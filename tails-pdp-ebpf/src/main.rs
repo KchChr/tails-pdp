@@ -25,7 +25,7 @@ pub fn file_open(ctx: LsmContext) -> i32 {
         aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_1);
     }
-
+    0
 }
 
 #[lsm(hook = "file_open")]
