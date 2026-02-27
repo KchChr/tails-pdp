@@ -61,7 +61,11 @@ pub fn combine(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: combine");
     }
-    0
+    match DECISIONS.get(0) {
+        Some(v) if *v != 0 => -1, // deny
+        _ => 0,                   // permit/default
+    }
+    
 }
 
 
