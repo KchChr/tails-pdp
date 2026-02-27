@@ -30,11 +30,12 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 
 #[lsm(hook = "file_open")]
 pub fn policy_1(ctx: LsmContext) -> i32 {
+    let _ = DECISIONS.set(0, 1, 0);
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_1");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_2);
     }
-    let _ = DECISIONS.set(0, 1, 0);
+
     0
 }
 
