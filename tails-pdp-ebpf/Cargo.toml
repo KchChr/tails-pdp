@@ -7,7 +7,7 @@ edition.workspace = true
 tails-pdp-common = { path = "../tails-pdp-common" }
 
 aya-ebpf = { workspace = true }
-aya-log-ebpf = { workspace = true }
+log = "0.4.29"
 
 [build-dependencies]
 which = { workspace = true }
