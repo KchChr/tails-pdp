@@ -25,7 +25,18 @@ pub fn file_open(ctx: LsmContext) -> i32 {
         aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_1);
     }
-    0
+    match DECISIONS.get(0) {
+        Some(v) if *v != 0 => {
+            unsafe {
+                aya_ebpf::bpf_printk!(b"DENY");
+            }
+            -1}, // deny
+        _ => {
+            unsafe {
+                aya_ebpf::bpf_printk!(b"PERMIT");
+            }
+            0},                   // permit/default
+    }
 }
 
 #[lsm(hook = "file_open")]
@@ -62,19 +73,19 @@ pub fn combine(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: combine");
     }
-    match DECISIONS.get(0) {
-        Some(v) if *v != 0 => {
-            unsafe {
-                aya_ebpf::bpf_printk!(b"DENY");
-            }
-            -1}, // deny
-        _ => {
-            unsafe {
-                aya_ebpf::bpf_printk!(b"PERMIT");
-            }
-            0},                   // permit/default
-    }
-
+    // match DECISIONS.get(0) {
+    //     Some(v) if *v != 0 => {
+    //         unsafe {
+    //             aya_ebpf::bpf_printk!(b"DENY");
+    //         }
+    //         -1}, // deny
+    //     _ => {
+    //         unsafe {
+    //             aya_ebpf::bpf_printk!(b"PERMIT");
+    //         }
+    //         0},                   // permit/default
+    // }
+0
 }
 
 
