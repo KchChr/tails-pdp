@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
         "/tails-pdp"
     )))?;
     let btf = Btf::from_sys_fs()?;
-    for program_name in ["file_open", "policy_1", "policy_2", "policy_3"] {
+    for program_name in ["file_open", "policy_1", "policy_2", "policy_3", "combine"] {
         let program: &mut Lsm = ebpf
             .program_mut(program_name)
             .with_context(|| format!("program '{program_name}' not found"))?
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
         .context("program 'combine' has unexpected type")?;
     jump_table
         .set(COMBINE, combine.fd()?, 0)
-        .context("failed to set jump table slot for policy_3")?;
+        .context("failed to set jump table slot for combine")?;
 
 
     let program: &mut Lsm = ebpf
