@@ -1,5 +1,8 @@
 #![no_std]
 
+pub mod authorization_subscription;
+pub use authorization_subscription::{ACT_LEN, AuthorizationSubscription, RES_LEN};
+
 pub const POLICY_COUNT: usize = 3;
 
 pub const TAIL_IDX_POLICY_1: u32 = 0;
@@ -10,18 +13,6 @@ pub const TAIL_IDX_COMBINER: u32 = 3;
 pub const DECISION_INDETERMINATE: u8 = 0;
 pub const DECISION_PERMIT: u8 = 1;
 pub const DECISION_DENY: u8 = 2;
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct AuthorizationSubscription {
-    pub request_id: u64,
-    pub pid: u32,
-    pub tgid: u32,
-    pub uid: u32,
-    pub gid: u32,
-    pub file_ptr: u64,
-    pub cred_ptr: u64,
-}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]

@@ -3,7 +3,6 @@
 
 use aya_ebpf::{
     EbpfContext,
-    cty::c_void,
     helpers::bpf_get_current_pid_tgid,
     macros::{lsm, map},
     maps::{HashMap, ProgramArray},
@@ -74,17 +73,7 @@ fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
     }
 
     let request_id = bpf_get_current_pid_tgid();
-    let file_ptr = ctx.arg::<*const c_void>(0) as u64;
-    let cred_ptr = ctx.arg::<*const c_void>(1) as u64;
-    let subscription = AuthorizationSubscription {
-        request_id,
-        pid: request_id as u32,
-        tgid: (request_id >> 32) as u32,
-        uid: ctx.uid(),
-        gid: ctx.gid(),
-        file_ptr,
-        cred_ptr,
-    };
+    let subscription = AuthorizationSubscription::new_file_open(ctx.uid(), b"file");
 
     AUTHORIZATION_SUBSCRIPTION.insert(&request_id, &subscription, 0)?;
     DECISIONS_FLAG.insert(&request_id, &DecisionFlags::all_indeterminate(), 0)?;
@@ -93,8 +82,8 @@ fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
         ctx,
         "file_open entry request_id={} -> policy pipeline", request_id
     );
-    unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_1);
+    if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_1).is_err() } {
+        cleanup_request_state(request_id);
     }
 
     // Fail-open while initial policy logic is mocked.
@@ -106,8 +95,8 @@ fn try_policy_1(ctx: &LsmContext) -> Result<i32, i32> {
     set_policy_decision(request_id, TAIL_IDX_POLICY_1, DECISION_PERMIT)?;
     info!(ctx, "policy_1 request_id={} -> Permit", request_id);
 
-    unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_2);
+    if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_2).is_err() } {
+        cleanup_request_state(request_id);
     }
 
     Ok(0)
@@ -118,8 +107,8 @@ fn try_policy_2(ctx: &LsmContext) -> Result<i32, i32> {
     set_policy_decision(request_id, TAIL_IDX_POLICY_2, DECISION_PERMIT)?;
     info!(ctx, "policy_2 request_id={} -> Permit", request_id);
 
-    unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_3);
+    if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_3).is_err() } {
+        cleanup_request_state(request_id);
     }
 
     Ok(0)
@@ -130,8 +119,8 @@ fn try_policy_3(ctx: &LsmContext) -> Result<i32, i32> {
     set_policy_decision(request_id, TAIL_IDX_POLICY_3, DECISION_PERMIT)?;
     info!(ctx, "policy_3 request_id={} -> Permit", request_id);
 
-    unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_COMBINER);
+    if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_COMBINER).is_err() } {
+        cleanup_request_state(request_id);
     }
 
     Ok(0)
@@ -177,6 +166,12 @@ fn set_policy_decision(request_id: u64, policy_slot: u32, decision: u8) -> Resul
     }
 
     Ok(())
+}
+
+#[inline(always)]
+fn cleanup_request_state(request_id: u64) {
+    let _ = DECISIONS_FLAG.remove(&request_id);
+    let _ = AUTHORIZATION_SUBSCRIPTION.remove(&request_id);
 }
 
 #[cfg(not(test))]

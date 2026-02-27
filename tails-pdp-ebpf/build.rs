@@ -12,6 +12,10 @@ use which::which;
 ///
 /// [bindeps]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html?highlight=feature#artifact-dependencies
 fn main() {
-    let bpf_linker = which("bpf-linker").unwrap();
+    let bpf_linker = which("bpf-linker").unwrap_or_else(|_| {
+        panic!(
+            "required binary 'bpf-linker' not found in PATH; install with: cargo install bpf-linker"
+        )
+    });
     println!("cargo:rerun-if-changed={}", bpf_linker.to_str().unwrap());
 }
