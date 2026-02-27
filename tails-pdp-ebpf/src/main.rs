@@ -11,9 +11,10 @@ use aya_ebpf::maps::Array;
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
+const COMBINE: u32 = 3;
 
 #[map]
-static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
+static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(4, 0);
 
 #[map]
 static DECISIONS : Array<i32> = Array::with_max_entries(1, 0);
@@ -50,6 +51,7 @@ pub fn policy_2(ctx: LsmContext) -> i32 {
 pub fn policy_3(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_3");
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, COMBINE);
     }
     0
 }
