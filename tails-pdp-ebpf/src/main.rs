@@ -9,8 +9,9 @@ use aya_ebpf::{
     programs::LsmContext,
 };
 use tails_pdp_common::{
-    AuthorizationSubscription, DECISION_DENY, DECISION_INDETERMINATE, DECISION_PERMIT,
-    DecisionFlags, TAIL_IDX_COMBINER, TAIL_IDX_POLICY_1, TAIL_IDX_POLICY_2, TAIL_IDX_POLICY_3,
+    ACT_LEN, AuthorizationSubscription, DECISION_DENY, DECISION_INDETERMINATE, DECISION_PERMIT,
+    DecisionFlags, RES_LEN, TAIL_IDX_COMBINER, TAIL_IDX_POLICY_1, TAIL_IDX_POLICY_2,
+    TAIL_IDX_POLICY_3,
 };
 
 const PIPELINE_LEN: u32 = 4;
@@ -67,7 +68,30 @@ pub fn policy_combiner(ctx: LsmContext) -> i32 {
 
 fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
     let request_id = bpf_get_current_pid_tgid();
-    let subscription = AuthorizationSubscription::new_file_open(ctx.uid(), b"file");
+    let mut subscription = AuthorizationSubscription {
+        subject: ctx.uid(),
+        action: [0; ACT_LEN],
+        resource: [0; RES_LEN],
+        action_hash: 0,
+        resource_hash: 0,
+    };
+
+    // Keep eBPF-side construction verifier-friendly: fixed stores, no slice/range helpers.
+    subscription.action[0] = b'f';
+    subscription.action[1] = b'i';
+    subscription.action[2] = b'l';
+    subscription.action[3] = b'e';
+    subscription.action[4] = b'_';
+    subscription.action[5] = b'o';
+    subscription.action[6] = b'p';
+    subscription.action[7] = b'e';
+    subscription.action[8] = b'n';
+
+    // Placeholder resource for now (policy logic is still mocked as Permit).
+    subscription.resource[0] = b'f';
+    subscription.resource[1] = b'i';
+    subscription.resource[2] = b'l';
+    subscription.resource[3] = b'e';
 
     AUTHORIZATION_SUBSCRIPTION.insert(&request_id, &subscription, 0)?;
     DECISIONS_FLAG.insert(&request_id, &DecisionFlags::all_indeterminate(), 0)?;
