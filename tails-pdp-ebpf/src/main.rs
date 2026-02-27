@@ -2,19 +2,11 @@
 #![no_main]
 
 use aya_ebpf::{macros::lsm, programs::LsmContext};
-use aya_log_ebpf::info;
 
 #[lsm(hook = "file_open")]
-pub fn file_open(ctx: LsmContext) -> i32 {
-    match try_file_open(ctx) {
-        Ok(ret) => ret,
-        Err(ret) => ret,
-    }
-}
-
-fn try_file_open(ctx: LsmContext) -> Result<i32, i32> {
-    info!(&ctx, "lsm hook file_open called");
-    Ok(0)
+pub fn file_open(_ctx: LsmContext) -> i32 {
+    // Phase 1: minimal verifier-friendly program.
+    0
 }
 
 #[cfg(not(test))]
