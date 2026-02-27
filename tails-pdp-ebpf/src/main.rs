@@ -46,7 +46,7 @@ pub fn policy_3(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_3");
     }
-    -1
+    0
 }
 
 #[cfg(not(test))]
