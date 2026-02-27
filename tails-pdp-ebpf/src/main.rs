@@ -8,7 +8,6 @@ use aya_ebpf::{
     maps::{HashMap, ProgramArray},
     programs::LsmContext,
 };
-use aya_log_ebpf::info;
 use tails_pdp_common::{
     AuthorizationSubscription, DECISION_DENY, DECISION_INDETERMINATE, DECISION_PERMIT,
     DecisionFlags, TAIL_IDX_COMBINER, TAIL_IDX_POLICY_1, TAIL_IDX_POLICY_2, TAIL_IDX_POLICY_3,
@@ -78,10 +77,6 @@ fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
     AUTHORIZATION_SUBSCRIPTION.insert(&request_id, &subscription, 0)?;
     DECISIONS_FLAG.insert(&request_id, &DecisionFlags::all_indeterminate(), 0)?;
 
-    info!(
-        ctx,
-        "file_open entry request_id={} -> policy pipeline", request_id
-    );
     if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_1).is_err() } {
         cleanup_request_state(request_id);
     }
@@ -93,8 +88,6 @@ fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
 fn try_policy_1(ctx: &LsmContext) -> Result<i32, i32> {
     let request_id = bpf_get_current_pid_tgid();
     set_policy_decision(request_id, TAIL_IDX_POLICY_1, DECISION_PERMIT)?;
-    info!(ctx, "policy_1 request_id={} -> Permit", request_id);
-
     if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_2).is_err() } {
         cleanup_request_state(request_id);
     }
@@ -105,8 +98,6 @@ fn try_policy_1(ctx: &LsmContext) -> Result<i32, i32> {
 fn try_policy_2(ctx: &LsmContext) -> Result<i32, i32> {
     let request_id = bpf_get_current_pid_tgid();
     set_policy_decision(request_id, TAIL_IDX_POLICY_2, DECISION_PERMIT)?;
-    info!(ctx, "policy_2 request_id={} -> Permit", request_id);
-
     if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_3).is_err() } {
         cleanup_request_state(request_id);
     }
@@ -117,8 +108,6 @@ fn try_policy_2(ctx: &LsmContext) -> Result<i32, i32> {
 fn try_policy_3(ctx: &LsmContext) -> Result<i32, i32> {
     let request_id = bpf_get_current_pid_tgid();
     set_policy_decision(request_id, TAIL_IDX_POLICY_3, DECISION_PERMIT)?;
-    info!(ctx, "policy_3 request_id={} -> Permit", request_id);
-
     if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_COMBINER).is_err() } {
         cleanup_request_state(request_id);
     }
@@ -138,11 +127,6 @@ fn try_policy_combiner(ctx: &LsmContext) -> Result<i32, i32> {
     // Cleanup request-scoped state.
     let _ = DECISIONS_FLAG.remove(&request_id);
     let _ = AUTHORIZATION_SUBSCRIPTION.remove(&request_id);
-
-    info!(
-        ctx,
-        "policy_combiner request_id={} -> combined={}", request_id, combined
-    );
 
     let decision = match combined {
         DECISION_DENY => -1,

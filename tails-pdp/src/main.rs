@@ -1,7 +1,7 @@
 use anyhow::Context;
 use aya::{Btf, maps::ProgramArray, programs::Lsm};
 #[rustfmt::skip]
-use log::{debug, warn};
+use log::debug;
 use tails_pdp_common::{
     TAIL_IDX_COMBINER, TAIL_IDX_POLICY_1, TAIL_IDX_POLICY_2, TAIL_IDX_POLICY_3,
 };
@@ -30,23 +30,6 @@ async fn main() -> anyhow::Result<()> {
         env!("OUT_DIR"),
         "/tails-pdp"
     )))?;
-    match aya_log::EbpfLogger::init(&mut ebpf) {
-        Err(e) => {
-            // This can happen if you remove all log statements from your eBPF program.
-            warn!("failed to initialize eBPF logger: {e}");
-        }
-        Ok(logger) => {
-            let mut logger =
-                tokio::io::unix::AsyncFd::with_interest(logger, tokio::io::Interest::READABLE)?;
-            tokio::task::spawn(async move {
-                loop {
-                    let mut guard = logger.readable_mut().await.unwrap();
-                    guard.get_inner_mut().flush();
-                    guard.clear_ready();
-                }
-            });
-        }
-    }
     let btf = Btf::from_sys_fs()?;
     for program_name in [
         "file_open",
