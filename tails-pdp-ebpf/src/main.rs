@@ -7,7 +7,7 @@ use aya_log_ebpf::info;
 #[lsm(hook = "file_open")]
 pub fn file_open(ctx: LsmContext) -> i32 {
     // Phase 1: minimal verifier-friendly program.
-    info!(&ctx, "tails-pdp: file_open hook called");
+    //info!(&ctx, "tails-pdp: file_open hook called");
     0
 }
 
