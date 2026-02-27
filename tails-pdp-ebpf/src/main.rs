@@ -6,6 +6,7 @@ use aya_ebpf::{
     maps::ProgramArray,
     programs::LsmContext,
 };
+use aya_ebpf::maps::Array;
 
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
@@ -13,6 +14,9 @@ const TAIL_IDX_POLICY_3: u32 = 2;
 
 #[map]
 static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
+
+#[map]
+static DECISIONS : Array<i32> = Array::with_max_entries(1, 0);
 
 #[lsm(hook = "file_open")]
 pub fn file_open(ctx: LsmContext) -> i32 {
@@ -29,6 +33,7 @@ pub fn policy_1(ctx: LsmContext) -> i32 {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_1");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_2);
     }
+    DECISIONS.set(0, 1, 0).expect("TODO: panic message");
     0
 }
 
@@ -48,6 +53,15 @@ pub fn policy_3(ctx: LsmContext) -> i32 {
     }
     0
 }
+
+#[lsm(hook = "file_open")]
+pub fn combine(ctx: LsmContext) -> i32 {
+    unsafe {
+        aya_ebpf::bpf_printk!(b"tails-pdp: combine");
+    }
+    0
+}
+
 
 #[cfg(not(test))]
 #[panic_handler]
