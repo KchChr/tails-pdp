@@ -1,13 +1,50 @@
 #![no_std]
 #![no_main]
 
-use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
+use aya_ebpf::{
+    macros::{lsm, map},
+    maps::ProgramArray,
+    programs::LsmContext,
+};
+
+const TAIL_IDX_POLICY_1: u32 = 0;
+const TAIL_IDX_POLICY_2: u32 = 1;
+const TAIL_IDX_POLICY_3: u32 = 2;
+
+#[map]
+static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
 
 #[lsm(hook = "file_open")]
 pub fn file_open(ctx: LsmContext) -> i32 {
-    // Phase 1: minimal verifier-friendly program.
     unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: file_open pid=%d", ctx.pid());
+        aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_1);
+    }
+    0
+}
+
+#[lsm(hook = "file_open")]
+pub fn policy_1(ctx: LsmContext) -> i32 {
+    unsafe {
+        aya_ebpf::bpf_printk!(b"tails-pdp: policy_1");
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_2);
+    }
+    0
+}
+
+#[lsm(hook = "file_open")]
+pub fn policy_2(ctx: LsmContext) -> i32 {
+    unsafe {
+        aya_ebpf::bpf_printk!(b"tails-pdp: policy_2");
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_3);
+    }
+    0
+}
+
+#[lsm(hook = "file_open")]
+pub fn policy_3(ctx: LsmContext) -> i32 {
+    unsafe {
+        aya_ebpf::bpf_printk!(b"tails-pdp: policy_3");
     }
     0
 }
