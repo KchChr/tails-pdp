@@ -5,7 +5,7 @@ use aya_ebpf::{
     EbpfContext,
     helpers::bpf_get_current_pid_tgid,
     macros::{lsm, map},
-    maps::{HashMap, ProgramArray},
+    maps::{HashMap, PerCpuArray, ProgramArray},
     programs::LsmContext,
 };
 use tails_pdp_common::{
@@ -22,6 +22,10 @@ static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(PIPELINE
 #[map]
 static AUTHORIZATION_SUBSCRIPTION: HashMap<u64, AuthorizationSubscription> =
     HashMap::with_max_entries(1024, 0);
+
+#[map]
+static AUTH_SUB_SCRATCH: PerCpuArray<AuthorizationSubscription> =
+    PerCpuArray::with_max_entries(1, 0);
 
 #[map]
 static DECISIONS_FLAG: HashMap<u64, DecisionFlags> = HashMap::with_max_entries(1024, 0);
@@ -68,32 +72,42 @@ pub fn policy_combiner(ctx: LsmContext) -> i32 {
 
 fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
     let request_id = bpf_get_current_pid_tgid();
-    let mut subscription = AuthorizationSubscription {
-        subject: ctx.uid(),
-        action: [0; ACT_LEN],
-        resource: [0; RES_LEN],
-        action_hash: 0,
-        resource_hash: 0,
-    };
+    let sub_ptr = AUTH_SUB_SCRATCH.get_ptr_mut(0).ok_or(-1)?;
+    unsafe {
+        // Build the subscription in map-backed memory, not on stack.
+        (*sub_ptr).subject = ctx.uid();
+        (*sub_ptr).action_hash = 0;
+        (*sub_ptr).resource_hash = 0;
 
-    // Keep eBPF-side construction verifier-friendly: fixed stores, no slice/range helpers.
-    subscription.action[0] = b'f';
-    subscription.action[1] = b'i';
-    subscription.action[2] = b'l';
-    subscription.action[3] = b'e';
-    subscription.action[4] = b'_';
-    subscription.action[5] = b'o';
-    subscription.action[6] = b'p';
-    subscription.action[7] = b'e';
-    subscription.action[8] = b'n';
+        let mut i = 0usize;
+        while i < ACT_LEN {
+            (*sub_ptr).action[i] = 0;
+            i += 1;
+        }
+        let mut j = 0usize;
+        while j < RES_LEN {
+            (*sub_ptr).resource[j] = 0;
+            j += 1;
+        }
 
-    // Placeholder resource for now (policy logic is still mocked as Permit).
-    subscription.resource[0] = b'f';
-    subscription.resource[1] = b'i';
-    subscription.resource[2] = b'l';
-    subscription.resource[3] = b'e';
+        (*sub_ptr).action[0] = b'f';
+        (*sub_ptr).action[1] = b'i';
+        (*sub_ptr).action[2] = b'l';
+        (*sub_ptr).action[3] = b'e';
+        (*sub_ptr).action[4] = b'_';
+        (*sub_ptr).action[5] = b'o';
+        (*sub_ptr).action[6] = b'p';
+        (*sub_ptr).action[7] = b'e';
+        (*sub_ptr).action[8] = b'n';
 
-    AUTHORIZATION_SUBSCRIPTION.insert(&request_id, &subscription, 0)?;
+        // Placeholder resource while policy logic is mocked.
+        (*sub_ptr).resource[0] = b'f';
+        (*sub_ptr).resource[1] = b'i';
+        (*sub_ptr).resource[2] = b'l';
+        (*sub_ptr).resource[3] = b'e';
+
+        AUTHORIZATION_SUBSCRIPTION.insert(&request_id, &*sub_ptr, 0)?;
+    }
     DECISIONS_FLAG.insert(&request_id, &DecisionFlags::all_indeterminate(), 0)?;
 
     if unsafe { POLICY_JUMP_TABLE.tail_call(ctx, TAIL_IDX_POLICY_1).is_err() } {
