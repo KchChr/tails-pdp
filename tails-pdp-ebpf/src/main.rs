@@ -34,7 +34,7 @@ pub fn policy_1(ctx: LsmContext) -> i32 {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_1");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_2);
     }
-    DECISIONS.set(0, 1, 0).expect("TODO: panic message");
+    let _ = DECISIONS.set(0, 1, 0);
     0
 }
 
