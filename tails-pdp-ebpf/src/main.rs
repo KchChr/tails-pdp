@@ -66,11 +66,6 @@ pub fn policy_combiner(ctx: LsmContext) -> i32 {
 }
 
 fn try_file_open(ctx: &LsmContext) -> Result<i32, i32> {
-    let previous_ret: i32 = ctx.arg(2);
-    if previous_ret != 0 {
-        return Ok(previous_ret);
-    }
-
     let request_id = bpf_get_current_pid_tgid();
     let subscription = AuthorizationSubscription::new_file_open(ctx.uid(), b"file");
 
