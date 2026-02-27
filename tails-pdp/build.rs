@@ -2,6 +2,15 @@ use anyhow::{Context as _, anyhow};
 use aya_build::Toolchain;
 
 fn main() -> anyhow::Result<()> {
+    // eBPF `no_std` binaries must not use unwinding; force abort panic strategy
+    // for the nested cargo invocation performed by aya-build.
+    println!("cargo:rerun-if-env-changed=CARGO_PROFILE_RELEASE_PANIC");
+    println!("cargo:rerun-if-env-changed=CARGO_PROFILE_DEV_PANIC");
+    unsafe {
+        std::env::set_var("CARGO_PROFILE_RELEASE_PANIC", "abort");
+        std::env::set_var("CARGO_PROFILE_DEV_PANIC", "abort");
+    }
+
     let cargo_metadata::Metadata { packages, .. } = cargo_metadata::MetadataCommand::new()
         .no_deps()
         .exec()
