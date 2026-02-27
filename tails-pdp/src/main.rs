@@ -7,6 +7,7 @@ use tokio::signal;
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
+const COMBINE: u32 = 3;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -75,6 +76,16 @@ async fn main() -> anyhow::Result<()> {
     jump_table
         .set(TAIL_IDX_POLICY_3, policy_3.fd()?, 0)
         .context("failed to set jump table slot for policy_3")?;
+
+    let combine: &Lsm = ebpf
+        .program("combine")
+        .context("program 'combine' not found")?
+        .try_into()
+        .context("program 'combine' has unexpected type")?;
+    jump_table
+        .set(COMBINE, combine.fd()?, 0)
+        .context("failed to set jump table slot for policy_3")?;
+
 
     let program: &mut Lsm = ebpf
         .program_mut("file_open")
