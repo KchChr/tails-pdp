@@ -13,7 +13,7 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    unsafe { core::hint::unreachable_unchecked() }
+    loop {}
 }
 
 #[unsafe(link_section = "license")]
