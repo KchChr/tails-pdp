@@ -8,6 +8,13 @@ const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
 const COMBINE: u32 = 3;
+const LSM_PROGRAMS: [&str; 5] = ["file_open", "policy_1", "policy_2", "policy_3", "combine"];
+const TAIL_PROGRAMS: [(u32, &str); 4] = [
+    (TAIL_IDX_POLICY_1, "policy_1"),
+    (TAIL_IDX_POLICY_2, "policy_2"),
+    (TAIL_IDX_POLICY_3, "policy_3"),
+    (COMBINE, "combine"),
+];
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -33,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         "/tails-pdp"
     )))?;
     let btf = Btf::from_sys_fs()?;
-    for program_name in ["file_open", "policy_1", "policy_2", "policy_3", "combine"] {
+    for program_name in LSM_PROGRAMS {
         let program: &mut Lsm = ebpf
             .program_mut(program_name)
             .with_context(|| format!("program '{program_name}' not found"))?
@@ -50,42 +57,16 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
 
-    let policy_1: &Lsm = ebpf
-        .program("policy_1")
-        .context("program 'policy_1' not found")?
-        .try_into()
-        .context("program 'policy_1' has unexpected type")?;
-    jump_table
-        .set(TAIL_IDX_POLICY_1, policy_1.fd()?, 0)
-        .context("failed to set jump table slot for policy_1")?;
-
-    let policy_2: &Lsm = ebpf
-        .program("policy_2")
-        .context("program 'policy_2' not found")?
-        .try_into()
-        .context("program 'policy_2' has unexpected type")?;
-    jump_table
-        .set(TAIL_IDX_POLICY_2, policy_2.fd()?, 0)
-        .context("failed to set jump table slot for policy_2")?;
-
-    let policy_3: &Lsm = ebpf
-        .program("policy_3")
-        .context("program 'policy_3' not found")?
-        .try_into()
-        .context("program 'policy_3' has unexpected type")?;
-    jump_table
-        .set(TAIL_IDX_POLICY_3, policy_3.fd()?, 0)
-        .context("failed to set jump table slot for policy_3")?;
-
-    let combine: &Lsm = ebpf
-        .program("combine")
-        .context("program 'combine' not found")?
-        .try_into()
-        .context("program 'combine' has unexpected type")?;
-    jump_table
-        .set(COMBINE, combine.fd()?, 0)
-        .context("failed to set jump table slot for combine")?;
-
+    for (index, program_name) in TAIL_PROGRAMS {
+        let program: &Lsm = ebpf
+            .program(program_name)
+            .with_context(|| format!("program '{program_name}' not found"))?
+            .try_into()
+            .with_context(|| format!("program '{program_name}' has unexpected type"))?;
+        jump_table
+            .set(index, program.fd()?, 0)
+            .with_context(|| format!("failed to set jump table slot for '{program_name}'"))?;
+    }
 
     let program: &mut Lsm = ebpf
         .program_mut("file_open")

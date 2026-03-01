@@ -3,10 +3,9 @@
 
 use aya_ebpf::{
     macros::{lsm, map},
-    maps::ProgramArray,
+    maps::{Array, ProgramArray},
     programs::LsmContext,
 };
-use aya_ebpf::maps::Array;
 
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
@@ -17,7 +16,7 @@ const COMBINE: u32 = 3;
 static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(4, 0);
 
 #[map]
-static DECISIONS : Array<i32> = Array::with_max_entries(1, 0);
+static DECISIONS: Array<i32> = Array::with_max_entries(1, 0);
 
 #[lsm(hook = "file_open")]
 pub fn file_open(ctx: LsmContext) -> i32 {
@@ -67,16 +66,16 @@ pub fn combine(ctx: LsmContext) -> i32 {
             unsafe {
                 aya_ebpf::bpf_printk!(b"DENY");
             }
-            -1}, // deny
+            -1
+        } // deny
         _ => {
             unsafe {
                 aya_ebpf::bpf_printk!(b"PERMIT");
             }
-            0},                   // permit/default
+            0
+        } // permit/default
     }
-
 }
-
 
 #[cfg(not(test))]
 #[panic_handler]
