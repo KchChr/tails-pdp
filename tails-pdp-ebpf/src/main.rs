@@ -13,7 +13,7 @@ const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
 const COMBINE: u32 = 3;
-const AUTH_SUBS_MAX_ENTRIES: u32 = 16_384;
+const AUTH_SUBS_MAX_ENTRIES: u32 = 1;
 
 #[map]
 static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(4, 0);
