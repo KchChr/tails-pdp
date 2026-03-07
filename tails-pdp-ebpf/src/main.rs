@@ -54,8 +54,8 @@ fn create_and_store_authorization_subscription(
 pub fn file_open(ctx: LsmContext) -> i32 {
     let uid = ctx.uid();
     let gid = ctx.gid();
-    info!(ctx, "uid: {}", &uid);
-    info!(ctx, "gid: {}", &gid);
+    info!(&ctx, "uid: {}", &uid);
+    info!(&ctx, "gid: {}", &gid);
 
 
 
