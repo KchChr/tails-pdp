@@ -490,6 +490,7 @@ name = "tails-pdp-ebpf"
 version = "0.1.0"
 dependencies = [
  "aya-ebpf",
+ "log",
  "tails-pdp-common",
  "which 6.0.3",
 ]

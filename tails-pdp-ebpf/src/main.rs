@@ -2,6 +2,7 @@
 #![no_main]
 
 use aya_ebpf::{helpers::{bpf_get_current_pid_tgid, bpf_get_current_uid_gid}, macros::{lsm, map}, maps::{Array, HashMap, ProgramArray}, programs::LsmContext, EbpfContext};
+use log::info;
 use tails_pdp_common::{Action, AuthorizationSubscription};
 
 const TAIL_IDX_POLICY_1: u32 = 0;
@@ -53,6 +54,8 @@ fn create_and_store_authorization_subscription(
 pub fn file_open(ctx: LsmContext) -> i32 {
     let uid = ctx.uid();
     let gid = ctx.gid();
+    info!(ctx, "uid: ", &uid);
+    info!(ctx, "gid: ", &gid);
 
 
 
