@@ -4,9 +4,8 @@ members = [
     "tails-pdp",
     "tails-pdp-common",
     "tails-pdp-ebpf",
-    "tails-pdp-admin",
 ]
-default-members = ["tails-pdp", "tails-pdp-common", "tails-pdp-admin"]
+default-members = ["tails-pdp", "tails-pdp-common"]
 
 [workspace.package]
 license = "MIT OR Apache-2.0"

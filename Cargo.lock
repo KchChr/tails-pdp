@@ -479,14 +479,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tails-pdp-admin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde_json",
-]
-
-[[package]]
 name = "tails-pdp-common"
 version = "0.1.0"
 dependencies = [
