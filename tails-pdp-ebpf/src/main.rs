@@ -8,7 +8,7 @@ use aya_ebpf::{
     maps::{Array, HashMap, ProgramArray},
     programs::LsmContext,
 };
-use aya_log_ebpf::info;
+
 use tails_pdp_common::{Action, AuthorizationSubscription};
 
 const TAIL_IDX_POLICY_1: u32 = 0;
