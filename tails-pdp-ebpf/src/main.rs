@@ -21,14 +21,15 @@ static AUTHORIZATION_SUBSCRIPTIONS: HashMap<u64, AuthorizationSubscription> =
     HashMap::with_max_entries(AUTH_SUBS_MAX_ENTRIES, 0);
 
 fn create_and_store_authorization_subscription(
-    ctx: LsmContext,
+    uid: u32,
+    gid: u32,
     action: Action,
     resource_id: u64,
 ) -> Result<u64, i64> {
     let pid_tgid = unsafe { bpf_get_current_pid_tgid() };
     let uid_gid = unsafe { bpf_get_current_uid_gid() };
-    let subject_uid = ctx.uid();
-    let subject_gid = ctx.gid();
+    let subject_uid = uid as u32;
+    let subject_gid = gid as u32;
     let pid = pid_tgid as u32;
     let tgid = (pid_tgid >> 32) as u32;
 
@@ -50,7 +51,12 @@ fn create_and_store_authorization_subscription(
 
 #[lsm(hook = "file_open")]
 pub fn file_open(ctx: LsmContext) -> i32 {
-    let store_result = create_and_store_authorization_subscription(ctx, Action::FileOpen, 0);
+    let uid = ctx.uid();
+    let gid = ctx.gid();
+
+
+
+    let store_result = create_and_store_authorization_subscription(uid, gid, Action::FileOpen, 0);
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");
@@ -63,8 +69,12 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 }
 
 #[lsm(hook = "task_setnice")]
-pub fn task_setnice(_ctx: LsmContext) -> i32 {
-    let store_result = create_and_store_authorization_subscription(_ctx, Action::TaskSetNice, 0);
+pub fn task_setnice(ctx: LsmContext) -> i32 {
+
+    let uid = ctx.uid();
+    let gid = ctx.gid();
+
+    let store_result = create_and_store_authorization_subscription(uid, gid, Action::TaskSetNice, 0);
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
