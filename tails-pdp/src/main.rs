@@ -1,5 +1,5 @@
 use anyhow::Context;
-use aya::{Btf, maps::ProgramArray, programs::Lsm, VerifierLogLevel, EbpfLoader};
+use aya::{Btf, EbpfLoader, VerifierLogLevel, maps::ProgramArray, programs::Lsm};
 #[rustfmt::skip]
 use log::debug;
 use tokio::signal;
@@ -40,10 +40,12 @@ async fn main() -> anyhow::Result<()> {
     //     "/tails-pdp"
     // )))?;
 
-
     let mut ebpf = EbpfLoader::new()
         .verifier_log_level(VerifierLogLevel::VERBOSE | VerifierLogLevel::STATS)
-        .load(aya::include_bytes_aligned!(concat!(env!("OUT_DIR"), "/tails-pdp")))?;
+        .load(aya::include_bytes_aligned!(concat!(
+            env!("OUT_DIR"),
+            "/tails-pdp"
+        )))?;
 
     let btf = Btf::from_sys_fs()?;
     for program_name in LSM_PROGRAMS {
