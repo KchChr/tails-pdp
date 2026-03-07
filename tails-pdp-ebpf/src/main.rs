@@ -64,7 +64,7 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 
 #[lsm(hook = "task_setnice")]
 pub fn task_setnice(_ctx: LsmContext) -> i32 {
-    let store_result = create_and_store_authorization_subscription(ctx, Action::TaskSetNice, 0);
+    let store_result = create_and_store_authorization_subscription(_ctx, Action::TaskSetNice, 0);
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
