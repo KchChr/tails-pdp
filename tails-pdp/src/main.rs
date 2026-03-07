@@ -8,7 +8,44 @@ const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
 const COMBINE: u32 = 3;
-const LSM_PROGRAMS: [&str; 5] = ["file_open", "policy_1", "policy_2", "policy_3", "combine"];
+struct LsmProgramSpec {
+    name: &'static str,
+    hook: &'static str,
+    attach: bool,
+}
+
+const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
+    LsmProgramSpec {
+        name: "file_open",
+        hook: "file_open",
+        attach: true,
+    },
+    LsmProgramSpec {
+        name: "task_setnice",
+        hook: "task_setnice",
+        attach: true,
+    },
+    LsmProgramSpec {
+        name: "policy_1",
+        hook: "file_open",
+        attach: false,
+    },
+    LsmProgramSpec {
+        name: "policy_2",
+        hook: "file_open",
+        attach: false,
+    },
+    LsmProgramSpec {
+        name: "policy_3",
+        hook: "file_open",
+        attach: false,
+    },
+    LsmProgramSpec {
+        name: "combine",
+        hook: "file_open",
+        attach: false,
+    },
+];
 const TAIL_PROGRAMS: [(u32, &str); 4] = [
     (TAIL_IDX_POLICY_1, "policy_1"),
     (TAIL_IDX_POLICY_2, "policy_2"),
@@ -48,15 +85,15 @@ async fn main() -> anyhow::Result<()> {
         )))?;
 
     let btf = Btf::from_sys_fs()?;
-    for program_name in LSM_PROGRAMS {
+    for spec in LSM_PROGRAMS {
         let program: &mut Lsm = ebpf
-            .program_mut(program_name)
-            .with_context(|| format!("program '{program_name}' not found"))?
+            .program_mut(spec.name)
+            .with_context(|| format!("program '{}' not found", spec.name))?
             .try_into()
-            .with_context(|| format!("program '{program_name}' has unexpected type"))?;
+            .with_context(|| format!("program '{}' has unexpected type", spec.name))?;
         program
-            .load("file_open", &btf)
-            .with_context(|| format!("failed to load '{program_name}'"))?;
+            .load(spec.hook, &btf)
+            .with_context(|| format!("failed to load '{}' on hook '{}'", spec.name, spec.hook))?;
     }
 
     let mut jump_table = ProgramArray::try_from(
@@ -76,12 +113,19 @@ async fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to set jump table slot for '{program_name}'"))?;
     }
 
-    let program: &mut Lsm = ebpf
-        .program_mut("file_open")
-        .context("program 'file_open' not found")?
-        .try_into()
-        .context("program 'file_open' has unexpected type")?;
-    program.attach()?;
+    for spec in LSM_PROGRAMS {
+        if !spec.attach {
+            continue;
+        }
+        let program: &mut Lsm = ebpf
+            .program_mut(spec.name)
+            .with_context(|| format!("program '{}' not found", spec.name))?
+            .try_into()
+            .with_context(|| format!("program '{}' has unexpected type", spec.name))?;
+        program
+            .attach()
+            .with_context(|| format!("failed to attach '{}'", spec.name))?;
+    }
 
     let ctrl_c = signal::ctrl_c();
     println!("Waiting for Ctrl-C...");

@@ -1,6 +1,23 @@
 #![no_std]
 
-pub const ACTION_FILE_OPEN: u8 = 1;
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Action {
+    FileOpen = 1,
+    TaskSetNice = 2,
+}
+
+impl Action {
+    pub const fn as_u8(self) -> u8 {
+        self as u8
+    }
+}
+
+impl From<Action> for u8 {
+    fn from(value: Action) -> Self {
+        value as u8
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
