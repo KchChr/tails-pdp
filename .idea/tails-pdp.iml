@@ -5,6 +5,8 @@
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp-common/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp-ebpf/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-admin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-maps/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
