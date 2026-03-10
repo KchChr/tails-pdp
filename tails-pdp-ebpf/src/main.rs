@@ -30,6 +30,7 @@ static AUTHORIZATION_SUBSCRIPTIONS: HashMap<u64, AuthorizationSubscription> =
 fn create_and_store_authorization_subscription(
     uid: u32,
     gid: u32,
+    comm: [u8; 16],
     action: Action,
     resource_id: u64,
 ) -> Result<u64, i64> {
@@ -47,6 +48,7 @@ fn create_and_store_authorization_subscription(
         pid,
         tgid,
         resource_id,
+        command
     };
 
     AUTHORIZATION_SUBSCRIPTIONS
@@ -59,10 +61,11 @@ fn create_and_store_authorization_subscription(
 pub fn file_open(ctx: LsmContext) -> i32 {
     let uid = ctx.uid();
     let gid = ctx.gid();
+    let comm = ctx.command();
     //info!(&ctx, "uid: {}", uid);
     //info!(&ctx, "gid: {}", gid);
 
-    let store_result = create_and_store_authorization_subscription(uid, gid, Action::FileOpen, 0);
+    let store_result = create_and_store_authorization_subscription(uid, gid, comm, Action::FileOpen, 0);
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");

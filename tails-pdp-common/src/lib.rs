@@ -29,6 +29,7 @@ pub struct AuthorizationSubscription {
     pub pid: u32,
     pub tgid: u32,
     pub resource_id: u64,
+    pub command : [u8; 16]
 }
 
 #[cfg(feature = "user")]
