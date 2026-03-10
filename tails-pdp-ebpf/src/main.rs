@@ -33,6 +33,7 @@ fn create_and_store_authorization_subscription(
     comm: [u8; 16],
     action: Action,
     resource_id: u64,
+    command: [u8; 16],
 ) -> Result<u64, i64> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let subject_uid = uid;
