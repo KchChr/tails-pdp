@@ -61,7 +61,7 @@ fn create_and_store_authorization_subscription(
 pub fn file_open(ctx: LsmContext) -> i32 {
     let uid = ctx.uid();
     let gid = ctx.gid();
-    let comm = ctx.command();
+    let comm = ctx.command().unwrap();
     //info!(&ctx, "uid: {}", uid);
     //info!(&ctx, "gid: {}", gid);
 
@@ -77,22 +77,22 @@ pub fn file_open(ctx: LsmContext) -> i32 {
     0
 }
 
-#[lsm(hook = "task_setnice")]
-pub fn task_setnice(ctx: LsmContext) -> i32 {
-    let uid = ctx.uid();
-    let gid = ctx.gid();
-    let store_result =
-        create_and_store_authorization_subscription(uid, gid, Action::TaskSetNice, 0);
-
-    unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
-        if store_result.is_err() {
-            aya_ebpf::bpf_printk!(b"tails-pdp: authz sub store failed");
-        }
-    }
-
-    0
-}
+// #[lsm(hook = "task_setnice")]
+// pub fn task_setnice(ctx: LsmContext) -> i32 {
+//     let uid = ctx.uid();
+//     let gid = ctx.gid();
+//     let store_result =
+//         create_and_store_authorization_subscription(uid, gid, Action::TaskSetNice, 0);
+//
+//     unsafe {
+//         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
+//         if store_result.is_err() {
+//             aya_ebpf::bpf_printk!(b"tails-pdp: authz sub store failed");
+//         }
+//     }
+//
+//     0
+// }
 
 #[lsm(hook = "file_open")]
 pub fn policy_1(ctx: LsmContext) -> i32 {
