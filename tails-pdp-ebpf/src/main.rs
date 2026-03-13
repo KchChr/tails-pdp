@@ -8,7 +8,7 @@ use aya_ebpf::{
     maps::{Array, HashMap, ProgramArray},
     programs::LsmContext,
 };
-use tails_pdp_common::{Action, AuthorizationSubscription};
+use tails_pdp_common::{Action, AuthorizationSubscription, command_name};
 
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
@@ -51,7 +51,7 @@ fn create_and_store_authorization_subscription(
     };
 
     AUTHORIZATION_SUBSCRIPTIONS
-        .insert(42u64, subscription, 0)
+        .insert(pid_tgid, subscription, 0)
         .map(|_| pid_tgid)
         .map_err(|e| e as i64)
 }
@@ -97,7 +97,10 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
 
 #[lsm(hook = "file_open")]
 pub fn policy_1(ctx: LsmContext) -> i32 {
-    let _ = DECISIONS.set(0, 0, 0);
+    let command = ctx.command().unwrap_or([0; 16]);
+    let decision = if command == command_name("cat") { 1 } else { 0 };
+    let _ = DECISIONS.set(0, decision, 0);
+
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_1");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_2);
