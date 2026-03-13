@@ -98,7 +98,7 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
 #[lsm(hook = "file_open")]
 pub fn policy_1(ctx: LsmContext) -> i32 {
     let command = ctx.command().unwrap_or([0; 16]);
-    let decision = if command == command_name("cat") { 0 } else { 0 };
+    let decision = if command == command_name("cat") { 1 } else { 0 };
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
