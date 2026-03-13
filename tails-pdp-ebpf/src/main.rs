@@ -51,7 +51,7 @@ fn create_and_store_authorization_subscription(
     };
 
     AUTHORIZATION_SUBSCRIPTIONS
-        .insert(pid_tgid, subscription, 0)
+        .insert(42u64, subscription, 0)
         .map(|_| pid_tgid)
         .map_err(|e| e as i64)
 }
