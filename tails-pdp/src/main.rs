@@ -38,7 +38,7 @@ const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
         attach: false,
     },
     LsmProgramSpec {
-        name: "evaluate_stram_policies",
+        name: "evaluate_stream_policies",
         hook: "file_open",
         attach: false,
     },
