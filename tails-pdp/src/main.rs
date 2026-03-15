@@ -13,8 +13,7 @@ use tokio::signal;
 
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
-const TAIL_IDX_POLICY_3: u32 = 2;
-const COMBINE: u32 = 3;
+const COMBINE: u32 = 2;
 const BPF_PIN_DIRECTORY: &str = "/sys/fs/bpf/tails-pdp";
 struct LsmProgramSpec {
     name: &'static str,
@@ -22,7 +21,7 @@ struct LsmProgramSpec {
     attach: bool,
 }
 
-const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
+const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
     LsmProgramSpec {
         name: "file_open",
         hook: "file_open",
@@ -39,12 +38,7 @@ const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
         attach: false,
     },
     LsmProgramSpec {
-        name: "policy_2",
-        hook: "file_open",
-        attach: false,
-    },
-    LsmProgramSpec {
-        name: "policy_3",
+        name: "evaluate_stram_policies",
         hook: "file_open",
         attach: false,
     },
@@ -54,10 +48,9 @@ const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
         attach: false,
     },
 ];
-const TAIL_PROGRAMS: [(u32, &str); 4] = [
+const TAIL_PROGRAMS: [(u32, &str); 3] = [
     (TAIL_IDX_POLICY_1, "evaluate_static_policys"),
-    (TAIL_IDX_POLICY_2, "policy_2"),
-    (TAIL_IDX_POLICY_3, "policy_3"),
+    (TAIL_IDX_POLICY_2, "evaluate_stram_policies"),
     (COMBINE, "combine"),
 ];
 
