@@ -15,6 +15,7 @@ const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
 const COMBINE: u32 = 3;
 const AUTH_SUBS_MAX_ENTRIES: u32 = 1;
+const DENY_UID: u32 = 0;
 
 #[map]
 static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(4, 0);
@@ -88,7 +89,7 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
         if store_result.is_err() {
-            aya_ebpf::bpf_printk!(b"tails-pdp: authz sub store failed");
+            aya_ebpf::bpf_printk!(b"tails-pdp: authsub store failed");
         }
     }
 
@@ -111,6 +112,15 @@ pub fn policy_1(ctx: LsmContext) -> i32 {
 
 #[lsm(hook = "file_open")]
 pub fn policy_2(ctx: LsmContext) -> i32 {
+    let uid = ctx.uid();
+    let current_decision = DECISIONS.get(0).copied().unwrap_or(0);
+    let decision = if current_decision != 0 || uid == DENY_UID {
+        1
+    } else {
+        0
+    };
+    let _ = DECISIONS.set(0, decision, 0);
+
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: policy_2");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_3);
