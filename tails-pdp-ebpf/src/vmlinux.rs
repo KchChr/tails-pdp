@@ -47,11 +47,7 @@ where
             index % 8
         };
         let mask = 1 << bit_index;
-        if val {
-            byte | mask
-        } else {
-            byte & !mask
-        }
+        if val { byte | mask } else { byte & !mask }
     }
     #[inline]
     pub fn set_bit(&mut self, index: usize, val: bool) {
@@ -66348,4 +66344,3 @@ pub struct xsk_tx_metadata_ops {
         unsafe extern "C" fn(arg1: u64_, arg2: *mut ::aya_ebpf::cty::c_void),
     >,
 }
-

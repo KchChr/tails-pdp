@@ -1,13 +1,21 @@
 use anyhow::Context;
-use aya::{Btf, EbpfLoader, VerifierLogLevel, maps::ProgramArray, programs::Lsm};
+use aya::{
+    Btf, EbpfLoader, VerifierLogLevel,
+    maps::{Array, ProgramArray},
+    programs::Lsm,
+};
 #[rustfmt::skip]
 use log::debug;
+use std::fs;
+
+use tails_pdp_common::{ANY_SUBJECT, Entitlement, PolicyAction, StaticPolicy};
 use tokio::signal;
 
 const TAIL_IDX_POLICY_1: u32 = 0;
 const TAIL_IDX_POLICY_2: u32 = 1;
 const TAIL_IDX_POLICY_3: u32 = 2;
 const COMBINE: u32 = 3;
+const BPF_PIN_DIRECTORY: &str = "/sys/fs/bpf/tails-pdp";
 struct LsmProgramSpec {
     name: &'static str,
     hook: &'static str,
@@ -26,7 +34,7 @@ const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
         attach: true,
     },
     LsmProgramSpec {
-        name: "policy_1",
+        name: "evaluate_static_policys",
         hook: "file_open",
         attach: false,
     },
@@ -47,11 +55,44 @@ const LSM_PROGRAMS: [LsmProgramSpec; 6] = [
     },
 ];
 const TAIL_PROGRAMS: [(u32, &str); 4] = [
-    (TAIL_IDX_POLICY_1, "policy_1"),
+    (TAIL_IDX_POLICY_1, "evaluate_static_policys"),
     (TAIL_IDX_POLICY_2, "policy_2"),
     (TAIL_IDX_POLICY_3, "policy_3"),
     (COMBINE, "combine"),
 ];
+
+fn load_static_policies(ebpf: &mut aya::Ebpf) -> anyhow::Result<()> {
+    let mut static_policy: Array<_, StaticPolicy> = Array::try_from(
+        ebpf.take_map("STATIC_POLICY")
+            .context("map 'STATIC_POLICY' not found")?,
+    )
+    .context("failed to open STATIC_POLICY")?;
+
+    let example_policies = [
+        StaticPolicy::new(
+            Entitlement::Deny,
+            ANY_SUBJECT,
+            PolicyAction::FileOpen,
+            "cat",
+            "shadow",
+        ),
+        StaticPolicy::new(Entitlement::Deny, 0, PolicyAction::TaskSetNice, "", ""),
+    ];
+
+    for index in 0..static_policy.len() {
+        static_policy
+            .set(index, StaticPolicy::disabled(), 0)
+            .with_context(|| format!("failed to clear STATIC_POLICY entry {index}"))?;
+    }
+
+    for (index, policy) in example_policies.into_iter().enumerate() {
+        static_policy
+            .set(index as u32, policy, 0)
+            .with_context(|| format!("failed to write STATIC_POLICY entry {index}"))?;
+    }
+
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -77,7 +118,11 @@ async fn main() -> anyhow::Result<()> {
     //     "/tails-pdp"
     // )))?;
 
+    fs::create_dir_all(BPF_PIN_DIRECTORY)
+        .with_context(|| format!("failed to create {BPF_PIN_DIRECTORY}"))?;
+
     let mut ebpf = EbpfLoader::new()
+        .default_map_pin_directory(BPF_PIN_DIRECTORY)
         .verifier_log_level(VerifierLogLevel::VERBOSE | VerifierLogLevel::STATS)
         .load(aya::include_bytes_aligned!(concat!(
             env!("OUT_DIR"),
@@ -101,6 +146,7 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
+    load_static_policies(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {
         let program: &Lsm = ebpf
