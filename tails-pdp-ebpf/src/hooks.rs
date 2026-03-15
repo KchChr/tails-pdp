@@ -2,8 +2,8 @@ use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{COMMAND_LEN, PolicyAction, RESOURCE_LEN};
 
 use crate::{
-    helpers::evaluate_policies,
     maps::{POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
+    policies::evaluate_static_policies::evaluate_policies,
 };
 
 #[lsm(hook = "file_open")]
