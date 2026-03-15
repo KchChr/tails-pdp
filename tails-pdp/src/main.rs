@@ -50,7 +50,7 @@ const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
 ];
 const TAIL_PROGRAMS: [(u32, &str); 3] = [
     (TAIL_IDX_POLICY_1, "evaluate_static_policys"),
-    (TAIL_IDX_POLICY_2, "evaluate_stram_policies"),
+    (TAIL_IDX_POLICY_2, "evaluate_stream_policies"),
     (COMBINE, "combine"),
 ];
 
