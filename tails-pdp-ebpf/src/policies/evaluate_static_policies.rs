@@ -39,10 +39,6 @@ fn evaluate_static_policy(
         return None;
     }
 
-    if !matches_bytes(&policy.resource, current_resource) {
-        return None;
-    }
-
     Some(policy.entitlement.decision())
 }
 
