@@ -18,6 +18,13 @@ impl Entitlement {
             Self::Deny => 1,
         }
     }
+
+    pub const fn inverse(self) -> Self {
+        match self {
+            Self::Permit => Self::Deny,
+            Self::Deny => Self::Permit,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -25,6 +32,22 @@ impl Entitlement {
 pub enum PolicyAction {
     FileOpen = 1,
     TaskSetNice = 2,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum StreamAttribute {
+    Time = 1,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum StreamOperator {
+    LessThan = 1,
+    LessThanOrEqual = 2,
+    Equal = 3,
+    GreaterThanOrEqual = 4,
+    GreaterThan = 5,
 }
 
 fn fixed_name<const N: usize>(name: &str) -> [u8; N] {
@@ -92,8 +115,58 @@ impl StaticPolicy {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct StreamPolicy {
+    pub entitlement: Entitlement,
+    pub action: PolicyAction,
+    pub attribute: StreamAttribute,
+    pub operator: StreamOperator,
+    pub enabled: u8,
+    pub _pad: [u8; 3],
+    pub modulo: u64,
+    pub value: u64,
+}
+
+impl StreamPolicy {
+    pub const fn disabled() -> Self {
+        Self {
+            entitlement: Entitlement::Permit,
+            action: PolicyAction::FileOpen,
+            attribute: StreamAttribute::Time,
+            operator: StreamOperator::LessThan,
+            enabled: 0,
+            _pad: [0; 3],
+            modulo: 0,
+            value: 0,
+        }
+    }
+
+    pub const fn time(
+        entitlement: Entitlement,
+        action: PolicyAction,
+        operator: StreamOperator,
+        modulo: u64,
+        value: u64,
+    ) -> Self {
+        Self {
+            entitlement,
+            action,
+            attribute: StreamAttribute::Time,
+            operator,
+            enabled: 1,
+            _pad: [0; 3],
+            modulo,
+            value,
+        }
+    }
+}
+
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for StaticPolicy {}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for StreamPolicy {}
 
 #[cfg(test)]
 mod tests {

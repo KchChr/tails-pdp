@@ -20,7 +20,7 @@ fn evaluate_static_policy(
     current_subject: u32,
     current_action: PolicyAction,
     current_command: &[u8; COMMAND_LEN],
-    current_resource: &[u8; RESOURCE_LEN],
+    _current_resource: &[u8; RESOURCE_LEN],
     policy: &StaticPolicy,
 ) -> Option<i32> {
     if policy.enabled == 0 {

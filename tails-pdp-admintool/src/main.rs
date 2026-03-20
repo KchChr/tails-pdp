@@ -1,0 +1,191 @@
+use std::path::PathBuf;
+
+use anyhow::{Context, anyhow, bail};
+use aya::maps::{Array, Map, MapData};
+use clap::{Parser, Subcommand, ValueEnum};
+use tails_pdp_common::{
+    ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN, StaticPolicy,
+};
+
+const DEFAULT_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum EntitlementArg {
+    Permit,
+    Deny,
+}
+
+impl From<EntitlementArg> for Entitlement {
+    fn from(value: EntitlementArg) -> Self {
+        match value {
+            EntitlementArg::Permit => Entitlement::Permit,
+            EntitlementArg::Deny => Entitlement::Deny,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum ActionArg {
+    FileOpen,
+    TaskSetNice,
+}
+
+impl From<ActionArg> for PolicyAction {
+    fn from(value: ActionArg) -> Self {
+        match value {
+            ActionArg::FileOpen => PolicyAction::FileOpen,
+            ActionArg::TaskSetNice => PolicyAction::TaskSetNice,
+        }
+    }
+}
+
+#[derive(Parser, Debug)]
+#[command(name = "tails-pdp-admintool")]
+struct Cli {
+    #[arg(long, default_value = DEFAULT_PIN_PATH)]
+    pin_path: PathBuf,
+
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    Show,
+    Clear {
+        index: u32,
+    },
+    Set {
+        index: u32,
+        #[arg(long, value_enum)]
+        entitlement: EntitlementArg,
+        #[arg(long, value_enum)]
+        action: ActionArg,
+        #[arg(long, default_value_t = ANY_SUBJECT)]
+        subject: u32,
+        #[arg(long, default_value = "")]
+        command: String,
+        #[arg(long, default_value = "")]
+        resource: String,
+    },
+    LoadExamples,
+}
+
+fn open_static_policy(path: &PathBuf) -> anyhow::Result<Array<MapData, StaticPolicy>> {
+    let map_data = MapData::from_pin(path)
+        .with_context(|| format!("failed to open pinned map at {}", path.display()))?;
+    let map = Map::Array(map_data);
+    Array::try_from(map).context("failed to treat pinned map as Array<StaticPolicy>")
+}
+
+fn fixed_string(bytes: &[u8]) -> String {
+    let len = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
+    String::from_utf8_lossy(&bytes[..len]).into_owned()
+}
+
+fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
+    if value.len() > max_len {
+        bail!("{name} too long: {} > {}", value.len(), max_len);
+    }
+    Ok(())
+}
+
+fn show(map: &Array<MapData, StaticPolicy>) -> anyhow::Result<()> {
+    for index in 0..map.len() {
+        let policy = map
+            .get(&index, 0)
+            .with_context(|| format!("failed to read STATIC_POLICY[{index}]"))?;
+        let command = fixed_string(&policy.command);
+        let resource = fixed_string(&policy.resource);
+        println!(
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?}",
+            policy.enabled, policy.entitlement, policy.action, policy.subject, command, resource,
+        );
+    }
+    Ok(())
+}
+
+fn load_examples(map: &mut Array<MapData, StaticPolicy>) -> anyhow::Result<()> {
+    let example_policies = [
+        StaticPolicy::new(
+            Entitlement::Deny,
+            ANY_SUBJECT,
+            PolicyAction::FileOpen,
+            "cat",
+            "shadow",
+        ),
+        StaticPolicy::new(Entitlement::Deny, 0, PolicyAction::TaskSetNice, "", ""),
+    ];
+
+    for index in 0..map.len() {
+        map.set(index, StaticPolicy::disabled(), 0)
+            .with_context(|| format!("failed to clear STATIC_POLICY[{index}]"))?;
+    }
+
+    for (index, policy) in example_policies.into_iter().enumerate() {
+        map.set(index as u32, policy, 0)
+            .with_context(|| format!("failed to write STATIC_POLICY[{index}]"))?;
+    }
+
+    Ok(())
+}
+
+fn set_policy(
+    map: &mut Array<MapData, StaticPolicy>,
+    index: u32,
+    entitlement: EntitlementArg,
+    action: ActionArg,
+    subject: u32,
+    command: String,
+    resource: String,
+) -> anyhow::Result<()> {
+    validate_len("command", &command, COMMAND_LEN)?;
+    validate_len("resource", &resource, RESOURCE_LEN)?;
+
+    let policy = StaticPolicy::new(
+        entitlement.into(),
+        subject,
+        action.into(),
+        &command,
+        &resource,
+    );
+
+    map.set(index, policy, 0)
+        .with_context(|| format!("failed to write STATIC_POLICY[{index}]"))?;
+
+    Ok(())
+}
+
+fn clear_policy(map: &mut Array<MapData, StaticPolicy>, index: u32) -> anyhow::Result<()> {
+    map.set(index, StaticPolicy::disabled(), 0)
+        .with_context(|| format!("failed to clear STATIC_POLICY[{index}]"))?;
+    Ok(())
+}
+
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+    let mut map = open_static_policy(&cli.pin_path)?;
+
+    match cli.command {
+        Command::Show => show(&map),
+        Command::Clear { index } => clear_policy(&mut map, index),
+        Command::Set {
+            index,
+            entitlement,
+            action,
+            subject,
+            command,
+            resource,
+        } => set_policy(
+            &mut map,
+            index,
+            entitlement,
+            action,
+            subject,
+            command,
+            resource,
+        ),
+        Command::LoadExamples => load_examples(&mut map),
+    }
+    .map_err(|error| anyhow!(error))
+}

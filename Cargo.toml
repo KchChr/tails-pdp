@@ -2,10 +2,11 @@
 resolver = "2"
 members = [
     "tails-pdp",
+    "tails-pdp-admintool",
     "tails-pdp-common",
     "tails-pdp-ebpf",
 ]
-default-members = ["tails-pdp", "tails-pdp-common"]
+default-members = ["tails-pdp", "tails-pdp-admintool", "tails-pdp-common"]
 
 [workspace.package]
 license = "MIT OR Apache-2.0"

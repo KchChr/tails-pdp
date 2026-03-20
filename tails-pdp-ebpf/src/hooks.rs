@@ -2,8 +2,11 @@ use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{COMMAND_LEN, PolicyAction, RESOURCE_LEN};
 
 use crate::{
-    maps::{POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
-    policies::evaluate_static_policies::evaluate_policies,
+    maps::{CURRENT_TIME, POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
+    policies::{
+        evaluate_static_policies::evaluate_policies as evaluate_static_policies,
+        evaluate_stream_policies::evaluate_policies as evaluate_stream_policies,
+    },
 };
 
 #[lsm(hook = "file_open")]
@@ -20,7 +23,15 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
     let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
     let resource = [0; RESOURCE_LEN];
-    let decision = evaluate_policies(subject, PolicyAction::TaskSetNice, &command, &resource);
+    let static_decision =
+        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, &resource);
+    let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
+    let stream_decision = evaluate_stream_policies(PolicyAction::TaskSetNice, current_time);
+    let decision = if static_decision != 0 || stream_decision != 0 {
+        1
+    } else {
+        0
+    };
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");

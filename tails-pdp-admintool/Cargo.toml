@@ -1,0 +1,17 @@
+[package]
+name = "tails-pdp-admintool"
+version = "0.1.0"
+edition.workspace = true
+
+license.workspace = true
+
+[dependencies]
+tails-pdp-common = { path = "../tails-pdp-common", features = ["user"] }
+
+anyhow = { workspace = true, default-features = true }
+aya = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+
+[[bin]]
+name = "tails-pdp-admintool"
+path = "src/main.rs"
