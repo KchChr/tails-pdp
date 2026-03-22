@@ -51,10 +51,7 @@ pkgs.mkShell {
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$PWD"
-if [ ! -d "$repo_root/target" ] && command -v git >/dev/null 2>&1; then
-  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")"
-fi
+repo_root="''${TAILS_PDP_REPO_ROOT:-$HOME/tails-pdp}"
 
 binary="$repo_root/target/release/tails-pdp-admintool"
 if [ ! -x "$binary" ]; then
