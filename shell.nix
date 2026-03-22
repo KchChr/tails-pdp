@@ -4,6 +4,9 @@ let
 in
 pkgs.mkShell {
   buildInputs = [
+    pkgs.bashInteractive
+    pkgs.bash-completion
+
     pkgs.git
     pkgs.pkg-config
     pkgs.libxml2
@@ -56,7 +59,13 @@ pkgs.mkShell {
       echo "[setup] done."
     }
 
-    alias tpdpadmin = "sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool"
+    tpdpadmin() {
+      sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool "$@"
+    }
+    if [ -f "${pkgs.bash-completion}/share/bash-completion/bash_completion" ]; then
+      source "${pkgs.bash-completion}/share/bash-completion/bash_completion"
+    fi
+
 
     echo
     echo "=== Nix dev shell ready ==="
