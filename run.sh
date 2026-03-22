@@ -2,5 +2,5 @@
 
 clear
 git pull
-cargo run --bin tails-pdp --release
 cargo build --bin tails-pdp-admintool --release
+cargo run --bin tails-pdp --release
