@@ -58,6 +58,8 @@ struct Cli {
 enum Command {
     /// Zeigt alle STATIC_POLICY-Eintraege an.
     Show,
+    /// Zeigt nur aktive STATIC_POLICY-Eintraege an.
+    ShowActive,
     /// Setzt einen Policy-Slot auf disabled zurueck.
     Clear { index: u32 },
     /// Schreibt einen STATIC_POLICY-Eintrag an einen Index.
@@ -106,11 +108,14 @@ fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn show(map: &Array<MapData, StaticPolicy>) -> anyhow::Result<()> {
+fn show(map: &Array<MapData, StaticPolicy>, active_only: bool) -> anyhow::Result<()> {
     for index in 0..map.len() {
         let policy = map
             .get(&index, 0)
             .with_context(|| format!("failed to read STATIC_POLICY[{index}]"))?;
+        if active_only && policy.enabled == 0 {
+            continue;
+        }
         let command = fixed_string(&policy.command);
         let resource = fixed_string(&policy.resource);
         println!(
@@ -191,6 +196,10 @@ fn print_usage() -> anyhow::Result<()> {
     println!("      Zeigt alle STATIC_POLICY-Eintraege an.");
     println!("      Kein sudo erforderlich.");
     println!();
+    println!("  show-active");
+    println!("      Zeigt nur aktive STATIC_POLICY-Eintraege an.");
+    println!("      Kein sudo erforderlich.");
+    println!();
     println!("  clear <INDEX>");
     println!("      Setzt einen Slot auf disabled zurueck.");
     println!("      sudo erforderlich.");
@@ -212,6 +221,7 @@ fn print_usage() -> anyhow::Result<()> {
     println!();
     println!("BEISPIELE:");
     println!("  tails-pdp-admintool show");
+    println!("  tails-pdp-admintool show-active");
     println!("  sudo tails-pdp-admintool clear 0");
     println!(
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource shadow"
@@ -255,7 +265,8 @@ fn main() -> anyhow::Result<()> {
     let mut map = open_static_policy(&cli.pin_path)?;
 
     match cli.command {
-        Command::Show => show(&map),
+        Command::Show => show(&map, false),
+        Command::ShowActive => show(&map, true),
         Command::Clear { index } => clear_policy(&mut map, index),
         Command::Set {
             index,
