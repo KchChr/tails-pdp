@@ -60,7 +60,7 @@ pkgs.mkShell {
     }
 
 
-    tpdpadmin() {
+    tails-pdp-admintool() {
       sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool "$@"
     }
 
