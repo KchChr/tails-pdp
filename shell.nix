@@ -43,17 +43,26 @@ pkgs.mkShell {
     fi
 
     # Wrapper-Binaries fuer die Dev-Shell.
-    mkdir -p "$PWD/.nix-shell/bin"
-    export PATH="$PWD/.nix-shell/bin:$PATH"
+    export TAILS_PDP_REPO_ROOT="$PWD"
+    mkdir -p "$HOME/.nix-shell/bin"
+    export PATH="$HOME/.nix-shell/bin:$PATH"
 
-    cat > "$PWD/.nix-shell/bin/tails-pdp-admintool" <<'EOF'
+    cat > "$HOME/.nix-shell/bin/tails-pdp-admintool" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="${TAILS_PDP_REPO_ROOT:-}"
+if [ -z "$repo_root" ] && command -v git >/dev/null 2>&1; then
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+if [ -z "$repo_root" ]; then
+  repo_root="$PWD"
+fi
+
 candidates=(
-  "$PWD/target/release/tails-pdp-admintool"
-  "$PWD/target/x86_64-unknown-linux-musl/release/tails-pdp-admintool"
-  "$PWD/target/aarch64-unknown-linux-musl/release/tails-pdp-admintool"
+  "$repo_root/target/release/tails-pdp-admintool"
+  "$repo_root/target/x86_64-unknown-linux-musl/release/tails-pdp-admintool"
+  "$repo_root/target/aarch64-unknown-linux-musl/release/tails-pdp-admintool"
 )
 
 for candidate in "''${candidates[@]}"; do
@@ -67,14 +76,14 @@ echo "Erwartete Kandidaten:" >&2
 printf '  %s\n' "''${candidates[@]}" >&2
 exit 1
 EOF
-    chmod +x "$PWD/.nix-shell/bin/tails-pdp-admintool"
+    chmod +x "$HOME/.nix-shell/bin/tails-pdp-admintool"
 
-    cat > "$PWD/.nix-shell/bin/tp-admin" <<'EOF'
+    cat > "$HOME/.nix-shell/bin/tp-admin" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-exec "$PWD/.nix-shell/bin/tails-pdp-admintool" "$@"
+exec tails-pdp-admintool "$@"
 EOF
-    chmod +x "$PWD/.nix-shell/bin/tp-admin"
+    chmod +x "$HOME/.nix-shell/bin/tp-admin"
 
     # Manuell aufrufbarer Installer fuer Tools
     setup-bpf-tools() {
