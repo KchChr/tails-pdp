@@ -59,17 +59,10 @@ pkgs.mkShell {
       echo "[setup] done."
     }
 
+
     tpdpadmin() {
-      local binary="$HOME/tails-pdp/target/release/tails-pdp-admintool"
-      if [ ! -x "$binary" ]; then
-        echo "tails-pdp-admintool wurde noch nicht gebaut: $binary" >&2
-        return 1
-      fi
-      "$binary" "$@"
+      sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool "$@"
     }
-    if [ -f "${pkgs.bash-completion}/share/bash-completion/bash_completion" ]; then
-      source "${pkgs.bash-completion}/share/bash-completion/bash_completion"
-    fi
 
 
     echo
