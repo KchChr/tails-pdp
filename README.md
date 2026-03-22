@@ -4,7 +4,8 @@
 
 1. stable rust toolchains: `rustup toolchain install stable`
 1. nightly rust toolchains: `rustup toolchain install nightly --component rust-src`
-1. (if cross-compiling) rustup target: `rustup target add ${ARCH}-unknown-linux-musl`
+1. (if cross-compiling to Intel/AMD Linux) rustup target: `rustup target add x86_64-unknown-linux-musl`
+1. (if cross-compiling to ARM64 Linux) rustup target: `rustup target add aarch64-unknown-linux-musl`
 1. (if cross-compiling) LLVM: (e.g.) `brew install llvm` (on macOS)
 1. (if cross-compiling) C toolchain: (e.g.) [`brew install filosottile/musl-cross/musl-cross`](https://github.com/FiloSottile/homebrew-musl-cross) (on macOS)
 1. bpf-linker: `cargo install bpf-linker` (`--no-default-features` on macOS)
@@ -20,17 +21,44 @@ cargo run --release
 Cargo build scripts are used to automatically build the eBPF correctly and include it in the
 program.
 
-## Cross-compiling on macOS
+## Cross-compiling on macOS for Linux/NixOS
 
 Cross compilation should work on both Intel and Apple Silicon Macs.
 
+The Linux kernel version does not affect the Rust userspace target triple. For NixOS you only need
+the target CPU architecture from the destination machine:
+
 ```shell
-CC=${ARCH}-linux-musl-gcc cargo build --package tails-pdp --release \
-  --target=${ARCH}-unknown-linux-musl \
-  --config=target.${ARCH}-unknown-linux-musl.linker=\"${ARCH}-linux-musl-gcc\"
+uname -m
 ```
-The cross-compiled program `target/${ARCH}-unknown-linux-musl/release/tails-pdp` can be
-copied to a Linux server or VM and run there.
+
+Typical mappings:
+
+- `x86_64` -> `x86_64-unknown-linux-musl`
+- `aarch64` or `arm64` -> `aarch64-unknown-linux-musl`
+
+```shell
+cargo build-linux-x86_64
+```
+
+This builds:
+
+- `target/x86_64-unknown-linux-musl/release/tails-pdp`
+- `target/x86_64-unknown-linux-musl/release/tails-pdp-admintool`
+
+For ARM64 targets use:
+
+```shell
+cargo build-linux-aarch64
+```
+
+If your local cross linker binary has a different name than the default musl-cross names, you can
+override it per command:
+
+```shell
+cargo build --release --target x86_64-unknown-linux-musl \
+  --config target.x86_64-unknown-linux-musl.linker=\"/path/to/your/linker\"
+```
 
 ## License
 

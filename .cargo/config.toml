@@ -1,2 +1,14 @@
 [target."cfg(all())"]
 runner = "sudo -E"
+
+[target.x86_64-unknown-linux-musl]
+linker = "x86_64-linux-musl-gcc"
+
+[target.aarch64-unknown-linux-musl]
+linker = "aarch64-linux-musl-gcc"
+
+[alias]
+build-linux-x86_64 = "build --release --target x86_64-unknown-linux-musl --package tails-pdp --package tails-pdp-admintool"
+build-linux-aarch64 = "build --release --target aarch64-unknown-linux-musl --package tails-pdp --package tails-pdp-admintool"
+check-linux-x86_64 = "check --target x86_64-unknown-linux-musl --package tails-pdp-common --package tails-pdp-admintool --package tails-pdp"
+check-linux-aarch64 = "check --target aarch64-unknown-linux-musl --package tails-pdp-common --package tails-pdp-admintool --package tails-pdp"
