@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
@@ -40,7 +40,12 @@ impl From<ActionArg> for PolicyAction {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "tails-pdp-admintool", arg_required_else_help = true)]
+#[command(
+    name = "tails-pdp-admintool",
+    arg_required_else_help = true,
+    about = "Verwaltet die gepinnte STATIC_POLICY-eBPF-Map.",
+    after_help = "Beispiele:\n  tp-admin show\n  tp-admin clear 0\n  tp-admin set 0 --entitlement deny --action file-open --subject 0 --command cat --resource shadow\n  tp-admin load-examples"
+)]
 struct Cli {
     #[arg(long, default_value = DEFAULT_PIN_PATH)]
     pin_path: PathBuf,
@@ -51,10 +56,11 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    /// Zeigt alle STATIC_POLICY-Eintraege an.
     Show,
-    Clear {
-        index: u32,
-    },
+    /// Setzt einen Policy-Slot auf disabled zurueck.
+    Clear { index: u32 },
+    /// Schreibt einen STATIC_POLICY-Eintrag an einen Index.
     Set {
         index: u32,
         #[arg(long, value_enum)]
@@ -68,6 +74,7 @@ enum Command {
         #[arg(long, default_value = "")]
         resource: String,
     },
+    /// Laedt die im Tool hinterlegten Beispielpolicies.
     LoadExamples,
 }
 
@@ -162,7 +169,25 @@ fn clear_policy(map: &mut Array<MapData, StaticPolicy>, index: u32) -> anyhow::R
     Ok(())
 }
 
+fn print_usage() -> anyhow::Result<()> {
+    let mut command = Cli::command();
+    command.print_long_help()?;
+    println!();
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
+    let args: Vec<_> = env::args_os().collect();
+    if args.len() == 1
+        || matches!(
+            args.get(1).and_then(|arg| arg.to_str()),
+            Some("-h" | "--help")
+        )
+    {
+        print_usage()?;
+        return Ok(());
+    }
+
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) => match error.kind() {
