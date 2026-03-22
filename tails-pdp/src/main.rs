@@ -208,7 +208,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
     load_static_policies(&mut ebpf)?;
-    load_stream_policies(&mut ebpf)?;
+    //load_stream_policies(&mut ebpf)?;
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {
