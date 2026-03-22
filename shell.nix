@@ -51,30 +51,18 @@ pkgs.mkShell {
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="''${TAILS_PDP_REPO_ROOT:-}"
-if [ -z "$repo_root" ] && command -v git >/dev/null 2>&1; then
-  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-fi
-if [ -z "$repo_root" ]; then
-  repo_root="$PWD"
+repo_root="$PWD"
+if [ ! -d "$repo_root/target" ] && command -v git >/dev/null 2>&1; then
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$PWD")"
 fi
 
-candidates=(
-  "$repo_root/target/release/tails-pdp-admintool"
-  "$repo_root/target/x86_64-unknown-linux-musl/release/tails-pdp-admintool"
-  "$repo_root/target/aarch64-unknown-linux-musl/release/tails-pdp-admintool"
-)
+binary="$repo_root/target/release/tails-pdp-admintool"
+if [ ! -x "$binary" ]; then
+  echo "tails-pdp-admintool wurde noch nicht gebaut: $binary" >&2
+  exit 1
+fi
 
-for candidate in "''${candidates[@]}"; do
-  if [ -x "$candidate" ]; then
-    exec "$candidate" "$@"
-  fi
-done
-
-echo "tails-pdp-admintool wurde noch nicht gebaut." >&2
-echo "Erwartete Kandidaten:" >&2
-printf '  %s\n' "''${candidates[@]}" >&2
-exit 1
+exec "$binary" "$@"
 EOF
     chmod +x "$HOME/.nix-shell/bin/tails-pdp-admintool"
 
