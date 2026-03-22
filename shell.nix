@@ -56,6 +56,8 @@ pkgs.mkShell {
       echo "[setup] done."
     }
 
+    alias tpdpadmin = "sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool"
+
     echo
     echo "=== Nix dev shell ready ==="
     echo "IN_NIX_SHELL=''${IN_NIX_SHELL:-}  (leer? -> evtl. schon in nix-shell)"
