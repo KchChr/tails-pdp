@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use tails_pdp_common::{
     ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN, StaticPolicy,
 };
@@ -40,7 +40,7 @@ impl From<ActionArg> for PolicyAction {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "tails-pdp-admintool")]
+#[command(name = "tails-pdp-admintool", arg_required_else_help = true)]
 struct Cli {
     #[arg(long, default_value = DEFAULT_PIN_PATH)]
     pin_path: PathBuf,
@@ -163,7 +163,19 @@ fn clear_policy(map: &mut Array<MapData, StaticPolicy>, index: u32) -> anyhow::R
 }
 
 fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => match error.kind() {
+            ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => error.exit(),
+            _ => {
+                error.print()?;
+                println!();
+                Cli::command().print_long_help()?;
+                println!();
+                std::process::exit(2);
+            }
+        },
+    };
     let mut map = open_static_policy(&cli.pin_path)?;
 
     match cli.command {

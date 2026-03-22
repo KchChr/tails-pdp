@@ -17,9 +17,9 @@ pkgs.mkShell {
     pkgs.zlib
     pkgs.rustup
     pkgs.cargo
-    pkgs.cargo-generate
+    pkgs.cargo-generate  # <--- hier dazu
     pkgs.jq
-  ];
+ ];
 
   shellHook = ''
     # kein -u/-e, damit der Hook nicht still abbricht
@@ -30,7 +30,7 @@ pkgs.mkShell {
     export PATH="$CARGO_HOME/bin:$PATH"
     export NIX_ENFORCE_PURITY=0
 
-    # LLVM fuer aya-rustc-llvm-proxy / bpf-linker
+    # LLVM für aya-rustc-llvm-proxy / bpf-linker
     export AYA_RUSTC_LLVM_PATH="${llvm.libllvm}/lib/libLLVM-21.so"
     export LD_LIBRARY_PATH="${pkgs.zlib.out}/lib:''${LD_LIBRARY_PATH:-}"
 
@@ -42,32 +42,7 @@ pkgs.mkShell {
       export RUSTUP_TOOLCHAIN="$NIGHTLY"
     fi
 
-    # Wrapper-Binaries fuer die Dev-Shell.
-    mkdir -p "$HOME/.nix-shell/bin"
-    export PATH="$HOME/.nix-shell/bin:$PATH"
-
-    cat > "$HOME/.nix-shell/bin/tails-pdp-admintool" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-binary="$HOME/tails-pdp/target/release/tails-pdp-admintool"
-if [ ! -x "$binary" ]; then
-  echo "tails-pdp-admintool wurde noch nicht gebaut: $binary" >&2
-  exit 1
-fi
-
-exec "$binary" "$@"
-EOF
-    chmod +x "$HOME/.nix-shell/bin/tails-pdp-admintool"
-
-    cat > "$HOME/.nix-shell/bin/tp-admin" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-exec tails-pdp-admintool "$@"
-EOF
-    chmod +x "$HOME/.nix-shell/bin/tp-admin"
-
-    # Manuell aufrufbarer Installer fuer Tools
+    # Manuell aufrufbarer Installer für Tools
     setup-bpf-tools() {
       WANT_BPF_LINKER="0.9.15"
       if ! command -v bpf-linker >/dev/null || ! bpf-linker -V 2>/dev/null | grep -q "bpf-linker $WANT_BPF_LINKER"; then
@@ -87,9 +62,8 @@ EOF
     echo "AYA_RUSTC_LLVM_PATH=$AYA_RUSTC_LLVM_PATH"
     command -v clang >/dev/null && echo "clang: $(clang --version | head -n1)"
     command -v bpftool >/dev/null && echo "bpftool: $(bpftool -V | head -n1)"
-    command -v rustup >/dev/null && rustup show active-toolchain || true
-    echo "Admin tool: tails-pdp-admintool oder tp-admin"
-    echo "Tipp: 'setup-bpf-tools' ausfuehren, um bpf-linker & aya-tool zu installieren."
+    command -v rustup  >/dev/null && rustup show active-toolchain || true
+    echo "Tipp: 'setup-bpf-tools' ausführen, um bpf-linker & aya-tool zu installieren."
     echo "========================================"
     echo
   '';
