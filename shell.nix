@@ -56,7 +56,7 @@ candidates=(
   "$PWD/target/aarch64-unknown-linux-musl/release/tails-pdp-admintool"
 )
 
-for candidate in "${candidates[@]}"; do
+for candidate in "''${candidates[@]}"; do
   if [ -x "$candidate" ]; then
     exec "$candidate" "$@"
   fi
@@ -64,7 +64,7 @@ done
 
 echo "tails-pdp-admintool wurde noch nicht gebaut." >&2
 echo "Erwartete Kandidaten:" >&2
-printf '  %s\n' "${candidates[@]}" >&2
+printf '  %s\n' "''${candidates[@]}" >&2
 exit 1
 EOF
     chmod +x "$PWD/.nix-shell/bin/tails-pdp-admintool"
