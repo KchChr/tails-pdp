@@ -43,7 +43,6 @@ pkgs.mkShell {
     fi
 
     # Wrapper-Binaries fuer die Dev-Shell.
-    export TAILS_PDP_REPO_ROOT="$PWD"
     mkdir -p "$HOME/.nix-shell/bin"
     export PATH="$HOME/.nix-shell/bin:$PATH"
 
@@ -51,9 +50,7 @@ pkgs.mkShell {
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="''${TAILS_PDP_REPO_ROOT:-$HOME/tails-pdp}"
-
-binary="$repo_root/target/release/tails-pdp-admintool"
+binary="$HOME/tails-pdp/target/release/tails-pdp-admintool"
 if [ ! -x "$binary" ]; then
   echo "tails-pdp-admintool wurde noch nicht gebaut: $binary" >&2
   exit 1
