@@ -2,4 +2,4 @@
 
 clear
 git pull
-cargo run --bin tails-pdp --release
+cargo run --release
