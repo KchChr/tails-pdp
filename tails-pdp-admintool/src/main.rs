@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum, error::ErrorKind};
+use clap::{Parser, Subcommand, ValueEnum, error::ErrorKind};
 use tails_pdp_common::{
     ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN, StaticPolicy,
 };
@@ -179,9 +179,44 @@ fn clear_policy(map: &mut Array<MapData, StaticPolicy>, index: u32) -> anyhow::R
 }
 
 fn print_usage() -> anyhow::Result<()> {
-    let mut command = Cli::command();
-    command.print_long_help()?;
+    println!("tails-pdp-admintool");
     println!();
+    println!("Verwaltet die gepinnte STATIC_POLICY-eBPF-Map.");
+    println!();
+    println!("USAGE:");
+    println!("  tails-pdp-admintool [--pin-path <PATH>] <COMMAND>");
+    println!();
+    println!("COMMANDS:");
+    println!("  show");
+    println!("      Zeigt alle STATIC_POLICY-Eintraege an.");
+    println!("      Kein sudo erforderlich.");
+    println!();
+    println!("  clear <INDEX>");
+    println!("      Setzt einen Slot auf disabled zurueck.");
+    println!("      sudo erforderlich.");
+    println!();
+    println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
+    println!("      [--subject <UID>] [--command <NAME>] [--resource <NAME>]");
+    println!("      Schreibt einen STATIC_POLICY-Eintrag.");
+    println!("      sudo erforderlich.");
+    println!();
+    println!("  load-examples");
+    println!("      Laedt die hinterlegten Beispielpolicies.");
+    println!("      sudo erforderlich.");
+    println!();
+    println!("OPTIONS:");
+    println!("  --pin-path <PATH>");
+    println!("      Standard: {}", DEFAULT_PIN_PATH);
+    println!("  -h, --help");
+    println!("      Zeigt diese Hilfe an.");
+    println!();
+    println!("BEISPIELE:");
+    println!("  tails-pdp-admintool show");
+    println!("  sudo tails-pdp-admintool clear 0");
+    println!(
+        "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource shadow"
+    );
+    println!("  sudo tails-pdp-admintool load-examples");
     Ok(())
 }
 
@@ -211,8 +246,7 @@ fn main() -> anyhow::Result<()> {
             _ => {
                 error.print()?;
                 println!();
-                Cli::command().print_long_help()?;
-                println!();
+                print_usage()?;
                 std::process::exit(2);
             }
         },
