@@ -51,7 +51,7 @@ pkgs.mkShell {
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="${TAILS_PDP_REPO_ROOT:-}"
+repo_root="''${TAILS_PDP_REPO_ROOT:-}"
 if [ -z "$repo_root" ] && command -v git >/dev/null 2>&1; then
   repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 fi
