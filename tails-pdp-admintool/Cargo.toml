@@ -11,6 +11,7 @@ tails-pdp-common = { path = "../tails-pdp-common", features = ["user"] }
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+libc = { workspace = true }
 
 [[bin]]
 name = "tails-pdp-admintool"

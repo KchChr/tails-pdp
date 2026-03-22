@@ -65,12 +65,7 @@ pkgs.mkShell {
         echo "tails-pdp-admintool wurde noch nicht gebaut: $binary" >&2
         return 1
       fi
-
-      if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-        "$binary" "$@"
-      else
-        sudo "$binary" "$@"
-      fi
+      "$binary" "$@"
     }
     if [ -f "${pkgs.bash-completion}/share/bash-completion/bash_completion" ]; then
       source "${pkgs.bash-completion}/share/bash-completion/bash_completion"

@@ -594,6 +594,7 @@ dependencies = [
  "anyhow",
  "aya",
  "clap",
+ "libc",
  "tails-pdp-common",
 ]
 

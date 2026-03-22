@@ -78,6 +78,15 @@ enum Command {
     LoadExamples,
 }
 
+impl Command {
+    fn requires_root(&self) -> bool {
+        matches!(
+            self,
+            Self::Clear { .. } | Self::Set { .. } | Self::LoadExamples
+        )
+    }
+}
+
 fn open_static_policy(path: &PathBuf) -> anyhow::Result<Array<MapData, StaticPolicy>> {
     let map_data = MapData::from_pin(path)
         .with_context(|| format!("failed to open pinned map at {}", path.display()))?;
@@ -176,6 +185,13 @@ fn print_usage() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn ensure_privileges(command: &Command) -> anyhow::Result<()> {
+    if command.requires_root() && unsafe { libc::geteuid() } != 0 {
+        bail!("this command modifies pinned eBPF maps and must be run with sudo");
+    }
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
     let args: Vec<_> = env::args_os().collect();
     if args.len() == 1
@@ -201,6 +217,7 @@ fn main() -> anyhow::Result<()> {
             }
         },
     };
+    ensure_privileges(&cli.command)?;
     let mut map = open_static_policy(&cli.pin_path)?;
 
     match cli.command {
