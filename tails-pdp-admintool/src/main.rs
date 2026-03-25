@@ -4,10 +4,11 @@ use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
 use clap::{Parser, Subcommand, ValueEnum, error::ErrorKind};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN, StaticPolicy,
+    ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN, StaticPolicy, StreamPolicy,
 };
 
-const DEFAULT_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
+const DEFAULT_STATIC_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
+const DEFAULT_STREAM_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STREAM_POLICY";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 enum EntitlementArg {
@@ -47,8 +48,11 @@ impl From<ActionArg> for PolicyAction {
     after_help = "Beispiele:\n  tp-admin show\n  tp-admin clear 0\n  tp-admin set 0 --entitlement deny --action file-open --subject 0 --command cat --resource shadow\n  tp-admin load-examples"
 )]
 struct Cli {
-    #[arg(long, default_value = DEFAULT_PIN_PATH)]
-    pin_path: PathBuf,
+    #[arg(long, default_value = DEFAULT_STATIC_PIN_PATH)]
+    static_pin_path: PathBuf,
+
+    #[arg(long, default_value = DEFAULT_STREAM_PIN_PATH)]
+    stream_pin_path: PathBuf,
 
     #[command(subcommand)]
     command: Command,
@@ -96,6 +100,13 @@ fn open_static_policy(path: &PathBuf) -> anyhow::Result<Array<MapData, StaticPol
     Array::try_from(map).context("failed to treat pinned map as Array<StaticPolicy>")
 }
 
+fn open_stream_policy(path: &PathBuf) -> anyhow::Result<Array<MapData, StreamPolicy>> {
+    let map_data = MapData::from_pin(path)
+        .with_context(|| format!("failed to open pinned map at {}", path.display()))?;
+    let map = Map::Array(map_data);
+    Array::try_from(map).context("failed to treat pinned map as Array<StreamPolicy>")
+}
+
 fn fixed_string(bytes: &[u8]) -> String {
     let len = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
     String::from_utf8_lossy(&bytes[..len]).into_owned()
@@ -108,7 +119,8 @@ fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn show(map: &Array<MapData, StaticPolicy>, active_only: bool) -> anyhow::Result<()> {
+fn show_static(map: &Array<MapData, StaticPolicy>, active_only: bool) -> anyhow::Result<()> {
+    println!("STATIC_POLICY:");
     for index in 0..map.len() {
         let policy = map
             .get(&index, 0)
@@ -121,6 +133,30 @@ fn show(map: &Array<MapData, StaticPolicy>, active_only: bool) -> anyhow::Result
         println!(
             "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?}",
             policy.enabled, policy.entitlement, policy.action, policy.subject, command, resource,
+        );
+    }
+    println!();
+    Ok(())
+}
+
+fn show_stream(map: &Array<MapData, StreamPolicy>, active_only: bool) -> anyhow::Result<()> {
+    println!("STREAM_POLICY:");
+    for index in 0..map.len() {
+        let policy = map
+            .get(&index, 0)
+            .with_context(|| format!("failed to read STREAM_POLICY[{index}]"))?;
+        if active_only && policy.enabled == 0 {
+            continue;
+        }
+        println!(
+            "[{index}] enabled={} entitlement={:?} action={:?} attribute={:?} operator={:?} modulo={} value={}",
+            policy.enabled,
+            policy.entitlement,
+            policy.action,
+            policy.attribute,
+            policy.operator,
+            policy.modulo,
+            policy.value,
         );
     }
     Ok(())
@@ -186,18 +222,20 @@ fn clear_policy(map: &mut Array<MapData, StaticPolicy>, index: u32) -> anyhow::R
 fn print_usage() -> anyhow::Result<()> {
     println!("tails-pdp-admintool");
     println!();
-    println!("Verwaltet die gepinnte STATIC_POLICY-eBPF-Map.");
+    println!("Verwaltet die gepinnten STATIC_POLICY- und STREAM_POLICY-eBPF-Maps.");
     println!();
     println!("USAGE:");
-    println!("  tails-pdp-admintool [--pin-path <PATH>] <COMMAND>");
+    println!(
+        "  tails-pdp-admintool [--static-pin-path <PATH>] [--stream-pin-path <PATH>] <COMMAND>"
+    );
     println!();
     println!("COMMANDS:");
     println!("  show");
-    println!("      Zeigt alle STATIC_POLICY-Eintraege an.");
+    println!("      Zeigt alle STATIC_POLICY- und STREAM_POLICY-Eintraege an.");
     println!("      Kein sudo erforderlich.");
     println!();
     println!("  show-active");
-    println!("      Zeigt nur aktive STATIC_POLICY-Eintraege an.");
+    println!("      Zeigt nur aktive STATIC_POLICY- und STREAM_POLICY-Eintraege an.");
     println!("      Kein sudo erforderlich.");
     println!();
     println!("  clear <INDEX>");
@@ -214,8 +252,10 @@ fn print_usage() -> anyhow::Result<()> {
     println!("      sudo erforderlich.");
     println!();
     println!("OPTIONS:");
-    println!("  --pin-path <PATH>");
-    println!("      Standard: {}", DEFAULT_PIN_PATH);
+    println!("  --static-pin-path <PATH>");
+    println!("      Standard: {}", DEFAULT_STATIC_PIN_PATH);
+    println!("  --stream-pin-path <PATH>");
+    println!("      Standard: {}", DEFAULT_STREAM_PIN_PATH);
     println!("  -h, --help");
     println!("      Zeigt diese Hilfe an.");
     println!();
@@ -262,12 +302,20 @@ fn main() -> anyhow::Result<()> {
         },
     };
     ensure_privileges(&cli.command)?;
-    let mut map = open_static_policy(&cli.pin_path)?;
+    let mut static_map = open_static_policy(&cli.static_pin_path)?;
 
     match cli.command {
-        Command::Show => show(&map, false),
-        Command::ShowActive => show(&map, true),
-        Command::Clear { index } => clear_policy(&mut map, index),
+        Command::Show => {
+            let stream_map = open_stream_policy(&cli.stream_pin_path)?;
+            show_static(&static_map, false)?;
+            show_stream(&stream_map, false)
+        }
+        Command::ShowActive => {
+            let stream_map = open_stream_policy(&cli.stream_pin_path)?;
+            show_static(&static_map, true)?;
+            show_stream(&stream_map, true)
+        }
+        Command::Clear { index } => clear_policy(&mut static_map, index),
         Command::Set {
             index,
             entitlement,
@@ -276,7 +324,7 @@ fn main() -> anyhow::Result<()> {
             command,
             resource,
         } => set_policy(
-            &mut map,
+            &mut static_map,
             index,
             entitlement,
             action,
@@ -284,7 +332,7 @@ fn main() -> anyhow::Result<()> {
             command,
             resource,
         ),
-        Command::LoadExamples => load_examples(&mut map),
+        Command::LoadExamples => load_examples(&mut static_map),
     }
     .map_err(|error| anyhow!(error))
 }
