@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         1000,
         PolicyAction::FileOpen,
         "cat",
-        "test.txt",
+        "/home/hntr/test.txt",
     )];
     let stream_policies = [StreamPolicy::time(
         Entitlement::Permit,
