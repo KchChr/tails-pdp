@@ -9,7 +9,9 @@ use tails_pdp::{
     policy_loader::{load_static_policies, load_stream_policies},
     time::{open_current_time_map, run_current_time_updater},
 };
-use tails_pdp_common::{Entitlement, PolicyAction, StaticPolicy, StreamOperator, StreamPolicy};
+use tails_pdp_common::{
+    ANY_SUBJECT, Entitlement, PolicyAction, StaticPolicy, StreamOperator, StreamPolicy,
+};
 use tokio::signal;
 
 #[tokio::main]
@@ -64,13 +66,16 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
-    let static_policies = [StaticPolicy::new(
-        Entitlement::Deny,
-        0,
-        PolicyAction::TaskSetNice,
-        "",
-        "",
-    )];
+    let static_policies = [
+        StaticPolicy::new(Entitlement::Deny, 0, PolicyAction::TaskSetNice, "", ""),
+        StaticPolicy::new(
+            Entitlement::Deny,
+            ANY_SUBJECT,
+            PolicyAction::FileOpen,
+            "cat",
+            "",
+        ),
+    ];
     let stream_policies = [StreamPolicy::time(
         Entitlement::Permit,
         0,
