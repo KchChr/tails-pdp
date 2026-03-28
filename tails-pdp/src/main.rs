@@ -83,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
         5,
     )];
     load_static_policies(&mut ebpf, &static_policies)?;
-    load_stream_policies(&mut ebpf, &stream_policies)?;
+    //load_stream_policies(&mut ebpf, &stream_policies)?;
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {
