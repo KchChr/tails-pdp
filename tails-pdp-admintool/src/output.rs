@@ -21,8 +21,15 @@ pub fn show_static(map: &StaticPolicyMap, active_only: bool) -> anyhow::Result<(
         let command = fixed_string(&policy.command);
         let resource = fixed_string(&policy.resource);
         println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?}",
-            policy.enabled, policy.entitlement, policy.action, policy.subject, command, resource,
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={}",
+            policy.enabled,
+            policy.entitlement,
+            policy.action,
+            policy.subject,
+            command,
+            resource,
+            policy.resource_device,
+            policy.resource_inode,
         );
     }
     println!();

@@ -1,24 +1,35 @@
 use core::ptr::addr_of;
 
-use aya_ebpf::{helpers::generated::bpf_d_path, programs::LsmContext};
-use tails_pdp_common::RESOURCE_LEN;
+use aya_ebpf::{helpers::bpf_probe_read_kernel, programs::LsmContext};
 
 use crate::vmlinux;
 
-pub(crate) fn read_file_open_resource(ctx: &LsmContext) -> [u8; RESOURCE_LEN] {
-    let mut resource = [0; RESOURCE_LEN];
+pub(crate) fn read_file_open_resource_identity(ctx: &LsmContext) -> (u64, u64) {
     let file_ptr: *const vmlinux::file = ctx.arg(0);
     if file_ptr.is_null() {
-        return resource;
+        return (0, 0);
     }
 
-    let path_ptr = unsafe { addr_of!((*file_ptr).f_path) as *mut vmlinux::path };
-    let _ = unsafe {
-        bpf_d_path(
-            path_ptr.cast(),
-            resource.as_mut_ptr().cast(),
-            RESOURCE_LEN as u32,
-        )
+    let Ok(inode_ptr) = (unsafe { bpf_probe_read_kernel(addr_of!((*file_ptr).f_inode)) }) else {
+        return (0, 0);
     };
-    resource
+    if inode_ptr.is_null() {
+        return (0, 0);
+    }
+
+    let Ok(sb_ptr) = (unsafe { bpf_probe_read_kernel(addr_of!((*inode_ptr).i_sb)) }) else {
+        return (0, 0);
+    };
+    if sb_ptr.is_null() {
+        return (0, 0);
+    }
+
+    let Ok(device) = (unsafe { bpf_probe_read_kernel(addr_of!((*sb_ptr).s_dev)) }) else {
+        return (0, 0);
+    };
+    let Ok(inode) = (unsafe { bpf_probe_read_kernel(addr_of!((*inode_ptr).i_ino)) }) else {
+        return (0, 0);
+    };
+
+    (device as u64, inode)
 }

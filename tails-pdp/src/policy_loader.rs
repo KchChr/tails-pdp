@@ -82,6 +82,9 @@ pub fn load_static_policies(ebpf: &mut aya::Ebpf, policies: &[StaticPolicy]) -> 
     }
 
     for (index, policy) in policies.iter().copied().enumerate() {
+        let policy = policy.resolve_resource_identity().with_context(|| {
+            format!("failed to resolve STATIC_POLICY entry {index} resource identity")
+        })?;
         static_policy
             .set(index as u32, policy, 0)
             .with_context(|| format!("failed to write STATIC_POLICY entry {index}"))?;

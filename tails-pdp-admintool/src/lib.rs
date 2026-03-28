@@ -45,7 +45,10 @@ fn set_static_policy(
         action.into(),
         &command,
         &resource,
-    );
+    )
+    .resolve_resource_identity()
+    .map_err(anyhow::Error::from)
+    .map_err(|error| anyhow!("failed to resolve STATIC_POLICY[{index}] resource: {error}"))?;
 
     map.set(index, policy, 0)
         .map_err(anyhow::Error::from)
@@ -59,7 +62,7 @@ fn load_example_static_policies(map: &mut maps::StaticPolicyMap) -> anyhow::Resu
             ANY_SUBJECT,
             tails_pdp_common::PolicyAction::FileOpen,
             "cat",
-            "shadow",
+            "/etc/shadow",
         ),
         StaticPolicy::new(
             Entitlement::Deny,
@@ -77,6 +80,12 @@ fn load_example_static_policies(map: &mut maps::StaticPolicyMap) -> anyhow::Resu
     }
 
     for (index, policy) in example_policies.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to resolve example STATIC_POLICY[{index}] resource: {error}")
+            })?;
         map.set(index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| anyhow!("failed to write STATIC_POLICY[{index}]: {error}"))?;

@@ -6,12 +6,10 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, LSM_PROGRAMS, TAIL_PROGRAMS,
-    policy_loader::{load_static_policies, load_stream_policies, verify_pinned_map_layouts},
+    policy_loader::{load_static_policies, verify_pinned_map_layouts},
     time::{open_current_time_map, run_current_time_updater},
 };
-use tails_pdp_common::{
-    ANY_SUBJECT, Entitlement, PolicyAction, StaticPolicy, StreamOperator, StreamPolicy,
-};
+use tails_pdp_common::{Entitlement, PolicyAction, StaticPolicy};
 use tokio::signal;
 
 #[tokio::main]
@@ -74,16 +72,7 @@ async fn main() -> anyhow::Result<()> {
         "cat",
         "/home/hntr/test.txt",
     )];
-    let stream_policies = [StreamPolicy::time(
-        Entitlement::Permit,
-        0,
-        PolicyAction::FileOpen,
-        StreamOperator::LessThan,
-        10,
-        5,
-    )];
     load_static_policies(&mut ebpf, &static_policies)?;
-    //load_stream_policies(&mut ebpf, &stream_policies)?;
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {

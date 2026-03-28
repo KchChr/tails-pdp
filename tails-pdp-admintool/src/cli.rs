@@ -112,7 +112,7 @@ pub fn print_usage() {
     println!("      sudo erforderlich.");
     println!();
     println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
-    println!("      [--subject <UID>] [--command <NAME>] [--resource <NAME>]");
+    println!("      [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
     println!("      Schreibt einen STATIC_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
     println!();
@@ -133,7 +133,7 @@ pub fn print_usage() {
     println!("  tails-pdp-admintool show-active");
     println!("  sudo tails-pdp-admintool clear 0");
     println!(
-        "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource shadow"
+        "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
     );
     println!("  sudo tails-pdp-admintool load-examples");
 }

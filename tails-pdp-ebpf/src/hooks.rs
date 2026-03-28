@@ -1,5 +1,5 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
-use tails_pdp_common::{COMMAND_LEN, PolicyAction, RESOURCE_LEN};
+use tails_pdp_common::{COMMAND_LEN, PolicyAction};
 
 use crate::{
     maps::{CURRENT_TIME, POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
@@ -22,9 +22,8 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 pub fn task_setnice(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
     let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
-    let resource = [0; RESOURCE_LEN];
     let static_decision =
-        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, &resource);
+        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, 0, 0);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let stream_decision =
         evaluate_stream_policies(subject, PolicyAction::TaskSetNice, current_time);
