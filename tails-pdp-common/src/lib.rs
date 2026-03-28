@@ -124,6 +124,7 @@ pub struct StreamPolicy {
     pub operator: StreamOperator,
     pub enabled: u8,
     pub _pad: [u8; 3],
+    pub subject: u32,
     pub modulo: u64,
     pub value: u64,
 }
@@ -137,6 +138,7 @@ impl StreamPolicy {
             operator: StreamOperator::LessThan,
             enabled: 0,
             _pad: [0; 3],
+            subject: ANY_SUBJECT,
             modulo: 0,
             value: 0,
         }
@@ -144,6 +146,7 @@ impl StreamPolicy {
 
     pub const fn time(
         entitlement: Entitlement,
+        subject: u32,
         action: PolicyAction,
         operator: StreamOperator,
         modulo: u64,
@@ -156,6 +159,7 @@ impl StreamPolicy {
             operator,
             enabled: 1,
             _pad: [0; 3],
+            subject,
             modulo,
             value,
         }

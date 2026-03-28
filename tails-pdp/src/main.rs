@@ -1,159 +1,16 @@
 use anyhow::Context;
-use aya::{
-    Btf, EbpfLoader, VerifierLogLevel,
-    maps::{Array, ProgramArray},
-    programs::Lsm,
-};
+use aya::{Btf, EbpfLoader, VerifierLogLevel, maps::ProgramArray, programs::Lsm};
 #[rustfmt::skip]
 use log::debug;
-use std::{
-    fs,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::fs;
 
+use tails_pdp::{
+    BPF_PIN_DIRECTORY, LSM_PROGRAMS, TAIL_PROGRAMS,
+    policy_loader::{load_static_policies, load_stream_policies},
+    time::{open_current_time_map, run_current_time_updater},
+};
 use tails_pdp_common::{Entitlement, PolicyAction, StaticPolicy, StreamOperator, StreamPolicy};
-use tokio::{
-    signal,
-    time::{self, Duration},
-};
-
-const TAIL_IDX_POLICY_1: u32 = 0;
-const TAIL_IDX_POLICY_2: u32 = 1;
-const COMBINE: u32 = 2;
-const BPF_PIN_DIRECTORY: &str = "/sys/fs/bpf/tails-pdp";
-struct LsmProgramSpec {
-    name: &'static str,
-    hook: &'static str,
-    attach: bool,
-}
-
-const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
-    LsmProgramSpec {
-        name: "file_open",
-        hook: "file_open",
-        attach: true,
-    },
-    LsmProgramSpec {
-        name: "task_setnice",
-        hook: "task_setnice",
-        attach: true,
-    },
-    LsmProgramSpec {
-        name: "evaluate_static_policies",
-        hook: "file_open",
-        attach: false,
-    },
-    LsmProgramSpec {
-        name: "evaluate_stream_policies",
-        hook: "file_open",
-        attach: false,
-    },
-    LsmProgramSpec {
-        name: "combine",
-        hook: "file_open",
-        attach: false,
-    },
-];
-const TAIL_PROGRAMS: [(u32, &str); 3] = [
-    (TAIL_IDX_POLICY_1, "evaluate_static_policies"),
-    (TAIL_IDX_POLICY_2, "evaluate_stream_policies"),
-    (COMBINE, "combine"),
-];
-
-fn load_static_policies(ebpf: &mut aya::Ebpf) -> anyhow::Result<()> {
-    let mut static_policy: Array<_, StaticPolicy> = Array::try_from(
-        ebpf.take_map("STATIC_POLICY")
-            .context("map 'STATIC_POLICY' not found")?,
-    )
-    .context("failed to open STATIC_POLICY")?;
-
-    let example_policies = [StaticPolicy::new(
-        Entitlement::Deny,
-        0,
-        PolicyAction::TaskSetNice,
-        "",
-        "",
-    )];
-
-    for index in 0..static_policy.len() {
-        static_policy
-            .set(index, StaticPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear STATIC_POLICY entry {index}"))?;
-    }
-
-    for (index, policy) in example_policies.into_iter().enumerate() {
-        static_policy
-            .set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write STATIC_POLICY entry {index}"))?;
-    }
-
-    Ok(())
-}
-
-fn load_stream_policies(ebpf: &mut aya::Ebpf) -> anyhow::Result<()> {
-    let mut stream_policy: Array<_, StreamPolicy> = Array::try_from(
-        ebpf.take_map("STREAM_POLICY")
-            .context("map 'STREAM_POLICY' not found")?,
-    )
-    .context("failed to open STREAM_POLICY")?;
-
-    let example_policies = [StreamPolicy::time(
-        Entitlement::Permit,
-        PolicyAction::FileOpen,
-        StreamOperator::LessThan,
-        10,
-        5,
-    )];
-
-    for index in 0..stream_policy.len() {
-        stream_policy
-            .set(index, StreamPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear STREAM_POLICY entry {index}"))?;
-    }
-
-    for (index, policy) in example_policies.into_iter().enumerate() {
-        stream_policy
-            .set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write STREAM_POLICY entry {index}"))?;
-    }
-
-    Ok(())
-}
-
-fn current_unix_timestamp() -> anyhow::Result<u64> {
-    Ok(SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .context("system clock is before UNIX_EPOCH")?
-        .as_secs())
-}
-
-fn open_current_time_map(ebpf: &mut aya::Ebpf) -> anyhow::Result<Array<aya::maps::MapData, u64>> {
-    Array::try_from(
-        ebpf.take_map("CURRENT_TIME")
-            .context("map 'CURRENT_TIME' not found")?,
-    )
-    .context("failed to open CURRENT_TIME")
-}
-
-fn write_current_time(current_time: &mut Array<aya::maps::MapData, u64>) -> anyhow::Result<()> {
-    current_time
-        .set(0, current_unix_timestamp()?, 0)
-        .context("failed to write CURRENT_TIME[0]")?;
-    Ok(())
-}
-
-async fn run_current_time_updater(
-    current_time: &mut Array<aya::maps::MapData, u64>,
-) -> anyhow::Result<()> {
-    let mut ticker = time::interval(Duration::from_secs(1));
-
-    write_current_time(current_time)?;
-
-    loop {
-        ticker.tick().await;
-        write_current_time(current_time)?;
-    }
-}
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -207,8 +64,23 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
-    load_static_policies(&mut ebpf)?;
-    load_stream_policies(&mut ebpf)?;
+    let static_policies = [StaticPolicy::new(
+        Entitlement::Deny,
+        0,
+        PolicyAction::TaskSetNice,
+        "cat",
+        "",
+    )];
+    let stream_policies = [StreamPolicy::time(
+        Entitlement::Permit,
+        0,
+        PolicyAction::FileOpen,
+        StreamOperator::LessThan,
+        10,
+        5,
+    )];
+    load_static_policies(&mut ebpf, &static_policies)?;
+    load_stream_policies(&mut ebpf, &stream_policies)?;
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {
