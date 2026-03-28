@@ -20,7 +20,7 @@ fn evaluate_static_policy(
     current_subject: u32,
     current_action: PolicyAction,
     current_command: &[u8; COMMAND_LEN],
-    _current_resource: &[u8; RESOURCE_LEN],
+    current_resource: &[u8; RESOURCE_LEN],
     policy: &StaticPolicy,
 ) -> Option<i32> {
     if policy.enabled == 0 {
@@ -36,6 +36,10 @@ fn evaluate_static_policy(
     }
 
     if !matches_bytes(&policy.command, current_command) {
+        return None;
+    }
+
+    if !matches_bytes(&policy.resource, current_resource) {
         return None;
     }
 
