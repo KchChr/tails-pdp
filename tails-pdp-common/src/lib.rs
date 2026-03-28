@@ -79,6 +79,13 @@ fn fixed_string_len(bytes: &[u8]) -> usize {
     bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len())
 }
 
+#[cfg(feature = "user")]
+fn encode_kernel_dev_t(device: u64) -> u64 {
+    let major = libc::major(device) as u64;
+    let minor = libc::minor(device) as u64;
+    (major << 20) | minor
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StaticPolicy {
@@ -150,7 +157,7 @@ impl StaticPolicy {
             )
         })?;
         let metadata = fs::metadata(path)?;
-        self.resource_device = metadata.dev();
+        self.resource_device = encode_kernel_dev_t(metadata.dev());
         self.resource_inode = metadata.ino();
         Ok(self)
     }

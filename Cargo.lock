@@ -603,6 +603,7 @@ name = "tails-pdp-common"
 version = "0.1.0"
 dependencies = [
  "aya",
+ "libc",
 ]
 
 [[package]]
