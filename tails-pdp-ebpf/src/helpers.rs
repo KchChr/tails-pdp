@@ -1,6 +1,9 @@
 use core::ptr::addr_of;
 
-use aya_ebpf::{helpers::generated::bpf_d_path, programs::LsmContext};
+use aya_ebpf::{
+    helpers::{bpf_probe_read_kernel, bpf_probe_read_kernel_str_bytes},
+    programs::LsmContext,
+};
 use tails_pdp_common::RESOURCE_LEN;
 
 use crate::vmlinux;
@@ -12,13 +15,22 @@ pub(crate) fn read_file_open_resource(ctx: &LsmContext) -> [u8; RESOURCE_LEN] {
         return resource;
     }
 
-    let path_ptr = unsafe { addr_of!((*file_ptr).f_path) as *mut vmlinux::path };
-    let _ = unsafe {
-        bpf_d_path(
-            path_ptr.cast(),
-            resource.as_mut_ptr().cast(),
-            RESOURCE_LEN as u32,
-        )
+    let Ok(dentry_ptr) = (unsafe { bpf_probe_read_kernel(addr_of!((*file_ptr).f_path.dentry)) })
+    else {
+        return resource;
     };
+    if dentry_ptr.is_null() {
+        return resource;
+    }
+
+    let Ok(name_ptr) = (unsafe { bpf_probe_read_kernel(addr_of!((*dentry_ptr).d_name.name)) })
+    else {
+        return resource;
+    };
+    if name_ptr.is_null() {
+        return resource;
+    }
+
+    let _ = unsafe { bpf_probe_read_kernel_str_bytes(name_ptr.cast(), &mut resource) };
     resource
 }
