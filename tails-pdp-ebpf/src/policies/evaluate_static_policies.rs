@@ -27,19 +27,25 @@ fn evaluate_static_policy(
         return None;
     }
 
-    if policy.action != current_action {
-        return None;
+    let action_matches = policy.action == current_action;
+    let subject_matches = matches_subject(policy.subject, current_subject);
+    let command_matches = matches_bytes(&policy.command, current_command);
+    let resource_matches = matches_bytes(&policy.resource, current_resource);
+
+    unsafe {
+        aya_ebpf::bpf_printk!(
+            b"static uid=%d subj=%d act=%d cmd=%d res=%d comm=%s res=%s",
+            current_subject,
+            subject_matches as u32,
+            action_matches as u32,
+            command_matches as u32,
+            resource_matches as u32,
+            current_command.as_ptr(),
+            current_resource.as_ptr(),
+        );
     }
 
-    if !matches_subject(policy.subject, current_subject) {
-        return None;
-    }
-
-    if !matches_bytes(&policy.command, current_command) {
-        return None;
-    }
-
-    if !matches_bytes(&policy.resource, current_resource) {
+    if !action_matches || !subject_matches || !command_matches || !resource_matches {
         return None;
     }
 
