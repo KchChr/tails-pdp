@@ -6,7 +6,7 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, LSM_PROGRAMS, TAIL_PROGRAMS,
-    policy_loader::{load_static_policies, load_stream_policies},
+    policy_loader::{load_static_policies, load_stream_policies, verify_pinned_map_layouts},
     time::{open_current_time_map, run_current_time_updater},
 };
 use tails_pdp_common::{
@@ -40,6 +40,7 @@ async fn main() -> anyhow::Result<()> {
 
     fs::create_dir_all(BPF_PIN_DIRECTORY)
         .with_context(|| format!("failed to create {BPF_PIN_DIRECTORY}"))?;
+    verify_pinned_map_layouts()?;
 
     let mut ebpf = EbpfLoader::new()
         .default_map_pin_directory(BPF_PIN_DIRECTORY)
@@ -66,16 +67,13 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
-    let static_policies = [
-        StaticPolicy::new(Entitlement::Deny, 0, PolicyAction::TaskSetNice, "", ""),
-        StaticPolicy::new(
-            Entitlement::Deny,
-            ANY_SUBJECT,
-            PolicyAction::FileOpen,
-            "cat",
-            "",
-        ),
-    ];
+    let static_policies = [StaticPolicy::new(
+        Entitlement::Deny,
+        ANY_SUBJECT,
+        PolicyAction::FileOpen,
+        "cat",
+        "",
+    )];
     let stream_policies = [StreamPolicy::time(
         Entitlement::Permit,
         0,

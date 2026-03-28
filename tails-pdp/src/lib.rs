@@ -12,15 +12,10 @@ pub struct LsmProgramSpec {
     pub attach: bool,
 }
 
-pub const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
+pub const LSM_PROGRAMS: [LsmProgramSpec; 4] = [
     LsmProgramSpec {
         name: "file_open",
         hook: "file_open",
-        attach: true,
-    },
-    LsmProgramSpec {
-        name: "task_setnice",
-        hook: "task_setnice",
         attach: true,
     },
     LsmProgramSpec {
