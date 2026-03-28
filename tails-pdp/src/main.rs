@@ -68,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
         Entitlement::Deny,
         0,
         PolicyAction::TaskSetNice,
-        "cat",
+        "",
         "",
     )];
     let stream_policies = [StreamPolicy::time(
