@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     .context("failed to open POLICY_JUMP_TABLE")?;
     let static_policies = [StaticPolicy::new(
         Entitlement::Deny,
-        ANY_SUBJECT,
+        1000,
         PolicyAction::FileOpen,
         "cat",
         "/home/hntr/text.txt",
