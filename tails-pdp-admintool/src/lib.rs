@@ -6,7 +6,9 @@ use std::env;
 
 use anyhow::{anyhow, bail};
 use clap::{Parser, error::ErrorKind};
-use tails_pdp_common::{ANY_SUBJECT, COMMAND_LEN, Entitlement, RESOURCE_LEN, StaticPolicy};
+use tails_pdp_common::{
+    ANY_SUBJECT, COMMAND_LEN, Entitlement, RESOURCE_LEN, StaticPolicy, StreamPolicy,
+};
 
 use crate::{
     cli::{Cli, Command, print_usage},
@@ -25,6 +27,12 @@ fn clear_static_policy(map: &mut maps::StaticPolicyMap, index: u32) -> anyhow::R
     map.set(index, StaticPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear STATIC_POLICY[{index}]: {error}"))
+}
+
+fn clear_stream_policy(map: &mut maps::StreamPolicyMap, index: u32) -> anyhow::Result<()> {
+    map.set(index, StreamPolicy::disabled(), 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to clear STREAM_POLICY[{index}]: {error}"))
 }
 
 fn set_static_policy(
@@ -94,6 +102,59 @@ fn load_example_static_policies(map: &mut maps::StaticPolicyMap) -> anyhow::Resu
     Ok(())
 }
 
+fn set_stream_policy(
+    map: &mut maps::StreamPolicyMap,
+    index: u32,
+    entitlement: cli::EntitlementArg,
+    action: cli::ActionArg,
+    subject: u32,
+    attribute: cli::StreamAttributeArg,
+    operator: cli::StreamOperatorArg,
+    modulo: u64,
+    value: u64,
+) -> anyhow::Result<()> {
+    let policy = StreamPolicy {
+        entitlement: entitlement.into(),
+        action: action.into(),
+        attribute: attribute.into(),
+        operator: operator.into(),
+        enabled: 1,
+        _pad: [0; 3],
+        subject,
+        modulo,
+        value,
+    };
+
+    map.set(index, policy, 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to write STREAM_POLICY[{index}]: {error}"))
+}
+
+fn load_example_stream_policies(map: &mut maps::StreamPolicyMap) -> anyhow::Result<()> {
+    let example_policies = [StreamPolicy::time(
+        Entitlement::Permit,
+        1000,
+        tails_pdp_common::PolicyAction::FileOpen,
+        tails_pdp_common::StreamOperator::LessThan,
+        10,
+        5,
+    )];
+
+    for index in 0..map.len() {
+        map.set(index, StreamPolicy::disabled(), 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| anyhow!("failed to clear STREAM_POLICY[{index}]: {error}"))?;
+    }
+
+    for (index, policy) in example_policies.into_iter().enumerate() {
+        map.set(index as u32, policy, 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| anyhow!("failed to write STREAM_POLICY[{index}]: {error}"))?;
+    }
+
+    Ok(())
+}
+
 fn ensure_privileges(command: &Command) -> anyhow::Result<()> {
     if command.requires_root() && unsafe { libc::geteuid() } != 0 {
         bail!("this command modifies pinned eBPF maps and must be run with sudo");
@@ -128,20 +189,27 @@ pub fn run() -> anyhow::Result<()> {
 
     ensure_privileges(&cli.command)?;
 
-    let mut static_map = open_static_policy(&cli.static_pin_path)?;
-
     match cli.command {
         Command::Show => {
+            let static_map = open_static_policy(&cli.static_pin_path)?;
             let stream_map = open_stream_policy(&cli.stream_pin_path)?;
             show_static(&static_map, false)?;
             show_stream(&stream_map, false)
         }
         Command::ShowActive => {
+            let static_map = open_static_policy(&cli.static_pin_path)?;
             let stream_map = open_stream_policy(&cli.stream_pin_path)?;
             show_static(&static_map, true)?;
             show_stream(&stream_map, true)
         }
-        Command::Clear { index } => clear_static_policy(&mut static_map, index),
+        Command::Clear { index } => {
+            let mut static_map = open_static_policy(&cli.static_pin_path)?;
+            clear_static_policy(&mut static_map, index)
+        }
+        Command::ClearStream { index } => {
+            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
+            clear_stream_policy(&mut stream_map, index)
+        }
         Command::Set {
             index,
             entitlement,
@@ -149,15 +217,48 @@ pub fn run() -> anyhow::Result<()> {
             subject,
             command,
             resource,
-        } => set_static_policy(
-            &mut static_map,
+        } => {
+            let mut static_map = open_static_policy(&cli.static_pin_path)?;
+            set_static_policy(
+                &mut static_map,
+                index,
+                entitlement,
+                action,
+                subject,
+                command,
+                resource,
+            )
+        }
+        Command::SetStream {
             index,
             entitlement,
             action,
             subject,
-            command,
-            resource,
-        ),
-        Command::LoadExamples => load_example_static_policies(&mut static_map),
+            attribute,
+            operator,
+            modulo,
+            value,
+        } => {
+            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
+            set_stream_policy(
+                &mut stream_map,
+                index,
+                entitlement,
+                action,
+                subject,
+                attribute,
+                operator,
+                modulo,
+                value,
+            )
+        }
+        Command::LoadExamples => {
+            let mut static_map = open_static_policy(&cli.static_pin_path)?;
+            load_example_static_policies(&mut static_map)
+        }
+        Command::LoadStreamExamples => {
+            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
+            load_example_stream_policies(&mut stream_map)
+        }
     }
 }

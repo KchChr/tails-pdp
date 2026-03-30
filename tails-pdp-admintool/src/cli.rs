@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use tails_pdp_common::{ANY_SUBJECT, Entitlement, PolicyAction};
+use tails_pdp_common::{ANY_SUBJECT, Entitlement, PolicyAction, StreamAttribute, StreamOperator};
 
 pub const DEFAULT_STATIC_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
 pub const DEFAULT_STREAM_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STREAM_POLICY";
@@ -36,6 +36,40 @@ impl From<ActionArg> for PolicyAction {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum StreamAttributeArg {
+    Time,
+}
+
+impl From<StreamAttributeArg> for StreamAttribute {
+    fn from(value: StreamAttributeArg) -> Self {
+        match value {
+            StreamAttributeArg::Time => StreamAttribute::Time,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum StreamOperatorArg {
+    LessThan,
+    LessThanOrEqual,
+    Equal,
+    GreaterThanOrEqual,
+    GreaterThan,
+}
+
+impl From<StreamOperatorArg> for StreamOperator {
+    fn from(value: StreamOperatorArg) -> Self {
+        match value {
+            StreamOperatorArg::LessThan => StreamOperator::LessThan,
+            StreamOperatorArg::LessThanOrEqual => StreamOperator::LessThanOrEqual,
+            StreamOperatorArg::Equal => StreamOperator::Equal,
+            StreamOperatorArg::GreaterThanOrEqual => StreamOperator::GreaterThanOrEqual,
+            StreamOperatorArg::GreaterThan => StreamOperator::GreaterThan,
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "tails-pdp-admintool",
@@ -61,6 +95,8 @@ pub enum Command {
     ShowActive,
     /// Setzt einen STATIC_POLICY-Slot auf disabled zurueck.
     Clear { index: u32 },
+    /// Setzt einen STREAM_POLICY-Slot auf disabled zurueck.
+    ClearStream { index: u32 },
     /// Schreibt einen STATIC_POLICY-Eintrag an einen Index.
     Set {
         index: u32,
@@ -75,15 +111,40 @@ pub enum Command {
         #[arg(long, default_value = "")]
         resource: String,
     },
+    /// Schreibt einen STREAM_POLICY-Eintrag an einen Index.
+    SetStream {
+        index: u32,
+        #[arg(long, value_enum)]
+        entitlement: EntitlementArg,
+        #[arg(long, value_enum)]
+        action: ActionArg,
+        #[arg(long, default_value_t = ANY_SUBJECT)]
+        subject: u32,
+        #[arg(long, value_enum, default_value_t = StreamAttributeArg::Time)]
+        attribute: StreamAttributeArg,
+        #[arg(long, value_enum)]
+        operator: StreamOperatorArg,
+        #[arg(long)]
+        modulo: u64,
+        #[arg(long)]
+        value: u64,
+    },
     /// Laedt die im Tool hinterlegten Beispielpolicies.
     LoadExamples,
+    /// Laedt Beispiel-Stream-Policies.
+    LoadStreamExamples,
 }
 
 impl Command {
     pub fn requires_root(&self) -> bool {
         matches!(
             self,
-            Self::Clear { .. } | Self::Set { .. } | Self::LoadExamples
+            Self::Clear { .. }
+                | Self::ClearStream { .. }
+                | Self::Set { .. }
+                | Self::SetStream { .. }
+                | Self::LoadExamples
+                | Self::LoadStreamExamples
         )
     }
 }
@@ -111,13 +172,28 @@ pub fn print_usage() {
     println!("      Setzt einen Slot auf disabled zurueck.");
     println!("      sudo erforderlich.");
     println!();
+    println!("  clear-stream <INDEX>");
+    println!("      Setzt einen STREAM_POLICY-Slot auf disabled zurueck.");
+    println!("      sudo erforderlich.");
+    println!();
     println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
     println!("      [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
     println!("      Schreibt einen STATIC_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
     println!();
+    println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
+    println!(
+        "      [--subject <UID>] [--attribute <time>] --operator <...> --modulo <N> --value <N>"
+    );
+    println!("      Schreibt einen STREAM_POLICY-Eintrag.");
+    println!("      sudo erforderlich.");
+    println!();
     println!("  load-examples");
     println!("      Laedt die hinterlegten Beispielpolicies.");
+    println!("      sudo erforderlich.");
+    println!();
+    println!("  load-stream-examples");
+    println!("      Laedt hinterlegte Beispiel-Stream-Policies.");
     println!("      sudo erforderlich.");
     println!();
     println!("OPTIONS:");
@@ -132,8 +208,13 @@ pub fn print_usage() {
     println!("  tails-pdp-admintool show");
     println!("  tails-pdp-admintool show-active");
     println!("  sudo tails-pdp-admintool clear 0");
+    println!("  sudo tails-pdp-admintool clear-stream 0");
     println!(
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
     );
+    println!(
+        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action file-open --subject 1000 --attribute time --operator less-than --modulo 10 --value 5"
+    );
     println!("  sudo tails-pdp-admintool load-examples");
+    println!("  sudo tails-pdp-admintool load-stream-examples");
 }

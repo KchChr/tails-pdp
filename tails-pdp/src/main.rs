@@ -65,13 +65,29 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
-    let static_policies = [StaticPolicy::new(
-        Entitlement::Deny,
-        1000,
-        PolicyAction::FileOpen,
-        "cat",
-        "/home/hntr/test.txt",
-    )];
+    let static_policies = [
+        StaticPolicy::new(
+            Entitlement::Deny,
+            1000,
+            PolicyAction::FileOpen,
+            "cat",
+            "/home/hntr/test.txt",
+        ),
+        StaticPolicy::new(
+            Entitlement::Permit,
+            1000,
+            PolicyAction::FileOpen,
+            "tail",
+            "/home/hntr/test.txt",
+        ),
+        StaticPolicy::new(
+            Entitlement::Deny,
+            1000,
+            PolicyAction::FileOpen,
+            "cat",
+            "/home/hntr/test2.txt",
+        ),
+    ];
     let stream_policies: [StreamPolicy; 0] = [];
     load_static_policies(&mut ebpf, &static_policies)?;
     load_stream_policies(&mut ebpf, &stream_policies)?;
