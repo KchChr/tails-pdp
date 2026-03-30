@@ -173,6 +173,9 @@ pub struct StreamPolicy {
     pub enabled: u8,
     pub _pad: [u8; 3],
     pub subject: u32,
+    pub resource: [u8; RESOURCE_LEN],
+    pub resource_device: u64,
+    pub resource_inode: u64,
     pub modulo: u64,
     pub value: u64,
 }
@@ -187,15 +190,19 @@ impl StreamPolicy {
             enabled: 0,
             _pad: [0; 3],
             subject: ANY_SUBJECT,
+            resource: [0; RESOURCE_LEN],
+            resource_device: 0,
+            resource_inode: 0,
             modulo: 0,
             value: 0,
         }
     }
 
-    pub const fn time(
+    pub fn time(
         entitlement: Entitlement,
         subject: u32,
         action: PolicyAction,
+        resource: &str,
         operator: StreamOperator,
         modulo: u64,
         value: u64,
@@ -208,9 +215,39 @@ impl StreamPolicy {
             enabled: 1,
             _pad: [0; 3],
             subject,
+            resource: resource_name(resource),
+            resource_device: 0,
+            resource_inode: 0,
             modulo,
             value,
         }
+    }
+
+    pub const fn matches_any_resource(&self) -> bool {
+        self.resource_device == 0 && self.resource_inode == 0
+    }
+
+    #[cfg(feature = "user")]
+    pub fn resolve_resource_identity(mut self) -> std::io::Result<Self> {
+        use std::{fs, io, os::unix::fs::MetadataExt, str};
+
+        let len = fixed_string_len(&self.resource);
+        if len == 0 {
+            self.resource_device = 0;
+            self.resource_inode = 0;
+            return Ok(self);
+        }
+
+        let path = str::from_utf8(&self.resource[..len]).map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                std::format!("resource path is not valid UTF-8: {error}"),
+            )
+        })?;
+        let metadata = fs::metadata(path)?;
+        self.resource_device = encode_kernel_dev_t(metadata.dev());
+        self.resource_inode = metadata.ino();
+        Ok(self)
     }
 }
 

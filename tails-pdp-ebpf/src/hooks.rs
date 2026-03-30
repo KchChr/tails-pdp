@@ -26,7 +26,7 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
         evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, 0, 0);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let stream_decision =
-        evaluate_stream_policies(subject, PolicyAction::TaskSetNice, current_time);
+        evaluate_stream_policies(subject, PolicyAction::TaskSetNice, 0, 0, current_time);
     let decision = if static_decision != 0 || stream_decision != 0 {
         1
     } else {

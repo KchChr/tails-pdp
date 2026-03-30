@@ -3,8 +3,12 @@ use tails_pdp_common::{
     ANY_SUBJECT, Entitlement, PolicyAction, StreamAttribute, StreamOperator, StreamPolicy,
 };
 
-use crate::maps::{
-    COMBINE, CURRENT_TIME, DECISIONS, POLICY_JUMP_TABLE, STREAM_POLICY, STREAM_POLICY_MAX_ENTRIES,
+use crate::{
+    helpers::read_file_open_resource_identity,
+    maps::{
+        COMBINE, CURRENT_TIME, DECISIONS, POLICY_JUMP_TABLE, STREAM_POLICY,
+        STREAM_POLICY_MAX_ENTRIES,
+    },
 };
 
 fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
@@ -20,6 +24,8 @@ fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
 fn evaluate_stream_policy(
     current_subject: u32,
     current_action: PolicyAction,
+    current_resource_device: u64,
+    current_resource_inode: u64,
     current_time: u64,
     policy: &StreamPolicy,
 ) -> Option<i32> {
@@ -32,6 +38,13 @@ fn evaluate_stream_policy(
     }
 
     if policy.subject != ANY_SUBJECT && policy.subject != current_subject {
+        return None;
+    }
+
+    if !policy.matches_any_resource()
+        && (policy.resource_device != current_resource_device
+            || policy.resource_inode != current_resource_inode)
+    {
         return None;
     }
 
@@ -57,6 +70,8 @@ fn evaluate_stream_policy(
 pub(crate) fn evaluate_policies(
     current_subject: u32,
     current_action: PolicyAction,
+    current_resource_device: u64,
+    current_resource_inode: u64,
     current_time: u64,
 ) -> i32 {
     let mut decision = 0;
@@ -64,9 +79,14 @@ pub(crate) fn evaluate_policies(
 
     while index < STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = STREAM_POLICY.get(index) {
-            if let Some(policy_decision) =
-                evaluate_stream_policy(current_subject, current_action, current_time, policy)
-            {
+            if let Some(policy_decision) = evaluate_stream_policy(
+                current_subject,
+                current_action,
+                current_resource_device,
+                current_resource_inode,
+                current_time,
+                policy,
+            ) {
                 if policy_decision != 0 {
                     decision = 1;
                     break;
@@ -83,8 +103,15 @@ pub(crate) fn evaluate_policies(
 pub fn evaluate_stream_policies(ctx: LsmContext) -> i32 {
     let current_decision = DECISIONS.get(0).copied().unwrap_or(0);
     let current_subject = ctx.uid();
+    let (current_resource_device, current_resource_inode) = read_file_open_resource_identity(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let stream_decision = evaluate_policies(current_subject, PolicyAction::FileOpen, current_time);
+    let stream_decision = evaluate_policies(
+        current_subject,
+        PolicyAction::FileOpen,
+        current_resource_device,
+        current_resource_inode,
+        current_time,
+    );
     let decision = if current_decision != 0 || stream_decision != 0 {
         Entitlement::Deny.decision()
     } else {

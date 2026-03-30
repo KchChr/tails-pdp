@@ -109,21 +109,26 @@ fn set_stream_policy(
     action: cli::ActionArg,
     subject: u32,
     attribute: cli::StreamAttributeArg,
+    resource: String,
     operator: cli::StreamOperatorArg,
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
-    let policy = StreamPolicy {
-        entitlement: entitlement.into(),
-        action: action.into(),
-        attribute: attribute.into(),
-        operator: operator.into(),
-        enabled: 1,
-        _pad: [0; 3],
+    validate_len("resource", &resource, RESOURCE_LEN)?;
+
+    let mut policy = StreamPolicy::time(
+        entitlement.into(),
         subject,
+        action.into(),
+        &resource,
+        operator.into(),
         modulo,
         value,
-    };
+    )
+    .resolve_resource_identity()
+    .map_err(anyhow::Error::from)
+    .map_err(|error| anyhow!("failed to resolve STREAM_POLICY[{index}] resource: {error}"))?;
+    policy.attribute = attribute.into();
 
     map.set(index, policy, 0)
         .map_err(anyhow::Error::from)
@@ -135,6 +140,7 @@ fn load_example_stream_policies(map: &mut maps::StreamPolicyMap) -> anyhow::Resu
         Entitlement::Permit,
         1000,
         tails_pdp_common::PolicyAction::FileOpen,
+        "/home/hntr/test.txt",
         tails_pdp_common::StreamOperator::LessThan,
         10,
         5,
@@ -147,6 +153,12 @@ fn load_example_stream_policies(map: &mut maps::StreamPolicyMap) -> anyhow::Resu
     }
 
     for (index, policy) in example_policies.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to resolve example STREAM_POLICY[{index}] resource: {error}")
+            })?;
         map.set(index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| anyhow!("failed to write STREAM_POLICY[{index}]: {error}"))?;
@@ -235,6 +247,7 @@ pub fn run() -> anyhow::Result<()> {
             action,
             subject,
             attribute,
+            resource,
             operator,
             modulo,
             value,
@@ -247,6 +260,7 @@ pub fn run() -> anyhow::Result<()> {
                 action,
                 subject,
                 attribute,
+                resource,
                 operator,
                 modulo,
                 value,

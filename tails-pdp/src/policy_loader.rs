@@ -107,6 +107,9 @@ pub fn load_stream_policies(ebpf: &mut aya::Ebpf, policies: &[StreamPolicy]) -> 
     }
 
     for (index, policy) in policies.iter().copied().enumerate() {
+        let policy = policy.resolve_resource_identity().with_context(|| {
+            format!("failed to resolve STREAM_POLICY entry {index} resource identity")
+        })?;
         stream_policy
             .set(index as u32, policy, 0)
             .with_context(|| format!("failed to write STREAM_POLICY entry {index}"))?;

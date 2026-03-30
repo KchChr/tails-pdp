@@ -46,12 +46,16 @@ pub fn show_stream(map: &StreamPolicyMap, active_only: bool) -> anyhow::Result<(
             continue;
         }
 
+        let resource = fixed_string(&policy.resource);
         println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} attribute={:?} operator={:?} modulo={} value={}",
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
             policy.subject,
+            resource,
+            policy.resource_device,
+            policy.resource_inode,
             policy.attribute,
             policy.operator,
             policy.modulo,

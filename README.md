@@ -72,6 +72,7 @@ sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --action file-open \
   --subject 1000 \
   --attribute time \
+  --resource /home/hntr/test.txt \
   --operator less-than \
   --modulo 10 \
   --value 5
@@ -87,27 +88,10 @@ Notes:
 
 ## Stream Policies
 
-Stream policies can be configured either:
+Stream policies are managed through `tails-pdp-admintool`.
 
-- in the userspace loader and written at startup
-- directly with `tails-pdp-admintool`
-
-Example with one active time-based stream policy:
-
-```rust
-let stream_policies = [StreamPolicy::time(
-    Entitlement::Permit,
-    1000,
-    PolicyAction::FileOpen,
-    StreamOperator::LessThan,
-    10,
-    5,
-)];
-
-load_stream_policies(&mut ebpf, &stream_policies)?;
-```
-
-Equivalent admin tool command:
+Example: allow subject `1000` to access `/home/hntr/test.txt` via `file_open` for five seconds
+out of every ten seconds:
 
 ```shell
 sudo ./target/release/tails-pdp-admintool set-stream 0 \
@@ -115,6 +99,7 @@ sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --action file-open \
   --subject 1000 \
   --attribute time \
+  --resource /home/hntr/test.txt \
   --operator less-than \
   --modulo 10 \
   --value 5
@@ -124,23 +109,23 @@ This example means:
 
 - subject `1000`
 - action `file_open`
+- resource `/home/hntr/test.txt`
 - evaluate `time % 10 < 5`
 - if the condition is true: `Permit`
 - if the condition is false: inverse decision, therefore `Deny`
 
-To disable stream policies completely, load an empty list:
-
-```rust
-let stream_policies: [StreamPolicy; 0] = [];
-load_stream_policies(&mut ebpf, &stream_policies)?;
-```
-
-Equivalent admin tool commands:
+To remove stream policies again:
 
 ```shell
 sudo ./target/release/tails-pdp-admintool clear-stream 0
 sudo ./target/release/tails-pdp-admintool clear-stream 1
 sudo ./target/release/tails-pdp-admintool clear-stream 2
+```
+
+To load the built-in example stream policies:
+
+```shell
+sudo ./target/release/tails-pdp-admintool load-stream-examples
 ```
 
 You can inspect the currently loaded stream policies with:

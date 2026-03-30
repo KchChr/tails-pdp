@@ -122,6 +122,8 @@ pub enum Command {
         subject: u32,
         #[arg(long, value_enum, default_value_t = StreamAttributeArg::Time)]
         attribute: StreamAttributeArg,
+        #[arg(long, default_value = "")]
+        resource: String,
         #[arg(long, value_enum)]
         operator: StreamOperatorArg,
         #[arg(long)]
@@ -183,7 +185,7 @@ pub fn print_usage() {
     println!();
     println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
     println!(
-        "      [--subject <UID>] [--attribute <time>] --operator <...> --modulo <N> --value <N>"
+        "      [--subject <UID>] [--attribute <time>] [--resource <PFAD>] --operator <...> --modulo <N> --value <N>"
     );
     println!("      Schreibt einen STREAM_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
@@ -213,7 +215,7 @@ pub fn print_usage() {
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
     );
     println!(
-        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action file-open --subject 1000 --attribute time --operator less-than --modulo 10 --value 5"
+        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action file-open --subject 1000 --attribute time --resource /home/hntr/test.txt --operator less-than --modulo 10 --value 5"
     );
     println!("  sudo tails-pdp-admintool load-examples");
     println!("  sudo tails-pdp-admintool load-stream-examples");
