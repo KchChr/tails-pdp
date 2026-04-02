@@ -1,11 +1,11 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    ANY_SUBJECT, Entitlement, PolicyAction, STREAM_POLICY_SLOTS_PER_HOOK, StreamAttribute,
-    StreamOperator, StreamPolicy,
+    ANY_SUBJECT, Entitlement, PolicyAction, SOCKET_IP_LEN, STREAM_POLICY_SLOTS_PER_HOOK,
+    SocketFamily, SocketTransport, StreamAttribute, StreamOperator, StreamPolicy,
 };
 
 use crate::{
-    helpers::read_file_open_resource_identity,
+    helpers::{ResourceIdentity, read_file_open_resource_identity},
     maps::{
         COMBINE, CURRENT_TIME, DECISIONS, POLICY_JUMP_TABLE, STREAM_POLICY,
         STREAM_POLICY_MAX_ENTRIES,
@@ -25,8 +25,7 @@ fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
 fn evaluate_stream_policy(
     current_subject: u32,
     current_action: PolicyAction,
-    current_resource_device: u64,
-    current_resource_inode: u64,
+    resource: &ResourceIdentity,
     current_time: u64,
     policy: &StreamPolicy,
 ) -> Option<i32> {
@@ -42,11 +41,34 @@ fn evaluate_stream_policy(
         return None;
     }
 
-    if !policy.matches_any_resource()
-        && (policy.resource_device != current_resource_device
-            || policy.resource_inode != current_resource_inode)
-    {
-        return None;
+    match current_action {
+        PolicyAction::FileOpen => {
+            if !policy.matches_any_resource()
+                && (policy.resource_device != resource.file_device
+                    || policy.resource_inode != resource.file_inode)
+            {
+                return None;
+            }
+        }
+        PolicyAction::SocketBind => {
+            if policy.socket_family != SocketFamily::Any
+                && policy.socket_family != resource.socket_family
+            {
+                return None;
+            }
+            if policy.socket_transport != SocketTransport::Any
+                && policy.socket_transport != resource.socket_transport
+            {
+                return None;
+            }
+            if policy.socket_port != 0 && policy.socket_port != resource.socket_port {
+                return None;
+            }
+            if !matches_socket_ip(policy, resource.socket_family, &resource.socket_ip) {
+                return None;
+            }
+        }
+        PolicyAction::TaskSetNice => {}
     }
 
     let condition = match policy.attribute {
@@ -68,11 +90,26 @@ fn evaluate_stream_policy(
     Some(entitlement.decision())
 }
 
+fn matches_socket_ip(
+    policy: &StreamPolicy,
+    current_family: SocketFamily,
+    current_ip: &[u8; SOCKET_IP_LEN],
+) -> bool {
+    if policy.matches_any_socket_ip() {
+        return true;
+    }
+
+    match current_family {
+        SocketFamily::Inet => policy.socket_ip[..4] == current_ip[..4],
+        SocketFamily::Inet6 => policy.socket_ip == *current_ip,
+        SocketFamily::Any => false,
+    }
+}
+
 pub(crate) fn evaluate_policies(
     current_subject: u32,
     current_action: PolicyAction,
-    current_resource_device: u64,
-    current_resource_inode: u64,
+    resource: &ResourceIdentity,
     current_time: u64,
 ) -> i32 {
     let mut decision = 0;
@@ -84,8 +121,7 @@ pub(crate) fn evaluate_policies(
             if let Some(policy_decision) = evaluate_stream_policy(
                 current_subject,
                 current_action,
-                current_resource_device,
-                current_resource_inode,
+                resource,
                 current_time,
                 policy,
             ) {
@@ -105,13 +141,12 @@ pub(crate) fn evaluate_policies(
 pub fn evaluate_stream_policies(ctx: LsmContext) -> i32 {
     let current_decision = DECISIONS.get(0).copied().unwrap_or(0);
     let current_subject = ctx.uid();
-    let (current_resource_device, current_resource_inode) = read_file_open_resource_identity(&ctx);
+    let resource = read_file_open_resource_identity(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let stream_decision = evaluate_policies(
         current_subject,
         PolicyAction::FileOpen,
-        current_resource_device,
-        current_resource_inode,
+        &resource,
         current_time,
     );
     let decision = if current_decision != 0 || stream_decision != 0 {

@@ -24,7 +24,7 @@ pub fn show_static(map: &StaticPolicyMap, active_only: bool) -> anyhow::Result<(
         let resource = fixed_string(&policy.resource);
         let local_index = index % STATIC_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={}",
+            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={} family={:?} transport={:?} port={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
@@ -33,6 +33,9 @@ pub fn show_static(map: &StaticPolicyMap, active_only: bool) -> anyhow::Result<(
             resource,
             policy.resource_device,
             policy.resource_inode,
+            policy.socket_family,
+            policy.socket_transport,
+            policy.socket_port,
         );
     }
     println!();
@@ -52,7 +55,7 @@ pub fn show_stream(map: &StreamPolicyMap, active_only: bool) -> anyhow::Result<(
         let resource = fixed_string(&policy.resource);
         let local_index = index % STREAM_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
+            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} family={:?} transport={:?} port={} attribute={:?} operator={:?} modulo={} value={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
@@ -60,6 +63,9 @@ pub fn show_stream(map: &StreamPolicyMap, active_only: bool) -> anyhow::Result<(
             resource,
             policy.resource_device,
             policy.resource_inode,
+            policy.socket_family,
+            policy.socket_transport,
+            policy.socket_port,
             policy.attribute,
             policy.operator,
             policy.modulo,

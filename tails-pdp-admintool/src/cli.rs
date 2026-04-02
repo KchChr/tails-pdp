@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use tails_pdp_common::{ANY_SUBJECT, Entitlement, PolicyAction, StreamAttribute, StreamOperator};
+use tails_pdp_common::{
+    ANY_SUBJECT, Entitlement, PolicyAction, SocketFamily, SocketTransport, StreamAttribute,
+    StreamOperator,
+};
 
 pub const DEFAULT_STATIC_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
 pub const DEFAULT_STREAM_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STREAM_POLICY";
@@ -25,6 +28,7 @@ impl From<EntitlementArg> for Entitlement {
 pub enum ActionArg {
     FileOpen,
     TaskSetNice,
+    SocketBind,
 }
 
 impl From<ActionArg> for PolicyAction {
@@ -32,6 +36,41 @@ impl From<ActionArg> for PolicyAction {
         match value {
             ActionArg::FileOpen => PolicyAction::FileOpen,
             ActionArg::TaskSetNice => PolicyAction::TaskSetNice,
+            ActionArg::SocketBind => PolicyAction::SocketBind,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum SocketFamilyArg {
+    Any,
+    Inet,
+    Inet6,
+}
+
+impl From<SocketFamilyArg> for SocketFamily {
+    fn from(value: SocketFamilyArg) -> Self {
+        match value {
+            SocketFamilyArg::Any => SocketFamily::Any,
+            SocketFamilyArg::Inet => SocketFamily::Inet,
+            SocketFamilyArg::Inet6 => SocketFamily::Inet6,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum SocketTransportArg {
+    Any,
+    Tcp,
+    Udp,
+}
+
+impl From<SocketTransportArg> for SocketTransport {
+    fn from(value: SocketTransportArg) -> Self {
+        match value {
+            SocketTransportArg::Any => SocketTransport::Any,
+            SocketTransportArg::Tcp => SocketTransport::Tcp,
+            SocketTransportArg::Udp => SocketTransport::Udp,
         }
     }
 }
@@ -118,6 +157,12 @@ pub enum Command {
         command: String,
         #[arg(long, default_value = "")]
         resource: String,
+        #[arg(long, value_enum, default_value_t = SocketFamilyArg::Any)]
+        family: SocketFamilyArg,
+        #[arg(long, value_enum, default_value_t = SocketTransportArg::Any)]
+        transport: SocketTransportArg,
+        #[arg(long, default_value_t = 0)]
+        port: u16,
     },
     /// Schreibt einen STREAM_POLICY-Eintrag an einen Index.
     SetStream {
@@ -132,6 +177,12 @@ pub enum Command {
         attribute: StreamAttributeArg,
         #[arg(long, default_value = "")]
         resource: String,
+        #[arg(long, value_enum, default_value_t = SocketFamilyArg::Any)]
+        family: SocketFamilyArg,
+        #[arg(long, value_enum, default_value_t = SocketTransportArg::Any)]
+        transport: SocketTransportArg,
+        #[arg(long, default_value_t = 0)]
+        port: u16,
         #[arg(long, value_enum)]
         operator: StreamOperatorArg,
         #[arg(long)]
@@ -186,14 +237,20 @@ pub fn print_usage() {
     println!("      Setzt einen hook-lokalen STREAM_POLICY-Slot auf disabled zurueck.");
     println!("      sudo erforderlich.");
     println!();
-    println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
-    println!("      [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
+    println!(
+        "  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice|socket-bind>"
+    );
+    println!(
+        "      [--subject <UID>] [--command <NAME>] [--resource <PFAD|IP>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--port <N>]"
+    );
     println!("      Schreibt einen hook-lokalen STATIC_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
     println!();
-    println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
     println!(
-        "      [--subject <UID>] [--attribute <time>] [--resource <PFAD>] --operator <...> --modulo <N> --value <N>"
+        "  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice|socket-bind>"
+    );
+    println!(
+        "      [--subject <UID>] [--attribute <time>] [--resource <PFAD|IP>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--port <N>] --operator <...> --modulo <N> --value <N>"
     );
     println!("      Schreibt einen hook-lokalen STREAM_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
@@ -223,7 +280,13 @@ pub fn print_usage() {
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
     );
     println!(
+        "  sudo tails-pdp-admintool set 0 --entitlement deny --action socket-bind --subject 1000 --family inet --transport tcp --resource 0.0.0.0 --port 8080"
+    );
+    println!(
         "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action file-open --subject 1000 --attribute time --resource /home/hntr/test.txt --operator less-than --modulo 10 --value 5"
+    );
+    println!(
+        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action socket-bind --subject 1000 --attribute time --family inet --transport tcp --resource 0.0.0.0 --port 8080 --operator less-than --modulo 10 --value 5"
     );
     println!("  sudo tails-pdp-admintool load-examples");
     println!("  sudo tails-pdp-admintool load-stream-examples");

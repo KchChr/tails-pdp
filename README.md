@@ -76,6 +76,26 @@ sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --operator less-than \
   --modulo 10 \
   --value 5
+sudo ./target/release/tails-pdp-admintool set 0 \
+  --entitlement deny \
+  --action socket-bind \
+  --subject 1000 \
+  --family inet \
+  --transport tcp \
+  --resource 0.0.0.0 \
+  --port 8080
+sudo ./target/release/tails-pdp-admintool set-stream 0 \
+  --entitlement permit \
+  --action socket-bind \
+  --subject 1000 \
+  --attribute time \
+  --family inet \
+  --transport tcp \
+  --resource 0.0.0.0 \
+  --port 8080 \
+  --operator less-than \
+  --modulo 10 \
+  --value 5
 ```
 
 Notes:
@@ -89,6 +109,10 @@ Notes:
   entries belonging to the current hook
 - for file policies, `--resource` is given as a path in userspace; when the policy is loaded, the
   loader resolves that path to `device + inode`, and the kernel matches on those values
+- for `socket-bind`, `--resource` is the local bind address, `--family` is `inet` or `inet6`,
+  `--transport` is `tcp` or `udp`, and `--port` is the local port
+- `0.0.0.0` matches any IPv4 address for the selected port and transport
+- `::` matches any IPv6 address for the selected port and transport
 
 ## Stream Policies
 
@@ -138,6 +162,52 @@ You can inspect the currently loaded stream policies with:
 ./target/release/tails-pdp-admintool show
 ./target/release/tails-pdp-admintool show-active
 ```
+
+## Socket-Bind Policies
+
+`socket_bind` policies control which local address/port combinations a subject may bind.
+
+Example: deny UID `1000` from binding any IPv4 TCP socket on local port `8080`:
+
+```shell
+sudo ./target/release/tails-pdp-admintool set 0 \
+  --entitlement deny \
+  --action socket-bind \
+  --subject 1000 \
+  --family inet \
+  --transport tcp \
+  --resource 0.0.0.0 \
+  --port 8080
+```
+
+Time-based example: permit UID `1000` to bind `0.0.0.0:8080/tcp` only when `time % 10 < 5`:
+
+```shell
+sudo ./target/release/tails-pdp-admintool set-stream 0 \
+  --entitlement permit \
+  --action socket-bind \
+  --subject 1000 \
+  --attribute time \
+  --family inet \
+  --transport tcp \
+  --resource 0.0.0.0 \
+  --port 8080 \
+  --operator less-than \
+  --modulo 10 \
+  --value 5
+```
+
+This means:
+
+- subject `1000`
+- action `socket_bind`
+- family `inet`
+- transport `tcp`
+- local address `0.0.0.0`, therefore any IPv4 address
+- local port `8080`
+- evaluate `time % 10 < 5`
+- if the condition is true: `Permit`
+- if the condition is false: inverse decision, therefore `Deny`
 
 ## Debugging
 

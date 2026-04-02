@@ -80,22 +80,29 @@ fn set_static_policy(
     subject: u32,
     command: String,
     resource: String,
+    family: cli::SocketFamilyArg,
+    transport: cli::SocketTransportArg,
+    port: u16,
 ) -> anyhow::Result<()> {
     validate_len("command", &command, COMMAND_LEN)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
     let policy_action: PolicyAction = action.into();
     let slot = hook_local_slot(policy_action, index, STATIC_POLICY_SLOTS_PER_HOOK)?;
 
-    let policy = StaticPolicy::new(
+    let mut policy = StaticPolicy::new(
         entitlement.into(),
         subject,
         policy_action,
         &command,
         &resource,
-    )
-    .resolve_resource_identity()
-    .map_err(anyhow::Error::from)
-    .map_err(|error| anyhow!("failed to resolve STATIC_POLICY[{index}] resource: {error}"))?;
+    );
+    policy.socket_family = family.into();
+    policy.socket_transport = transport.into();
+    policy.socket_port = port;
+    let policy = policy
+        .resolve_resource_identity()
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to resolve STATIC_POLICY[{index}] resource: {error}"))?;
 
     map.set(slot, policy, 0)
         .map_err(anyhow::Error::from)
@@ -159,6 +166,9 @@ fn set_stream_policy(
     subject: u32,
     attribute: cli::StreamAttributeArg,
     resource: String,
+    family: cli::SocketFamilyArg,
+    transport: cli::SocketTransportArg,
+    port: u16,
     operator: cli::StreamOperatorArg,
     modulo: u64,
     value: u64,
@@ -175,11 +185,15 @@ fn set_stream_policy(
         operator.into(),
         modulo,
         value,
-    )
-    .resolve_resource_identity()
-    .map_err(anyhow::Error::from)
-    .map_err(|error| anyhow!("failed to resolve STREAM_POLICY[{index}] resource: {error}"))?;
+    );
     policy.attribute = attribute.into();
+    policy.socket_family = family.into();
+    policy.socket_transport = transport.into();
+    policy.socket_port = port;
+    policy = policy
+        .resolve_resource_identity()
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to resolve STREAM_POLICY[{index}] resource: {error}"))?;
 
     map.set(slot, policy, 0)
         .map_err(anyhow::Error::from)
@@ -290,6 +304,9 @@ pub fn run() -> anyhow::Result<()> {
             subject,
             command,
             resource,
+            family,
+            transport,
+            port,
         } => {
             let mut static_map = open_static_policy(&cli.static_pin_path)?;
             set_static_policy(
@@ -300,6 +317,9 @@ pub fn run() -> anyhow::Result<()> {
                 subject,
                 command,
                 resource,
+                family,
+                transport,
+                port,
             )
         }
         Command::SetStream {
@@ -309,6 +329,9 @@ pub fn run() -> anyhow::Result<()> {
             subject,
             attribute,
             resource,
+            family,
+            transport,
+            port,
             operator,
             modulo,
             value,
@@ -322,6 +345,9 @@ pub fn run() -> anyhow::Result<()> {
                 subject,
                 attribute,
                 resource,
+                family,
+                transport,
+                port,
                 operator,
                 modulo,
                 value,

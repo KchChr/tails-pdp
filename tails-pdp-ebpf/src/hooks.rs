@@ -2,6 +2,7 @@ use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{COMMAND_LEN, PolicyAction};
 
 use crate::{
+    helpers::{ResourceIdentity, read_socket_bind_resource_identity},
     maps::{CURRENT_TIME, POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
     policies::{
         evaluate_static_policies::evaluate_policies as evaluate_static_policies,
@@ -22,11 +23,12 @@ pub fn file_open(ctx: LsmContext) -> i32 {
 pub fn task_setnice(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
     let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
+    let resource = ResourceIdentity::empty();
     let static_decision =
-        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, 0, 0);
+        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, &resource);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let stream_decision =
-        evaluate_stream_policies(subject, PolicyAction::TaskSetNice, 0, 0, current_time);
+        evaluate_stream_policies(subject, PolicyAction::TaskSetNice, &resource, current_time);
     let decision = if static_decision != 0 || stream_decision != 0 {
         1
     } else {
@@ -35,6 +37,29 @@ pub fn task_setnice(ctx: LsmContext) -> i32 {
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
+    }
+
+    if decision != 0 { -1 } else { 0 }
+}
+
+#[lsm(hook = "socket_bind")]
+pub fn socket_bind(ctx: LsmContext) -> i32 {
+    let subject = ctx.uid();
+    let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
+    let resource = read_socket_bind_resource_identity(&ctx);
+    let static_decision =
+        evaluate_static_policies(subject, PolicyAction::SocketBind, &command, &resource);
+    let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
+    let stream_decision =
+        evaluate_stream_policies(subject, PolicyAction::SocketBind, &resource, current_time);
+    let decision = if static_decision != 0 || stream_decision != 0 {
+        1
+    } else {
+        0
+    };
+
+    unsafe {
+        aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind entry");
     }
 
     if decision != 0 { -1 } else { 0 }

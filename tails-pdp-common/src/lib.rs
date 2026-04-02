@@ -6,7 +6,8 @@ extern crate std;
 pub const COMMAND_LEN: usize = 16;
 pub const RESOURCE_LEN: usize = 64;
 pub const ANY_SUBJECT: u32 = u32::MAX;
-pub const POLICY_HOOK_COUNT: u32 = 2;
+pub const SOCKET_IP_LEN: usize = 16;
+pub const POLICY_HOOK_COUNT: u32 = 3;
 pub const STATIC_POLICY_SLOTS_PER_HOOK: u32 = 64;
 pub const STREAM_POLICY_SLOTS_PER_HOOK: u32 = 64;
 
@@ -38,6 +39,7 @@ impl Entitlement {
 pub enum PolicyAction {
     FileOpen = 1,
     TaskSetNice = 2,
+    SocketBind = 3,
 }
 
 impl PolicyAction {
@@ -45,6 +47,7 @@ impl PolicyAction {
         match self {
             Self::FileOpen => 0,
             Self::TaskSetNice => 1,
+            Self::SocketBind => 2,
         }
     }
 
@@ -61,8 +64,27 @@ impl PolicyAction {
     }
 }
 
-pub const POLICY_HOOKS: [PolicyAction; POLICY_HOOK_COUNT as usize] =
-    [PolicyAction::FileOpen, PolicyAction::TaskSetNice];
+pub const POLICY_HOOKS: [PolicyAction; POLICY_HOOK_COUNT as usize] = [
+    PolicyAction::FileOpen,
+    PolicyAction::TaskSetNice,
+    PolicyAction::SocketBind,
+];
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum SocketFamily {
+    Any = 0,
+    Inet = 2,
+    Inet6 = 10,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum SocketTransport {
+    Any = 0,
+    Tcp = 1,
+    Udp = 2,
+}
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -123,6 +145,12 @@ pub struct StaticPolicy {
     pub subject: u32,
     pub command: [u8; COMMAND_LEN],
     pub resource: [u8; RESOURCE_LEN],
+    pub socket_family: SocketFamily,
+    pub socket_transport: SocketTransport,
+    pub _socket_pad: [u8; 6],
+    pub socket_port: u16,
+    pub _socket_pad2: [u8; 6],
+    pub socket_ip: [u8; SOCKET_IP_LEN],
     pub resource_device: u64,
     pub resource_inode: u64,
 }
@@ -137,6 +165,12 @@ impl StaticPolicy {
             subject: ANY_SUBJECT,
             command: [0; COMMAND_LEN],
             resource: [0; RESOURCE_LEN],
+            socket_family: SocketFamily::Any,
+            socket_transport: SocketTransport::Any,
+            _socket_pad: [0; 6],
+            socket_port: 0,
+            _socket_pad2: [0; 6],
+            socket_ip: [0; SOCKET_IP_LEN],
             resource_device: 0,
             resource_inode: 0,
         }
@@ -157,6 +191,12 @@ impl StaticPolicy {
             subject,
             command: command_name(command),
             resource: resource_name(resource),
+            socket_family: SocketFamily::Any,
+            socket_transport: SocketTransport::Any,
+            _socket_pad: [0; 6],
+            socket_port: 0,
+            _socket_pad2: [0; 6],
+            socket_ip: [0; SOCKET_IP_LEN],
             resource_device: 0,
             resource_inode: 0,
         }
@@ -166,26 +206,77 @@ impl StaticPolicy {
         self.resource_device == 0 && self.resource_inode == 0
     }
 
+    pub const fn matches_any_socket_ip(&self) -> bool {
+        let mut index = 0;
+        while index < SOCKET_IP_LEN {
+            if self.socket_ip[index] != 0 {
+                return false;
+            }
+            index += 1;
+        }
+        true
+    }
+
     #[cfg(feature = "user")]
     pub fn resolve_resource_identity(mut self) -> std::io::Result<Self> {
-        use std::{fs, io, os::unix::fs::MetadataExt, str};
+        match self.action {
+            PolicyAction::FileOpen => {
+                use std::{fs, io, os::unix::fs::MetadataExt, str};
 
-        let len = fixed_string_len(&self.resource);
-        if len == 0 {
-            self.resource_device = 0;
-            self.resource_inode = 0;
-            return Ok(self);
+                let len = fixed_string_len(&self.resource);
+                if len == 0 {
+                    self.resource_device = 0;
+                    self.resource_inode = 0;
+                    return Ok(self);
+                }
+
+                let path = str::from_utf8(&self.resource[..len]).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        std::format!("resource path is not valid UTF-8: {error}"),
+                    )
+                })?;
+                let metadata = fs::metadata(path)?;
+                self.resource_device = encode_kernel_dev_t(metadata.dev());
+                self.resource_inode = metadata.ino();
+            }
+            PolicyAction::SocketBind => {
+                use std::{io, net::IpAddr, str::FromStr};
+
+                let len = fixed_string_len(&self.resource);
+                self.resource_device = 0;
+                self.resource_inode = 0;
+                self.socket_ip = [0; SOCKET_IP_LEN];
+                if len == 0 {
+                    return Ok(self);
+                }
+
+                let address = core::str::from_utf8(&self.resource[..len]).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        std::format!("socket address is not valid UTF-8: {error}"),
+                    )
+                })?;
+                match IpAddr::from_str(address).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        std::format!("invalid socket IP address '{address}': {error}"),
+                    )
+                })? {
+                    IpAddr::V4(ip) => {
+                        self.socket_ip[..4].copy_from_slice(&ip.octets());
+                    }
+                    IpAddr::V6(ip) => {
+                        self.socket_ip.copy_from_slice(&ip.octets());
+                    }
+                }
+            }
+            PolicyAction::TaskSetNice => {
+                self.resource_device = 0;
+                self.resource_inode = 0;
+                self.socket_ip = [0; SOCKET_IP_LEN];
+            }
         }
-
-        let path = str::from_utf8(&self.resource[..len]).map_err(|error| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                std::format!("resource path is not valid UTF-8: {error}"),
-            )
-        })?;
-        let metadata = fs::metadata(path)?;
-        self.resource_device = encode_kernel_dev_t(metadata.dev());
-        self.resource_inode = metadata.ino();
         Ok(self)
     }
 }
@@ -201,6 +292,12 @@ pub struct StreamPolicy {
     pub _pad: [u8; 3],
     pub subject: u32,
     pub resource: [u8; RESOURCE_LEN],
+    pub socket_family: SocketFamily,
+    pub socket_transport: SocketTransport,
+    pub _socket_pad: [u8; 6],
+    pub socket_port: u16,
+    pub _socket_pad2: [u8; 6],
+    pub socket_ip: [u8; SOCKET_IP_LEN],
     pub resource_device: u64,
     pub resource_inode: u64,
     pub modulo: u64,
@@ -218,6 +315,12 @@ impl StreamPolicy {
             _pad: [0; 3],
             subject: ANY_SUBJECT,
             resource: [0; RESOURCE_LEN],
+            socket_family: SocketFamily::Any,
+            socket_transport: SocketTransport::Any,
+            _socket_pad: [0; 6],
+            socket_port: 0,
+            _socket_pad2: [0; 6],
+            socket_ip: [0; SOCKET_IP_LEN],
             resource_device: 0,
             resource_inode: 0,
             modulo: 0,
@@ -243,6 +346,12 @@ impl StreamPolicy {
             _pad: [0; 3],
             subject,
             resource: resource_name(resource),
+            socket_family: SocketFamily::Any,
+            socket_transport: SocketTransport::Any,
+            _socket_pad: [0; 6],
+            socket_port: 0,
+            _socket_pad2: [0; 6],
+            socket_ip: [0; SOCKET_IP_LEN],
             resource_device: 0,
             resource_inode: 0,
             modulo,
@@ -254,26 +363,77 @@ impl StreamPolicy {
         self.resource_device == 0 && self.resource_inode == 0
     }
 
+    pub const fn matches_any_socket_ip(&self) -> bool {
+        let mut index = 0;
+        while index < SOCKET_IP_LEN {
+            if self.socket_ip[index] != 0 {
+                return false;
+            }
+            index += 1;
+        }
+        true
+    }
+
     #[cfg(feature = "user")]
     pub fn resolve_resource_identity(mut self) -> std::io::Result<Self> {
-        use std::{fs, io, os::unix::fs::MetadataExt, str};
+        match self.action {
+            PolicyAction::FileOpen => {
+                use std::{fs, io, os::unix::fs::MetadataExt, str};
 
-        let len = fixed_string_len(&self.resource);
-        if len == 0 {
-            self.resource_device = 0;
-            self.resource_inode = 0;
-            return Ok(self);
+                let len = fixed_string_len(&self.resource);
+                if len == 0 {
+                    self.resource_device = 0;
+                    self.resource_inode = 0;
+                    return Ok(self);
+                }
+
+                let path = str::from_utf8(&self.resource[..len]).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        std::format!("resource path is not valid UTF-8: {error}"),
+                    )
+                })?;
+                let metadata = fs::metadata(path)?;
+                self.resource_device = encode_kernel_dev_t(metadata.dev());
+                self.resource_inode = metadata.ino();
+            }
+            PolicyAction::SocketBind => {
+                use std::{io, net::IpAddr, str::FromStr};
+
+                let len = fixed_string_len(&self.resource);
+                self.resource_device = 0;
+                self.resource_inode = 0;
+                self.socket_ip = [0; SOCKET_IP_LEN];
+                if len == 0 {
+                    return Ok(self);
+                }
+
+                let address = core::str::from_utf8(&self.resource[..len]).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        std::format!("socket address is not valid UTF-8: {error}"),
+                    )
+                })?;
+                match IpAddr::from_str(address).map_err(|error| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        std::format!("invalid socket IP address '{address}': {error}"),
+                    )
+                })? {
+                    IpAddr::V4(ip) => {
+                        self.socket_ip[..4].copy_from_slice(&ip.octets());
+                    }
+                    IpAddr::V6(ip) => {
+                        self.socket_ip.copy_from_slice(&ip.octets());
+                    }
+                }
+            }
+            PolicyAction::TaskSetNice => {
+                self.resource_device = 0;
+                self.resource_inode = 0;
+                self.socket_ip = [0; SOCKET_IP_LEN];
+            }
         }
-
-        let path = str::from_utf8(&self.resource[..len]).map_err(|error| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                std::format!("resource path is not valid UTF-8: {error}"),
-            )
-        })?;
-        let metadata = fs::metadata(path)?;
-        self.resource_device = encode_kernel_dev_t(metadata.dev());
-        self.resource_inode = metadata.ino();
         Ok(self)
     }
 }

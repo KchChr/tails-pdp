@@ -12,7 +12,7 @@ pub struct LsmProgramSpec {
     pub attach: bool,
 }
 
-pub const LSM_PROGRAMS: [LsmProgramSpec; 4] = [
+pub const LSM_PROGRAMS: [LsmProgramSpec; 5] = [
     LsmProgramSpec {
         name: "file_open",
         hook: "file_open",
@@ -32,6 +32,11 @@ pub const LSM_PROGRAMS: [LsmProgramSpec; 4] = [
         name: "combine",
         hook: "file_open",
         attach: false,
+    },
+    LsmProgramSpec {
+        name: "socket_bind",
+        hook: "socket_bind",
+        attach: true,
     },
 ];
 
