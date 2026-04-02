@@ -127,7 +127,8 @@ pub(crate) fn read_socket_bind_resource_identity(ctx: &LsmContext) -> ResourceId
 
     match family {
         AF_INET => {
-            let Ok(address) = (unsafe { bpf_probe_read_kernel(address_ptr.cast::<SockAddrIn>()) }) else {
+            let Ok(address) = (unsafe { bpf_probe_read_kernel(address_ptr.cast::<SockAddrIn>()) })
+            else {
                 return ResourceIdentity::empty();
             };
             let mut socket_ip = [0; SOCKET_IP_LEN];
@@ -142,7 +143,8 @@ pub(crate) fn read_socket_bind_resource_identity(ctx: &LsmContext) -> ResourceId
             }
         }
         AF_INET6 => {
-            let Ok(address) = (unsafe { bpf_probe_read_kernel(address_ptr.cast::<SockAddrIn6>()) }) else {
+            let Ok(address) = (unsafe { bpf_probe_read_kernel(address_ptr.cast::<SockAddrIn6>()) })
+            else {
                 return ResourceIdentity::empty();
             };
             ResourceIdentity {

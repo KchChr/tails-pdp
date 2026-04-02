@@ -49,18 +49,26 @@ pub fn socket_bind(ctx: LsmContext) -> i32 {
     let resource = read_socket_bind_resource_identity(&ctx);
     let static_decision =
         evaluate_static_policies(subject, PolicyAction::SocketBind, &command, &resource);
+    if static_decision != 0 {
+        unsafe {
+            aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind deny static");
+        }
+        return -1;
+    }
+
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let stream_decision =
         evaluate_stream_policies(subject, PolicyAction::SocketBind, &resource, current_time);
-    let decision = if static_decision != 0 || stream_decision != 0 {
-        1
-    } else {
-        0
-    };
+    if stream_decision != 0 {
+        unsafe {
+            aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind deny stream");
+        }
+        return -1;
+    }
 
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind entry");
     }
 
-    if decision != 0 { -1 } else { 0 }
+    0
 }
