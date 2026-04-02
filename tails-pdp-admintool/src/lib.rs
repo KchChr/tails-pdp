@@ -7,14 +7,22 @@ use std::env;
 use anyhow::{anyhow, bail};
 use clap::{Parser, error::ErrorKind};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, Entitlement, PolicyAction, RESOURCE_LEN,
-    STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy, StreamPolicy,
+    ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
+    RESOURCE_LEN, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
+    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport,
 };
 
 use crate::{
-    cli::{Cli, Command, print_usage},
-    maps::{open_static_policy, open_stream_policy},
-    output::{show_static, show_stream},
+    cli::{ActionArg, Cli, Command, print_usage},
+    maps::{
+        FileOpenStaticPolicyMap, FileOpenStreamPolicyMap, SocketBindStaticPolicyMap,
+        SocketBindStreamPolicyMap, open_file_open_static_policies, open_file_open_stream_policies,
+        open_socket_bind_static_policies, open_socket_bind_stream_policies,
+    },
+    output::{
+        show_file_open_static, show_file_open_stream, show_socket_bind_static,
+        show_socket_bind_stream,
+    },
 };
 
 fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
@@ -24,228 +32,315 @@ fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn hook_local_slot(
-    action: PolicyAction,
-    local_index: u32,
-    slots_per_hook: u32,
-) -> anyhow::Result<u32> {
-    if local_index >= slots_per_hook {
-        bail!(
-            "local hook index {} out of range for {:?}; max is {}",
-            local_index,
-            action,
-            slots_per_hook - 1
-        );
+fn ensure_privileges(command: &Command) -> anyhow::Result<()> {
+    if command.requires_root() && unsafe { libc::geteuid() } != 0 {
+        bail!("this command modifies pinned eBPF maps and must be run with sudo");
     }
-    Ok(action.local_slot(local_index, slots_per_hook))
-}
-
-fn clear_static_policy(
-    map: &mut maps::StaticPolicyMap,
-    action: cli::ActionArg,
-    index: u32,
-) -> anyhow::Result<()> {
-    let slot = hook_local_slot(action.into(), index, STATIC_POLICY_SLOTS_PER_HOOK)?;
-    map.set(slot, StaticPolicy::disabled(), 0)
-        .map_err(anyhow::Error::from)
-        .map_err(|error| {
-            anyhow!(
-                "failed to clear STATIC_POLICY[{slot}] from {:?}[{index}]: {error}",
-                action
-            )
-        })
-}
-
-fn clear_stream_policy(
-    map: &mut maps::StreamPolicyMap,
-    action: cli::ActionArg,
-    index: u32,
-) -> anyhow::Result<()> {
-    let slot = hook_local_slot(action.into(), index, STREAM_POLICY_SLOTS_PER_HOOK)?;
-    map.set(slot, StreamPolicy::disabled(), 0)
-        .map_err(anyhow::Error::from)
-        .map_err(|error| {
-            anyhow!(
-                "failed to clear STREAM_POLICY[{slot}] from {:?}[{index}]: {error}",
-                action
-            )
-        })
-}
-
-fn set_static_policy(
-    map: &mut maps::StaticPolicyMap,
-    index: u32,
-    entitlement: cli::EntitlementArg,
-    action: cli::ActionArg,
-    subject: u32,
-    command: String,
-    resource: String,
-    family: cli::SocketFamilyArg,
-    transport: cli::SocketTransportArg,
-    port: u16,
-) -> anyhow::Result<()> {
-    validate_len("command", &command, COMMAND_LEN)?;
-    validate_len("resource", &resource, RESOURCE_LEN)?;
-    let policy_action: PolicyAction = action.into();
-    let slot = hook_local_slot(policy_action, index, STATIC_POLICY_SLOTS_PER_HOOK)?;
-
-    let mut policy = StaticPolicy::new(
-        entitlement.into(),
-        subject,
-        policy_action,
-        &command,
-        &resource,
-    );
-    policy.socket_family = family.into();
-    policy.socket_transport = transport.into();
-    policy.socket_port = port;
-    let policy = policy
-        .resolve_resource_identity()
-        .map_err(anyhow::Error::from)
-        .map_err(|error| anyhow!("failed to resolve STATIC_POLICY[{index}] resource: {error}"))?;
-
-    map.set(slot, policy, 0)
-        .map_err(anyhow::Error::from)
-        .map_err(|error| {
-            anyhow!(
-                "failed to write STATIC_POLICY[{slot}] from {:?}[{index}]: {error}",
-                action
-            )
-        })
-}
-
-fn load_example_static_policies(map: &mut maps::StaticPolicyMap) -> anyhow::Result<()> {
-    let example_policies = [
-        StaticPolicy::new(
-            Entitlement::Deny,
-            ANY_SUBJECT,
-            tails_pdp_common::PolicyAction::FileOpen,
-            "cat",
-            "/etc/shadow",
-        ),
-        StaticPolicy::new(
-            Entitlement::Deny,
-            0,
-            tails_pdp_common::PolicyAction::TaskSetNice,
-            "",
-            "",
-        ),
-    ];
-
-    for index in 0..map.len() {
-        map.set(index, StaticPolicy::disabled(), 0)
-            .map_err(anyhow::Error::from)
-            .map_err(|error| anyhow!("failed to clear STATIC_POLICY[{index}]: {error}"))?;
-    }
-
-    let mut next_index = [0u32; tails_pdp_common::POLICY_HOOK_COUNT as usize];
-    for policy in example_policies.into_iter() {
-        let hook_slot = policy.action.hook_slot() as usize;
-        let index = next_index[hook_slot];
-        let slot = hook_local_slot(policy.action, index, STATIC_POLICY_SLOTS_PER_HOOK)?;
-        let policy = policy
-            .resolve_resource_identity()
-            .map_err(anyhow::Error::from)
-            .map_err(|error| {
-                anyhow!("failed to resolve example STATIC_POLICY[{index}] resource: {error}")
-            })?;
-        map.set(slot, policy, 0)
-            .map_err(anyhow::Error::from)
-            .map_err(|error| anyhow!("failed to write STATIC_POLICY[{slot}]: {error}"))?;
-        next_index[hook_slot] += 1;
-    }
-
     Ok(())
 }
 
-fn set_stream_policy(
-    map: &mut maps::StreamPolicyMap,
+fn clear_file_open_static_policy(
+    map: &mut FileOpenStaticPolicyMap,
+    index: u32,
+) -> anyhow::Result<()> {
+    map.set(index, FileOpenStaticPolicy::disabled(), 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to clear FILE_OPEN_STATIC_POLICIES[{index}]: {error}"))
+}
+
+fn clear_file_open_stream_policy(
+    map: &mut FileOpenStreamPolicyMap,
+    index: u32,
+) -> anyhow::Result<()> {
+    map.set(index, FileOpenStreamPolicy::disabled(), 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]: {error}"))
+}
+
+fn clear_socket_bind_static_policy(
+    map: &mut SocketBindStaticPolicyMap,
+    index: u32,
+) -> anyhow::Result<()> {
+    if index >= SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
+        bail!(
+            "socket_bind static index {} out of range; max is {}",
+            index,
+            SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES - 1
+        );
+    }
+    map.set(index, SocketBindStaticPolicy::disabled(), 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to clear SOCKET_BIND_STATIC_POLICIES[{index}]: {error}"))
+}
+
+fn clear_socket_bind_stream_policy(
+    map: &mut SocketBindStreamPolicyMap,
+    index: u32,
+) -> anyhow::Result<()> {
+    if index >= SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES {
+        bail!(
+            "socket_bind stream index {} out of range; max is {}",
+            index,
+            SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES - 1
+        );
+    }
+    map.set(index, SocketBindStreamPolicy::disabled(), 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to clear SOCKET_BIND_STREAM_POLICIES[{index}]: {error}"))
+}
+
+fn set_file_open_static_policy(
+    map: &mut FileOpenStaticPolicyMap,
     index: u32,
     entitlement: cli::EntitlementArg,
-    action: cli::ActionArg,
     subject: u32,
-    attribute: cli::StreamAttributeArg,
+    command: String,
     resource: String,
+) -> anyhow::Result<()> {
+    validate_len("command", &command, COMMAND_LEN)?;
+    validate_len("resource", &resource, RESOURCE_LEN)?;
+
+    let policy = FileOpenStaticPolicy::new(entitlement.into(), subject, &command, &resource)
+        .resolve_resource_identity()
+        .map_err(anyhow::Error::from)
+        .map_err(|error| {
+            anyhow!("failed to resolve FILE_OPEN_STATIC_POLICIES[{index}] resource: {error}")
+        })?;
+
+    map.set(index, policy, 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to write FILE_OPEN_STATIC_POLICIES[{index}]: {error}"))
+}
+
+fn set_socket_bind_static_policy(
+    map: &mut SocketBindStaticPolicyMap,
+    index: u32,
+    entitlement: cli::EntitlementArg,
+    subject: u32,
     family: cli::SocketFamilyArg,
     transport: cli::SocketTransportArg,
     port: u16,
+    resource: String,
+) -> anyhow::Result<()> {
+    validate_len("resource", &resource, RESOURCE_LEN)?;
+
+    let policy = SocketBindStaticPolicy::new(
+        entitlement.into(),
+        subject,
+        family.into(),
+        transport.into(),
+        port,
+        &resource,
+    )
+    .resolve_resource_identity()
+    .map_err(anyhow::Error::from)
+    .map_err(|error| {
+        anyhow!("failed to resolve SOCKET_BIND_STATIC_POLICIES[{index}] resource: {error}")
+    })?;
+
+    map.set(index, policy, 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to write SOCKET_BIND_STATIC_POLICIES[{index}]: {error}"))
+}
+
+fn set_file_open_stream_policy(
+    map: &mut FileOpenStreamPolicyMap,
+    index: u32,
+    entitlement: cli::EntitlementArg,
+    subject: u32,
+    resource: String,
     operator: cli::StreamOperatorArg,
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
     validate_len("resource", &resource, RESOURCE_LEN)?;
-    let policy_action: PolicyAction = action.into();
-    let slot = hook_local_slot(policy_action, index, STREAM_POLICY_SLOTS_PER_HOOK)?;
 
-    let mut policy = StreamPolicy::time(
+    let policy = FileOpenStreamPolicy::time(
         entitlement.into(),
         subject,
-        policy_action,
         &resource,
         operator.into(),
         modulo,
         value,
-    );
-    policy.attribute = attribute.into();
-    policy.socket_family = family.into();
-    policy.socket_transport = transport.into();
-    policy.socket_port = port;
-    policy = policy
-        .resolve_resource_identity()
-        .map_err(anyhow::Error::from)
-        .map_err(|error| anyhow!("failed to resolve STREAM_POLICY[{index}] resource: {error}"))?;
+    )
+    .resolve_resource_identity()
+    .map_err(anyhow::Error::from)
+    .map_err(|error| {
+        anyhow!("failed to resolve FILE_OPEN_STREAM_POLICIES[{index}] resource: {error}")
+    })?;
 
-    map.set(slot, policy, 0)
+    map.set(index, policy, 0)
         .map_err(anyhow::Error::from)
-        .map_err(|error| {
-            anyhow!(
-                "failed to write STREAM_POLICY[{slot}] from {:?}[{index}]: {error}",
-                action
-            )
-        })
+        .map_err(|error| anyhow!("failed to write FILE_OPEN_STREAM_POLICIES[{index}]: {error}"))
 }
 
-fn load_example_stream_policies(map: &mut maps::StreamPolicyMap) -> anyhow::Result<()> {
-    let example_policies = [StreamPolicy::time(
-        Entitlement::Permit,
-        1000,
-        tails_pdp_common::PolicyAction::FileOpen,
-        "/home/hntr/test.txt",
-        tails_pdp_common::StreamOperator::LessThan,
-        10,
-        5,
-    )];
+fn set_socket_bind_stream_policy(
+    map: &mut SocketBindStreamPolicyMap,
+    index: u32,
+    entitlement: cli::EntitlementArg,
+    subject: u32,
+    attribute: cli::StreamAttributeArg,
+    family: cli::SocketFamilyArg,
+    transport: cli::SocketTransportArg,
+    port: u16,
+    resource: String,
+    operator: cli::StreamOperatorArg,
+    modulo: u64,
+    value: u64,
+) -> anyhow::Result<()> {
+    validate_len("resource", &resource, RESOURCE_LEN)?;
 
-    for index in 0..map.len() {
-        map.set(index, StreamPolicy::disabled(), 0)
-            .map_err(anyhow::Error::from)
-            .map_err(|error| anyhow!("failed to clear STREAM_POLICY[{index}]: {error}"))?;
-    }
+    let mut policy = SocketBindStreamPolicy::time(
+        entitlement.into(),
+        subject,
+        family.into(),
+        transport.into(),
+        port,
+        &resource,
+        operator.into(),
+        modulo,
+        value,
+    )
+    .resolve_resource_identity()
+    .map_err(anyhow::Error::from)
+    .map_err(|error| {
+        anyhow!("failed to resolve SOCKET_BIND_STREAM_POLICIES[{index}] resource: {error}")
+    })?;
+    policy.attribute = attribute.into();
 
-    let mut next_index = [0u32; tails_pdp_common::POLICY_HOOK_COUNT as usize];
-    for policy in example_policies.into_iter() {
-        let hook_slot = policy.action.hook_slot() as usize;
-        let index = next_index[hook_slot];
-        let slot = hook_local_slot(policy.action, index, STREAM_POLICY_SLOTS_PER_HOOK)?;
-        let policy = policy
-            .resolve_resource_identity()
+    map.set(index, policy, 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to write SOCKET_BIND_STREAM_POLICIES[{index}]: {error}"))
+}
+
+fn load_example_static_policies(
+    file_open_map: &mut FileOpenStaticPolicyMap,
+    socket_bind_map: &mut SocketBindStaticPolicyMap,
+) -> anyhow::Result<()> {
+    for index in 0..file_open_map.len() {
+        file_open_map
+            .set(index, FileOpenStaticPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| {
-                anyhow!("failed to resolve example STREAM_POLICY[{index}] resource: {error}")
+                anyhow!("failed to clear FILE_OPEN_STATIC_POLICIES[{index}]: {error}")
             })?;
-        map.set(slot, policy, 0)
+    }
+    for index in 0..socket_bind_map.len() {
+        socket_bind_map
+            .set(index, SocketBindStaticPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
-            .map_err(|error| anyhow!("failed to write STREAM_POLICY[{slot}]: {error}"))?;
-        next_index[hook_slot] += 1;
+            .map_err(|error| {
+                anyhow!("failed to clear SOCKET_BIND_STATIC_POLICIES[{index}]: {error}")
+            })?;
+    }
+
+    let file_open_examples = [FileOpenStaticPolicy::new(
+        Entitlement::Deny,
+        ANY_SUBJECT,
+        "cat",
+        "/etc/shadow",
+    )];
+    let socket_bind_examples = [SocketBindStaticPolicy::new(
+        Entitlement::Deny,
+        1000,
+        SocketFamily::Inet,
+        SocketTransport::Tcp,
+        8080,
+        "0.0.0.0",
+    )];
+
+    for (index, policy) in file_open_examples.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)?;
+        file_open_map
+            .set(index as u32, policy, 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to write FILE_OPEN_STATIC_POLICIES[{index}]: {error}")
+            })?;
+    }
+
+    for (index, policy) in socket_bind_examples.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)?;
+        socket_bind_map
+            .set(index as u32, policy, 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to write SOCKET_BIND_STATIC_POLICIES[{index}]: {error}")
+            })?;
     }
 
     Ok(())
 }
 
-fn ensure_privileges(command: &Command) -> anyhow::Result<()> {
-    if command.requires_root() && unsafe { libc::geteuid() } != 0 {
-        bail!("this command modifies pinned eBPF maps and must be run with sudo");
+fn load_example_stream_policies(
+    file_open_map: &mut FileOpenStreamPolicyMap,
+    socket_bind_map: &mut SocketBindStreamPolicyMap,
+) -> anyhow::Result<()> {
+    for index in 0..file_open_map.len() {
+        file_open_map
+            .set(index, FileOpenStreamPolicy::disabled(), 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]: {error}")
+            })?;
     }
+    for index in 0..socket_bind_map.len() {
+        socket_bind_map
+            .set(index, SocketBindStreamPolicy::disabled(), 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to clear SOCKET_BIND_STREAM_POLICIES[{index}]: {error}")
+            })?;
+    }
+
+    let file_open_examples = [FileOpenStreamPolicy::time(
+        Entitlement::Permit,
+        1000,
+        "/home/hntr/test.txt",
+        tails_pdp_common::StreamOperator::LessThan,
+        10,
+        5,
+    )];
+    let socket_bind_examples = [SocketBindStreamPolicy::time(
+        Entitlement::Permit,
+        1000,
+        SocketFamily::Inet,
+        SocketTransport::Tcp,
+        8080,
+        "0.0.0.0",
+        tails_pdp_common::StreamOperator::LessThan,
+        10,
+        5,
+    )];
+
+    for (index, policy) in file_open_examples.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)?;
+        file_open_map
+            .set(index as u32, policy, 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to write FILE_OPEN_STREAM_POLICIES[{index}]: {error}")
+            })?;
+    }
+
+    for (index, policy) in socket_bind_examples.into_iter().enumerate() {
+        let policy = policy
+            .resolve_resource_identity()
+            .map_err(anyhow::Error::from)?;
+        socket_bind_map
+            .set(index as u32, policy, 0)
+            .map_err(anyhow::Error::from)
+            .map_err(|error| {
+                anyhow!("failed to write SOCKET_BIND_STREAM_POLICIES[{index}]: {error}")
+            })?;
+    }
+
     Ok(())
 }
 
@@ -278,25 +373,49 @@ pub fn run() -> anyhow::Result<()> {
 
     match cli.command {
         Command::Show => {
-            let static_map = open_static_policy(&cli.static_pin_path)?;
-            let stream_map = open_stream_policy(&cli.stream_pin_path)?;
-            show_static(&static_map, false)?;
-            show_stream(&stream_map, false)
+            let file_open_static = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+            let file_open_stream = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+            let socket_bind_static =
+                open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+            let socket_bind_stream =
+                open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+            show_file_open_static(&file_open_static, false)?;
+            show_file_open_stream(&file_open_stream, false)?;
+            show_socket_bind_static(&socket_bind_static, false)?;
+            show_socket_bind_stream(&socket_bind_stream, false)
         }
         Command::ShowActive => {
-            let static_map = open_static_policy(&cli.static_pin_path)?;
-            let stream_map = open_stream_policy(&cli.stream_pin_path)?;
-            show_static(&static_map, true)?;
-            show_stream(&stream_map, true)
+            let file_open_static = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+            let file_open_stream = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+            let socket_bind_static =
+                open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+            let socket_bind_stream =
+                open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+            show_file_open_static(&file_open_static, true)?;
+            show_file_open_stream(&file_open_stream, true)?;
+            show_socket_bind_static(&socket_bind_static, true)?;
+            show_socket_bind_stream(&socket_bind_stream, true)
         }
-        Command::Clear { index, action } => {
-            let mut static_map = open_static_policy(&cli.static_pin_path)?;
-            clear_static_policy(&mut static_map, action, index)
-        }
-        Command::ClearStream { index, action } => {
-            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
-            clear_stream_policy(&mut stream_map, action, index)
-        }
+        Command::Clear { index, action } => match action {
+            ActionArg::FileOpen => {
+                let mut map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+                clear_file_open_static_policy(&mut map, index)
+            }
+            ActionArg::SocketBind => {
+                let mut map = open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+                clear_socket_bind_static_policy(&mut map, index)
+            }
+        },
+        Command::ClearStream { index, action } => match action {
+            ActionArg::FileOpen => {
+                let mut map = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+                clear_file_open_stream_policy(&mut map, index)
+            }
+            ActionArg::SocketBind => {
+                let mut map = open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+                clear_socket_bind_stream_policy(&mut map, index)
+            }
+        },
         Command::Set {
             index,
             entitlement,
@@ -307,21 +426,32 @@ pub fn run() -> anyhow::Result<()> {
             family,
             transport,
             port,
-        } => {
-            let mut static_map = open_static_policy(&cli.static_pin_path)?;
-            set_static_policy(
-                &mut static_map,
-                index,
-                entitlement,
-                action,
-                subject,
-                command,
-                resource,
-                family,
-                transport,
-                port,
-            )
-        }
+        } => match action {
+            ActionArg::FileOpen => {
+                let mut map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+                set_file_open_static_policy(
+                    &mut map,
+                    index,
+                    entitlement,
+                    subject,
+                    command,
+                    resource,
+                )
+            }
+            ActionArg::SocketBind => {
+                let mut map = open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+                set_socket_bind_static_policy(
+                    &mut map,
+                    index,
+                    entitlement,
+                    subject,
+                    family,
+                    transport,
+                    port,
+                    resource,
+                )
+            }
+        },
         Command::SetStream {
             index,
             entitlement,
@@ -335,31 +465,49 @@ pub fn run() -> anyhow::Result<()> {
             operator,
             modulo,
             value,
-        } => {
-            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
-            set_stream_policy(
-                &mut stream_map,
-                index,
-                entitlement,
-                action,
-                subject,
-                attribute,
-                resource,
-                family,
-                transport,
-                port,
-                operator,
-                modulo,
-                value,
-            )
-        }
+        } => match action {
+            ActionArg::FileOpen => {
+                let mut map = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+                set_file_open_stream_policy(
+                    &mut map,
+                    index,
+                    entitlement,
+                    subject,
+                    resource,
+                    operator,
+                    modulo,
+                    value,
+                )
+            }
+            ActionArg::SocketBind => {
+                let mut map = open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+                set_socket_bind_stream_policy(
+                    &mut map,
+                    index,
+                    entitlement,
+                    subject,
+                    attribute,
+                    family,
+                    transport,
+                    port,
+                    resource,
+                    operator,
+                    modulo,
+                    value,
+                )
+            }
+        },
         Command::LoadExamples => {
-            let mut static_map = open_static_policy(&cli.static_pin_path)?;
-            load_example_static_policies(&mut static_map)
+            let mut file_open_map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+            let mut socket_bind_map =
+                open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+            load_example_static_policies(&mut file_open_map, &mut socket_bind_map)
         }
         Command::LoadStreamExamples => {
-            let mut stream_map = open_stream_policy(&cli.stream_pin_path)?;
-            load_example_stream_policies(&mut stream_map)
+            let mut file_open_map = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+            let mut socket_bind_map =
+                open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+            load_example_stream_policies(&mut file_open_map, &mut socket_bind_map)
         }
     }
 }

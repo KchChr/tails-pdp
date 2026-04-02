@@ -3,15 +3,14 @@ use aya_ebpf::{
     maps::{Array, ProgramArray},
 };
 use tails_pdp_common::{
-    POLICY_HOOK_COUNT, STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy,
-    StreamPolicy,
+    FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
+    FileOpenStreamPolicy, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
+    SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
-pub(crate) const TAIL_IDX_POLICY_1: u32 = 0;
-pub(crate) const TAIL_IDX_POLICY_2: u32 = 1;
-pub(crate) const COMBINE: u32 = 2;
-pub(crate) const STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_HOOK_COUNT * STATIC_POLICY_SLOTS_PER_HOOK;
-pub(crate) const STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_HOOK_COUNT * STREAM_POLICY_SLOTS_PER_HOOK;
+pub(crate) const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;
+pub(crate) const TAIL_IDX_FILE_OPEN_STREAM: u32 = 1;
+pub(crate) const TAIL_IDX_COMBINE: u32 = 2;
 
 #[map]
 pub(crate) static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
@@ -20,10 +19,20 @@ pub(crate) static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entri
 pub(crate) static DECISIONS: Array<i32> = Array::with_max_entries(1, 0);
 
 #[map]
-pub(crate) static STATIC_POLICY: Array<StaticPolicy> = Array::pinned(STATIC_POLICY_MAX_ENTRIES, 0);
+pub(crate) static FILE_OPEN_STATIC_POLICIES: Array<FileOpenStaticPolicy> =
+    Array::pinned(FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, 0);
 
 #[map]
-pub(crate) static STREAM_POLICY: Array<StreamPolicy> = Array::pinned(STREAM_POLICY_MAX_ENTRIES, 0);
+pub(crate) static FILE_OPEN_STREAM_POLICIES: Array<FileOpenStreamPolicy> =
+    Array::pinned(FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, 0);
+
+#[map]
+pub(crate) static SOCKET_BIND_STATIC_POLICIES: Array<SocketBindStaticPolicy> =
+    Array::pinned(SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, 0);
+
+#[map]
+pub(crate) static SOCKET_BIND_STREAM_POLICIES: Array<SocketBindStreamPolicy> =
+    Array::pinned(SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, 0);
 
 #[map]
 pub(crate) static CURRENT_TIME: Array<u64> = Array::pinned(1, 0);

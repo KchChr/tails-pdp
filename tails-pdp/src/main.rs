@@ -6,18 +6,23 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, LSM_PROGRAMS, TAIL_PROGRAMS,
-    policy_loader::{load_static_policies, load_stream_policies, verify_pinned_map_layouts},
+    policy_loader::{
+        load_file_open_static_policies, load_file_open_stream_policies,
+        load_socket_bind_static_policies, load_socket_bind_stream_policies,
+        verify_pinned_map_layouts,
+    },
     time::{open_current_time_map, run_current_time_updater},
 };
-use tails_pdp_common::{Entitlement, PolicyAction, StaticPolicy, StreamPolicy};
+use tails_pdp_common::{
+    Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy,
+    SocketBindStreamPolicy,
+};
 use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    // Bump the memlock rlimit. This is needed for older kernels that don't use the
-    // new memcg based accounting, see https://lwn.net/Articles/837122/
     let rlim = libc::rlimit {
         rlim_cur: libc::RLIM_INFINITY,
         rlim_max: libc::RLIM_INFINITY,
@@ -26,15 +31,6 @@ async fn main() -> anyhow::Result<()> {
     if ret != 0 {
         debug!("remove limit on locked memory failed, ret is: {ret}");
     }
-
-    // This will include your eBPF object file as raw bytes at compile-time and load it at
-    // runtime. This approach is recommended for most real-world use cases. If you would
-    // like to specify the eBPF program at runtime rather than at compile-time, you can
-    // reach for `Bpf::load_file` instead.
-    // let mut ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
-    //     env!("OUT_DIR"),
-    //     "/tails-pdp"
-    // )))?;
 
     fs::create_dir_all(BPF_PIN_DIRECTORY)
         .with_context(|| format!("failed to create {BPF_PIN_DIRECTORY}"))?;
@@ -65,32 +61,21 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'POLICY_JUMP_TABLE' not found")?,
     )
     .context("failed to open POLICY_JUMP_TABLE")?;
-    let static_policies = [
-        StaticPolicy::new(
-            Entitlement::Deny,
-            1000,
-            PolicyAction::FileOpen,
-            "cat",
-            "/home/hntr/test.txt",
-        ),
-        StaticPolicy::new(
-            Entitlement::Permit,
-            1000,
-            PolicyAction::FileOpen,
-            "tail",
-            "/home/hntr/test.txt",
-        ),
-        StaticPolicy::new(
-            Entitlement::Deny,
-            1000,
-            PolicyAction::FileOpen,
-            "cat",
-            "/home/hntr/test2.txt",
-        ),
+
+    let file_open_static_policies = [
+        FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "/home/hntr/test.txt"),
+        FileOpenStaticPolicy::new(Entitlement::Permit, 1000, "tail", "/home/hntr/test.txt"),
+        FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "/home/hntr/test2.txt"),
     ];
-    let stream_policies: [StreamPolicy; 0] = [];
-    load_static_policies(&mut ebpf, &static_policies)?;
-    load_stream_policies(&mut ebpf, &stream_policies)?;
+    let file_open_stream_policies: [FileOpenStreamPolicy; 0] = [];
+    let socket_bind_static_policies: [SocketBindStaticPolicy; 0] = [];
+    let socket_bind_stream_policies: [SocketBindStreamPolicy; 0] = [];
+
+    load_file_open_static_policies(&mut ebpf, &file_open_static_policies)?;
+    load_file_open_stream_policies(&mut ebpf, &file_open_stream_policies)?;
+    load_socket_bind_static_policies(&mut ebpf, &socket_bind_static_policies)?;
+    load_socket_bind_stream_policies(&mut ebpf, &socket_bind_stream_policies)?;
+
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
     for (index, program_name) in TAIL_PROGRAMS {

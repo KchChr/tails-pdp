@@ -1,71 +1,130 @@
 use anyhow::Context;
 use tails_pdp_common::{
-    STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy, StreamPolicy,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
-use crate::maps::{StaticPolicyMap, StreamPolicyMap};
+use crate::maps::{
+    FileOpenStaticPolicyMap, FileOpenStreamPolicyMap, SocketBindStaticPolicyMap,
+    SocketBindStreamPolicyMap,
+};
 
 fn fixed_string(bytes: &[u8]) -> String {
-    let len = bytes.iter().position(|b| *b == 0).unwrap_or(bytes.len());
+    let len = bytes
+        .iter()
+        .position(|byte| *byte == 0)
+        .unwrap_or(bytes.len());
     String::from_utf8_lossy(&bytes[..len]).into_owned()
 }
 
-pub fn show_static(map: &StaticPolicyMap, active_only: bool) -> anyhow::Result<()> {
-    println!("STATIC_POLICY:");
+pub fn show_file_open_static(
+    map: &FileOpenStaticPolicyMap,
+    active_only: bool,
+) -> anyhow::Result<()> {
+    println!("FILE_OPEN_STATIC_POLICIES:");
     for index in 0..map.len() {
-        let policy: StaticPolicy = map
+        let policy: FileOpenStaticPolicy = map
             .get(&index, 0)
-            .with_context(|| format!("failed to read STATIC_POLICY[{index}]"))?;
+            .with_context(|| format!("failed to read FILE_OPEN_STATIC_POLICIES[{index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }
-
-        let command = fixed_string(&policy.command);
-        let resource = fixed_string(&policy.resource);
-        let local_index = index % STATIC_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={} family={:?} transport={:?} port={}",
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
             policy.subject,
-            command,
-            resource,
+            fixed_string(&policy.command),
+            fixed_string(&policy.resource),
             policy.resource_device,
             policy.resource_inode,
-            policy.socket_family,
-            policy.socket_transport,
-            policy.socket_port,
         );
     }
     println!();
     Ok(())
 }
 
-pub fn show_stream(map: &StreamPolicyMap, active_only: bool) -> anyhow::Result<()> {
-    println!("STREAM_POLICY:");
+pub fn show_file_open_stream(
+    map: &FileOpenStreamPolicyMap,
+    active_only: bool,
+) -> anyhow::Result<()> {
+    println!("FILE_OPEN_STREAM_POLICIES:");
     for index in 0..map.len() {
-        let policy: StreamPolicy = map
+        let policy: FileOpenStreamPolicy = map
             .get(&index, 0)
-            .with_context(|| format!("failed to read STREAM_POLICY[{index}]"))?;
+            .with_context(|| format!("failed to read FILE_OPEN_STREAM_POLICIES[{index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }
-
-        let resource = fixed_string(&policy.resource);
-        let local_index = index % STREAM_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} family={:?} transport={:?} port={} attribute={:?} operator={:?} modulo={} value={}",
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
             policy.subject,
-            resource,
+            fixed_string(&policy.resource),
             policy.resource_device,
             policy.resource_inode,
+            policy.attribute,
+            policy.operator,
+            policy.modulo,
+            policy.value,
+        );
+    }
+    println!();
+    Ok(())
+}
+
+pub fn show_socket_bind_static(
+    map: &SocketBindStaticPolicyMap,
+    active_only: bool,
+) -> anyhow::Result<()> {
+    println!("SOCKET_BIND_STATIC_POLICIES:");
+    for index in 0..map.len() {
+        let policy: SocketBindStaticPolicy = map
+            .get(&index, 0)
+            .with_context(|| format!("failed to read SOCKET_BIND_STATIC_POLICIES[{index}]"))?;
+        if active_only && policy.enabled == 0 {
+            continue;
+        }
+        println!(
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} family={:?} transport={:?} port={} resource={:?}",
+            policy.enabled,
+            policy.entitlement,
+            policy.action,
+            policy.subject,
             policy.socket_family,
             policy.socket_transport,
             policy.socket_port,
+            fixed_string(&policy.resource),
+        );
+    }
+    println!();
+    Ok(())
+}
+
+pub fn show_socket_bind_stream(
+    map: &SocketBindStreamPolicyMap,
+    active_only: bool,
+) -> anyhow::Result<()> {
+    println!("SOCKET_BIND_STREAM_POLICIES:");
+    for index in 0..map.len() {
+        let policy: SocketBindStreamPolicy = map
+            .get(&index, 0)
+            .with_context(|| format!("failed to read SOCKET_BIND_STREAM_POLICIES[{index}]"))?;
+        if active_only && policy.enabled == 0 {
+            continue;
+        }
+        println!(
+            "[{index}] enabled={} entitlement={:?} action={:?} subject={} family={:?} transport={:?} port={} resource={:?} attribute={:?} operator={:?} modulo={} value={}",
+            policy.enabled,
+            policy.entitlement,
+            policy.action,
+            policy.subject,
+            policy.socket_family,
+            policy.socket_transport,
+            policy.socket_port,
+            fixed_string(&policy.resource),
             policy.attribute,
             policy.operator,
             policy.modulo,

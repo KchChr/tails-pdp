@@ -2,12 +2,17 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use tails_pdp_common::{
-    ANY_SUBJECT, Entitlement, PolicyAction, SocketFamily, SocketTransport, StreamAttribute,
-    StreamOperator,
+    ANY_SUBJECT, Entitlement, SocketFamily, SocketTransport, StreamAttribute, StreamOperator,
 };
 
-pub const DEFAULT_STATIC_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STATIC_POLICY";
-pub const DEFAULT_STREAM_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/STREAM_POLICY";
+pub const DEFAULT_FILE_OPEN_STATIC_PIN_PATH: &str =
+    "/sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES";
+pub const DEFAULT_FILE_OPEN_STREAM_PIN_PATH: &str =
+    "/sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES";
+pub const DEFAULT_SOCKET_BIND_STATIC_PIN_PATH: &str =
+    "/sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES";
+pub const DEFAULT_SOCKET_BIND_STREAM_PIN_PATH: &str =
+    "/sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum EntitlementArg {
@@ -27,18 +32,7 @@ impl From<EntitlementArg> for Entitlement {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum ActionArg {
     FileOpen,
-    TaskSetNice,
     SocketBind,
-}
-
-impl From<ActionArg> for PolicyAction {
-    fn from(value: ActionArg) -> Self {
-        match value {
-            ActionArg::FileOpen => PolicyAction::FileOpen,
-            ActionArg::TaskSetNice => PolicyAction::TaskSetNice,
-            ActionArg::SocketBind => PolicyAction::SocketBind,
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -113,14 +107,20 @@ impl From<StreamOperatorArg> for StreamOperator {
 #[command(
     name = "tails-pdp-admintool",
     arg_required_else_help = true,
-    about = "Verwaltet die gepinnten STATIC_POLICY- und STREAM_POLICY-eBPF-Maps."
+    about = "Verwaltet die hook-spezifischen eBPF-Policy-Maps."
 )]
 pub struct Cli {
-    #[arg(long, default_value = DEFAULT_STATIC_PIN_PATH)]
-    pub static_pin_path: PathBuf,
+    #[arg(long, default_value = DEFAULT_FILE_OPEN_STATIC_PIN_PATH)]
+    pub file_open_static_pin_path: PathBuf,
 
-    #[arg(long, default_value = DEFAULT_STREAM_PIN_PATH)]
-    pub stream_pin_path: PathBuf,
+    #[arg(long, default_value = DEFAULT_FILE_OPEN_STREAM_PIN_PATH)]
+    pub file_open_stream_pin_path: PathBuf,
+
+    #[arg(long, default_value = DEFAULT_SOCKET_BIND_STATIC_PIN_PATH)]
+    pub socket_bind_static_pin_path: PathBuf,
+
+    #[arg(long, default_value = DEFAULT_SOCKET_BIND_STREAM_PIN_PATH)]
+    pub socket_bind_stream_pin_path: PathBuf,
 
     #[command(subcommand)]
     pub command: Command,
@@ -128,23 +128,18 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// Zeigt alle STATIC_POLICY- und STREAM_POLICY-Eintraege an.
     Show,
-    /// Zeigt nur aktive STATIC_POLICY- und STREAM_POLICY-Eintraege an.
     ShowActive,
-    /// Setzt einen STATIC_POLICY-Slot auf disabled zurueck.
     Clear {
         index: u32,
         #[arg(long, value_enum)]
         action: ActionArg,
     },
-    /// Setzt einen STREAM_POLICY-Slot auf disabled zurueck.
     ClearStream {
         index: u32,
         #[arg(long, value_enum)]
         action: ActionArg,
     },
-    /// Schreibt einen STATIC_POLICY-Eintrag an einen Index.
     Set {
         index: u32,
         #[arg(long, value_enum)]
@@ -164,7 +159,6 @@ pub enum Command {
         #[arg(long, default_value_t = 0)]
         port: u16,
     },
-    /// Schreibt einen STREAM_POLICY-Eintrag an einen Index.
     SetStream {
         index: u32,
         #[arg(long, value_enum)]
@@ -190,9 +184,7 @@ pub enum Command {
         #[arg(long)]
         value: u64,
     },
-    /// Laedt die im Tool hinterlegten Beispielpolicies.
     LoadExamples,
-    /// Laedt Beispiel-Stream-Policies.
     LoadStreamExamples,
 }
 
@@ -213,81 +205,46 @@ impl Command {
 pub fn print_usage() {
     println!("tails-pdp-admintool");
     println!();
-    println!("Verwaltet die gepinnten STATIC_POLICY- und STREAM_POLICY-eBPF-Maps.");
+    println!("Verwaltet die hook-spezifischen eBPF-Policy-Maps.");
     println!();
     println!("USAGE:");
-    println!(
-        "  tails-pdp-admintool [--static-pin-path <PATH>] [--stream-pin-path <PATH>] <COMMAND>"
-    );
+    println!("  tails-pdp-admintool <COMMAND> [OPTIONS]");
     println!();
     println!("COMMANDS:");
     println!("  show");
-    println!("      Zeigt alle STATIC_POLICY- und STREAM_POLICY-Eintraege an.");
-    println!("      Kein sudo erforderlich.");
-    println!();
+    println!("      Zeigt alle hook-spezifischen Static- und Stream-Policies an.");
     println!("  show-active");
-    println!("      Zeigt nur aktive STATIC_POLICY- und STREAM_POLICY-Eintraege an.");
-    println!("      Kein sudo erforderlich.");
-    println!();
-    println!("  clear <INDEX> --action <file-open|task-set-nice>");
-    println!("      Setzt einen hook-lokalen STATIC_POLICY-Slot auf disabled zurueck.");
-    println!("      sudo erforderlich.");
-    println!();
-    println!("  clear-stream <INDEX> --action <file-open|task-set-nice>");
-    println!("      Setzt einen hook-lokalen STREAM_POLICY-Slot auf disabled zurueck.");
-    println!("      sudo erforderlich.");
-    println!();
+    println!("      Zeigt nur aktive hook-spezifische Policies an.");
+    println!("  clear <INDEX> --action <file-open|socket-bind>");
+    println!("      Setzt einen Static-Policy-Slot des Hooks auf disabled zurueck.");
+    println!("  clear-stream <INDEX> --action <file-open|socket-bind>");
+    println!("      Setzt einen Stream-Policy-Slot des Hooks auf disabled zurueck.");
+    println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
+    println!("      file-open: [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
     println!(
-        "  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice|socket-bind>"
+        "      socket-bind: [--subject <UID>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--resource <IP>] [--port <N>]"
     );
+    println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
     println!(
-        "      [--subject <UID>] [--command <NAME>] [--resource <PFAD|IP>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--port <N>]"
+        "      [--subject <UID>] [--attribute <time>] --operator <...> --modulo <N> --value <N>"
     );
-    println!("      Schreibt einen hook-lokalen STATIC_POLICY-Eintrag.");
-    println!("      sudo erforderlich.");
-    println!();
+    println!("      file-open: [--resource <PFAD>]");
     println!(
-        "  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice|socket-bind>"
+        "      socket-bind: [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--resource <IP>] [--port <N>]"
     );
-    println!(
-        "      [--subject <UID>] [--attribute <time>] [--resource <PFAD|IP>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--port <N>] --operator <...> --modulo <N> --value <N>"
-    );
-    println!("      Schreibt einen hook-lokalen STREAM_POLICY-Eintrag.");
-    println!("      sudo erforderlich.");
-    println!();
     println!("  load-examples");
-    println!("      Laedt die hinterlegten Beispielpolicies.");
-    println!("      sudo erforderlich.");
-    println!();
     println!("  load-stream-examples");
-    println!("      Laedt hinterlegte Beispiel-Stream-Policies.");
-    println!("      sudo erforderlich.");
-    println!();
-    println!("OPTIONS:");
-    println!("  --static-pin-path <PATH>");
-    println!("      Standard: {}", DEFAULT_STATIC_PIN_PATH);
-    println!("  --stream-pin-path <PATH>");
-    println!("      Standard: {}", DEFAULT_STREAM_PIN_PATH);
-    println!("  -h, --help");
-    println!("      Zeigt diese Hilfe an.");
     println!();
     println!("BEISPIELE:");
     println!("  tails-pdp-admintool show");
     println!("  tails-pdp-admintool show-active");
-    println!("  sudo tails-pdp-admintool clear 0 --action file-open");
-    println!("  sudo tails-pdp-admintool clear-stream 0 --action file-open");
     println!(
-        "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
+        "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 1000 --command cat --resource /home/hntr/test.txt"
     );
     println!(
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action socket-bind --subject 1000 --family inet --transport tcp --resource 0.0.0.0 --port 8080"
     );
     println!(
-        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action file-open --subject 1000 --attribute time --resource /home/hntr/test.txt --operator less-than --modulo 10 --value 5"
-    );
-    println!(
         "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action socket-bind --subject 1000 --attribute time --family inet --transport tcp --resource 0.0.0.0 --port 8080 --operator less-than --modulo 10 --value 5"
     );
-    println!("  sudo tails-pdp-admintool load-examples");
-    println!("  sudo tails-pdp-admintool load-stream-examples");
 }

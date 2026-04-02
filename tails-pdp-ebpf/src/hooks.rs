@@ -1,12 +1,11 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
-use tails_pdp_common::{COMMAND_LEN, PolicyAction};
 
 use crate::{
-    helpers::{ResourceIdentity, read_socket_bind_resource_identity},
-    maps::{CURRENT_TIME, POLICY_JUMP_TABLE, TAIL_IDX_POLICY_1},
+    helpers::read_socket_bind_resource,
+    maps::{CURRENT_TIME, POLICY_JUMP_TABLE, TAIL_IDX_FILE_OPEN_STATIC},
     policies::{
-        evaluate_static_policies::evaluate_policies as evaluate_static_policies,
-        evaluate_stream_policies::evaluate_policies as evaluate_stream_policies,
+        socket_bind_static_policies::evaluate_policies as evaluate_socket_bind_static_policies,
+        socket_bind_stream_policies::evaluate_policies as evaluate_socket_bind_stream_policies,
     },
 };
 
@@ -14,42 +13,17 @@ use crate::{
 pub fn file_open(ctx: LsmContext) -> i32 {
     unsafe {
         aya_ebpf::bpf_printk!(b"tails-pdp: file_open entry");
-        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_POLICY_1);
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STATIC);
     }
     0
-}
-
-#[lsm(hook = "task_setnice")]
-pub fn task_setnice(ctx: LsmContext) -> i32 {
-    let subject = ctx.uid();
-    let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
-    let resource = ResourceIdentity::empty();
-    let static_decision =
-        evaluate_static_policies(subject, PolicyAction::TaskSetNice, &command, &resource);
-    let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let stream_decision =
-        evaluate_stream_policies(subject, PolicyAction::TaskSetNice, &resource, current_time);
-    let decision = if static_decision != 0 || stream_decision != 0 {
-        1
-    } else {
-        0
-    };
-
-    unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: task_setnice entry");
-    }
-
-    if decision != 0 { -1 } else { 0 }
 }
 
 #[lsm(hook = "socket_bind")]
 pub fn socket_bind(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
-    let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
-    let resource = read_socket_bind_resource_identity(&ctx);
-    let static_decision =
-        evaluate_static_policies(subject, PolicyAction::SocketBind, &command, &resource);
-    if static_decision != 0 {
+    let resource = read_socket_bind_resource(&ctx);
+
+    if evaluate_socket_bind_static_policies(subject, &resource) != 0 {
         unsafe {
             aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind deny static");
         }
@@ -57,9 +31,7 @@ pub fn socket_bind(ctx: LsmContext) -> i32 {
     }
 
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let stream_decision =
-        evaluate_stream_policies(subject, PolicyAction::SocketBind, &resource, current_time);
-    if stream_decision != 0 {
+    if evaluate_socket_bind_stream_policies(subject, &resource, current_time) != 0 {
         unsafe {
             aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind deny stream");
         }
@@ -67,8 +39,7 @@ pub fn socket_bind(ctx: LsmContext) -> i32 {
     }
 
     unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind entry");
+        aya_ebpf::bpf_printk!(b"tails-pdp: socket_bind permit");
     }
-
     0
 }

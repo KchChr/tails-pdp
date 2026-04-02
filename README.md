@@ -40,8 +40,10 @@ cargo run --bin tails-pdp --release
 If pinned map layouts changed, remove the stale maps once before restarting:
 
 ```shell
-sudo rm -f /sys/fs/bpf/tails-pdp/STATIC_POLICY
-sudo rm -f /sys/fs/bpf/tails-pdp/STREAM_POLICY
+sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
+sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
+sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
+sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 ```
 
@@ -105,8 +107,9 @@ Notes:
   require `sudo`
 - `action` is always the LSM hook the policy belongs to, for example `file-open`
 - `index` in `clear`, `clear-stream`, `set`, and `set-stream` is hook-local
-- internally the policy maps are segmented by hook, so during evaluation the kernel only walks the
-  entries belonging to the current hook
+- there are separate pinned maps per hook:
+  `FILE_OPEN_STATIC_POLICIES`, `FILE_OPEN_STREAM_POLICIES`,
+  `SOCKET_BIND_STATIC_POLICIES`, and `SOCKET_BIND_STREAM_POLICIES`
 - for file policies, `--resource` is given as a path in userspace; when the policy is loaded, the
   loader resolves that path to `device + inode`, and the kernel matches on those values
 - for `socket-bind`, `--resource` is the local bind address, `--family` is `inet` or `inet6`,
@@ -230,7 +233,8 @@ sudo ./target/release/tails-pdp-admintool show-active
 This lets you compare:
 
 - the file's inode and device from `stat`
-- the resolved `device` and `inode` stored in `STATIC_POLICY`
+- the resolved `device` and `inode` stored in `FILE_OPEN_STATIC_POLICIES` or
+  `FILE_OPEN_STREAM_POLICIES`
 - the `bpf_printk!` output in `trace_pipe`
 
 ## Cross-compiling on macOS for Linux/NixOS
