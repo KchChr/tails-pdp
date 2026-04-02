@@ -2,13 +2,16 @@ use aya_ebpf::{
     macros::map,
     maps::{Array, ProgramArray},
 };
-use tails_pdp_common::{StaticPolicy, StreamPolicy};
+use tails_pdp_common::{
+    POLICY_HOOK_COUNT, STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy,
+    StreamPolicy,
+};
 
 pub(crate) const TAIL_IDX_POLICY_1: u32 = 0;
 pub(crate) const TAIL_IDX_POLICY_2: u32 = 1;
 pub(crate) const COMBINE: u32 = 2;
-pub(crate) const STATIC_POLICY_MAX_ENTRIES: u32 = 128;
-pub(crate) const STREAM_POLICY_MAX_ENTRIES: u32 = 128;
+pub(crate) const STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_HOOK_COUNT * STATIC_POLICY_SLOTS_PER_HOOK;
+pub(crate) const STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_HOOK_COUNT * STREAM_POLICY_SLOTS_PER_HOOK;
 
 #[map]
 pub(crate) static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);

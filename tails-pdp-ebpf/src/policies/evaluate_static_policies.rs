@@ -1,5 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
-use tails_pdp_common::{ANY_SUBJECT, COMMAND_LEN, PolicyAction, StaticPolicy};
+use tails_pdp_common::{
+    ANY_SUBJECT, COMMAND_LEN, PolicyAction, STATIC_POLICY_SLOTS_PER_HOOK, StaticPolicy,
+};
 
 use crate::{
     helpers::read_file_open_resource_identity,
@@ -82,9 +84,10 @@ pub(crate) fn evaluate_policies(
     current_resource_inode: u64,
 ) -> i32 {
     let mut decision = 0;
-    let mut index = 0;
+    let mut index = current_action.segment_start(STATIC_POLICY_SLOTS_PER_HOOK);
+    let end = current_action.segment_end(STATIC_POLICY_SLOTS_PER_HOOK);
 
-    while index < STATIC_POLICY_MAX_ENTRIES {
+    while index < end && index < STATIC_POLICY_MAX_ENTRIES {
         if let Some(policy) = STATIC_POLICY.get(index) {
             if let Some(policy_decision) = evaluate_static_policy(
                 current_subject,

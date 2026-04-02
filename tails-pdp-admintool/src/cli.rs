@@ -94,9 +94,17 @@ pub enum Command {
     /// Zeigt nur aktive STATIC_POLICY- und STREAM_POLICY-Eintraege an.
     ShowActive,
     /// Setzt einen STATIC_POLICY-Slot auf disabled zurueck.
-    Clear { index: u32 },
+    Clear {
+        index: u32,
+        #[arg(long, value_enum)]
+        action: ActionArg,
+    },
     /// Setzt einen STREAM_POLICY-Slot auf disabled zurueck.
-    ClearStream { index: u32 },
+    ClearStream {
+        index: u32,
+        #[arg(long, value_enum)]
+        action: ActionArg,
+    },
     /// Schreibt einen STATIC_POLICY-Eintrag an einen Index.
     Set {
         index: u32,
@@ -170,24 +178,24 @@ pub fn print_usage() {
     println!("      Zeigt nur aktive STATIC_POLICY- und STREAM_POLICY-Eintraege an.");
     println!("      Kein sudo erforderlich.");
     println!();
-    println!("  clear <INDEX>");
-    println!("      Setzt einen Slot auf disabled zurueck.");
+    println!("  clear <INDEX> --action <file-open|task-set-nice>");
+    println!("      Setzt einen hook-lokalen STATIC_POLICY-Slot auf disabled zurueck.");
     println!("      sudo erforderlich.");
     println!();
-    println!("  clear-stream <INDEX>");
-    println!("      Setzt einen STREAM_POLICY-Slot auf disabled zurueck.");
+    println!("  clear-stream <INDEX> --action <file-open|task-set-nice>");
+    println!("      Setzt einen hook-lokalen STREAM_POLICY-Slot auf disabled zurueck.");
     println!("      sudo erforderlich.");
     println!();
     println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
     println!("      [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
-    println!("      Schreibt einen STATIC_POLICY-Eintrag.");
+    println!("      Schreibt einen hook-lokalen STATIC_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
     println!();
     println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|task-set-nice>");
     println!(
         "      [--subject <UID>] [--attribute <time>] [--resource <PFAD>] --operator <...> --modulo <N> --value <N>"
     );
-    println!("      Schreibt einen STREAM_POLICY-Eintrag.");
+    println!("      Schreibt einen hook-lokalen STREAM_POLICY-Eintrag.");
     println!("      sudo erforderlich.");
     println!();
     println!("  load-examples");
@@ -209,8 +217,8 @@ pub fn print_usage() {
     println!("BEISPIELE:");
     println!("  tails-pdp-admintool show");
     println!("  tails-pdp-admintool show-active");
-    println!("  sudo tails-pdp-admintool clear 0");
-    println!("  sudo tails-pdp-admintool clear-stream 0");
+    println!("  sudo tails-pdp-admintool clear 0 --action file-open");
+    println!("  sudo tails-pdp-admintool clear-stream 0 --action file-open");
     println!(
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 0 --command cat --resource /etc/shadow"
     );

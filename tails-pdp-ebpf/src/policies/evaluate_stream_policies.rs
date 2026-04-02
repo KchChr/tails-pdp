@@ -1,6 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    ANY_SUBJECT, Entitlement, PolicyAction, StreamAttribute, StreamOperator, StreamPolicy,
+    ANY_SUBJECT, Entitlement, PolicyAction, STREAM_POLICY_SLOTS_PER_HOOK, StreamAttribute,
+    StreamOperator, StreamPolicy,
 };
 
 use crate::{
@@ -75,9 +76,10 @@ pub(crate) fn evaluate_policies(
     current_time: u64,
 ) -> i32 {
     let mut decision = 0;
-    let mut index = 0;
+    let mut index = current_action.segment_start(STREAM_POLICY_SLOTS_PER_HOOK);
+    let end = current_action.segment_end(STREAM_POLICY_SLOTS_PER_HOOK);
 
-    while index < STREAM_POLICY_MAX_ENTRIES {
+    while index < end && index < STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = STREAM_POLICY.get(index) {
             if let Some(policy_decision) = evaluate_stream_policy(
                 current_subject,

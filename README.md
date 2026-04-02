@@ -59,8 +59,8 @@ Typical commands:
 ```shell
 ./target/release/tails-pdp-admintool show
 ./target/release/tails-pdp-admintool show-active
-sudo ./target/release/tails-pdp-admintool clear 0
-sudo ./target/release/tails-pdp-admintool clear-stream 0
+sudo ./target/release/tails-pdp-admintool clear 0 --action file-open
+sudo ./target/release/tails-pdp-admintool clear-stream 0 --action file-open
 sudo ./target/release/tails-pdp-admintool set 0 \
   --entitlement deny \
   --action file-open \
@@ -83,8 +83,12 @@ Notes:
 - `show` and `show-active` do not require `sudo`
 - `clear`, `clear-stream`, `set`, `set-stream`, `load-examples`, and `load-stream-examples`
   require `sudo`
-- for static file policies, `--resource` is given as a path in userspace; when the policy is loaded,
-  the loader resolves that path to `device + inode`, and the kernel matches on those values
+- `action` is always the LSM hook the policy belongs to, for example `file-open`
+- `index` in `clear`, `clear-stream`, `set`, and `set-stream` is hook-local
+- internally the policy maps are segmented by hook, so during evaluation the kernel only walks the
+  entries belonging to the current hook
+- for file policies, `--resource` is given as a path in userspace; when the policy is loaded, the
+  loader resolves that path to `device + inode`, and the kernel matches on those values
 
 ## Stream Policies
 
@@ -117,9 +121,9 @@ This example means:
 To remove stream policies again:
 
 ```shell
-sudo ./target/release/tails-pdp-admintool clear-stream 0
-sudo ./target/release/tails-pdp-admintool clear-stream 1
-sudo ./target/release/tails-pdp-admintool clear-stream 2
+sudo ./target/release/tails-pdp-admintool clear-stream 0 --action file-open
+sudo ./target/release/tails-pdp-admintool clear-stream 1 --action file-open
+sudo ./target/release/tails-pdp-admintool clear-stream 2 --action file-open
 ```
 
 To load the built-in example stream policies:

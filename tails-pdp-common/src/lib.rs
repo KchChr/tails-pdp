@@ -6,6 +6,9 @@ extern crate std;
 pub const COMMAND_LEN: usize = 16;
 pub const RESOURCE_LEN: usize = 64;
 pub const ANY_SUBJECT: u32 = u32::MAX;
+pub const POLICY_HOOK_COUNT: u32 = 2;
+pub const STATIC_POLICY_SLOTS_PER_HOOK: u32 = 64;
+pub const STREAM_POLICY_SLOTS_PER_HOOK: u32 = 64;
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -36,6 +39,30 @@ pub enum PolicyAction {
     FileOpen = 1,
     TaskSetNice = 2,
 }
+
+impl PolicyAction {
+    pub const fn hook_slot(self) -> u32 {
+        match self {
+            Self::FileOpen => 0,
+            Self::TaskSetNice => 1,
+        }
+    }
+
+    pub const fn segment_start(self, slots_per_hook: u32) -> u32 {
+        self.hook_slot() * slots_per_hook
+    }
+
+    pub const fn segment_end(self, slots_per_hook: u32) -> u32 {
+        self.segment_start(slots_per_hook) + slots_per_hook
+    }
+
+    pub const fn local_slot(self, local_index: u32, slots_per_hook: u32) -> u32 {
+        self.segment_start(slots_per_hook) + local_index
+    }
+}
+
+pub const POLICY_HOOKS: [PolicyAction; POLICY_HOOK_COUNT as usize] =
+    [PolicyAction::FileOpen, PolicyAction::TaskSetNice];
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

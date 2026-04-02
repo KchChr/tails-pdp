@@ -1,5 +1,7 @@
 use anyhow::Context;
-use tails_pdp_common::{StaticPolicy, StreamPolicy};
+use tails_pdp_common::{
+    STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy, StreamPolicy,
+};
 
 use crate::maps::{StaticPolicyMap, StreamPolicyMap};
 
@@ -20,8 +22,9 @@ pub fn show_static(map: &StaticPolicyMap, active_only: bool) -> anyhow::Result<(
 
         let command = fixed_string(&policy.command);
         let resource = fixed_string(&policy.resource);
+        let local_index = index % STATIC_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={}",
+            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} command={:?} resource={:?} device={} inode={}",
             policy.enabled,
             policy.entitlement,
             policy.action,
@@ -47,8 +50,9 @@ pub fn show_stream(map: &StreamPolicyMap, active_only: bool) -> anyhow::Result<(
         }
 
         let resource = fixed_string(&policy.resource);
+        let local_index = index % STREAM_POLICY_SLOTS_PER_HOOK;
         println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
+            "[slot={index} hook_index={local_index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
             policy.enabled,
             policy.entitlement,
             policy.action,

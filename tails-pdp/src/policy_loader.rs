@@ -2,14 +2,45 @@ use std::{mem::size_of, path::Path};
 
 use anyhow::{Context, bail};
 use aya::maps::{Array, MapInfo};
-use tails_pdp_common::{StaticPolicy, StreamPolicy};
+use tails_pdp_common::{
+    POLICY_HOOKS, STATIC_POLICY_SLOTS_PER_HOOK, STREAM_POLICY_SLOTS_PER_HOOK, StaticPolicy,
+    StreamPolicy,
+};
 
 use crate::BPF_PIN_DIRECTORY;
 
 const ARRAY_KEY_SIZE: u32 = size_of::<u32>() as u32;
-const STATIC_POLICY_MAX_ENTRIES: u32 = 128;
-const STREAM_POLICY_MAX_ENTRIES: u32 = 128;
+const STATIC_POLICY_MAX_ENTRIES: u32 =
+    tails_pdp_common::POLICY_HOOK_COUNT * STATIC_POLICY_SLOTS_PER_HOOK;
+const STREAM_POLICY_MAX_ENTRIES: u32 =
+    tails_pdp_common::POLICY_HOOK_COUNT * STREAM_POLICY_SLOTS_PER_HOOK;
 const CURRENT_TIME_MAX_ENTRIES: u32 = 1;
+
+fn slot_for_static_policy(policy: StaticPolicy, local_index: u32) -> anyhow::Result<u32> {
+    if local_index >= STATIC_POLICY_SLOTS_PER_HOOK {
+        bail!(
+            "too many STATIC_POLICY entries for hook {:?}: limit is {}",
+            policy.action,
+            STATIC_POLICY_SLOTS_PER_HOOK
+        );
+    }
+    Ok(policy
+        .action
+        .local_slot(local_index, STATIC_POLICY_SLOTS_PER_HOOK))
+}
+
+fn slot_for_stream_policy(policy: StreamPolicy, local_index: u32) -> anyhow::Result<u32> {
+    if local_index >= STREAM_POLICY_SLOTS_PER_HOOK {
+        bail!(
+            "too many STREAM_POLICY entries for hook {:?}: limit is {}",
+            policy.action,
+            STREAM_POLICY_SLOTS_PER_HOOK
+        );
+    }
+    Ok(policy
+        .action
+        .local_slot(local_index, STREAM_POLICY_SLOTS_PER_HOOK))
+}
 
 fn verify_pinned_map_layout(
     map_name: &str,
@@ -81,13 +112,24 @@ pub fn load_static_policies(ebpf: &mut aya::Ebpf, policies: &[StaticPolicy]) -> 
             .with_context(|| format!("failed to clear STATIC_POLICY entry {index}"))?;
     }
 
-    for (index, policy) in policies.iter().copied().enumerate() {
+    let mut next_index = [0u32; POLICY_HOOKS.len()];
+    for policy in policies.iter().copied() {
         let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve STATIC_POLICY entry {index} resource identity")
+            format!(
+                "failed to resolve STATIC_POLICY entry for hook {:?} resource identity",
+                policy.action
+            )
         })?;
-        static_policy
-            .set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write STATIC_POLICY entry {index}"))?;
+        let hook_slot = policy.action.hook_slot() as usize;
+        let index = next_index[hook_slot];
+        let slot = slot_for_static_policy(policy, index)?;
+        static_policy.set(slot, policy, 0).with_context(|| {
+            format!(
+                "failed to write STATIC_POLICY hook {:?} local entry {index} (slot {slot})",
+                policy.action
+            )
+        })?;
+        next_index[hook_slot] += 1;
     }
 
     Ok(())
@@ -106,13 +148,24 @@ pub fn load_stream_policies(ebpf: &mut aya::Ebpf, policies: &[StreamPolicy]) -> 
             .with_context(|| format!("failed to clear STREAM_POLICY entry {index}"))?;
     }
 
-    for (index, policy) in policies.iter().copied().enumerate() {
+    let mut next_index = [0u32; POLICY_HOOKS.len()];
+    for policy in policies.iter().copied() {
         let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve STREAM_POLICY entry {index} resource identity")
+            format!(
+                "failed to resolve STREAM_POLICY entry for hook {:?} resource identity",
+                policy.action
+            )
         })?;
-        stream_policy
-            .set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write STREAM_POLICY entry {index}"))?;
+        let hook_slot = policy.action.hook_slot() as usize;
+        let index = next_index[hook_slot];
+        let slot = slot_for_stream_policy(policy, index)?;
+        stream_policy.set(slot, policy, 0).with_context(|| {
+            format!(
+                "failed to write STREAM_POLICY hook {:?} local entry {index} (slot {slot})",
+                policy.action
+            )
+        })?;
+        next_index[hook_slot] += 1;
     }
 
     Ok(())
