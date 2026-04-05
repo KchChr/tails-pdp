@@ -57,6 +57,20 @@ fn clear_file_open_stream_policy(
         .map_err(|error| anyhow!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]: {error}"))
 }
 
+fn clear_all_file_open_static_policies(map: &mut FileOpenStaticPolicyMap) -> anyhow::Result<()> {
+    for index in 0..map.len() {
+        clear_file_open_static_policy(map, index)?;
+    }
+    Ok(())
+}
+
+fn clear_all_file_open_stream_policies(map: &mut FileOpenStreamPolicyMap) -> anyhow::Result<()> {
+    for index in 0..map.len() {
+        clear_file_open_stream_policy(map, index)?;
+    }
+    Ok(())
+}
+
 fn clear_socket_bind_static_policy(
     map: &mut SocketBindStaticPolicyMap,
     index: u32,
@@ -87,6 +101,24 @@ fn clear_socket_bind_stream_policy(
     map.set(index, SocketBindStreamPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear SOCKET_BIND_STREAM_POLICIES[{index}]: {error}"))
+}
+
+fn clear_all_socket_bind_static_policies(
+    map: &mut SocketBindStaticPolicyMap,
+) -> anyhow::Result<()> {
+    for index in 0..map.len() {
+        clear_socket_bind_static_policy(map, index)?;
+    }
+    Ok(())
+}
+
+fn clear_all_socket_bind_stream_policies(
+    map: &mut SocketBindStreamPolicyMap,
+) -> anyhow::Result<()> {
+    for index in 0..map.len() {
+        clear_socket_bind_stream_policy(map, index)?;
+    }
+    Ok(())
 }
 
 fn set_file_open_static_policy(
@@ -396,6 +428,39 @@ pub fn run() -> anyhow::Result<()> {
             show_socket_bind_static(&socket_bind_static, true)?;
             show_socket_bind_stream(&socket_bind_stream, true)
         }
+        Command::ClearAll { action } => match action {
+            None => {
+                let mut file_open_static =
+                    open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+                let mut file_open_stream =
+                    open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+                let mut socket_bind_static =
+                    open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+                let mut socket_bind_stream =
+                    open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+
+                clear_all_file_open_static_policies(&mut file_open_static)?;
+                clear_all_file_open_stream_policies(&mut file_open_stream)?;
+                clear_all_socket_bind_static_policies(&mut socket_bind_static)?;
+                clear_all_socket_bind_stream_policies(&mut socket_bind_stream)
+            }
+            Some(ActionArg::FileOpen) => {
+                let mut file_open_static =
+                    open_file_open_static_policies(&cli.file_open_static_pin_path)?;
+                let mut file_open_stream =
+                    open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
+                clear_all_file_open_static_policies(&mut file_open_static)?;
+                clear_all_file_open_stream_policies(&mut file_open_stream)
+            }
+            Some(ActionArg::SocketBind) => {
+                let mut socket_bind_static =
+                    open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
+                let mut socket_bind_stream =
+                    open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
+                clear_all_socket_bind_static_policies(&mut socket_bind_static)?;
+                clear_all_socket_bind_stream_policies(&mut socket_bind_stream)
+            }
+        },
         Command::Clear { index, action } => match action {
             ActionArg::FileOpen => {
                 let mut map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;

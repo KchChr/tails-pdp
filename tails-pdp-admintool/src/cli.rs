@@ -130,6 +130,10 @@ pub struct Cli {
 pub enum Command {
     Show,
     ShowActive,
+    ClearAll {
+        #[arg(long, value_enum)]
+        action: Option<ActionArg>,
+    },
     Clear {
         index: u32,
         #[arg(long, value_enum)]
@@ -192,7 +196,8 @@ impl Command {
     pub fn requires_root(&self) -> bool {
         matches!(
             self,
-            Self::Clear { .. }
+            Self::ClearAll { .. }
+                | Self::Clear { .. }
                 | Self::ClearStream { .. }
                 | Self::Set { .. }
                 | Self::SetStream { .. }
@@ -215,6 +220,9 @@ pub fn print_usage() {
     println!("      Zeigt alle hook-spezifischen Static- und Stream-Policies an.");
     println!("  show-active");
     println!("      Zeigt nur aktive hook-spezifische Policies an.");
+    println!("  clear-all [--action <file-open|socket-bind>]");
+    println!("      Ohne --action: leert alle Static- und Stream-Policies aller Hooks.");
+    println!("      Mit --action: leert alle Static- und Stream-Policies des Hooks.");
     println!("  clear <INDEX> --action <file-open|socket-bind>");
     println!("      Setzt einen Static-Policy-Slot des Hooks auf disabled zurueck.");
     println!("  clear-stream <INDEX> --action <file-open|socket-bind>");
@@ -238,6 +246,8 @@ pub fn print_usage() {
     println!("BEISPIELE:");
     println!("  tails-pdp-admintool show");
     println!("  tails-pdp-admintool show-active");
+    println!("  sudo tails-pdp-admintool clear-all");
+    println!("  sudo tails-pdp-admintool clear-all --action file-open");
     println!(
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 1000 --command cat --resource /home/hntr/test.txt"
     );
