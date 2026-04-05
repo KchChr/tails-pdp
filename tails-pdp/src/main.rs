@@ -14,8 +14,7 @@ use tails_pdp::{
     time::{open_current_time_map, run_current_time_updater},
 };
 use tails_pdp_common::{
-    Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy,
-    SocketBindStreamPolicy,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 use tokio::signal;
 
@@ -68,11 +67,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
 
-    let file_open_static_policies = [
-        FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "/home/hntr/test.txt"),
-        FileOpenStaticPolicy::new(Entitlement::Permit, 1000, "tail", "/home/hntr/test.txt"),
-        FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "/home/hntr/test2.txt"),
-    ];
+    let file_open_static_policies: [FileOpenStaticPolicy; 0] = [];
     let file_open_stream_policies: [FileOpenStreamPolicy; 0] = [];
     let socket_bind_static_policies: [SocketBindStaticPolicy; 0] = [];
     let socket_bind_stream_policies: [SocketBindStreamPolicy; 0] = [];
