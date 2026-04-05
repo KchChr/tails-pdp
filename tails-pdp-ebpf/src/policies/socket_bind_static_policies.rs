@@ -1,14 +1,13 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    ANY_SUBJECT, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_IP_LEN, SocketBindStaticPolicy,
-    SocketFamily, SocketTransport,
+    ANY_SUBJECT, Entitlement, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_IP_LEN,
+    SocketBindStaticPolicy, SocketFamily, SocketTransport,
 };
 
 use crate::{
     helpers::{SocketBindResource, read_socket_bind_resource},
-    maps::{
-        DECISIONS, SOCKET_BIND_JUMP_TABLE, SOCKET_BIND_STATIC_POLICIES, TAIL_IDX_SOCKET_BIND_STREAM,
-    },
+    maps::{SOCKET_BIND_JUMP_TABLE, SOCKET_BIND_STATIC_POLICIES, TAIL_IDX_SOCKET_BIND_STREAM},
+    policies::decision::DecisionState,
 };
 
 fn matches_subject(subject: u32, current_subject: u32) -> bool {
@@ -43,36 +42,56 @@ fn matches_resource(policy: &SocketBindStaticPolicy, resource: &SocketBindResour
         && matches_socket_ip(policy, resource.family, &resource.ip)
 }
 
+fn is_policy_applicable(
+    current_subject: u32,
+    resource: &SocketBindResource,
+    policy: &SocketBindStaticPolicy,
+) -> bool {
+    if policy.enabled == 0 {
+        return false;
+    }
+    if !matches_subject(policy.subject, current_subject) {
+        return false;
+    }
+    if !matches_resource(policy, resource) {
+        return false;
+    }
+    true
+}
+
 fn evaluate_policy(
     current_subject: u32,
     resource: &SocketBindResource,
     policy: &SocketBindStaticPolicy,
-) -> Option<i32> {
-    if policy.enabled == 0 {
+) -> Option<Entitlement> {
+    if !is_policy_applicable(current_subject, resource, policy) {
         return None;
     }
-    if !matches_subject(policy.subject, current_subject) {
-        return None;
-    }
-    if !matches_resource(policy, resource) {
-        return None;
-    }
-    Some(policy.entitlement.decision())
+
+    Some(policy.entitlement)
 }
 
-pub(crate) fn evaluate_policies(current_subject: u32, resource: &SocketBindResource) -> i32 {
-    let mut decision = 0;
+pub(crate) fn evaluate_policies(
+    current_subject: u32,
+    resource: &SocketBindResource,
+) -> DecisionState {
+    let mut state = DecisionState::empty();
     let mut index = 0;
-    let mut matched_index = u32::MAX;
+    let mut matched_deny_index = u32::MAX;
+    let mut matched_permit_index = u32::MAX;
 
     while index < SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
         if let Some(policy) = SOCKET_BIND_STATIC_POLICIES.get(index) {
-            if let Some(policy_decision) = evaluate_policy(current_subject, resource, policy) {
-                matched_index = index;
-                if policy_decision != 0 {
-                    decision = 1;
-                    break;
+            if let Some(entitlement) = evaluate_policy(current_subject, resource, policy) {
+                match entitlement {
+                    Entitlement::Deny => {
+                        matched_deny_index = matched_deny_index.min(index);
+                    }
+                    Entitlement::Permit => {
+                        matched_permit_index = matched_permit_index.min(index);
+                    }
                 }
+                state.record(entitlement);
             }
         }
         index += 1;
@@ -80,9 +99,11 @@ pub(crate) fn evaluate_policies(current_subject: u32, resource: &SocketBindResou
 
     unsafe {
         aya_ebpf::bpf_printk!(
-            b"sbs res=%d idx=%d uid=%d fam=%d tr=%d port=%d",
-            decision as u32,
-            matched_index,
+            b"sbs deny=%d permit=%d didx=%d pidx=%d uid=%d fam=%d tr=%d port=%d",
+            state.deny,
+            state.permit,
+            matched_deny_index,
+            matched_permit_index,
             current_subject,
             resource.family as u32,
             resource.transport as u32,
@@ -90,15 +111,15 @@ pub(crate) fn evaluate_policies(current_subject: u32, resource: &SocketBindResou
         );
     }
 
-    decision
+    state
 }
 
 #[lsm(hook = "socket_bind")]
 pub fn evaluate_socket_bind_static_policies(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
     let resource = read_socket_bind_resource(&ctx);
-    let decision = evaluate_policies(subject, &resource);
-    let _ = DECISIONS.set(0, decision, 0);
+    let decision_state = evaluate_policies(subject, &resource);
+    decision_state.write_to_map();
 
     unsafe {
         let _ = SOCKET_BIND_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_SOCKET_BIND_STREAM);

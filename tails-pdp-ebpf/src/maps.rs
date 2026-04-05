@@ -14,6 +14,8 @@ pub(crate) const TAIL_IDX_FILE_OPEN_COMBINE: u32 = 2;
 pub(crate) const TAIL_IDX_SOCKET_BIND_STATIC: u32 = 0;
 pub(crate) const TAIL_IDX_SOCKET_BIND_STREAM: u32 = 1;
 pub(crate) const TAIL_IDX_SOCKET_BIND_COMBINE: u32 = 2;
+pub(crate) const DECISION_DENY_IDX: u32 = 0;
+pub(crate) const DECISION_PERMIT_IDX: u32 = 1;
 
 #[map]
 pub(crate) static FILE_OPEN_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
@@ -22,7 +24,7 @@ pub(crate) static FILE_OPEN_JUMP_TABLE: ProgramArray = ProgramArray::with_max_en
 pub(crate) static SOCKET_BIND_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
 
 #[map]
-pub(crate) static DECISIONS: Array<i32> = Array::with_max_entries(1, 0);
+pub(crate) static DECISIONS: Array<u32> = Array::with_max_entries(2, 0);
 
 #[map]
 pub(crate) static FILE_OPEN_STATIC_POLICIES: Array<FileOpenStaticPolicy> =

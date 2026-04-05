@@ -7,9 +7,9 @@ use tails_pdp_common::{
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        CURRENT_TIME, DECISIONS, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES,
-        TAIL_IDX_FILE_OPEN_COMBINE,
+        CURRENT_TIME, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
     },
+    policies::decision::DecisionState,
 };
 
 fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
@@ -22,21 +22,32 @@ fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
     }
 }
 
+fn is_policy_applicable(
+    current_subject: u32,
+    resource: &FileOpenResource,
+    policy: &FileOpenStreamPolicy,
+) -> bool {
+    if policy.enabled == 0 {
+        return false;
+    }
+    if policy.subject != ANY_SUBJECT && policy.subject != current_subject {
+        return false;
+    }
+    if !policy.matches_any_resource()
+        && (policy.resource_device != resource.device || policy.resource_inode != resource.inode)
+    {
+        return false;
+    }
+    true
+}
+
 fn evaluate_policy(
     current_subject: u32,
     resource: &FileOpenResource,
     current_time: u64,
     policy: &FileOpenStreamPolicy,
-) -> Option<i32> {
-    if policy.enabled == 0 {
-        return None;
-    }
-    if policy.subject != ANY_SUBJECT && policy.subject != current_subject {
-        return None;
-    }
-    if !policy.matches_any_resource()
-        && (policy.resource_device != resource.device || policy.resource_inode != resource.inode)
-    {
+) -> Option<Entitlement> {
+    if !is_policy_applicable(current_subject, resource, policy) {
         return None;
     }
 
@@ -50,9 +61,9 @@ fn evaluate_policy(
     };
 
     Some(if condition {
-        policy.entitlement.decision()
+        policy.entitlement
     } else {
-        policy.entitlement.inverse().decision()
+        policy.entitlement.inverse()
     })
 }
 
@@ -60,21 +71,26 @@ pub(crate) fn evaluate_policies(
     current_subject: u32,
     resource: &FileOpenResource,
     current_time: u64,
-) -> i32 {
-    let mut decision = 0;
+) -> DecisionState {
+    let mut state = DecisionState::empty();
     let mut index = 0;
-    let mut matched_index = u32::MAX;
+    let mut matched_deny_index = u32::MAX;
+    let mut matched_permit_index = u32::MAX;
 
     while index < FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = FILE_OPEN_STREAM_POLICIES.get(index) {
-            if let Some(policy_decision) =
+            if let Some(entitlement) =
                 evaluate_policy(current_subject, resource, current_time, policy)
             {
-                matched_index = index;
-                if policy_decision != 0 {
-                    decision = 1;
-                    break;
+                match entitlement {
+                    Entitlement::Deny => {
+                        matched_deny_index = matched_deny_index.min(index);
+                    }
+                    Entitlement::Permit => {
+                        matched_permit_index = matched_permit_index.min(index);
+                    }
                 }
+                state.record(entitlement);
             }
         }
         index += 1;
@@ -82,9 +98,11 @@ pub(crate) fn evaluate_policies(
 
     unsafe {
         aya_ebpf::bpf_printk!(
-            b"fosm res=%d idx=%d uid=%d t=%llu dev=%llu ino=%llu",
-            decision as u32,
-            matched_index,
+            b"fosm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu dev=%llu ino=%llu",
+            state.deny,
+            state.permit,
+            matched_deny_index,
+            matched_permit_index,
             current_subject,
             current_time,
             resource.device,
@@ -92,22 +110,18 @@ pub(crate) fn evaluate_policies(
         );
     }
 
-    decision
+    state
 }
 
 #[lsm(hook = "file_open")]
 pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
-    let current_decision = DECISIONS.get(0).copied().unwrap_or(0);
+    let mut current_state = DecisionState::from_map();
     let current_subject = ctx.uid();
     let resource = read_file_open_resource(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let stream_decision = evaluate_policies(current_subject, &resource, current_time);
-    let decision = if current_decision != 0 || stream_decision != 0 {
-        Entitlement::Deny.decision()
-    } else {
-        Entitlement::Permit.decision()
-    };
-    let _ = DECISIONS.set(0, decision, 0);
+    let stream_state = evaluate_policies(current_subject, &resource, current_time);
+    current_state.merge(stream_state);
+    current_state.write_to_map();
 
     unsafe {
         let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);

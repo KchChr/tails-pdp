@@ -1,12 +1,15 @@
 use aya_ebpf::{macros::lsm, programs::LsmContext};
 
-use crate::maps::DECISIONS;
+use crate::policies::decision::DecisionState;
 
 fn combine_decision() -> i32 {
-    match DECISIONS.get(0) {
-        Some(v) if *v != 0 => -1,
-        _ => 0,
+    let state = DecisionState::from_map();
+
+    if state.deny != 0 {
+        return -1;
     }
+
+    0
 }
 
 macro_rules! define_combine_program {
