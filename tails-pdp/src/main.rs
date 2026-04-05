@@ -5,7 +5,7 @@ use log::debug;
 use std::fs;
 
 use tails_pdp::{
-    BPF_PIN_DIRECTORY, LSM_PROGRAMS, TAIL_PROGRAMS,
+    BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
     policy_loader::{
         load_file_open_static_policies, load_file_open_stream_policies,
         load_socket_bind_static_policies, load_socket_bind_stream_policies,
@@ -56,11 +56,17 @@ async fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to load '{}' on hook '{}'", spec.name, spec.hook))?;
     }
 
-    let mut jump_table = ProgramArray::try_from(
-        ebpf.take_map("POLICY_JUMP_TABLE")
-            .context("map 'POLICY_JUMP_TABLE' not found")?,
+    let mut file_open_jump_table = ProgramArray::try_from(
+        ebpf.take_map("FILE_OPEN_JUMP_TABLE")
+            .context("map 'FILE_OPEN_JUMP_TABLE' not found")?,
     )
-    .context("failed to open POLICY_JUMP_TABLE")?;
+    .context("failed to open FILE_OPEN_JUMP_TABLE")?;
+
+    let mut socket_bind_jump_table = ProgramArray::try_from(
+        ebpf.take_map("SOCKET_BIND_JUMP_TABLE")
+            .context("map 'SOCKET_BIND_JUMP_TABLE' not found")?,
+    )
+    .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
 
     let file_open_static_policies = [
         FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "/home/hntr/test.txt"),
@@ -78,15 +84,30 @@ async fn main() -> anyhow::Result<()> {
 
     let mut current_time = open_current_time_map(&mut ebpf)?;
 
-    for (index, program_name) in TAIL_PROGRAMS {
+    for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
         let program: &Lsm = ebpf
             .program(program_name)
             .with_context(|| format!("program '{program_name}' not found"))?
             .try_into()
             .with_context(|| format!("program '{program_name}' has unexpected type"))?;
-        jump_table
+        file_open_jump_table
             .set(index, program.fd()?, 0)
-            .with_context(|| format!("failed to set jump table slot for '{program_name}'"))?;
+            .with_context(|| {
+                format!("failed to set file_open jump table slot for '{program_name}'")
+            })?;
+    }
+
+    for (index, program_name) in SOCKET_BIND_TAIL_PROGRAMS {
+        let program: &Lsm = ebpf
+            .program(program_name)
+            .with_context(|| format!("program '{program_name}' not found"))?
+            .try_into()
+            .with_context(|| format!("program '{program_name}' has unexpected type"))?;
+        socket_bind_jump_table
+            .set(index, program.fd()?, 0)
+            .with_context(|| {
+                format!("failed to set socket_bind jump table slot for '{program_name}'")
+            })?;
     }
 
     for spec in LSM_PROGRAMS {

@@ -7,7 +7,7 @@ use tails_pdp_common::{
 use crate::{
     helpers::{SocketBindResource, read_socket_bind_resource},
     maps::{
-        CURRENT_TIME, DECISIONS, POLICY_JUMP_TABLE, SOCKET_BIND_STREAM_POLICIES,
+        CURRENT_TIME, DECISIONS, SOCKET_BIND_JUMP_TABLE, SOCKET_BIND_STREAM_POLICIES,
         TAIL_IDX_SOCKET_BIND_COMBINE,
     },
 };
@@ -137,7 +137,7 @@ pub fn evaluate_socket_bind_stream_policies(ctx: LsmContext) -> i32 {
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_SOCKET_BIND_COMBINE);
+        let _ = SOCKET_BIND_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_SOCKET_BIND_COMBINE);
     }
 
     0

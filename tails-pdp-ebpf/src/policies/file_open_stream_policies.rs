@@ -7,7 +7,7 @@ use tails_pdp_common::{
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        CURRENT_TIME, DECISIONS, FILE_OPEN_STREAM_POLICIES, POLICY_JUMP_TABLE,
+        CURRENT_TIME, DECISIONS, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES,
         TAIL_IDX_FILE_OPEN_COMBINE,
     },
 };
@@ -110,7 +110,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);
+        let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);
     }
     0
 }

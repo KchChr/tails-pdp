@@ -5,7 +5,7 @@ use tails_pdp_common::{
 
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
-    maps::{DECISIONS, FILE_OPEN_STATIC_POLICIES, POLICY_JUMP_TABLE, TAIL_IDX_FILE_OPEN_STREAM},
+    maps::{DECISIONS, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STATIC_POLICIES, TAIL_IDX_FILE_OPEN_STREAM},
 };
 
 fn matches_subject(subject: u32, current_subject: u32) -> bool {
@@ -90,7 +90,7 @@ pub fn evaluate_file_open_static_policies(ctx: LsmContext) -> i32 {
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
-        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STREAM);
+        let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STREAM);
     }
 
     0
