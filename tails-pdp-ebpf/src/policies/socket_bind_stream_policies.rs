@@ -1,9 +1,16 @@
+use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    ANY_SUBJECT, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SOCKET_IP_LEN, SocketBindStreamPolicy,
-    SocketFamily, SocketTransport, StreamAttribute, StreamOperator,
+    ANY_SUBJECT, Entitlement, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SOCKET_IP_LEN,
+    SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute, StreamOperator,
 };
 
-use crate::{helpers::SocketBindResource, maps::SOCKET_BIND_STREAM_POLICIES};
+use crate::{
+    helpers::{SocketBindResource, read_socket_bind_resource},
+    maps::{
+        CURRENT_TIME, DECISIONS, POLICY_JUMP_TABLE, SOCKET_BIND_STREAM_POLICIES,
+        TAIL_IDX_SOCKET_BIND_COMBINE,
+    },
+};
 
 fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
     match operator {
@@ -82,12 +89,14 @@ pub(crate) fn evaluate_policies(
 ) -> i32 {
     let mut decision = 0;
     let mut index = 0;
+    let mut matched_index = u32::MAX;
 
     while index < SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = SOCKET_BIND_STREAM_POLICIES.get(index) {
             if let Some(policy_decision) =
                 evaluate_policy(current_subject, resource, current_time, policy)
             {
+                matched_index = index;
                 if policy_decision != 0 {
                     decision = 1;
                     break;
@@ -97,5 +106,39 @@ pub(crate) fn evaluate_policies(
         index += 1;
     }
 
+    unsafe {
+        aya_ebpf::bpf_printk!(
+            b"sbsm res=%d idx=%d uid=%d t=%llu fam=%d tr=%d port=%d",
+            decision as u32,
+            matched_index,
+            current_subject,
+            current_time,
+            resource.family as u32,
+            resource.transport as u32,
+            resource.port as u32,
+        );
+    }
+
     decision
+}
+
+#[lsm(hook = "socket_bind")]
+pub fn evaluate_socket_bind_stream_policies(ctx: LsmContext) -> i32 {
+    let current_decision = DECISIONS.get(0).copied().unwrap_or(0);
+    let current_subject = ctx.uid();
+    let resource = read_socket_bind_resource(&ctx);
+    let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
+    let stream_decision = evaluate_policies(current_subject, &resource, current_time);
+    let decision = if current_decision != 0 || stream_decision != 0 {
+        Entitlement::Deny.decision()
+    } else {
+        Entitlement::Permit.decision()
+    };
+    let _ = DECISIONS.set(0, decision, 0);
+
+    unsafe {
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_SOCKET_BIND_COMBINE);
+    }
+
+    0
 }

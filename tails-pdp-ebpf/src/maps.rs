@@ -10,10 +10,13 @@ use tails_pdp_common::{
 
 pub(crate) const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;
 pub(crate) const TAIL_IDX_FILE_OPEN_STREAM: u32 = 1;
-pub(crate) const TAIL_IDX_COMBINE: u32 = 2;
+pub(crate) const TAIL_IDX_FILE_OPEN_COMBINE: u32 = 2;
+pub(crate) const TAIL_IDX_SOCKET_BIND_STATIC: u32 = 3;
+pub(crate) const TAIL_IDX_SOCKET_BIND_STREAM: u32 = 4;
+pub(crate) const TAIL_IDX_SOCKET_BIND_COMBINE: u32 = 5;
 
 #[map]
-pub(crate) static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
+pub(crate) static POLICY_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(6, 0);
 
 #[map]
 pub(crate) static DECISIONS: Array<i32> = Array::with_max_entries(1, 0);

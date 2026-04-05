@@ -7,7 +7,8 @@ use tails_pdp_common::{
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        CURRENT_TIME, DECISIONS, FILE_OPEN_STREAM_POLICIES, POLICY_JUMP_TABLE, TAIL_IDX_COMBINE,
+        CURRENT_TIME, DECISIONS, FILE_OPEN_STREAM_POLICIES, POLICY_JUMP_TABLE,
+        TAIL_IDX_FILE_OPEN_COMBINE,
     },
 };
 
@@ -62,12 +63,14 @@ pub(crate) fn evaluate_policies(
 ) -> i32 {
     let mut decision = 0;
     let mut index = 0;
+    let mut matched_index = u32::MAX;
 
     while index < FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = FILE_OPEN_STREAM_POLICIES.get(index) {
             if let Some(policy_decision) =
                 evaluate_policy(current_subject, resource, current_time, policy)
             {
+                matched_index = index;
                 if policy_decision != 0 {
                     decision = 1;
                     break;
@@ -75,6 +78,18 @@ pub(crate) fn evaluate_policies(
             }
         }
         index += 1;
+    }
+
+    unsafe {
+        aya_ebpf::bpf_printk!(
+            b"fosm res=%d idx=%d uid=%d t=%llu dev=%llu ino=%llu",
+            decision as u32,
+            matched_index,
+            current_subject,
+            current_time,
+            resource.device,
+            resource.inode,
+        );
     }
 
     decision
@@ -95,8 +110,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: evaluate_file_open_stream_policies");
-        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_COMBINE);
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);
     }
     0
 }

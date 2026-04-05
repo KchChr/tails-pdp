@@ -49,12 +49,14 @@ pub(crate) fn evaluate_policies(
 ) -> i32 {
     let mut decision = 0;
     let mut index = 0;
+    let mut matched_index = u32::MAX;
 
     while index < FILE_OPEN_STATIC_POLICY_MAX_ENTRIES {
         if let Some(policy) = FILE_OPEN_STATIC_POLICIES.get(index) {
             if let Some(policy_decision) =
                 evaluate_policy(current_subject, current_command, resource, policy)
             {
+                matched_index = index;
                 if policy_decision != 0 {
                     decision = 1;
                     break;
@@ -62,6 +64,18 @@ pub(crate) fn evaluate_policies(
             }
         }
         index += 1;
+    }
+
+    unsafe {
+        aya_ebpf::bpf_printk!(
+            b"fos res=%d idx=%d uid=%d dev=%llu ino=%llu cmd=%s",
+            decision as u32,
+            matched_index,
+            current_subject,
+            resource.device,
+            resource.inode,
+            current_command.as_ptr(),
+        );
     }
 
     decision
@@ -76,7 +90,6 @@ pub fn evaluate_file_open_static_policies(ctx: LsmContext) -> i32 {
     let _ = DECISIONS.set(0, decision, 0);
 
     unsafe {
-        aya_ebpf::bpf_printk!(b"tails-pdp: evaluate_file_open_static_policies");
         let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STREAM);
     }
 

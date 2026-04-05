@@ -1,9 +1,15 @@
+use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     ANY_SUBJECT, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_IP_LEN, SocketBindStaticPolicy,
     SocketFamily, SocketTransport,
 };
 
-use crate::{helpers::SocketBindResource, maps::SOCKET_BIND_STATIC_POLICIES};
+use crate::{
+    helpers::{SocketBindResource, read_socket_bind_resource},
+    maps::{
+        DECISIONS, POLICY_JUMP_TABLE, SOCKET_BIND_STATIC_POLICIES, TAIL_IDX_SOCKET_BIND_STREAM,
+    },
+};
 
 fn matches_subject(subject: u32, current_subject: u32) -> bool {
     subject == ANY_SUBJECT || subject == current_subject
@@ -57,10 +63,12 @@ fn evaluate_policy(
 pub(crate) fn evaluate_policies(current_subject: u32, resource: &SocketBindResource) -> i32 {
     let mut decision = 0;
     let mut index = 0;
+    let mut matched_index = u32::MAX;
 
     while index < SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
         if let Some(policy) = SOCKET_BIND_STATIC_POLICIES.get(index) {
             if let Some(policy_decision) = evaluate_policy(current_subject, resource, policy) {
+                matched_index = index;
                 if policy_decision != 0 {
                     decision = 1;
                     break;
@@ -70,5 +78,31 @@ pub(crate) fn evaluate_policies(current_subject: u32, resource: &SocketBindResou
         index += 1;
     }
 
+    unsafe {
+        aya_ebpf::bpf_printk!(
+            b"sbs res=%d idx=%d uid=%d fam=%d tr=%d port=%d",
+            decision as u32,
+            matched_index,
+            current_subject,
+            resource.family as u32,
+            resource.transport as u32,
+            resource.port as u32,
+        );
+    }
+
     decision
+}
+
+#[lsm(hook = "socket_bind")]
+pub fn evaluate_socket_bind_static_policies(ctx: LsmContext) -> i32 {
+    let subject = ctx.uid();
+    let resource = read_socket_bind_resource(&ctx);
+    let decision = evaluate_policies(subject, &resource);
+    let _ = DECISIONS.set(0, decision, 0);
+
+    unsafe {
+        let _ = POLICY_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_SOCKET_BIND_STREAM);
+    }
+
+    0
 }
