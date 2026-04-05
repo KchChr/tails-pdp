@@ -74,13 +74,20 @@ pub(crate) fn evaluate_policies(
             {
                 match entitlement {
                     Entitlement::Deny => {
-                        matched_deny_index = matched_deny_index.min(index);
+                        if matched_deny_index == u32::MAX {
+                            matched_deny_index = index;
+                        }
                     }
                     Entitlement::Permit => {
-                        matched_permit_index = matched_permit_index.min(index);
+                        if matched_permit_index == u32::MAX {
+                            matched_permit_index = index;
+                        }
                     }
                 }
                 state.record(entitlement);
+                if state.deny != 0 && state.permit != 0 {
+                    break;
+                }
             }
         }
         index += 1;
