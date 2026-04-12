@@ -1,6 +1,7 @@
 use anyhow::Context;
 use tails_pdp_common::{
     FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
+    StreamAttribute,
 };
 
 use crate::maps::{
@@ -56,20 +57,36 @@ pub fn show_file_open_stream(
         if active_only && policy.enabled == 0 {
             continue;
         }
-        println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
-            policy.enabled,
-            policy.entitlement,
-            policy.action,
-            policy.subject,
-            fixed_string(&policy.resource),
-            policy.resource_device,
-            policy.resource_inode,
-            policy.attribute,
-            policy.operator,
-            policy.modulo,
-            policy.value,
-        );
+        if policy.attribute == StreamAttribute::Time {
+            println!(
+                "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} modulo={} value={}",
+                policy.enabled,
+                policy.entitlement,
+                policy.action,
+                policy.subject,
+                fixed_string(&policy.resource),
+                policy.resource_device,
+                policy.resource_inode,
+                policy.attribute,
+                policy.operator,
+                policy.modulo,
+                policy.value,
+            );
+        } else {
+            println!(
+                "[{index}] enabled={} entitlement={:?} action={:?} subject={} resource={:?} device={} inode={} attribute={:?} operator={:?} value={}",
+                policy.enabled,
+                policy.entitlement,
+                policy.action,
+                policy.subject,
+                fixed_string(&policy.resource),
+                policy.resource_device,
+                policy.resource_inode,
+                policy.attribute,
+                policy.operator,
+                policy.value,
+            );
+        }
     }
     println!();
     Ok(())
@@ -115,21 +132,38 @@ pub fn show_socket_bind_stream(
         if active_only && policy.enabled == 0 {
             continue;
         }
-        println!(
-            "[{index}] enabled={} entitlement={:?} action={:?} subject={} family={:?} transport={:?} port={} resource={:?} attribute={:?} operator={:?} modulo={} value={}",
-            policy.enabled,
-            policy.entitlement,
-            policy.action,
-            policy.subject,
-            policy.socket_family,
-            policy.socket_transport,
-            policy.socket_port,
-            fixed_string(&policy.resource),
-            policy.attribute,
-            policy.operator,
-            policy.modulo,
-            policy.value,
-        );
+        if policy.attribute == StreamAttribute::Time {
+            println!(
+                "[{index}] enabled={} entitlement={:?} action={:?} subject={} family={:?} transport={:?} port={} resource={:?} attribute={:?} operator={:?} modulo={} value={}",
+                policy.enabled,
+                policy.entitlement,
+                policy.action,
+                policy.subject,
+                policy.socket_family,
+                policy.socket_transport,
+                policy.socket_port,
+                fixed_string(&policy.resource),
+                policy.attribute,
+                policy.operator,
+                policy.modulo,
+                policy.value,
+            );
+        } else {
+            println!(
+                "[{index}] enabled={} entitlement={:?} action={:?} subject={} family={:?} transport={:?} port={} resource={:?} attribute={:?} operator={:?} value={}",
+                policy.enabled,
+                policy.entitlement,
+                policy.action,
+                policy.subject,
+                policy.socket_family,
+                policy.socket_transport,
+                policy.socket_port,
+                fixed_string(&policy.resource),
+                policy.attribute,
+                policy.operator,
+                policy.value,
+            );
+        }
     }
     Ok(())
 }
