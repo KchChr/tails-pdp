@@ -4,7 +4,7 @@ use aya_ebpf::{
 };
 use tails_pdp_common::{
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
+    FileOpenStreamPolicy, Iso8601TimeParts, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
     SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
@@ -44,3 +44,6 @@ pub(crate) static SOCKET_BIND_STREAM_POLICIES: Array<SocketBindStreamPolicy> =
 
 #[map]
 pub(crate) static CURRENT_TIME: Array<u64> = Array::pinned(1, 0);
+
+#[map]
+pub(crate) static CURRENT_TIME_ISO8601: Array<Iso8601TimeParts> = Array::pinned(1, 0);

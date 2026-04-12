@@ -76,6 +76,32 @@ pub enum SocketTransport {
     Udp = 2,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Iso8601TimeParts {
+    pub year: u16,
+    pub month: u8,
+    pub day: u8,
+    pub hour: u8,
+    pub minute: u8,
+    pub second: u8,
+    pub _pad: u8,
+}
+
+impl Iso8601TimeParts {
+    pub const fn new(year: u16, month: u8, day: u8, hour: u8, minute: u8, second: u8) -> Self {
+        Self {
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            _pad: 0,
+        }
+    }
+}
+
 fn fixed_name<const N: usize>(name: &str) -> [u8; N] {
     let mut value = [0; N];
     let bytes = name.as_bytes();
@@ -471,3 +497,6 @@ unsafe impl aya::Pod for SocketBindStaticPolicy {}
 
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for SocketBindStreamPolicy {}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for Iso8601TimeParts {}

@@ -11,7 +11,7 @@ use tails_pdp::{
         load_socket_bind_static_policies, load_socket_bind_stream_policies,
         verify_pinned_map_layouts,
     },
-    time::{open_current_time_map, run_current_time_updater},
+    time::{open_current_time_maps, run_current_time_updater},
 };
 use tails_pdp_common::{
     FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
     load_socket_bind_static_policies(&mut ebpf, &socket_bind_static_policies)?;
     load_socket_bind_stream_policies(&mut ebpf, &socket_bind_stream_policies)?;
 
-    let mut current_time = open_current_time_map(&mut ebpf)?;
+    let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
 
     for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
         let program: &Lsm = ebpf
@@ -121,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Waiting for Ctrl-C...");
     tokio::select! {
-        result = run_current_time_updater(&mut current_time) => result?,
+        result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
         result = signal::ctrl_c() => result?,
     }
     println!("Exiting...");
