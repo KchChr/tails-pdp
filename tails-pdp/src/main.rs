@@ -6,15 +6,8 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
-    policy_loader::{
-        load_file_open_static_policies, load_file_open_stream_policies,
-        load_socket_bind_static_policies, load_socket_bind_stream_policies,
-        verify_pinned_map_layouts,
-    },
+    policy_loader::verify_pinned_map_layouts,
     time::{open_current_time_maps, run_current_time_updater},
-};
-use tails_pdp_common::{
-    FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 use tokio::signal;
 
@@ -66,16 +59,6 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'SOCKET_BIND_JUMP_TABLE' not found")?,
     )
     .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
-
-    let file_open_static_policies: [FileOpenStaticPolicy; 0] = [];
-    let file_open_stream_policies: [FileOpenStreamPolicy; 0] = [];
-    let socket_bind_static_policies: [SocketBindStaticPolicy; 0] = [];
-    let socket_bind_stream_policies: [SocketBindStreamPolicy; 0] = [];
-
-    load_file_open_static_policies(&mut ebpf, &file_open_static_policies)?;
-    load_file_open_stream_policies(&mut ebpf, &file_open_stream_policies)?;
-    load_socket_bind_static_policies(&mut ebpf, &socket_bind_static_policies)?;
-    load_socket_bind_stream_policies(&mut ebpf, &socket_bind_stream_policies)?;
 
     let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
 
