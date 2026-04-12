@@ -48,6 +48,9 @@ pub enum PolicyAction {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum StreamAttribute {
     Time = 1,
+    Hour = 2,
+    Minute = 3,
+    Second = 4,
 }
 
 #[repr(u8)]

@@ -25,6 +25,31 @@ use crate::{
     },
 };
 
+fn validate_stream_condition(
+    attribute: cli::StreamAttributeArg,
+    modulo: u64,
+    value: u64,
+) -> anyhow::Result<()> {
+    match attribute {
+        cli::StreamAttributeArg::Time => {
+            if modulo == 0 {
+                bail!("--modulo must be > 0 when --attribute time is used");
+            }
+        }
+        cli::StreamAttributeArg::Hour => {
+            if value > 23 {
+                bail!("hour value out of range: {} > 23", value);
+            }
+        }
+        cli::StreamAttributeArg::Minute | cli::StreamAttributeArg::Second => {
+            if value > 59 {
+                bail!("time component value out of range: {} > 59", value);
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_len(name: &str, value: &str, max_len: usize) -> anyhow::Result<()> {
     if value.len() > max_len {
         bail!("{name} too long: {} > {}", value.len(), max_len);
@@ -180,14 +205,16 @@ fn set_file_open_stream_policy(
     index: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
+    attribute: cli::StreamAttributeArg,
     resource: String,
     operator: cli::StreamOperatorArg,
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
     validate_len("resource", &resource, RESOURCE_LEN)?;
+    validate_stream_condition(attribute, modulo, value)?;
 
-    let policy = FileOpenStreamPolicy::time(
+    let mut policy = FileOpenStreamPolicy::time(
         entitlement.into(),
         subject,
         &resource,
@@ -200,6 +227,7 @@ fn set_file_open_stream_policy(
     .map_err(|error| {
         anyhow!("failed to resolve FILE_OPEN_STREAM_POLICIES[{index}] resource: {error}")
     })?;
+    policy.attribute = attribute.into();
 
     map.set(index, policy, 0)
         .map_err(anyhow::Error::from)
@@ -221,6 +249,7 @@ fn set_socket_bind_stream_policy(
     value: u64,
 ) -> anyhow::Result<()> {
     validate_len("resource", &resource, RESOURCE_LEN)?;
+    validate_stream_condition(attribute, modulo, value)?;
 
     let mut policy = SocketBindStreamPolicy::time(
         entitlement.into(),
@@ -538,6 +567,7 @@ pub fn run() -> anyhow::Result<()> {
                     index,
                     entitlement,
                     subject,
+                    attribute,
                     resource,
                     operator,
                     modulo,

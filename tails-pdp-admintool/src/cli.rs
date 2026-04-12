@@ -72,12 +72,18 @@ impl From<SocketTransportArg> for SocketTransport {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum StreamAttributeArg {
     Time,
+    Hour,
+    Minute,
+    Second,
 }
 
 impl From<StreamAttributeArg> for StreamAttribute {
     fn from(value: StreamAttributeArg) -> Self {
         match value {
             StreamAttributeArg::Time => StreamAttribute::Time,
+            StreamAttributeArg::Hour => StreamAttribute::Hour,
+            StreamAttributeArg::Minute => StreamAttribute::Minute,
+            StreamAttributeArg::Second => StreamAttribute::Second,
         }
     }
 }
@@ -183,7 +189,7 @@ pub enum Command {
         port: u16,
         #[arg(long, value_enum)]
         operator: StreamOperatorArg,
-        #[arg(long)]
+        #[arg(long, default_value_t = 0)]
         modulo: u64,
         #[arg(long)]
         value: u64,
@@ -234,7 +240,7 @@ pub fn print_usage() {
     );
     println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
     println!(
-        "      [--subject <UID>] [--attribute <time>] --operator <...> --modulo <N> --value <N>"
+        "      [--subject <UID>] [--attribute <time|hour|minute|second>] --operator <...> [--modulo <N>] --value <N>"
     );
     println!("      file-open: [--resource <PFAD>]");
     println!(
@@ -256,5 +262,8 @@ pub fn print_usage() {
     );
     println!(
         "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action socket-bind --subject 1000 --attribute time --family inet --transport tcp --resource 0.0.0.0 --port 8080 --operator less-than --modulo 10 --value 5"
+    );
+    println!(
+        "  sudo tails-pdp-admintool set-stream 1 --entitlement deny --action file-open --subject 1000 --resource /home/hntr/test.txt --attribute hour --operator greater-than-or-equal --value 18"
     );
 }

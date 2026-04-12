@@ -7,7 +7,8 @@ use tails_pdp_common::{
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        CURRENT_TIME, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
+        CURRENT_TIME, CURRENT_TIME_ISO8601, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES,
+        TAIL_IDX_FILE_OPEN_COMBINE,
     },
     policies::decision::DecisionState,
 };
@@ -45,6 +46,7 @@ fn evaluate_policy(
     current_subject: u32,
     resource: &FileOpenResource,
     current_time: u64,
+    current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
     policy: &FileOpenStreamPolicy,
 ) -> Option<Entitlement> {
     if !is_policy_applicable(current_subject, resource, policy) {
@@ -58,6 +60,21 @@ fn evaluate_policy(
             }
             matches_operator(policy.operator, current_time % policy.modulo, policy.value)
         }
+        StreamAttribute::Hour => matches_operator(
+            policy.operator,
+            current_iso8601_time.hour as u64,
+            policy.value,
+        ),
+        StreamAttribute::Minute => matches_operator(
+            policy.operator,
+            current_iso8601_time.minute as u64,
+            policy.value,
+        ),
+        StreamAttribute::Second => matches_operator(
+            policy.operator,
+            current_iso8601_time.second as u64,
+            policy.value,
+        ),
     };
 
     Some(if condition {
@@ -71,6 +88,7 @@ pub(crate) fn evaluate_policies(
     current_subject: u32,
     resource: &FileOpenResource,
     current_time: u64,
+    current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
 ) -> DecisionState {
     let mut state = DecisionState::empty();
     let mut index = 0;
@@ -79,9 +97,13 @@ pub(crate) fn evaluate_policies(
 
     while index < FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = FILE_OPEN_STREAM_POLICIES.get(index) {
-            if let Some(entitlement) =
-                evaluate_policy(current_subject, resource, current_time, policy)
-            {
+            if let Some(entitlement) = evaluate_policy(
+                current_subject,
+                resource,
+                current_time,
+                current_iso8601_time,
+                policy,
+            ) {
                 match entitlement {
                     Entitlement::Deny => {
                         if matched_deny_index == u32::MAX {
@@ -126,7 +148,16 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let current_subject = ctx.uid();
     let resource = read_file_open_resource(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let stream_state = evaluate_policies(current_subject, &resource, current_time);
+    let current_iso8601_time = CURRENT_TIME_ISO8601
+        .get(0)
+        .copied()
+        .unwrap_or(tails_pdp_common::Iso8601TimeParts::new(1970, 1, 1, 0, 0, 0));
+    let stream_state = evaluate_policies(
+        current_subject,
+        &resource,
+        current_time,
+        current_iso8601_time,
+    );
     current_state.merge(stream_state);
     current_state.write_to_map();
 
