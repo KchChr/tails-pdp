@@ -317,6 +317,12 @@ Only active policies:
 sudo ./target/release/tails-pdp-admintool show-active
 ```
 
+Test a `socket_bind` policy with Python:
+
+```shell
+python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.bind(('0.0.0.0', 8080)); print('bind ok')"
+```
+
 Notes:
 
 - `ls -li` is a quick way to see the inode.
@@ -324,6 +330,8 @@ Notes:
   the shell.
 - `stat -c 'major=%t minor=%T ...'` shows the device split into major/minor numbers, which is
   useful when comparing filesystem identities manually.
+- the Python one-liner is a quick way to test whether a `socket_bind` policy allows or denies a
+  local bind on a specific address and port.
 - For policy matching, the important values are the resolved `device + inode` pair stored in the
   policy map and the same pair read by the eBPF hook.
 
