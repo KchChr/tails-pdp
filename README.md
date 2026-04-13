@@ -58,17 +58,44 @@ cargo build --bin tails-pdp-admintool --release
 
 Typical commands:
 
+Show all policies:
+
 ```shell
 ./target/release/tails-pdp-admintool show
+```
+
+Show only active policies:
+
+```shell
 ./target/release/tails-pdp-admintool show-active
+```
+
+Clear one file-open static policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool clear 0 --action file-open
+```
+
+Clear one file-open stream policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool clear-stream 0 --action file-open
+```
+
+Set one file-open static policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool set 0 \
   --entitlement deny \
   --action file-open \
   --subject 1000 \
   --command cat \
   --resource /home/hntr/test.txt
+```
+
+Set one file-open stream policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --entitlement permit \
   --action file-open \
@@ -78,6 +105,11 @@ sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --operator less-than \
   --modulo 10 \
   --value 5
+```
+
+Set one socket-bind static policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool set 0 \
   --entitlement deny \
   --action socket-bind \
@@ -86,6 +118,11 @@ sudo ./target/release/tails-pdp-admintool set 0 \
   --transport tcp \
   --resource 0.0.0.0 \
   --port 8080
+```
+
+Set one socket-bind stream policy:
+
+```shell
 sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --entitlement permit \
   --action socket-bind \
@@ -224,11 +261,45 @@ Run that in a second terminal while `tails-pdp` is running.
 
 Useful checks during debugging:
 
+Inode quickly:
+
+```shell
+ls -li /home/hntr/test.txt
+```
+
+Inode and raw device value:
+
 ```shell
 stat -c 'inode=%i dev_dec=%d dev_hex=%D path=%n' /home/hntr/test.txt
+```
+
+Device as major/minor plus inode:
+
+```shell
+stat -c 'major=%t minor=%T inode=%i path=%n' /home/hntr/test.txt
+```
+
+All policies:
+
+```shell
 sudo ./target/release/tails-pdp-admintool show
+```
+
+Only active policies:
+
+```shell
 sudo ./target/release/tails-pdp-admintool show-active
 ```
+
+Notes:
+
+- `ls -li` is a quick way to see the inode.
+- `stat -c 'inode=%i dev_dec=%d dev_hex=%D ...'` shows the inode and the raw device value from
+  the shell.
+- `stat -c 'major=%t minor=%T ...'` shows the device split into major/minor numbers, which is
+  useful when comparing filesystem identities manually.
+- For policy matching, the important values are the resolved `device + inode` pair stored in the
+  policy map and the same pair read by the eBPF hook.
 
 This lets you compare:
 
