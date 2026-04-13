@@ -107,6 +107,32 @@ sudo ./target/release/tails-pdp-admintool set-stream 0 \
   --value 5
 ```
 
+Deny opening a file before 08:00 UTC:
+
+```shell
+sudo ./target/release/tails-pdp-admintool set-stream 1 \
+  --entitlement deny \
+  --action file-open \
+  --subject 1000 \
+  --resource /home/hntr/arbeiten.txt \
+  --attribute hour \
+  --operator less-than \
+  --value 8
+```
+
+Deny opening a file from 16:00 UTC onwards:
+
+```shell
+sudo ./target/release/tails-pdp-admintool set-stream 2 \
+  --entitlement deny \
+  --action file-open \
+  --subject 1000 \
+  --resource /home/hntr/arbeiten.txt \
+  --attribute hour \
+  --operator greater-than-or-equal \
+  --value 16
+```
+
 Set one socket-bind static policy:
 
 ```shell
