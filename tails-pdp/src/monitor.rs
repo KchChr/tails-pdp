@@ -77,10 +77,13 @@ pub async fn run_socket_bind_monitor() -> anyhow::Result<()> {
                 let mut current_keys = HashSet::new();
                 for violation in current_violations {
                     let first_seen_in_scan = current_keys.insert(violation.key.clone());
-                    if !first_seen_in_scan || previous_violations.contains(&violation.key) {
+                    if !first_seen_in_scan {
                         continue;
                     }
-                    print_violation(&violation);
+                    if !previous_violations.contains(&violation.key) {
+                        print_violation(&violation);
+                    }
+                    enforce_violation(&violation);
                 }
                 previous_violations = current_keys;
             }
@@ -458,6 +461,40 @@ fn print_violation(violation: &Violation) {
         format_ip(violation.family, &violation.ip),
         violation.port,
     );
+}
+
+fn enforce_violation(violation: &Violation) {
+    let pid = violation.key.pid;
+    if pid == 0 {
+        eprintln!(
+            "MONITOR socket_bind enforcement skipped: unknown pid for socket inode {}",
+            violation.key.socket_inode,
+        );
+        return;
+    }
+
+    let current_pid = std::process::id();
+    if pid == current_pid {
+        eprintln!(
+            "MONITOR socket_bind enforcement skipped: refusing to kill monitor process {pid}"
+        );
+        return;
+    }
+
+    let result = unsafe { libc::kill(pid as libc::pid_t, libc::SIGTERM) };
+    if result == 0 {
+        println!(
+            "MONITOR socket_bind enforcement signal=SIGTERM pid={} comm={} policy={:?}[{}]",
+            pid, violation.command, violation.key.policy_kind, violation.key.policy_index,
+        );
+    } else {
+        eprintln!(
+            "MONITOR socket_bind enforcement failed pid={} comm={}: {}",
+            pid,
+            violation.command,
+            io::Error::last_os_error(),
+        );
+    }
 }
 
 fn format_ip(family: SocketFamily, ip: &[u8; SOCKET_IP_LEN]) -> String {
