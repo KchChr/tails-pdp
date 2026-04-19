@@ -6,6 +6,7 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
+    monitor::run_socket_bind_monitor,
     policy_loader::verify_pinned_map_layouts,
     time::{open_current_time_maps, run_current_time_updater},
 };
@@ -105,6 +106,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Waiting for Ctrl-C...");
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
+        result = run_socket_bind_monitor() => result?,
         result = signal::ctrl_c() => result?,
     }
     println!("Exiting...");

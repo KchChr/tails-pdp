@@ -1,7 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    ANY_SUBJECT, Entitlement, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStreamPolicy,
-    StreamAttribute, StreamOperator,
+    Entitlement, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenRequest,
+    evaluate_file_open_stream_policy,
 };
 
 use crate::{
@@ -10,79 +10,8 @@ use crate::{
         CURRENT_TIME, CURRENT_TIME_ISO8601, FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES,
         TAIL_IDX_FILE_OPEN_COMBINE,
     },
-    policies::decision::DecisionState,
+    policies::decision::{DecisionMapExt, DecisionState},
 };
-
-fn matches_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
-    match operator {
-        StreamOperator::LessThan => left < right,
-        StreamOperator::LessThanOrEqual => left <= right,
-        StreamOperator::Equal => left == right,
-        StreamOperator::GreaterThanOrEqual => left >= right,
-        StreamOperator::GreaterThan => left > right,
-    }
-}
-
-fn is_policy_applicable(
-    current_subject: u32,
-    resource: &FileOpenResource,
-    policy: &FileOpenStreamPolicy,
-) -> bool {
-    if policy.enabled == 0 {
-        return false;
-    }
-    if policy.subject != ANY_SUBJECT && policy.subject != current_subject {
-        return false;
-    }
-    if !policy.matches_any_resource()
-        && (policy.resource_device != resource.device || policy.resource_inode != resource.inode)
-    {
-        return false;
-    }
-    true
-}
-
-fn evaluate_policy(
-    current_subject: u32,
-    resource: &FileOpenResource,
-    current_time: u64,
-    current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
-    policy: &FileOpenStreamPolicy,
-) -> Option<Entitlement> {
-    if !is_policy_applicable(current_subject, resource, policy) {
-        return None;
-    }
-
-    let condition = match policy.attribute {
-        StreamAttribute::Time => {
-            if policy.modulo == 0 {
-                return None;
-            }
-            matches_operator(policy.operator, current_time % policy.modulo, policy.value)
-        }
-        StreamAttribute::Hour => matches_operator(
-            policy.operator,
-            current_iso8601_time.hour as u64,
-            policy.value,
-        ),
-        StreamAttribute::Minute => matches_operator(
-            policy.operator,
-            current_iso8601_time.minute as u64,
-            policy.value,
-        ),
-        StreamAttribute::Second => matches_operator(
-            policy.operator,
-            current_iso8601_time.second as u64,
-            policy.value,
-        ),
-    };
-
-    Some(if condition {
-        policy.entitlement
-    } else {
-        policy.entitlement.inverse()
-    })
-}
 
 pub(crate) fn evaluate_policies(
     current_subject: u32,
@@ -91,15 +20,20 @@ pub(crate) fn evaluate_policies(
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
 ) -> DecisionState {
     let mut state = DecisionState::empty();
+    let request = FileOpenRequest {
+        subject: current_subject,
+        command: [0; tails_pdp_common::COMMAND_LEN],
+        resource_device: resource.device,
+        resource_inode: resource.inode,
+    };
     let mut index = 0;
     let mut matched_deny_index = u32::MAX;
     let mut matched_permit_index = u32::MAX;
 
     while index < FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
         if let Some(policy) = FILE_OPEN_STREAM_POLICIES.get(index) {
-            if let Some(entitlement) = evaluate_policy(
-                current_subject,
-                resource,
+            if let Some(entitlement) = evaluate_file_open_stream_policy(
+                &request,
                 current_time,
                 current_iso8601_time,
                 policy,

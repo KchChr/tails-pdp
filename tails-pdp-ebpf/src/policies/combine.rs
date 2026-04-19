@@ -1,6 +1,6 @@
 use aya_ebpf::{macros::lsm, programs::LsmContext};
 
-use crate::policies::decision::DecisionState;
+use crate::policies::decision::{DecisionMapExt, DecisionState};
 
 fn combine_decision() -> i32 {
     let state = DecisionState::from_map();
