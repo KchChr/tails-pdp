@@ -1,0 +1,6 @@
+policy "deny file_open on /home/hntr/arbeiten.txt for uid 1000 from 16 UTC onwards"
+deny
+    action == "file_open";
+    subject.uid == 1000;
+    resource.path == "/home/hntr/arbeiten.txt";
+    environment.utc.hour >= 16;

@@ -1,0 +1,6 @@
+policy "permit file_open on /home/hntr/test.txt for uid 1000 when time modulo matches"
+permit
+    action == "file_open";
+    subject.uid == 1000;
+    resource.path == "/home/hntr/test.txt";
+    environment.time % 10 < 5;

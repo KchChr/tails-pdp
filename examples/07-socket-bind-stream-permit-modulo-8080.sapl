@@ -1,0 +1,9 @@
+policy "permit socket_bind on 0.0.0.0:8080 tcp for uid 1000 when time modulo matches"
+permit
+    action == "socket_bind";
+    subject.uid == 1000;
+    resource.family == "inet";
+    resource.transport == "tcp";
+    resource.ip == "0.0.0.0";
+    resource.port == 8080;
+    environment.time % 10 < 5;

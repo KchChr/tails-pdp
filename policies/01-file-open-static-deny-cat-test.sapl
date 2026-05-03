@@ -1,0 +1,6 @@
+policy "deny cat on /home/hntr/test.txt for uid 1000"
+deny
+    action == "file_open";
+    subject.uid == 1000;
+    command == "cat";
+    resource.path == "/home/hntr/test.txt";

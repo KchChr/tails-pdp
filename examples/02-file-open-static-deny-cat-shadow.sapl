@@ -1,0 +1,5 @@
+policy "deny cat on /etc/shadow for any subject"
+deny
+    action == "file_open";
+    command == "cat";
+    resource.path == "/etc/shadow";

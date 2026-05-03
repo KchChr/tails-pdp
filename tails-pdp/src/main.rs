@@ -8,6 +8,7 @@ use tails_pdp::{
     BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
     monitor::run_socket_bind_monitor,
     policy_loader::verify_pinned_map_layouts,
+    policy_source::PolicyDirectorySync,
     time::{open_current_time_maps, run_current_time_updater},
 };
 use tokio::signal;
@@ -62,6 +63,7 @@ async fn main() -> anyhow::Result<()> {
     .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
 
     let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
+    let mut policy_sync = PolicyDirectorySync::new()?;
 
     for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
         let program: &Lsm = ebpf
@@ -103,9 +105,15 @@ async fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to attach '{}'", spec.name))?;
     }
 
+    policy_sync.sync_initial()?;
+    println!(
+        "Watching policy directory '{}'",
+        policy_sync.directory().display()
+    );
     println!("Waiting for Ctrl-C...");
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
+        result = policy_sync.run() => result?,
         result = run_socket_bind_monitor() => result?,
         result = signal::ctrl_c() => result?,
     }

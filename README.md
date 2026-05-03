@@ -49,14 +49,123 @@ sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 
 ## Admin Tool
 
-The admin tool operates on the pinned maps directly and can be built and run separately:
+Policies are no longer loaded through `tails-pdp-admintool`.
+
+The active source of truth is the repository-local `policies/` directory. The userspace loader:
+
+- loads all `.sapl` files from `./policies` on startup
+- rescans the directory every second
+- recompiles the full directory contents on change
+- fully reconciles the four pinned policy maps on successful compilation
+- keeps the last successfully applied policy generation if a changed file cannot be parsed or
+  compiled
+- removes policies from the maps again when the corresponding `.sapl` file disappears from
+  `./policies`
+
+Only files ending in `.sapl` are loaded. The `examples/` directory is not loaded automatically.
+
+## Policy Files
+
+Each file contains exactly one SAPL-inspired policy document:
+
+```sapl
+policy "deny cat on /home/hntr/test.txt for uid 1000"
+deny
+    action == "file_open";
+    subject.uid == 1000;
+    command == "cat";
+    resource.path == "/home/hntr/test.txt";
+```
+
+Supported concepts:
+
+- `policy "name"`
+- entitlement `permit` or `deny`
+- one `action == "file_open"` or `action == "socket_bind"` condition
+- simple conjunction by writing multiple semicolon-terminated statements
+- optional `subject.uid`
+- `file_open` fields:
+  `command`, `resource.path`
+- `socket_bind` fields:
+  `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
+- one optional time condition per policy:
+  `environment.time % N <op> VALUE`
+  `environment.utc.hour <op> VALUE`
+  `environment.utc.minute <op> VALUE`
+  `environment.utc.second <op> VALUE`
+
+Not supported:
+
+- `import`
+- `schema`
+- `var`
+- `obligation`
+- `advice`
+- `transform`
+- `or`
+- multiple time conditions inside one file
+
+Complex behavior is intentionally expressed by multiple files. Example: “deny before 08:00 and
+from 16:00 onwards” is represented by two policies.
+
+Example `socket_bind` stream policy:
+
+```sapl
+policy "deny socket_bind on 0.0.0.0:8443 before 08 UTC"
+deny
+    action == "socket_bind";
+    resource.family == "inet";
+    resource.ip == "0.0.0.0";
+    resource.port == 8443;
+    environment.utc.hour < 8;
+```
+
+Example modulo-based stream policy:
+
+```sapl
+policy "permit file_open on /home/hntr/test.txt for uid 1000 when time modulo matches"
+permit
+    action == "file_open";
+    subject.uid == 1000;
+    resource.path == "/home/hntr/test.txt";
+    environment.time % 10 < 5;
+```
+
+Example workflow:
+
+```shell
+cp examples/01-file-open-static-deny-cat-test.sapl policies/
+cp examples/04-file-open-stream-deny-before-08.sapl policies/
+cp examples/05-file-open-stream-deny-after-16.sapl policies/
+```
+
+After at most one second, the loader detects the change and rewrites the pinned maps.
+
+## Examples
+
+The repository ships example policies in `examples/`.
+
+Current examples cover:
+
+- `file_open` static deny for `cat`
+- `file_open` modulo-based stream permit
+- `file_open` deny before 08:00 UTC
+- `file_open` deny from 16:00 UTC onwards
+- `socket_bind` static deny on `0.0.0.0:8080/tcp`
+- `socket_bind` modulo-based stream permit
+- `socket_bind` deny before 08:00 UTC
+- `socket_bind` deny from 16:00 UTC onwards
+
+## Admin Tool
+
+The admin tool is now primarily an inspection/debugging tool for the pinned maps:
 
 ```shell
 cargo build --bin tails-pdp-admintool --release
 ./target/release/tails-pdp-admintool --help
 ```
 
-Typical commands:
+Typical read-only commands:
 
 Show all policies:
 
@@ -70,106 +179,11 @@ Show only active policies:
 ./target/release/tails-pdp-admintool show-active
 ```
 
-Clear one file-open static policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool clear 0 --action file-open
-```
-
-Clear one file-open stream policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool clear-stream 0 --action file-open
-```
-
-Set one file-open static policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set 0 \
-  --entitlement deny \
-  --action file-open \
-  --subject 1000 \
-  --command cat \
-  --resource /home/hntr/test.txt
-```
-
-Set one file-open stream policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 0 \
-  --entitlement permit \
-  --action file-open \
-  --subject 1000 \
-  --attribute time \
-  --resource /home/hntr/test.txt \
-  --operator less-than \
-  --modulo 10 \
-  --value 5
-```
-
-Deny opening a file before 08:00 UTC:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 1 \
-  --entitlement deny \
-  --action file-open \
-  --subject 1000 \
-  --resource /home/hntr/arbeiten.txt \
-  --attribute hour \
-  --operator less-than \
-  --value 8
-```
-
-Deny opening a file from 16:00 UTC onwards:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 2 \
-  --entitlement deny \
-  --action file-open \
-  --subject 1000 \
-  --resource /home/hntr/arbeiten.txt \
-  --attribute hour \
-  --operator greater-than-or-equal \
-  --value 16
-```
-
-Set one socket-bind static policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set 0 \
-  --entitlement deny \
-  --action socket-bind \
-  --subject 1000 \
-  --family inet \
-  --transport tcp \
-  --resource 0.0.0.0 \
-  --port 8080
-```
-
-Set one socket-bind stream policy:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 0 \
-  --entitlement permit \
-  --action socket-bind \
-  --subject 1000 \
-  --attribute time \
-  --family inet \
-  --transport tcp \
-  --resource 0.0.0.0 \
-  --port 8080 \
-  --operator less-than \
-  --modulo 10 \
-  --value 5
-```
-
 Notes:
 
 - `show` and `show-active` do not require `sudo`
-- `clear`, `clear-stream`, `set`, `set-stream`, `load-examples`, and `load-stream-examples`
-  require `sudo`
-- `action` is always the LSM hook the policy belongs to, for example `file-open`
-- `index` in `clear`, `clear-stream`, `set`, and `set-stream` is hook-local
+- mutating admin-tool commands still operate on the pinned maps directly, but they are no longer
+  the source of truth and will be overwritten by the next successful sync from `./policies`
 - there are separate pinned maps per hook:
   `FILE_OPEN_STATIC_POLICIES`, `FILE_OPEN_STREAM_POLICIES`,
   `SOCKET_BIND_STATIC_POLICIES`, and `SOCKET_BIND_STREAM_POLICIES`
@@ -180,100 +194,18 @@ Notes:
 - `0.0.0.0` matches any IPv4 address for the selected port and transport
 - `::` matches any IPv6 address for the selected port and transport
 
-## Stream Policies
+## Monitoring
 
-Stream policies are managed through `tails-pdp-admintool`.
+The userspace monitor currently observes active `socket_bind` states only.
 
-Example: allow subject `1000` to access `/home/hntr/test.txt` via `file_open` for five seconds
-out of every ten seconds:
+It:
 
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 0 \
-  --entitlement permit \
-  --action file-open \
-  --subject 1000 \
-  --attribute time \
-  --resource /home/hntr/test.txt \
-  --operator less-than \
-  --modulo 10 \
-  --value 5
-```
+- scans `/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, and `/proc/net/udp6`
+- maps socket inodes back to processes via `/proc/<pid>/fd`
+- evaluates the same policy logic as the eBPF side
+- prints violations on the command line
 
-This example means:
-
-- subject `1000`
-- action `file_open`
-- resource `/home/hntr/test.txt`
-- evaluate `time % 10 < 5`
-- if the condition is true: `Permit`
-- if the condition is false: inverse decision, therefore `Deny`
-
-To remove stream policies again:
-
-```shell
-sudo ./target/release/tails-pdp-admintool clear-stream 0 --action file-open
-sudo ./target/release/tails-pdp-admintool clear-stream 1 --action file-open
-sudo ./target/release/tails-pdp-admintool clear-stream 2 --action file-open
-```
-
-To load the built-in example stream policies:
-
-```shell
-sudo ./target/release/tails-pdp-admintool load-stream-examples
-```
-
-You can inspect the currently loaded stream policies with:
-
-```shell
-./target/release/tails-pdp-admintool show
-./target/release/tails-pdp-admintool show-active
-```
-
-## Socket-Bind Policies
-
-`socket_bind` policies control which local address/port combinations a subject may bind.
-
-Example: deny UID `1000` from binding any IPv4 TCP socket on local port `8080`:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set 0 \
-  --entitlement deny \
-  --action socket-bind \
-  --subject 1000 \
-  --family inet \
-  --transport tcp \
-  --resource 0.0.0.0 \
-  --port 8080
-```
-
-Time-based example: permit UID `1000` to bind `0.0.0.0:8080/tcp` only when `time % 10 < 5`:
-
-```shell
-sudo ./target/release/tails-pdp-admintool set-stream 0 \
-  --entitlement permit \
-  --action socket-bind \
-  --subject 1000 \
-  --attribute time \
-  --family inet \
-  --transport tcp \
-  --resource 0.0.0.0 \
-  --port 8080 \
-  --operator less-than \
-  --modulo 10 \
-  --value 5
-```
-
-This means:
-
-- subject `1000`
-- action `socket_bind`
-- family `inet`
-- transport `tcp`
-- local address `0.0.0.0`, therefore any IPv4 address
-- local port `8080`
-- evaluate `time % 10 < 5`
-- if the condition is true: `Permit`
-- if the condition is false: inverse decision, therefore `Deny`
+The monitor currently does not enforce anything. It only reports violations.
 
 ## Debugging
 

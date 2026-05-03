@@ -1,0 +1,7 @@
+policy "deny socket_bind on 0.0.0.0:8443 before 08 UTC"
+deny
+    action == "socket_bind";
+    resource.family == "inet";
+    resource.ip == "0.0.0.0";
+    resource.port == 8443;
+    environment.utc.hour < 8;
