@@ -1,3 +1,4 @@
+pub mod fd_revoker;
 pub mod monitor;
 pub mod policy_loader;
 pub mod policy_source;

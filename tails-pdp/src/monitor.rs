@@ -1,8 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
+    ffi::OsString,
     fs, io,
     mem::MaybeUninit,
     net::{Ipv4Addr, Ipv6Addr},
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -10,15 +12,20 @@ use std::{
 use anyhow::Context;
 use aya::maps::{Array, Map, MapData};
 use tails_pdp_common::{
-    Entitlement, Iso8601TimeParts, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
-    SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SOCKET_IP_LEN, SocketBindRequest,
-    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport,
-    evaluate_socket_bind_static_policy, evaluate_socket_bind_stream_policy,
+    Entitlement, FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES,
+    FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts,
+    SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SOCKET_IP_LEN,
+    SocketBindRequest, SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily,
+    SocketTransport, command_name, evaluate_file_open_static_policy,
+    evaluate_file_open_stream_policy, evaluate_socket_bind_static_policy,
+    evaluate_socket_bind_stream_policy,
 };
 use tokio::time;
 
-use crate::BPF_PIN_DIRECTORY;
+use crate::{BPF_PIN_DIRECTORY, fd_revoker::close_remote_fd};
 
+type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
+type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
 type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
 
@@ -28,7 +35,6 @@ struct ActiveSocket {
     transport: SocketTransport,
     ip: [u8; SOCKET_IP_LEN],
     port: u16,
-    uid: u32,
     inode: u64,
 }
 
@@ -39,12 +45,26 @@ struct ProcessInfo {
     command: String,
 }
 
+#[derive(Clone, Debug)]
+struct ProcessFd {
+    process: ProcessInfo,
+    fd: i32,
+    target: FdTarget,
+}
+
+#[derive(Clone, Debug)]
+enum FdTarget {
+    File { device: u64, inode: u64 },
+    Socket { socket: ActiveSocket },
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ViolationKey {
     policy_kind: PolicyKind,
     policy_index: u32,
+    resource_kind: ResourceKind,
     pid: u32,
-    socket_inode: u64,
+    fd: i32,
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -53,58 +73,100 @@ enum PolicyKind {
     Stream,
 }
 
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+enum ResourceKind {
+    File,
+    Socket,
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+struct RevocationKey {
+    pid: u32,
+    fd: i32,
+}
+
 struct Violation {
     key: ViolationKey,
     subject: u32,
     command: String,
-    family: SocketFamily,
-    transport: SocketTransport,
-    ip: [u8; SOCKET_IP_LEN],
-    port: u16,
+    resource: ViolationResource,
 }
 
-pub async fn run_socket_bind_monitor() -> anyhow::Result<()> {
-    let mut static_policies = open_socket_bind_static_policies()?;
-    let mut stream_policies = open_socket_bind_stream_policies()?;
+enum ViolationResource {
+    File {
+        device: u64,
+        inode: u64,
+    },
+    Socket {
+        family: SocketFamily,
+        transport: SocketTransport,
+        ip: [u8; SOCKET_IP_LEN],
+        port: u16,
+        inode: u64,
+    },
+}
+
+struct PolicyMaps {
+    file_open_static: FileOpenStaticPolicyMap,
+    file_open_stream: FileOpenStreamPolicyMap,
+    socket_bind_static: SocketBindStaticPolicyMap,
+    socket_bind_stream: SocketBindStreamPolicyMap,
+}
+
+pub async fn run_policy_monitor() -> anyhow::Result<()> {
+    let mut policies = open_policy_maps()?;
     let mut previous_violations = HashSet::new();
     let mut interval = time::interval(Duration::from_secs(1));
 
     loop {
         interval.tick().await;
 
-        match collect_socket_bind_violations(&mut static_policies, &mut stream_policies) {
+        match collect_policy_violations(&mut policies) {
             Ok(current_violations) => {
                 let mut current_keys = HashSet::new();
+                let mut revoked_in_scan = HashSet::new();
+
                 for violation in current_violations {
                     let first_seen_in_scan = current_keys.insert(violation.key.clone());
                     if !first_seen_in_scan {
                         continue;
                     }
+
                     if !previous_violations.contains(&violation.key) {
                         print_violation(&violation);
                     }
+
+                    enforce_violation(&violation, &mut revoked_in_scan);
                 }
+
                 previous_violations = current_keys;
             }
             Err(error) => {
-                eprintln!("MONITOR socket_bind scan failed: {error:#}");
+                eprintln!("MONITOR scan failed: {error:#}");
             }
         }
     }
 }
 
-fn open_socket_bind_static_policies() -> anyhow::Result<SocketBindStaticPolicyMap> {
-    open_array_map(
-        &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STATIC_POLICIES"),
-        "SOCKET_BIND_STATIC_POLICIES",
-    )
-}
-
-fn open_socket_bind_stream_policies() -> anyhow::Result<SocketBindStreamPolicyMap> {
-    open_array_map(
-        &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STREAM_POLICIES"),
-        "SOCKET_BIND_STREAM_POLICIES",
-    )
+fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
+    Ok(PolicyMaps {
+        file_open_static: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STATIC_POLICIES"),
+            "FILE_OPEN_STATIC_POLICIES",
+        )?,
+        file_open_stream: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STREAM_POLICIES"),
+            "FILE_OPEN_STREAM_POLICIES",
+        )?,
+        socket_bind_static: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STATIC_POLICIES"),
+            "SOCKET_BIND_STATIC_POLICIES",
+        )?,
+        socket_bind_stream: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STREAM_POLICIES"),
+            "SOCKET_BIND_STREAM_POLICIES",
+        )?,
+    })
 }
 
 fn open_array_map<T: aya::Pod>(path: &Path, label: &str) -> anyhow::Result<Array<MapData, T>> {
@@ -114,61 +176,101 @@ fn open_array_map<T: aya::Pod>(path: &Path, label: &str) -> anyhow::Result<Array
     Array::try_from(map).with_context(|| format!("failed to open {label} as array map"))
 }
 
-fn collect_socket_bind_violations(
-    static_policies: &mut SocketBindStaticPolicyMap,
-    stream_policies: &mut SocketBindStreamPolicyMap,
-) -> anyhow::Result<Vec<Violation>> {
-    let sockets = read_active_sockets();
-    let socket_owners = read_socket_owners();
+fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Violation>> {
+    let socket_index = read_active_sockets()
+        .into_iter()
+        .map(|socket| (socket.inode, socket))
+        .collect();
+    let process_fds = read_process_fds(&socket_index);
     let (current_time, current_iso8601_time) = current_utc_time()?;
     let mut violations = Vec::new();
 
-    for socket in sockets {
-        if let Some(owners) = socket_owners.get(&socket.inode) {
-            for owner in owners {
-                collect_socket_violations_for_subject(
-                    &socket,
-                    owner.uid,
-                    owner.pid,
-                    owner.command.clone(),
-                    static_policies,
-                    stream_policies,
-                    current_time,
-                    current_iso8601_time,
-                    &mut violations,
-                )?;
-            }
-        } else {
-            collect_socket_violations_for_subject(
-                &socket,
-                socket.uid,
-                0,
-                String::from("<unknown>"),
-                static_policies,
-                stream_policies,
+    for process_fd in process_fds {
+        match &process_fd.target {
+            FdTarget::File { device, inode } => collect_file_open_violations(
+                &process_fd,
+                *device,
+                *inode,
+                policies,
                 current_time,
                 current_iso8601_time,
                 &mut violations,
-            )?;
+            )?,
+            FdTarget::Socket { socket } => collect_socket_bind_violations(
+                &process_fd,
+                socket,
+                policies,
+                current_time,
+                current_iso8601_time,
+                &mut violations,
+            )?,
         }
     }
 
     Ok(violations)
 }
 
-fn collect_socket_violations_for_subject(
+fn collect_file_open_violations(
+    process_fd: &ProcessFd,
+    device: u64,
+    inode: u64,
+    policies: &mut PolicyMaps,
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    violations: &mut Vec<Violation>,
+) -> anyhow::Result<()> {
+    let request = FileOpenRequest {
+        subject: process_fd.process.uid,
+        command: command_name(&process_fd.process.command),
+        resource_device: device,
+        resource_inode: inode,
+    };
+
+    for index in 0..FILE_OPEN_STATIC_POLICY_MAX_ENTRIES {
+        let policy = policies.file_open_static.get(&index, 0).with_context(|| {
+            format!("failed to read FILE_OPEN_STATIC_POLICIES[{index}] for monitor")
+        })?;
+        if evaluate_file_open_static_policy(&request, &policy) == Some(Entitlement::Deny) {
+            violations.push(file_violation(
+                process_fd,
+                PolicyKind::Static,
+                index,
+                device,
+                inode,
+            ));
+        }
+    }
+
+    for index in 0..FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
+        let policy = policies.file_open_stream.get(&index, 0).with_context(|| {
+            format!("failed to read FILE_OPEN_STREAM_POLICIES[{index}] for monitor")
+        })?;
+        if evaluate_file_open_stream_policy(&request, current_time, current_iso8601_time, &policy)
+            == Some(Entitlement::Deny)
+        {
+            violations.push(file_violation(
+                process_fd,
+                PolicyKind::Stream,
+                index,
+                device,
+                inode,
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn collect_socket_bind_violations(
+    process_fd: &ProcessFd,
     socket: &ActiveSocket,
-    subject: u32,
-    pid: u32,
-    command: String,
-    static_policies: &mut SocketBindStaticPolicyMap,
-    stream_policies: &mut SocketBindStreamPolicyMap,
+    policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
     let request = SocketBindRequest {
-        subject,
+        subject: process_fd.process.uid,
         socket_family: socket.family,
         socket_transport: socket.transport,
         socket_port: socket.port,
@@ -176,52 +278,193 @@ fn collect_socket_violations_for_subject(
     };
 
     for index in 0..SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
-        let policy = static_policies.get(&index, 0).with_context(|| {
-            format!("failed to read SOCKET_BIND_STATIC_POLICIES[{index}] for monitor")
-        })?;
+        let policy = policies
+            .socket_bind_static
+            .get(&index, 0)
+            .with_context(|| {
+                format!("failed to read SOCKET_BIND_STATIC_POLICIES[{index}] for monitor")
+            })?;
         if evaluate_socket_bind_static_policy(&request, &policy) == Some(Entitlement::Deny) {
-            violations.push(Violation {
-                key: ViolationKey {
-                    policy_kind: PolicyKind::Static,
-                    policy_index: index,
-                    pid,
-                    socket_inode: socket.inode,
-                },
-                subject,
-                command: command.clone(),
-                family: socket.family,
-                transport: socket.transport,
-                ip: socket.ip,
-                port: socket.port,
-            });
+            violations.push(socket_violation(
+                process_fd,
+                PolicyKind::Static,
+                index,
+                socket,
+            ));
         }
     }
 
     for index in 0..SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES {
-        let policy = stream_policies.get(&index, 0).with_context(|| {
-            format!("failed to read SOCKET_BIND_STREAM_POLICIES[{index}] for monitor")
-        })?;
+        let policy = policies
+            .socket_bind_stream
+            .get(&index, 0)
+            .with_context(|| {
+                format!("failed to read SOCKET_BIND_STREAM_POLICIES[{index}] for monitor")
+            })?;
         if evaluate_socket_bind_stream_policy(&request, current_time, current_iso8601_time, &policy)
             == Some(Entitlement::Deny)
         {
-            violations.push(Violation {
-                key: ViolationKey {
-                    policy_kind: PolicyKind::Stream,
-                    policy_index: index,
-                    pid,
-                    socket_inode: socket.inode,
-                },
-                subject,
-                command: command.clone(),
-                family: socket.family,
-                transport: socket.transport,
-                ip: socket.ip,
-                port: socket.port,
-            });
+            violations.push(socket_violation(
+                process_fd,
+                PolicyKind::Stream,
+                index,
+                socket,
+            ));
         }
     }
 
     Ok(())
+}
+
+fn file_violation(
+    process_fd: &ProcessFd,
+    policy_kind: PolicyKind,
+    policy_index: u32,
+    device: u64,
+    inode: u64,
+) -> Violation {
+    Violation {
+        key: ViolationKey {
+            policy_kind,
+            policy_index,
+            resource_kind: ResourceKind::File,
+            pid: process_fd.process.pid,
+            fd: process_fd.fd,
+        },
+        subject: process_fd.process.uid,
+        command: process_fd.process.command.clone(),
+        resource: ViolationResource::File { device, inode },
+    }
+}
+
+fn socket_violation(
+    process_fd: &ProcessFd,
+    policy_kind: PolicyKind,
+    policy_index: u32,
+    socket: &ActiveSocket,
+) -> Violation {
+    Violation {
+        key: ViolationKey {
+            policy_kind,
+            policy_index,
+            resource_kind: ResourceKind::Socket,
+            pid: process_fd.process.pid,
+            fd: process_fd.fd,
+        },
+        subject: process_fd.process.uid,
+        command: process_fd.process.command.clone(),
+        resource: ViolationResource::Socket {
+            family: socket.family,
+            transport: socket.transport,
+            ip: socket.ip,
+            port: socket.port,
+            inode: socket.inode,
+        },
+    }
+}
+
+fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<RevocationKey>) {
+    let key = RevocationKey {
+        pid: violation.key.pid,
+        fd: violation.key.fd,
+    };
+    if !revoked_in_scan.insert(key) {
+        return;
+    }
+    if should_skip_enforcement(violation.key.pid) {
+        return;
+    }
+
+    match close_remote_fd(violation.key.pid, violation.key.fd) {
+        Ok(()) => {
+            println!(
+                "MONITOR closed pid={} fd={} for {:?} policy {:?}[{}]",
+                violation.key.pid,
+                violation.key.fd,
+                violation.key.resource_kind,
+                violation.key.policy_kind,
+                violation.key.policy_index,
+            );
+        }
+        Err(error) => {
+            eprintln!(
+                "MONITOR failed to close pid={} fd={} for {:?} policy {:?}[{}]: {error:#}",
+                violation.key.pid,
+                violation.key.fd,
+                violation.key.resource_kind,
+                violation.key.policy_kind,
+                violation.key.policy_index,
+            );
+        }
+    }
+}
+
+fn should_skip_enforcement(pid: u32) -> bool {
+    pid == 0 || pid == 1 || pid == std::process::id()
+}
+
+fn read_process_fds(socket_index: &HashMap<u64, ActiveSocket>) -> Vec<ProcessFd> {
+    let mut process_fds = Vec::new();
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return process_fds;
+    };
+
+    for entry in entries.flatten() {
+        let Some(pid) = parse_pid(entry.file_name()) else {
+            continue;
+        };
+        let Some(process) = read_process_info(pid) else {
+            continue;
+        };
+        append_process_fds(process, socket_index, &mut process_fds);
+    }
+
+    process_fds
+}
+
+fn append_process_fds(
+    process: ProcessInfo,
+    socket_index: &HashMap<u64, ActiveSocket>,
+    process_fds: &mut Vec<ProcessFd>,
+) {
+    let fd_path = PathBuf::from(format!("/proc/{}/fd", process.pid));
+    let Ok(entries) = fs::read_dir(fd_path) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let Some(fd) = parse_fd(entry.file_name()) else {
+            continue;
+        };
+        let Some(target) = read_fd_target(&entry.path(), socket_index) else {
+            continue;
+        };
+        process_fds.push(ProcessFd {
+            process: process.clone(),
+            fd,
+            target,
+        });
+    }
+}
+
+fn read_fd_target(path: &Path, socket_index: &HashMap<u64, ActiveSocket>) -> Option<FdTarget> {
+    let target = fs::read_link(path).ok()?;
+    if let Some(inode) = parse_socket_symlink(&target) {
+        return socket_index
+            .get(&inode)
+            .cloned()
+            .map(|socket| FdTarget::Socket { socket });
+    }
+
+    let metadata = fs::metadata(path).ok()?;
+    if !metadata.file_type().is_file() {
+        return None;
+    }
+
+    Some(FdTarget::File {
+        device: encode_kernel_dev_t(metadata.dev()),
+        inode: metadata.ino(),
+    })
 }
 
 fn read_active_sockets() -> Vec<ActiveSocket> {
@@ -292,7 +535,6 @@ fn parse_proc_net_socket_line(
     }
 
     let (ip, port) = parse_local_socket_address(fields[1], family)?;
-    let uid = fields[7].parse().ok()?;
     let inode = fields[9].parse().ok()?;
 
     Some(ActiveSocket {
@@ -300,7 +542,6 @@ fn parse_proc_net_socket_line(
         transport,
         ip,
         port,
-        uid,
         inode,
     })
 }
@@ -351,26 +592,11 @@ fn parse_proc_net_ipv6(value: &str) -> Option<[u8; 16]> {
     Some(ip)
 }
 
-fn read_socket_owners() -> HashMap<u64, Vec<ProcessInfo>> {
-    let mut owners = HashMap::new();
-    let Ok(entries) = fs::read_dir("/proc") else {
-        return owners;
-    };
-
-    for entry in entries.flatten() {
-        let Some(pid) = parse_pid(entry.file_name()) else {
-            continue;
-        };
-        let Some(process) = read_process_info(pid) else {
-            continue;
-        };
-        append_process_socket_owners(pid, process, &mut owners);
-    }
-
-    owners
+fn parse_pid(name: OsString) -> Option<u32> {
+    name.to_string_lossy().parse().ok()
 }
 
-fn parse_pid(name: std::ffi::OsString) -> Option<u32> {
+fn parse_fd(name: OsString) -> Option<i32> {
     name.to_string_lossy().parse().ok()
 }
 
@@ -394,31 +620,16 @@ fn read_process_info(pid: u32) -> Option<ProcessInfo> {
     })
 }
 
-fn append_process_socket_owners(
-    pid: u32,
-    process: ProcessInfo,
-    owners: &mut HashMap<u64, Vec<ProcessInfo>>,
-) {
-    let fd_path = PathBuf::from(format!("/proc/{pid}/fd"));
-    let Ok(entries) = fs::read_dir(fd_path) else {
-        return;
-    };
-
-    for entry in entries.flatten() {
-        let Ok(target) = fs::read_link(entry.path()) else {
-            continue;
-        };
-        let Some(inode) = parse_socket_symlink(&target) else {
-            continue;
-        };
-        owners.entry(inode).or_default().push(process.clone());
-    }
-}
-
 fn parse_socket_symlink(target: &Path) -> Option<u64> {
     let value = target.to_string_lossy();
     let inode = value.strip_prefix("socket:[")?.strip_suffix(']')?;
     inode.parse().ok()
+}
+
+fn encode_kernel_dev_t(device: u64) -> u64 {
+    let major = libc::major(device) as u64;
+    let minor = libc::minor(device) as u64;
+    (major << 20) | minor
 }
 
 fn current_utc_time() -> anyhow::Result<(u64, Iso8601TimeParts)> {
@@ -448,18 +659,43 @@ fn current_utc_time() -> anyhow::Result<(u64, Iso8601TimeParts)> {
 }
 
 fn print_violation(violation: &Violation) {
-    println!(
-        "MONITOR socket_bind violation policy={:?}[{}] uid={} pid={} comm={} family={:?} transport={:?} local={}:{}",
-        violation.key.policy_kind,
-        violation.key.policy_index,
-        violation.subject,
-        violation.key.pid,
-        violation.command,
-        violation.family,
-        violation.transport,
-        format_ip(violation.family, &violation.ip),
-        violation.port,
-    );
+    match &violation.resource {
+        ViolationResource::File { device, inode } => {
+            println!(
+                "MONITOR file_open violation policy={:?}[{}] uid={} pid={} fd={} comm={} dev={} ino={}",
+                violation.key.policy_kind,
+                violation.key.policy_index,
+                violation.subject,
+                violation.key.pid,
+                violation.key.fd,
+                violation.command,
+                device,
+                inode,
+            );
+        }
+        ViolationResource::Socket {
+            family,
+            transport,
+            ip,
+            port,
+            inode,
+        } => {
+            println!(
+                "MONITOR socket_bind violation policy={:?}[{}] uid={} pid={} fd={} comm={} family={:?} transport={:?} local={}:{} socket_inode={}",
+                violation.key.policy_kind,
+                violation.key.policy_index,
+                violation.subject,
+                violation.key.pid,
+                violation.key.fd,
+                violation.command,
+                family,
+                transport,
+                format_ip(*family, ip),
+                port,
+                inode,
+            );
+        }
+    }
 }
 
 fn format_ip(family: SocketFamily, ip: &[u8; SOCKET_IP_LEN]) -> String {

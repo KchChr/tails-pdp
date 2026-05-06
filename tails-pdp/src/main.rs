@@ -6,7 +6,7 @@ use std::fs;
 
 use tails_pdp::{
     BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
-    monitor::run_socket_bind_monitor,
+    monitor::run_policy_monitor,
     policy_loader::verify_pinned_map_layouts,
     policy_source::PolicyDirectorySync,
     time::{open_current_time_maps, run_current_time_updater},
@@ -114,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
         result = policy_sync.run() => result?,
-        result = run_socket_bind_monitor() => result?,
+        result = run_policy_monitor() => result?,
         result = signal::ctrl_c() => result?,
     }
     println!("Exiting...");
