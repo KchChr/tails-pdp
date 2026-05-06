@@ -28,6 +28,12 @@ struct TracedProcess {
     detached: bool,
 }
 
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "musl"))]
+type PtraceRequest = libc::c_int;
+
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(target_env = "musl")))]
+type PtraceRequest = libc::c_uint;
+
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 impl TracedProcess {
     fn attach(pid: libc::pid_t) -> anyhow::Result<Self> {
@@ -98,7 +104,7 @@ impl Drop for TracedProcess {
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-fn ptrace_simple(request: libc::c_int, pid: libc::pid_t) -> std::io::Result<()> {
+fn ptrace_simple(request: PtraceRequest, pid: libc::pid_t) -> std::io::Result<()> {
     let result = unsafe {
         libc::ptrace(
             request,
