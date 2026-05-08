@@ -16,7 +16,15 @@ impl DecisionMapExt for DecisionState {
     }
 
     fn write_to_map(self) {
-        let _ = DECISIONS.set(DECISION_DENY_IDX, self.deny, 0);
-        let _ = DECISIONS.set(DECISION_PERMIT_IDX, self.permit, 0);
+        if let Some(deny) = DECISIONS.get_ptr_mut(DECISION_DENY_IDX) {
+            unsafe {
+                *deny = self.deny;
+            }
+        }
+        if let Some(permit) = DECISIONS.get_ptr_mut(DECISION_PERMIT_IDX) {
+            unsafe {
+                *permit = self.permit;
+            }
+        }
     }
 }

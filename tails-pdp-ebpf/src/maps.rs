@@ -1,6 +1,6 @@
 use aya_ebpf::{
     macros::map,
-    maps::{Array, ProgramArray},
+    maps::{Array, PerCpuArray, ProgramArray},
 };
 use tails_pdp_common::{
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
@@ -24,7 +24,7 @@ pub(crate) static FILE_OPEN_JUMP_TABLE: ProgramArray = ProgramArray::with_max_en
 pub(crate) static SOCKET_BIND_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
 
 #[map]
-pub(crate) static DECISIONS: Array<u32> = Array::with_max_entries(2, 0);
+pub(crate) static DECISIONS: PerCpuArray<u32> = PerCpuArray::with_max_entries(2, 0);
 
 #[map]
 pub(crate) static FILE_OPEN_STATIC_POLICIES: Array<FileOpenStaticPolicy> =
