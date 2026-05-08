@@ -56,6 +56,7 @@ struct ProcessFd {
 enum FdTarget {
     File { device: u64, inode: u64 },
     Socket { socket: ActiveSocket },
+    Inotify,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -80,7 +81,7 @@ enum ResourceKind {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-struct RevocationKey {
+struct FdKey {
     pid: u32,
     fd: i32,
 }
@@ -182,6 +183,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
         .map(|socket| (socket.inode, socket))
         .collect();
     let process_fds = read_process_fds(&socket_index);
+    let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let (current_time, current_iso8601_time) = current_utc_time()?;
     let mut violations = Vec::new();
 
@@ -194,6 +196,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
+                &inotify_fds,
                 &mut violations,
             )?,
             FdTarget::Socket { socket } => collect_socket_bind_violations(
@@ -204,6 +207,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 current_iso8601_time,
                 &mut violations,
             )?,
+            FdTarget::Inotify => {}
         }
     }
 
@@ -217,6 +221,7 @@ fn collect_file_open_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    inotify_fds: &HashMap<u32, Vec<i32>>,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
     let request = FileOpenRequest {
@@ -238,6 +243,15 @@ fn collect_file_open_violations(
                 device,
                 inode,
             ));
+            append_file_open_sidecar_violations(
+                process_fd,
+                PolicyKind::Static,
+                index,
+                device,
+                inode,
+                inotify_fds,
+                violations,
+            );
         }
     }
 
@@ -255,10 +269,44 @@ fn collect_file_open_violations(
                 device,
                 inode,
             ));
+            append_file_open_sidecar_violations(
+                process_fd,
+                PolicyKind::Stream,
+                index,
+                device,
+                inode,
+                inotify_fds,
+                violations,
+            );
         }
     }
 
     Ok(())
+}
+
+fn append_file_open_sidecar_violations(
+    process_fd: &ProcessFd,
+    policy_kind: PolicyKind,
+    policy_index: u32,
+    device: u64,
+    inode: u64,
+    inotify_fds: &HashMap<u32, Vec<i32>>,
+    violations: &mut Vec<Violation>,
+) {
+    let Some(fds) = inotify_fds.get(&process_fd.process.pid) else {
+        return;
+    };
+
+    for fd in fds {
+        violations.push(file_violation_for_fd(
+            process_fd,
+            *fd,
+            policy_kind,
+            policy_index,
+            device,
+            inode,
+        ));
+    }
 }
 
 fn collect_socket_bind_violations(
@@ -323,13 +371,31 @@ fn file_violation(
     device: u64,
     inode: u64,
 ) -> Violation {
+    file_violation_for_fd(
+        process_fd,
+        process_fd.fd,
+        policy_kind,
+        policy_index,
+        device,
+        inode,
+    )
+}
+
+fn file_violation_for_fd(
+    process_fd: &ProcessFd,
+    fd: i32,
+    policy_kind: PolicyKind,
+    policy_index: u32,
+    device: u64,
+    inode: u64,
+) -> Violation {
     Violation {
         key: ViolationKey {
             policy_kind,
             policy_index,
             resource_kind: ResourceKind::File,
             pid: process_fd.process.pid,
-            fd: process_fd.fd,
+            fd,
         },
         subject: process_fd.process.uid,
         command: process_fd.process.command.clone(),
@@ -363,8 +429,8 @@ fn socket_violation(
     }
 }
 
-fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<RevocationKey>) {
-    let key = RevocationKey {
+fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>) {
+    let key = FdKey {
         pid: violation.key.pid,
         fd: violation.key.fd,
     };
@@ -397,6 +463,22 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<Revoca
             );
         }
     }
+}
+
+fn collect_inotify_fds_by_pid(process_fds: &[ProcessFd]) -> HashMap<u32, Vec<i32>> {
+    let mut fds_by_pid = HashMap::new();
+
+    for process_fd in process_fds {
+        if !matches!(process_fd.target, FdTarget::Inotify) {
+            continue;
+        }
+        fds_by_pid
+            .entry(process_fd.process.pid)
+            .or_insert_with(Vec::new)
+            .push(process_fd.fd);
+    }
+
+    fds_by_pid
 }
 
 fn should_skip_enforcement(pid: u32) -> bool {
@@ -455,6 +537,9 @@ fn read_fd_target(path: &Path, socket_index: &HashMap<u64, ActiveSocket>) -> Opt
             .cloned()
             .map(|socket| FdTarget::Socket { socket });
     }
+    if is_inotify_symlink(&target) {
+        return Some(FdTarget::Inotify);
+    }
 
     let metadata = fs::metadata(path).ok()?;
     if !metadata.file_type().is_file() {
@@ -465,6 +550,10 @@ fn read_fd_target(path: &Path, socket_index: &HashMap<u64, ActiveSocket>) -> Opt
         device: encode_kernel_dev_t(metadata.dev()),
         inode: metadata.ino(),
     })
+}
+
+fn is_inotify_symlink(target: &Path) -> bool {
+    target.to_string_lossy() == "anon_inode:inotify"
 }
 
 fn read_active_sockets() -> Vec<ActiveSocket> {
