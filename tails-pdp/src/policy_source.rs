@@ -7,11 +7,9 @@ use std::{
 use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, Entitlement, FILE_OPEN_STATIC_POLICY_MAX_ENTRIES,
-    FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy, FileOpenStreamPolicy, PolicyAction,
-    RESOURCE_LEN, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
-    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute,
-    StreamOperator,
+    ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
+    POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketBindStaticPolicy, SocketBindStreamPolicy,
+    SocketFamily, SocketTransport, StreamAttribute, StreamOperator, policy_bank_offset,
 };
 use tokio::time::{self, Duration};
 
@@ -25,6 +23,7 @@ type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
 type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
+type PolicyGenerationMap = Array<MapData, u32>;
 
 #[derive(Clone, Eq, PartialEq)]
 struct PolicyDocument {
@@ -77,6 +76,7 @@ struct ParsedPolicy {
 }
 
 struct PinnedPolicyMaps {
+    policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
     socket_bind_static: SocketBindStaticPolicyMap,
@@ -86,7 +86,8 @@ struct PinnedPolicyMaps {
 pub struct PolicyDirectorySync {
     policy_dir: PathBuf,
     maps: PinnedPolicyMaps,
-    last_processed_documents: Option<Vec<PolicyDocument>>,
+    last_applied_documents: Option<Vec<PolicyDocument>>,
+    last_failed_documents: Option<Vec<PolicyDocument>>,
 }
 
 impl PolicyDirectorySync {
@@ -102,7 +103,8 @@ impl PolicyDirectorySync {
         Ok(Self {
             policy_dir,
             maps: PinnedPolicyMaps::open()?,
-            last_processed_documents: None,
+            last_applied_documents: None,
+            last_failed_documents: None,
         })
     }
 
@@ -112,10 +114,23 @@ impl PolicyDirectorySync {
 
     pub fn sync_initial(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
-        let compiled = compile_policy_documents(&documents)?;
-        self.maps.write(&compiled)?;
-        self.last_processed_documents = Some(documents);
-        print_policy_summary(&self.policy_dir, &compiled);
+        match compile_policy_documents(&documents).and_then(|compiled| {
+            let generation = self.maps.commit(&compiled)?;
+            Ok((compiled, generation))
+        }) {
+            Ok((compiled, generation)) => {
+                self.last_applied_documents = Some(documents);
+                self.last_failed_documents = None;
+                print_policy_summary(&self.policy_dir, generation, &compiled);
+            }
+            Err(error) => {
+                eprintln!(
+                    "POLICY initial sync failed for '{}'; keeping existing pinned generation active: {error:#}",
+                    self.policy_dir.display()
+                );
+                self.last_failed_documents = Some(documents);
+            }
+        }
         Ok(())
     }
 
@@ -131,26 +146,29 @@ impl PolicyDirectorySync {
 
     fn sync_if_changed(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
-        let source_changed = self.last_processed_documents.as_ref() != Some(&documents);
-
-        match compile_policy_documents(&documents) {
-            Ok(compiled) => {
-                self.maps.write(&compiled)?;
-                if source_changed {
-                    print_policy_summary(&self.policy_dir, &compiled);
-                }
-            }
-            Err(error) => {
-                if source_changed {
-                    eprintln!(
-                        "POLICY sync failed for '{}': {error:#}",
-                        self.policy_dir.display()
-                    );
-                }
-            }
+        if self.last_applied_documents.as_ref() == Some(&documents)
+            || self.last_failed_documents.as_ref() == Some(&documents)
+        {
+            return Ok(());
         }
 
-        self.last_processed_documents = Some(documents);
+        match compile_policy_documents(&documents).and_then(|compiled| {
+            let generation = self.maps.commit(&compiled)?;
+            Ok((compiled, generation))
+        }) {
+            Ok((compiled, generation)) => {
+                self.last_applied_documents = Some(documents);
+                self.last_failed_documents = None;
+                print_policy_summary(&self.policy_dir, generation, &compiled);
+            }
+            Err(error) => {
+                eprintln!(
+                    "POLICY sync failed for '{}'; previous generation remains active: {error:#}",
+                    self.policy_dir.display()
+                );
+                self.last_failed_documents = Some(documents);
+            }
+        }
         Ok(())
     }
 }
@@ -158,6 +176,7 @@ impl PolicyDirectorySync {
 impl PinnedPolicyMaps {
     fn open() -> anyhow::Result<Self> {
         Ok(Self {
+            policy_generation: open_array_map("POLICY_GENERATION")?,
             file_open_static: open_array_map("FILE_OPEN_STATIC_POLICIES")?,
             file_open_stream: open_array_map("FILE_OPEN_STREAM_POLICIES")?,
             socket_bind_static: open_array_map("SOCKET_BIND_STATIC_POLICIES")?,
@@ -165,30 +184,55 @@ impl PinnedPolicyMaps {
         })
     }
 
-    fn write(&mut self, compiled: &CompiledPolicies) -> anyhow::Result<()> {
-        write_array_map(
+    fn active_generation(&self) -> anyhow::Result<u32> {
+        self.policy_generation
+            .get(&0, 0)
+            .context("failed to read POLICY_GENERATION[0]")
+    }
+
+    fn commit(&mut self, compiled: &CompiledPolicies) -> anyhow::Result<u32> {
+        let current_generation = self.active_generation()?;
+        let next_generation = current_generation.wrapping_add(1);
+        let bank_offset = policy_bank_offset(next_generation);
+
+        // Write the inactive bank first. The old generation remains active unless this final
+        // POLICY_GENERATION write succeeds.
+        self.write_bank(compiled, bank_offset)?;
+        self.policy_generation
+            .set(0, next_generation, 0)
+            .context("failed to commit POLICY_GENERATION[0]")?;
+
+        Ok(next_generation)
+    }
+
+    fn write_bank(&mut self, compiled: &CompiledPolicies, bank_offset: u32) -> anyhow::Result<()> {
+        write_array_bank(
             &mut self.file_open_static,
             &compiled.file_open_static,
             FileOpenStaticPolicy::disabled(),
             "FILE_OPEN_STATIC_POLICIES",
+            bank_offset,
         )?;
-        write_array_map(
+        write_array_bank(
             &mut self.file_open_stream,
             &compiled.file_open_stream,
             FileOpenStreamPolicy::disabled(),
             "FILE_OPEN_STREAM_POLICIES",
+            bank_offset,
         )?;
-        write_array_map(
+        write_array_bank(
             &mut self.socket_bind_static,
             &compiled.socket_bind_static,
             SocketBindStaticPolicy::disabled(),
             "SOCKET_BIND_STATIC_POLICIES",
+            bank_offset,
         )?;
-        write_array_map(
+        write_array_bank(
             &mut self.socket_bind_stream,
             &compiled.socket_bind_stream,
             SocketBindStreamPolicy::disabled(),
             "SOCKET_BIND_STREAM_POLICIES",
+            bank_offset,
         )?;
         Ok(())
     }
@@ -208,25 +252,37 @@ fn open_array_map<T: aya::Pod>(map_name: &str) -> anyhow::Result<Array<MapData, 
     Array::try_from(map).with_context(|| format!("failed to open {map_name} as array map"))
 }
 
-fn write_array_map<T: aya::Pod + Copy>(
+fn write_array_bank<T: aya::Pod + Copy>(
     map: &mut Array<MapData, T>,
     values: &[T],
     disabled: T,
     map_name: &str,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    if values.len() > map.len() as usize {
+    if values.len() > POLICY_BANK_SIZE as usize {
         bail!(
             "too many policies for {}: {} > {}",
             map_name,
             values.len(),
+            POLICY_BANK_SIZE
+        );
+    }
+
+    if bank_offset + POLICY_BANK_SIZE > map.len() {
+        bail!(
+            "policy bank out of range for {}: bank_offset={} bank_size={} map_len={}",
+            map_name,
+            bank_offset,
+            POLICY_BANK_SIZE,
             map.len()
         );
     }
 
-    for index in 0..map.len() {
+    for index in 0..POLICY_BANK_SIZE {
         let value = values.get(index as usize).copied().unwrap_or(disabled);
-        map.set(index, value, 0)
-            .with_context(|| format!("failed to write {map_name}[{index}]"))?;
+        let map_index = bank_offset + index;
+        map.set(map_index, value, 0)
+            .with_context(|| format!("failed to write {map_name}[{map_index}]"))?;
     }
 
     Ok(())
@@ -604,32 +660,32 @@ fn ensure_policy_capacity(
     socket_bind_static_count: usize,
     socket_bind_stream_count: usize,
 ) -> anyhow::Result<()> {
-    if file_open_static_count > FILE_OPEN_STATIC_POLICY_MAX_ENTRIES as usize {
+    if file_open_static_count > POLICY_BANK_SIZE as usize {
         bail!(
             "too many file_open static policies: {} > {}",
             file_open_static_count,
-            FILE_OPEN_STATIC_POLICY_MAX_ENTRIES
+            POLICY_BANK_SIZE
         );
     }
-    if file_open_stream_count > FILE_OPEN_STREAM_POLICY_MAX_ENTRIES as usize {
+    if file_open_stream_count > POLICY_BANK_SIZE as usize {
         bail!(
             "too many file_open stream policies: {} > {}",
             file_open_stream_count,
-            FILE_OPEN_STREAM_POLICY_MAX_ENTRIES
+            POLICY_BANK_SIZE
         );
     }
-    if socket_bind_static_count > SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES as usize {
+    if socket_bind_static_count > POLICY_BANK_SIZE as usize {
         bail!(
             "too many socket_bind static policies: {} > {}",
             socket_bind_static_count,
-            SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES
+            POLICY_BANK_SIZE
         );
     }
-    if socket_bind_stream_count > SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES as usize {
+    if socket_bind_stream_count > POLICY_BANK_SIZE as usize {
         bail!(
             "too many socket_bind stream policies: {} > {}",
             socket_bind_stream_count,
-            SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES
+            POLICY_BANK_SIZE
         );
     }
     Ok(())
@@ -883,10 +939,11 @@ fn stream_value(condition: ParsedTimeCondition) -> u64 {
     }
 }
 
-fn print_policy_summary(policy_dir: &Path, compiled: &CompiledPolicies) {
+fn print_policy_summary(policy_dir: &Path, generation: u32, compiled: &CompiledPolicies) {
     println!(
-        "POLICY sync ok dir={} file_open_static={} file_open_stream={} socket_bind_static={} socket_bind_stream={}",
+        "POLICY sync ok dir={} generation={} file_open_static={} file_open_stream={} socket_bind_static={} socket_bind_stream={}",
         policy_dir.display(),
+        generation,
         compiled.file_open_static.len(),
         compiled.file_open_stream.len(),
         compiled.socket_bind_static.len(),

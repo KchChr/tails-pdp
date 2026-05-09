@@ -4,8 +4,9 @@ use anyhow::{Context, bail};
 use aya::maps::{Array, MapInfo};
 use tails_pdp_common::{
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, Iso8601TimeParts, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
-    SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
+    FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
+    SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
+    SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
 use crate::BPF_PIN_DIRECTORY;
@@ -71,6 +72,11 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         "SOCKET_BIND_STREAM_POLICIES",
         size_of::<SocketBindStreamPolicy>() as u32,
         SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
+    )?;
+    verify_pinned_map_layout(
+        "POLICY_GENERATION",
+        size_of::<u32>() as u32,
+        POLICY_GENERATION_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "CURRENT_TIME",

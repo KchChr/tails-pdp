@@ -1,7 +1,7 @@
 use anyhow::Context;
 use tails_pdp_common::{
-    FileOpenStaticPolicy, FileOpenStreamPolicy, SocketBindStaticPolicy, SocketBindStreamPolicy,
-    StreamAttribute,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, POLICY_BANK_SIZE, SocketBindStaticPolicy,
+    SocketBindStreamPolicy, StreamAttribute,
 };
 
 use crate::maps::{
@@ -19,13 +19,15 @@ fn fixed_string(bytes: &[u8]) -> String {
 
 pub fn show_file_open_static(
     map: &FileOpenStaticPolicyMap,
+    bank_offset: u32,
     active_only: bool,
 ) -> anyhow::Result<()> {
     println!("FILE_OPEN_STATIC_POLICIES:");
-    for index in 0..map.len() {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy: FileOpenStaticPolicy = map
-            .get(&index, 0)
-            .with_context(|| format!("failed to read FILE_OPEN_STATIC_POLICIES[{index}]"))?;
+            .get(&map_index, 0)
+            .with_context(|| format!("failed to read FILE_OPEN_STATIC_POLICIES[{map_index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }
@@ -47,13 +49,15 @@ pub fn show_file_open_static(
 
 pub fn show_file_open_stream(
     map: &FileOpenStreamPolicyMap,
+    bank_offset: u32,
     active_only: bool,
 ) -> anyhow::Result<()> {
     println!("FILE_OPEN_STREAM_POLICIES:");
-    for index in 0..map.len() {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy: FileOpenStreamPolicy = map
-            .get(&index, 0)
-            .with_context(|| format!("failed to read FILE_OPEN_STREAM_POLICIES[{index}]"))?;
+            .get(&map_index, 0)
+            .with_context(|| format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }
@@ -94,13 +98,15 @@ pub fn show_file_open_stream(
 
 pub fn show_socket_bind_static(
     map: &SocketBindStaticPolicyMap,
+    bank_offset: u32,
     active_only: bool,
 ) -> anyhow::Result<()> {
     println!("SOCKET_BIND_STATIC_POLICIES:");
-    for index in 0..map.len() {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy: SocketBindStaticPolicy = map
-            .get(&index, 0)
-            .with_context(|| format!("failed to read SOCKET_BIND_STATIC_POLICIES[{index}]"))?;
+            .get(&map_index, 0)
+            .with_context(|| format!("failed to read SOCKET_BIND_STATIC_POLICIES[{map_index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }
@@ -122,13 +128,15 @@ pub fn show_socket_bind_static(
 
 pub fn show_socket_bind_stream(
     map: &SocketBindStreamPolicyMap,
+    bank_offset: u32,
     active_only: bool,
 ) -> anyhow::Result<()> {
     println!("SOCKET_BIND_STREAM_POLICIES:");
-    for index in 0..map.len() {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy: SocketBindStreamPolicy = map
-            .get(&index, 0)
-            .with_context(|| format!("failed to read SOCKET_BIND_STREAM_POLICIES[{index}]"))?;
+            .get(&map_index, 0)
+            .with_context(|| format!("failed to read SOCKET_BIND_STREAM_POLICIES[{map_index}]"))?;
         if active_only && policy.enabled == 0 {
             continue;
         }

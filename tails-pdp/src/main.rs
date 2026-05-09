@@ -91,6 +91,13 @@ async fn main() -> anyhow::Result<()> {
             })?;
     }
 
+    policy_sync.sync_initial()?;
+    println!(
+        "Watching policy directory '{}'",
+        policy_sync.directory().display()
+    );
+    println!("Waiting for Ctrl-C...");
+
     for spec in LSM_PROGRAMS {
         if !spec.attach {
             continue;
@@ -105,12 +112,6 @@ async fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to attach '{}'", spec.name))?;
     }
 
-    policy_sync.sync_initial()?;
-    println!(
-        "Watching policy directory '{}'",
-        policy_sync.directory().display()
-    );
-    println!("Waiting for Ctrl-C...");
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
         result = policy_sync.run() => result?,

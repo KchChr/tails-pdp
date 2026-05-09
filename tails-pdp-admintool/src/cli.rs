@@ -13,6 +13,7 @@ pub const DEFAULT_SOCKET_BIND_STATIC_PIN_PATH: &str =
     "/sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES";
 pub const DEFAULT_SOCKET_BIND_STREAM_PIN_PATH: &str =
     "/sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES";
+pub const DEFAULT_POLICY_GENERATION_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/POLICY_GENERATION";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum EntitlementArg {
@@ -127,6 +128,9 @@ pub struct Cli {
 
     #[arg(long, default_value = DEFAULT_SOCKET_BIND_STREAM_PIN_PATH)]
     pub socket_bind_stream_pin_path: PathBuf,
+
+    #[arg(long, default_value = DEFAULT_POLICY_GENERATION_PIN_PATH)]
+    pub policy_generation_pin_path: PathBuf,
 
     #[command(subcommand)]
     pub command: Command,
@@ -267,6 +271,8 @@ pub fn print_usage() {
     println!("      Standard: /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES");
     println!("  --socket-bind-stream-pin-path <PFAD>");
     println!("      Standard: /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES");
+    println!("  --policy-generation-pin-path <PFAD>");
+    println!("      Standard: /sys/fs/bpf/tails-pdp/POLICY_GENERATION");
     println!("  --action <file-open|socket-bind>");
     println!("      Waehlt den Hook fuer clear, clear-stream, clear-all, set und set-stream.");
     println!("  --entitlement <permit|deny>");

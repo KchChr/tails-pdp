@@ -8,8 +8,8 @@ use anyhow::{anyhow, bail};
 use clap::{Parser, error::ErrorKind};
 use tails_pdp_common::{
     ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    RESOURCE_LEN, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
-    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport,
+    POLICY_BANK_SIZE, RESOURCE_LEN, SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily,
+    SocketTransport, policy_bank_offset,
 };
 
 use crate::{
@@ -17,7 +17,7 @@ use crate::{
     maps::{
         FileOpenStaticPolicyMap, FileOpenStreamPolicyMap, SocketBindStaticPolicyMap,
         SocketBindStreamPolicyMap, open_file_open_static_policies, open_file_open_stream_policies,
-        open_socket_bind_static_policies, open_socket_bind_stream_policies,
+        open_policy_generation, open_socket_bind_static_policies, open_socket_bind_stream_policies,
     },
     output::{
         show_file_open_static, show_file_open_stream, show_socket_bind_static,
@@ -64,10 +64,32 @@ fn ensure_privileges(command: &Command) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn active_bank_offset(cli: &Cli) -> anyhow::Result<u32> {
+    let generation_map = open_policy_generation(&cli.policy_generation_pin_path)?;
+    let generation = generation_map
+        .get(&0, 0)
+        .map_err(anyhow::Error::from)
+        .map_err(|error| anyhow!("failed to read POLICY_GENERATION[0]: {error}"))?;
+    Ok(policy_bank_offset(generation))
+}
+
+fn map_index(bank_offset: u32, index: u32) -> anyhow::Result<u32> {
+    if index >= POLICY_BANK_SIZE {
+        bail!(
+            "policy index {} out of range; max is {}",
+            index,
+            POLICY_BANK_SIZE - 1
+        );
+    }
+    Ok(bank_offset + index)
+}
+
 fn clear_file_open_static_policy(
     map: &mut FileOpenStaticPolicyMap,
     index: u32,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     map.set(index, FileOpenStaticPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear FILE_OPEN_STATIC_POLICIES[{index}]: {error}"))
@@ -76,22 +98,30 @@ fn clear_file_open_static_policy(
 fn clear_file_open_stream_policy(
     map: &mut FileOpenStreamPolicyMap,
     index: u32,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     map.set(index, FileOpenStreamPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]: {error}"))
 }
 
-fn clear_all_file_open_static_policies(map: &mut FileOpenStaticPolicyMap) -> anyhow::Result<()> {
-    for index in 0..map.len() {
-        clear_file_open_static_policy(map, index)?;
+fn clear_all_file_open_static_policies(
+    map: &mut FileOpenStaticPolicyMap,
+    bank_offset: u32,
+) -> anyhow::Result<()> {
+    for index in 0..POLICY_BANK_SIZE {
+        clear_file_open_static_policy(map, index, bank_offset)?;
     }
     Ok(())
 }
 
-fn clear_all_file_open_stream_policies(map: &mut FileOpenStreamPolicyMap) -> anyhow::Result<()> {
-    for index in 0..map.len() {
-        clear_file_open_stream_policy(map, index)?;
+fn clear_all_file_open_stream_policies(
+    map: &mut FileOpenStreamPolicyMap,
+    bank_offset: u32,
+) -> anyhow::Result<()> {
+    for index in 0..POLICY_BANK_SIZE {
+        clear_file_open_stream_policy(map, index, bank_offset)?;
     }
     Ok(())
 }
@@ -99,14 +129,16 @@ fn clear_all_file_open_stream_policies(map: &mut FileOpenStreamPolicyMap) -> any
 fn clear_socket_bind_static_policy(
     map: &mut SocketBindStaticPolicyMap,
     index: u32,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    if index >= SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
+    if index >= POLICY_BANK_SIZE {
         bail!(
             "socket_bind static index {} out of range; max is {}",
             index,
-            SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES - 1
+            POLICY_BANK_SIZE - 1
         );
     }
+    let index = map_index(bank_offset, index)?;
     map.set(index, SocketBindStaticPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear SOCKET_BIND_STATIC_POLICIES[{index}]: {error}"))
@@ -115,14 +147,16 @@ fn clear_socket_bind_static_policy(
 fn clear_socket_bind_stream_policy(
     map: &mut SocketBindStreamPolicyMap,
     index: u32,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    if index >= SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES {
+    if index >= POLICY_BANK_SIZE {
         bail!(
             "socket_bind stream index {} out of range; max is {}",
             index,
-            SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES - 1
+            POLICY_BANK_SIZE - 1
         );
     }
+    let index = map_index(bank_offset, index)?;
     map.set(index, SocketBindStreamPolicy::disabled(), 0)
         .map_err(anyhow::Error::from)
         .map_err(|error| anyhow!("failed to clear SOCKET_BIND_STREAM_POLICIES[{index}]: {error}"))
@@ -130,18 +164,20 @@ fn clear_socket_bind_stream_policy(
 
 fn clear_all_socket_bind_static_policies(
     map: &mut SocketBindStaticPolicyMap,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    for index in 0..map.len() {
-        clear_socket_bind_static_policy(map, index)?;
+    for index in 0..POLICY_BANK_SIZE {
+        clear_socket_bind_static_policy(map, index, bank_offset)?;
     }
     Ok(())
 }
 
 fn clear_all_socket_bind_stream_policies(
     map: &mut SocketBindStreamPolicyMap,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    for index in 0..map.len() {
-        clear_socket_bind_stream_policy(map, index)?;
+    for index in 0..POLICY_BANK_SIZE {
+        clear_socket_bind_stream_policy(map, index, bank_offset)?;
     }
     Ok(())
 }
@@ -149,11 +185,13 @@ fn clear_all_socket_bind_stream_policies(
 fn set_file_open_static_policy(
     map: &mut FileOpenStaticPolicyMap,
     index: u32,
+    bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
     command: String,
     resource: String,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     validate_len("command", &command, COMMAND_LEN)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
 
@@ -172,6 +210,7 @@ fn set_file_open_static_policy(
 fn set_socket_bind_static_policy(
     map: &mut SocketBindStaticPolicyMap,
     index: u32,
+    bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
     family: cli::SocketFamilyArg,
@@ -179,6 +218,7 @@ fn set_socket_bind_static_policy(
     port: u16,
     resource: String,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
 
     let policy = SocketBindStaticPolicy::new(
@@ -203,6 +243,7 @@ fn set_socket_bind_static_policy(
 fn set_file_open_stream_policy(
     map: &mut FileOpenStreamPolicyMap,
     index: u32,
+    bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
     attribute: cli::StreamAttributeArg,
@@ -211,6 +252,7 @@ fn set_file_open_stream_policy(
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
     validate_stream_condition(attribute, modulo, value)?;
 
@@ -237,6 +279,7 @@ fn set_file_open_stream_policy(
 fn set_socket_bind_stream_policy(
     map: &mut SocketBindStreamPolicyMap,
     index: u32,
+    bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
     attribute: cli::StreamAttributeArg,
@@ -248,6 +291,7 @@ fn set_socket_bind_stream_policy(
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
+    let index = map_index(bank_offset, index)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
     validate_stream_condition(attribute, modulo, value)?;
 
@@ -277,8 +321,10 @@ fn set_socket_bind_stream_policy(
 fn load_example_static_policies(
     file_open_map: &mut FileOpenStaticPolicyMap,
     socket_bind_map: &mut SocketBindStaticPolicyMap,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    for index in 0..file_open_map.len() {
+    for logical_index in 0..POLICY_BANK_SIZE {
+        let index = bank_offset + logical_index;
         file_open_map
             .set(index, FileOpenStaticPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
@@ -286,7 +332,8 @@ fn load_example_static_policies(
                 anyhow!("failed to clear FILE_OPEN_STATIC_POLICIES[{index}]: {error}")
             })?;
     }
-    for index in 0..socket_bind_map.len() {
+    for logical_index in 0..POLICY_BANK_SIZE {
+        let index = bank_offset + logical_index;
         socket_bind_map
             .set(index, SocketBindStaticPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
@@ -315,7 +362,7 @@ fn load_example_static_policies(
             .resolve_resource_identity()
             .map_err(anyhow::Error::from)?;
         file_open_map
-            .set(index as u32, policy, 0)
+            .set(bank_offset + index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| {
                 anyhow!("failed to write FILE_OPEN_STATIC_POLICIES[{index}]: {error}")
@@ -327,7 +374,7 @@ fn load_example_static_policies(
             .resolve_resource_identity()
             .map_err(anyhow::Error::from)?;
         socket_bind_map
-            .set(index as u32, policy, 0)
+            .set(bank_offset + index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| {
                 anyhow!("failed to write SOCKET_BIND_STATIC_POLICIES[{index}]: {error}")
@@ -340,8 +387,10 @@ fn load_example_static_policies(
 fn load_example_stream_policies(
     file_open_map: &mut FileOpenStreamPolicyMap,
     socket_bind_map: &mut SocketBindStreamPolicyMap,
+    bank_offset: u32,
 ) -> anyhow::Result<()> {
-    for index in 0..file_open_map.len() {
+    for logical_index in 0..POLICY_BANK_SIZE {
+        let index = bank_offset + logical_index;
         file_open_map
             .set(index, FileOpenStreamPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
@@ -349,7 +398,8 @@ fn load_example_stream_policies(
                 anyhow!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]: {error}")
             })?;
     }
-    for index in 0..socket_bind_map.len() {
+    for logical_index in 0..POLICY_BANK_SIZE {
+        let index = bank_offset + logical_index;
         socket_bind_map
             .set(index, SocketBindStreamPolicy::disabled(), 0)
             .map_err(anyhow::Error::from)
@@ -383,7 +433,7 @@ fn load_example_stream_policies(
             .resolve_resource_identity()
             .map_err(anyhow::Error::from)?;
         file_open_map
-            .set(index as u32, policy, 0)
+            .set(bank_offset + index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| {
                 anyhow!("failed to write FILE_OPEN_STREAM_POLICIES[{index}]: {error}")
@@ -395,7 +445,7 @@ fn load_example_stream_policies(
             .resolve_resource_identity()
             .map_err(anyhow::Error::from)?;
         socket_bind_map
-            .set(index as u32, policy, 0)
+            .set(bank_offset + index as u32, policy, 0)
             .map_err(anyhow::Error::from)
             .map_err(|error| {
                 anyhow!("failed to write SOCKET_BIND_STREAM_POLICIES[{index}]: {error}")
@@ -431,6 +481,7 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     ensure_privileges(&cli.command)?;
+    let bank_offset = active_bank_offset(&cli)?;
 
     match cli.command {
         Command::Show => {
@@ -440,10 +491,10 @@ pub fn run() -> anyhow::Result<()> {
                 open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
             let socket_bind_stream =
                 open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
-            show_file_open_static(&file_open_static, false)?;
-            show_file_open_stream(&file_open_stream, false)?;
-            show_socket_bind_static(&socket_bind_static, false)?;
-            show_socket_bind_stream(&socket_bind_stream, false)
+            show_file_open_static(&file_open_static, bank_offset, false)?;
+            show_file_open_stream(&file_open_stream, bank_offset, false)?;
+            show_socket_bind_static(&socket_bind_static, bank_offset, false)?;
+            show_socket_bind_stream(&socket_bind_stream, bank_offset, false)
         }
         Command::ShowActive => {
             let file_open_static = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
@@ -452,10 +503,10 @@ pub fn run() -> anyhow::Result<()> {
                 open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
             let socket_bind_stream =
                 open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
-            show_file_open_static(&file_open_static, true)?;
-            show_file_open_stream(&file_open_stream, true)?;
-            show_socket_bind_static(&socket_bind_static, true)?;
-            show_socket_bind_stream(&socket_bind_stream, true)
+            show_file_open_static(&file_open_static, bank_offset, true)?;
+            show_file_open_stream(&file_open_stream, bank_offset, true)?;
+            show_socket_bind_static(&socket_bind_static, bank_offset, true)?;
+            show_socket_bind_stream(&socket_bind_stream, bank_offset, true)
         }
         Command::ClearAll { action } => match action {
             None => {
@@ -468,46 +519,46 @@ pub fn run() -> anyhow::Result<()> {
                 let mut socket_bind_stream =
                     open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
 
-                clear_all_file_open_static_policies(&mut file_open_static)?;
-                clear_all_file_open_stream_policies(&mut file_open_stream)?;
-                clear_all_socket_bind_static_policies(&mut socket_bind_static)?;
-                clear_all_socket_bind_stream_policies(&mut socket_bind_stream)
+                clear_all_file_open_static_policies(&mut file_open_static, bank_offset)?;
+                clear_all_file_open_stream_policies(&mut file_open_stream, bank_offset)?;
+                clear_all_socket_bind_static_policies(&mut socket_bind_static, bank_offset)?;
+                clear_all_socket_bind_stream_policies(&mut socket_bind_stream, bank_offset)
             }
             Some(ActionArg::FileOpen) => {
                 let mut file_open_static =
                     open_file_open_static_policies(&cli.file_open_static_pin_path)?;
                 let mut file_open_stream =
                     open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
-                clear_all_file_open_static_policies(&mut file_open_static)?;
-                clear_all_file_open_stream_policies(&mut file_open_stream)
+                clear_all_file_open_static_policies(&mut file_open_static, bank_offset)?;
+                clear_all_file_open_stream_policies(&mut file_open_stream, bank_offset)
             }
             Some(ActionArg::SocketBind) => {
                 let mut socket_bind_static =
                     open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
                 let mut socket_bind_stream =
                     open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
-                clear_all_socket_bind_static_policies(&mut socket_bind_static)?;
-                clear_all_socket_bind_stream_policies(&mut socket_bind_stream)
+                clear_all_socket_bind_static_policies(&mut socket_bind_static, bank_offset)?;
+                clear_all_socket_bind_stream_policies(&mut socket_bind_stream, bank_offset)
             }
         },
         Command::Clear { index, action } => match action {
             ActionArg::FileOpen => {
                 let mut map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
-                clear_file_open_static_policy(&mut map, index)
+                clear_file_open_static_policy(&mut map, index, bank_offset)
             }
             ActionArg::SocketBind => {
                 let mut map = open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
-                clear_socket_bind_static_policy(&mut map, index)
+                clear_socket_bind_static_policy(&mut map, index, bank_offset)
             }
         },
         Command::ClearStream { index, action } => match action {
             ActionArg::FileOpen => {
                 let mut map = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
-                clear_file_open_stream_policy(&mut map, index)
+                clear_file_open_stream_policy(&mut map, index, bank_offset)
             }
             ActionArg::SocketBind => {
                 let mut map = open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
-                clear_socket_bind_stream_policy(&mut map, index)
+                clear_socket_bind_stream_policy(&mut map, index, bank_offset)
             }
         },
         Command::Set {
@@ -526,6 +577,7 @@ pub fn run() -> anyhow::Result<()> {
                 set_file_open_static_policy(
                     &mut map,
                     index,
+                    bank_offset,
                     entitlement,
                     subject,
                     command,
@@ -537,6 +589,7 @@ pub fn run() -> anyhow::Result<()> {
                 set_socket_bind_static_policy(
                     &mut map,
                     index,
+                    bank_offset,
                     entitlement,
                     subject,
                     family,
@@ -565,6 +618,7 @@ pub fn run() -> anyhow::Result<()> {
                 set_file_open_stream_policy(
                     &mut map,
                     index,
+                    bank_offset,
                     entitlement,
                     subject,
                     attribute,
@@ -579,6 +633,7 @@ pub fn run() -> anyhow::Result<()> {
                 set_socket_bind_stream_policy(
                     &mut map,
                     index,
+                    bank_offset,
                     entitlement,
                     subject,
                     attribute,
@@ -596,13 +651,13 @@ pub fn run() -> anyhow::Result<()> {
             let mut file_open_map = open_file_open_static_policies(&cli.file_open_static_pin_path)?;
             let mut socket_bind_map =
                 open_socket_bind_static_policies(&cli.socket_bind_static_pin_path)?;
-            load_example_static_policies(&mut file_open_map, &mut socket_bind_map)
+            load_example_static_policies(&mut file_open_map, &mut socket_bind_map, bank_offset)
         }
         Command::LoadStreamExamples => {
             let mut file_open_map = open_file_open_stream_policies(&cli.file_open_stream_pin_path)?;
             let mut socket_bind_map =
                 open_socket_bind_stream_policies(&cli.socket_bind_stream_pin_path)?;
-            load_example_stream_policies(&mut file_open_map, &mut socket_bind_map)
+            load_example_stream_policies(&mut file_open_map, &mut socket_bind_map, bank_offset)
         }
     }
 }

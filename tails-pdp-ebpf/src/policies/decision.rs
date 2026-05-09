@@ -1,6 +1,8 @@
 pub(crate) use tails_pdp_common::DecisionState;
 
-use crate::maps::{DECISION_DENY_IDX, DECISION_PERMIT_IDX, DECISIONS};
+use crate::maps::{
+    DECISION_DENY_IDX, DECISION_GENERATION_IDX, DECISION_PERMIT_IDX, DECISIONS, POLICY_GENERATION,
+};
 
 pub(crate) trait DecisionMapExt {
     fn from_map() -> Self;
@@ -12,6 +14,7 @@ impl DecisionMapExt for DecisionState {
         Self {
             deny: DECISIONS.get(DECISION_DENY_IDX).copied().unwrap_or(0),
             permit: DECISIONS.get(DECISION_PERMIT_IDX).copied().unwrap_or(0),
+            generation: DECISIONS.get(DECISION_GENERATION_IDX).copied().unwrap_or(0),
         }
     }
 
@@ -26,5 +29,14 @@ impl DecisionMapExt for DecisionState {
                 *permit = self.permit;
             }
         }
+        if let Some(generation) = DECISIONS.get_ptr_mut(DECISION_GENERATION_IDX) {
+            unsafe {
+                *generation = self.generation;
+            }
+        }
     }
+}
+
+pub(crate) fn active_policy_generation() -> u32 {
+    POLICY_GENERATION.get(0).copied().unwrap_or(0)
 }

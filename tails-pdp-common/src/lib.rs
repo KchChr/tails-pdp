@@ -9,10 +9,19 @@ pub const SOCKET_IP_LEN: usize = 16;
 pub const ANY_SUBJECT: u32 = u32::MAX;
 
 pub const MAX_POLICIES: u32 = 16;
-pub const FILE_OPEN_STATIC_POLICY_MAX_ENTRIES: u32 = MAX_POLICIES;
-pub const FILE_OPEN_STREAM_POLICY_MAX_ENTRIES: u32 = MAX_POLICIES;
-pub const SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES: u32 = MAX_POLICIES;
-pub const SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES: u32 = MAX_POLICIES;
+pub const POLICY_BANK_COUNT: u32 = 2;
+pub const POLICY_BANK_SIZE: u32 = MAX_POLICIES;
+pub const POLICY_MAP_MAX_ENTRIES: u32 = POLICY_BANK_COUNT * POLICY_BANK_SIZE;
+pub const POLICY_GENERATION_MAX_ENTRIES: u32 = 1;
+
+pub const FILE_OPEN_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
+pub const FILE_OPEN_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
+pub const SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
+pub const SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
+
+pub const fn policy_bank_offset(generation: u32) -> u32 {
+    (generation % POLICY_BANK_COUNT) * POLICY_BANK_SIZE
+}
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -493,11 +502,24 @@ impl SocketBindStreamPolicy {
 pub struct DecisionState {
     pub deny: u32,
     pub permit: u32,
+    pub generation: u32,
 }
 
 impl DecisionState {
     pub const fn empty() -> Self {
-        Self { deny: 0, permit: 0 }
+        Self {
+            deny: 0,
+            permit: 0,
+            generation: 0,
+        }
+    }
+
+    pub const fn empty_for_generation(generation: u32) -> Self {
+        Self {
+            deny: 0,
+            permit: 0,
+            generation,
+        }
     }
 
     pub fn record(&mut self, entitlement: Entitlement) {

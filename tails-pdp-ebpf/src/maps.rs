@@ -4,8 +4,9 @@ use aya_ebpf::{
 };
 use tails_pdp_common::{
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, Iso8601TimeParts, SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
-    SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
+    FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
+    SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
+    SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
 pub(crate) const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;
@@ -16,6 +17,7 @@ pub(crate) const TAIL_IDX_SOCKET_BIND_STREAM: u32 = 1;
 pub(crate) const TAIL_IDX_SOCKET_BIND_COMBINE: u32 = 2;
 pub(crate) const DECISION_DENY_IDX: u32 = 0;
 pub(crate) const DECISION_PERMIT_IDX: u32 = 1;
+pub(crate) const DECISION_GENERATION_IDX: u32 = 2;
 
 #[map]
 pub(crate) static FILE_OPEN_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
@@ -24,7 +26,10 @@ pub(crate) static FILE_OPEN_JUMP_TABLE: ProgramArray = ProgramArray::with_max_en
 pub(crate) static SOCKET_BIND_JUMP_TABLE: ProgramArray = ProgramArray::with_max_entries(3, 0);
 
 #[map]
-pub(crate) static DECISIONS: PerCpuArray<u32> = PerCpuArray::with_max_entries(2, 0);
+pub(crate) static DECISIONS: PerCpuArray<u32> = PerCpuArray::with_max_entries(3, 0);
+
+#[map]
+pub(crate) static POLICY_GENERATION: Array<u32> = Array::pinned(POLICY_GENERATION_MAX_ENTRIES, 0);
 
 #[map]
 pub(crate) static FILE_OPEN_STATIC_POLICIES: Array<FileOpenStaticPolicy> =

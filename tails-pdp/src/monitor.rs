@@ -12,13 +12,11 @@ use std::{
 use anyhow::Context;
 use aya::maps::{Array, Map, MapData};
 use tails_pdp_common::{
-    Entitlement, FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES,
-    FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts,
-    SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES, SOCKET_IP_LEN,
-    SocketBindRequest, SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily,
-    SocketTransport, command_name, evaluate_file_open_static_policy,
-    evaluate_file_open_stream_policy, evaluate_socket_bind_static_policy,
-    evaluate_socket_bind_stream_policy,
+    Entitlement, FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts,
+    POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
+    SocketBindStreamPolicy, SocketFamily, SocketTransport, command_name,
+    evaluate_file_open_static_policy, evaluate_file_open_stream_policy,
+    evaluate_socket_bind_static_policy, evaluate_socket_bind_stream_policy, policy_bank_offset,
 };
 use tokio::time;
 
@@ -28,6 +26,7 @@ type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
 type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
+type PolicyGenerationMap = Array<MapData, u32>;
 
 #[derive(Clone, Debug)]
 struct ActiveSocket {
@@ -108,6 +107,7 @@ enum ViolationResource {
 }
 
 struct PolicyMaps {
+    policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
     socket_bind_static: SocketBindStaticPolicyMap,
@@ -151,6 +151,10 @@ pub async fn run_policy_monitor() -> anyhow::Result<()> {
 
 fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
     Ok(PolicyMaps {
+        policy_generation: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("POLICY_GENERATION"),
+            "POLICY_GENERATION",
+        )?,
         file_open_static: open_array_map(
             &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STATIC_POLICIES"),
             "FILE_OPEN_STATIC_POLICIES",
@@ -178,6 +182,11 @@ fn open_array_map<T: aya::Pod>(path: &Path, label: &str) -> anyhow::Result<Array
 }
 
 fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Violation>> {
+    let generation = policies
+        .policy_generation
+        .get(&0, 0)
+        .context("failed to read POLICY_GENERATION[0] for monitor")?;
+    let bank_offset = policy_bank_offset(generation);
     let socket_index = read_active_sockets()
         .into_iter()
         .map(|socket| (socket.inode, socket))
@@ -196,6 +205,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
+                bank_offset,
                 &inotify_fds,
                 &mut violations,
             )?,
@@ -205,6 +215,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
+                bank_offset,
                 &mut violations,
             )?,
             FdTarget::Inotify => {}
@@ -221,6 +232,7 @@ fn collect_file_open_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    bank_offset: u32,
     inotify_fds: &HashMap<u32, Vec<i32>>,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
@@ -231,10 +243,14 @@ fn collect_file_open_violations(
         resource_inode: inode,
     };
 
-    for index in 0..FILE_OPEN_STATIC_POLICY_MAX_ENTRIES {
-        let policy = policies.file_open_static.get(&index, 0).with_context(|| {
-            format!("failed to read FILE_OPEN_STATIC_POLICIES[{index}] for monitor")
-        })?;
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
+        let policy = policies
+            .file_open_static
+            .get(&map_index, 0)
+            .with_context(|| {
+                format!("failed to read FILE_OPEN_STATIC_POLICIES[{map_index}] for monitor")
+            })?;
         if evaluate_file_open_static_policy(&request, &policy) == Some(Entitlement::Deny) {
             violations.push(file_violation(
                 process_fd,
@@ -255,10 +271,14 @@ fn collect_file_open_violations(
         }
     }
 
-    for index in 0..FILE_OPEN_STREAM_POLICY_MAX_ENTRIES {
-        let policy = policies.file_open_stream.get(&index, 0).with_context(|| {
-            format!("failed to read FILE_OPEN_STREAM_POLICIES[{index}] for monitor")
-        })?;
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
+        let policy = policies
+            .file_open_stream
+            .get(&map_index, 0)
+            .with_context(|| {
+                format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}] for monitor")
+            })?;
         if evaluate_file_open_stream_policy(&request, current_time, current_iso8601_time, &policy)
             == Some(Entitlement::Deny)
         {
@@ -315,6 +335,7 @@ fn collect_socket_bind_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    bank_offset: u32,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
     let request = SocketBindRequest {
@@ -325,12 +346,13 @@ fn collect_socket_bind_violations(
         socket_ip: socket.ip,
     };
 
-    for index in 0..SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy = policies
             .socket_bind_static
-            .get(&index, 0)
+            .get(&map_index, 0)
             .with_context(|| {
-                format!("failed to read SOCKET_BIND_STATIC_POLICIES[{index}] for monitor")
+                format!("failed to read SOCKET_BIND_STATIC_POLICIES[{map_index}] for monitor")
             })?;
         if evaluate_socket_bind_static_policy(&request, &policy) == Some(Entitlement::Deny) {
             violations.push(socket_violation(
@@ -342,12 +364,13 @@ fn collect_socket_bind_violations(
         }
     }
 
-    for index in 0..SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES {
+    for index in 0..POLICY_BANK_SIZE {
+        let map_index = bank_offset + index;
         let policy = policies
             .socket_bind_stream
-            .get(&index, 0)
+            .get(&map_index, 0)
             .with_context(|| {
-                format!("failed to read SOCKET_BIND_STREAM_POLICIES[{index}] for monitor")
+                format!("failed to read SOCKET_BIND_STREAM_POLICIES[{map_index}] for monitor")
             })?;
         if evaluate_socket_bind_stream_policy(&request, current_time, current_iso8601_time, &policy)
             == Some(Entitlement::Deny)
