@@ -7,7 +7,7 @@ Hinweise für spätere Arbeit.
 
 Der aktuelle Monitor ruft `enforce_violation` für alle Violations auf. Das betrifft nicht nur
 Datei-FDs, sondern auch Socket-FDs. In der README steht teilweise eine enger formulierte Aussage zu
-Datei-FDs.
+Datei-FDs [P6], [P7], [P22].
 
 Vorschlag:
 
@@ -18,7 +18,7 @@ Vorschlag:
 ## Admin-Tool kann Policies noch direkt setzen
 
 Die eigentliche Quelle der Wahrheit ist inzwischen `policies/`. Das Admin-Tool kann aber weiterhin
-Maps direkt verändern.
+Maps direkt verändern [P3], [P17].
 
 Risiko:
 
@@ -77,7 +77,7 @@ Vorschlag:
 ## Pfadmatching im Kernel
 
 Das Projekt matcht Dateien im Kernel über `device + inode`, nicht über Pfade. Das ist verifier-
-freundlich und robust gegen Pfadprobleme, bedeutet aber:
+freundlich und robust gegen Pfadprobleme, bedeutet aber [P8], [P11], [Q7], [Q22]:
 
 - Hardlinks mit gleichem Inode werden gleich behandelt.
 - Wenn eine Datei gelöscht und neu erstellt wird, ändert sich der Inode und alte Policies matchen
@@ -93,31 +93,21 @@ Vorschlag:
 - Architektur explizit dokumentieren.
 - Für ARM64 eine separate Implementierung planen, falls nötig.
 
-## `remove_maps.sh` ist nicht vollständig
+## Ungültige Stream-Attribute bleiben ein Bedienrisiko
 
-Das Skript entfernt einige alte und aktuelle Maps, aber nicht alle aktuell relevanten Maps wie
-`POLICY_GENERATION` und `CURRENT_TIME_ISO8601`.
-
-Vorschlag:
-
-- Skript aktualisieren oder durch eine dokumentierte `bpftool`-/`rm`-Sequenz ersetzen.
-
-## README verweist auf ein fehlendes Beispiel
-
-In `README.md` wird `examples/01-file-open-static-deny-cat-test.sapl` erwähnt. In der aktuellen
-Projektstruktur liegt diese Datei aber unter `policies/01-file-open-static-deny-cat-test.sapl`, nicht
-unter `examples/`.
+Der DEFCON-Updater ignoriert ungültige Werte in `stream-attributes/DEFCON.txt` und behält den
+letzten gültigen Wert bei [P23]. Das ist robust, kann aber verwirrend sein, wenn ein Tippfehler
+nicht sofort als Policy-Verhalten sichtbar wird.
 
 Vorschlag:
 
-- README-Beispielpfad korrigieren.
-- Oder die Beispielpolicy zusätzlich nach `examples/` verschieben/kopieren, wenn sie nicht aktiv
-  geladen werden soll.
+- Ungültige Werte weiterhin klar loggen.
+- Optional später Status im Admin-Tool anzeigen.
 
 ## Keine Ring-Buffer-Events
 
 Es gibt keine Eventübertragung vom Kernel zum Userspace. Das ist bewusst oder zumindest aktuell so.
-Der Monitor arbeitet stattdessen pollend über `/proc`.
+Der Monitor arbeitet stattdessen pollend über `/proc` [P6], [Q12], [Q13], [Q14].
 
 Grenze:
 
@@ -132,8 +122,6 @@ Vorschlag:
 - In Policy-Beispielen und CLI-Hilfe deutlich machen.
 - Falls lokale Zeit gewünscht ist, eigene Felder oder Konfiguration ergänzen.
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P3], [P4], [P6], [P7], [P8], [P14], [P17],
-[P18], [P19] und [P21] sowie auf die externen Quellen [Q11], [Q12], [Q14], [Q15] und [Q22]. Die
-vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Tests und Teststrategie](09-tests.md) | **Next:** [Glossar](11-glossar.md)

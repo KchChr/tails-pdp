@@ -8,6 +8,10 @@ Stream-Policy-Semantik:
 - Zeitbedingung wahr ergibt Entitlement.
 - Zeitbedingung falsch ergibt `None`.
 - Modulo `0` ergibt `None`.
+- DEFCON-Bedingung wahr ergibt Entitlement.
+- DEFCON-Bedingung falsch ergibt `None`.
+
+Diese Tests betreffen die gemeinsame Logik, die eBPF und Monitor verwenden [P6], [P8].
 
 Ausführung ohne den globalen Cargo-Runner:
 
@@ -35,6 +39,8 @@ Sinnvolle Fälle:
 - `ANY_SUBJECT` matcht jede UID.
 - Stream `hour < 8` trifft vor 8 Uhr.
 - Stream `hour >= 16` trifft ab 16 Uhr.
+- Stream `defcon <= 2` trifft bei DEFCON 1 oder 2.
+- Stream `defcon <= 2` trifft nicht bei DEFCON 3, 4 oder 5.
 - Stream-Bedingung falsch erzeugt keine Gegenentscheidung.
 
 Implementierung:
@@ -52,10 +58,12 @@ Sinnvolle Fälle:
 - gültige `file_open` Stream Policy
 - gültige `socket_bind` Static Policy
 - gültige `socket_bind` Stream Policy
+- gültige `environment.defcon.level <= 2`
+- ungültige DEFCON-Werte `0` und `6`
 - doppelte Policy-Namen werden abgelehnt
 - fehlendes Semikolon wird abgelehnt
 - unbekannte Action wird abgelehnt
-- mehrere Zeitbedingungen in einer Policy werden abgelehnt
+- mehrere Stream-Bedingungen in einer Policy werden abgelehnt
 - `command` in `file_open` Stream Policy wird abgelehnt
 - mehr als 16 Policies pro Map wird abgelehnt
 
@@ -116,6 +124,7 @@ Sinnvolle Fälle:
 - `clear-all --action file-open` betrifft nur File-Open-Maps.
 - `set-stream --attribute time --modulo 0` wird abgelehnt.
 - `hour > 23` wird abgelehnt.
+- `defcon` außerhalb `1..=5` wird abgelehnt.
 
 Implementierung:
 
@@ -150,7 +159,7 @@ Erwartung: `cat` bekommt `Operation not permitted`.
 #### Socket-Bind verboten
 
 ```shell
-cp examples/06-socket-bind-static-deny-8080-tcp.sapl policies/
+cp examples/20-socket-bind-static-deny-8080-tcp.sapl policies/
 python3 -c "import socket; s=socket.socket(); s.bind(('0.0.0.0', 8080))"
 ```
 
@@ -160,6 +169,18 @@ Erwartung: Bind schlägt fehl.
 
 Eine Policy mit `environment.utc.hour < 8` oder `>= 16` aktivieren und mit aktueller UTC-Zeit
 vergleichen.
+
+#### DEFCON-Stream-Policy
+
+```shell
+cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
+echo 5 > stream-attributes/DEFCON.txt
+cat /home/hntr/test.txt
+echo 2 > stream-attributes/DEFCON.txt
+cat /home/hntr/test.txt
+```
+
+Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [P19], [P23].
 
 #### Monitor nachträglich
 
@@ -177,8 +198,6 @@ Priorität:
 3. Monitor testbar machen.
 4. Privilegierte Linux-Smoke-Tests automatisieren.
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P6], [P8], [P17], [P19] und [P21]
-sowie auf die externen Quellen [Q9], [Q11], [Q12], [Q14], [Q15] und [Q18]. Die vollständige
-Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Debugging und Analyse](08-debugging-und-analyse.md) | **Next:** [Offene Punkte und Einschränkungen](10-offene-punkte.md)

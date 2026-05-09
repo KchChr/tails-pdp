@@ -8,9 +8,10 @@ use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
 use log::{error, info};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketBindStaticPolicy, SocketBindStreamPolicy,
-    SocketFamily, SocketTransport, StreamAttribute, StreamOperator, policy_bank_offset,
+    ANY_SUBJECT, COMMAND_LEN, DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN,
+    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute,
+    StreamOperator, policy_bank_offset,
 };
 use tokio::time::{self, Duration};
 
@@ -41,7 +42,7 @@ struct CompiledPolicies {
 }
 
 #[derive(Copy, Clone)]
-enum ParsedTimeCondition {
+enum ParsedStreamCondition {
     TimeModulo {
         operator: StreamOperator,
         modulo: u64,
@@ -59,6 +60,10 @@ enum ParsedTimeCondition {
         operator: StreamOperator,
         value: u64,
     },
+    Defcon {
+        operator: StreamOperator,
+        value: u64,
+    },
 }
 
 struct ParsedPolicy {
@@ -73,7 +78,7 @@ struct ParsedPolicy {
     socket_transport: SocketTransport,
     socket_resource: Option<String>,
     socket_port: u16,
-    time_condition: Option<ParsedTimeCondition>,
+    stream_condition: Option<ParsedStreamCondition>,
 }
 
 struct PinnedPolicyMaps {
@@ -407,7 +412,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     let mut socket_transport = None;
     let mut socket_resource = None;
     let mut socket_port = None;
-    let mut time_condition = None;
+    let mut stream_condition = None;
 
     for (line_no, line) in lines {
         let statement = line.strip_suffix(';').ok_or_else(|| {
@@ -506,13 +511,13 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             continue;
         }
 
-        if let Some(parsed_time_condition) = parse_time_condition(statement)? {
+        if let Some(parsed_stream_condition) = parse_stream_condition(statement)? {
             set_once(
-                &mut time_condition,
-                parsed_time_condition,
+                &mut stream_condition,
+                parsed_stream_condition,
                 &document.relative_path,
                 line_no,
-                "time condition",
+                "stream condition",
             )?;
             continue;
         }
@@ -545,12 +550,12 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         socket_transport: socket_transport.unwrap_or(SocketTransport::Any),
         socket_resource,
         socket_port: socket_port.unwrap_or(0),
-        time_condition,
+        stream_condition,
     })
 }
 
 fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyhow::Result<()> {
-    match (parsed.action, parsed.time_condition) {
+    match (parsed.action, parsed.stream_condition) {
         (PolicyAction::FileOpen, None) => {
             ensure_no_socket_fields(&parsed)?;
             let command = parsed.command.as_deref().unwrap_or("");
@@ -568,7 +573,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                     })?;
             compiled.file_open_static.push(policy);
         }
-        (PolicyAction::FileOpen, Some(time_condition)) => {
+        (PolicyAction::FileOpen, Some(stream_condition)) => {
             ensure_no_socket_fields(&parsed)?;
             if parsed.command.is_some() {
                 bail!(
@@ -583,9 +588,9 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                 parsed.entitlement,
                 parsed.subject,
                 resource,
-                stream_operator(time_condition),
-                stream_modulo(time_condition),
-                stream_value(time_condition),
+                stream_operator(stream_condition),
+                stream_modulo(stream_condition),
+                stream_value(stream_condition),
             )
             .resolve_resource_identity()
             .with_context(|| {
@@ -594,7 +599,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                     parsed.source_path.display()
                 )
             })?;
-            policy.attribute = stream_attribute(time_condition);
+            policy.attribute = stream_attribute(stream_condition);
             compiled.file_open_stream.push(policy);
         }
         (PolicyAction::SocketBind, None) => {
@@ -618,7 +623,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
             })?;
             compiled.socket_bind_static.push(policy);
         }
-        (PolicyAction::SocketBind, Some(time_condition)) => {
+        (PolicyAction::SocketBind, Some(stream_condition)) => {
             ensure_no_file_open_fields(&parsed)?;
             let resource = parsed.socket_resource.as_deref().unwrap_or("");
             ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
@@ -629,9 +634,9 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                 parsed.socket_transport,
                 parsed.socket_port,
                 resource,
-                stream_operator(time_condition),
-                stream_modulo(time_condition),
-                stream_value(time_condition),
+                stream_operator(stream_condition),
+                stream_modulo(stream_condition),
+                stream_value(stream_condition),
             )
             .resolve_resource_identity()
             .with_context(|| {
@@ -640,7 +645,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                     parsed.source_path.display()
                 )
             })?;
-            policy.attribute = stream_attribute(time_condition);
+            policy.attribute = stream_attribute(stream_condition);
             compiled.socket_bind_stream.push(policy);
         }
     }
@@ -805,13 +810,13 @@ fn parse_port_statement(statement: &str) -> anyhow::Result<Option<u16>> {
     })?))
 }
 
-fn parse_time_condition(statement: &str) -> anyhow::Result<Option<ParsedTimeCondition>> {
+fn parse_stream_condition(statement: &str) -> anyhow::Result<Option<ParsedStreamCondition>> {
     if let Some(remainder) = statement.strip_prefix("environment.time % ") {
         let tokens: Vec<_> = remainder.split_whitespace().collect();
         if tokens.len() != 3 {
             bail!("invalid environment.time modulo condition '{statement}'");
         }
-        return Ok(Some(ParsedTimeCondition::TimeModulo {
+        return Ok(Some(ParsedStreamCondition::TimeModulo {
             modulo: tokens[0]
                 .parse()
                 .map_err(|error| anyhow!("invalid modulo '{}': {error}", tokens[0]))?,
@@ -823,36 +828,46 @@ fn parse_time_condition(statement: &str) -> anyhow::Result<Option<ParsedTimeCond
     }
 
     if let Some(remainder) = statement.strip_prefix("environment.utc.hour ") {
-        return parse_component_time_condition(remainder, StreamAttribute::Hour).map(Some);
+        return parse_component_stream_condition(remainder, StreamAttribute::Hour).map(Some);
     }
     if let Some(remainder) = statement.strip_prefix("environment.utc.minute ") {
-        return parse_component_time_condition(remainder, StreamAttribute::Minute).map(Some);
+        return parse_component_stream_condition(remainder, StreamAttribute::Minute).map(Some);
     }
     if let Some(remainder) = statement.strip_prefix("environment.utc.second ") {
-        return parse_component_time_condition(remainder, StreamAttribute::Second).map(Some);
+        return parse_component_stream_condition(remainder, StreamAttribute::Second).map(Some);
+    }
+    if let Some(remainder) = statement.strip_prefix("environment.defcon.level ") {
+        return parse_component_stream_condition(remainder, StreamAttribute::Defcon).map(Some);
     }
 
     Ok(None)
 }
 
-fn parse_component_time_condition(
+fn parse_component_stream_condition(
     remainder: &str,
     attribute: StreamAttribute,
-) -> anyhow::Result<ParsedTimeCondition> {
+) -> anyhow::Result<ParsedStreamCondition> {
     let tokens: Vec<_> = remainder.split_whitespace().collect();
     if tokens.len() != 2 {
-        bail!("invalid time condition '{remainder}'");
+        bail!("invalid stream condition '{remainder}'");
     }
 
     let operator = parse_stream_operator(tokens[0])?;
     let value = tokens[1]
         .parse()
-        .map_err(|error| anyhow!("invalid time component value '{}': {error}", tokens[1]))?;
+        .map_err(|error| anyhow!("invalid stream attribute value '{}': {error}", tokens[1]))?;
+
+    if attribute == StreamAttribute::Defcon
+        && !((DEFCON_MIN_LEVEL as u64)..=(DEFCON_MAX_LEVEL as u64)).contains(&value)
+    {
+        bail!("invalid DEFCON level {value}; expected {DEFCON_MIN_LEVEL}..={DEFCON_MAX_LEVEL}");
+    }
 
     match attribute {
-        StreamAttribute::Hour => Ok(ParsedTimeCondition::Hour { operator, value }),
-        StreamAttribute::Minute => Ok(ParsedTimeCondition::Minute { operator, value }),
-        StreamAttribute::Second => Ok(ParsedTimeCondition::Second { operator, value }),
+        StreamAttribute::Hour => Ok(ParsedStreamCondition::Hour { operator, value }),
+        StreamAttribute::Minute => Ok(ParsedStreamCondition::Minute { operator, value }),
+        StreamAttribute::Second => Ok(ParsedStreamCondition::Second { operator, value }),
+        StreamAttribute::Defcon => Ok(ParsedStreamCondition::Defcon { operator, value }),
         StreamAttribute::Time => bail!("unexpected StreamAttribute::Time"),
     }
 }
@@ -904,39 +919,43 @@ fn set_once<T>(
     Ok(())
 }
 
-fn stream_attribute(condition: ParsedTimeCondition) -> StreamAttribute {
+fn stream_attribute(condition: ParsedStreamCondition) -> StreamAttribute {
     match condition {
-        ParsedTimeCondition::TimeModulo { .. } => StreamAttribute::Time,
-        ParsedTimeCondition::Hour { .. } => StreamAttribute::Hour,
-        ParsedTimeCondition::Minute { .. } => StreamAttribute::Minute,
-        ParsedTimeCondition::Second { .. } => StreamAttribute::Second,
+        ParsedStreamCondition::TimeModulo { .. } => StreamAttribute::Time,
+        ParsedStreamCondition::Hour { .. } => StreamAttribute::Hour,
+        ParsedStreamCondition::Minute { .. } => StreamAttribute::Minute,
+        ParsedStreamCondition::Second { .. } => StreamAttribute::Second,
+        ParsedStreamCondition::Defcon { .. } => StreamAttribute::Defcon,
     }
 }
 
-fn stream_operator(condition: ParsedTimeCondition) -> StreamOperator {
+fn stream_operator(condition: ParsedStreamCondition) -> StreamOperator {
     match condition {
-        ParsedTimeCondition::TimeModulo { operator, .. }
-        | ParsedTimeCondition::Hour { operator, .. }
-        | ParsedTimeCondition::Minute { operator, .. }
-        | ParsedTimeCondition::Second { operator, .. } => operator,
+        ParsedStreamCondition::TimeModulo { operator, .. }
+        | ParsedStreamCondition::Hour { operator, .. }
+        | ParsedStreamCondition::Minute { operator, .. }
+        | ParsedStreamCondition::Second { operator, .. }
+        | ParsedStreamCondition::Defcon { operator, .. } => operator,
     }
 }
 
-fn stream_modulo(condition: ParsedTimeCondition) -> u64 {
+fn stream_modulo(condition: ParsedStreamCondition) -> u64 {
     match condition {
-        ParsedTimeCondition::TimeModulo { modulo, .. } => modulo,
-        ParsedTimeCondition::Hour { .. }
-        | ParsedTimeCondition::Minute { .. }
-        | ParsedTimeCondition::Second { .. } => 0,
+        ParsedStreamCondition::TimeModulo { modulo, .. } => modulo,
+        ParsedStreamCondition::Hour { .. }
+        | ParsedStreamCondition::Minute { .. }
+        | ParsedStreamCondition::Second { .. }
+        | ParsedStreamCondition::Defcon { .. } => 0,
     }
 }
 
-fn stream_value(condition: ParsedTimeCondition) -> u64 {
+fn stream_value(condition: ParsedStreamCondition) -> u64 {
     match condition {
-        ParsedTimeCondition::TimeModulo { value, .. }
-        | ParsedTimeCondition::Hour { value, .. }
-        | ParsedTimeCondition::Minute { value, .. }
-        | ParsedTimeCondition::Second { value, .. } => value,
+        ParsedStreamCondition::TimeModulo { value, .. }
+        | ParsedStreamCondition::Hour { value, .. }
+        | ParsedStreamCondition::Minute { value, .. }
+        | ParsedStreamCondition::Second { value, .. }
+        | ParsedStreamCondition::Defcon { value, .. } => value,
     }
 }
 

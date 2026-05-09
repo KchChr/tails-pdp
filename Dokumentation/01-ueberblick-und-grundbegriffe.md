@@ -35,10 +35,14 @@ Datei lesen darf oder ob ein Port erreichbar ist. `tails-pdp` versucht, feiner z
 - Welches Programm handelt?
 - Welche Ressource ist betroffen?
 - Zu welcher Zeit passiert der Zugriff?
+- Welcher DEFCON-Level ist aktuell aktiv?
 - Gilt eine statische Policy oder eine zeitabhängige Stream-Policy?
 
 Der Begriff PDP steht für Policy Decision Point. Das ist die Komponente, die eine Policy auswertet
-und eine Entscheidung trifft.
+und eine Entscheidung trifft. Die konkrete Auswertung liegt in `tails-pdp-common`, die Kernel-Hooks
+in `tails-pdp-ebpf/src/hooks.rs`, und die aktiven Policies werden über eBPF-Maps bereitgestellt
+[P8], [P10], [P12]. Die Begriffe eBPF, Map und LSM orientieren sich an der Linux-Kernel-
+Dokumentation [Q4], [Q5], [Q9], [Q10].
 
 ## Rust
 
@@ -116,9 +120,10 @@ Beispiele aus `tails-pdp-ebpf/src/maps.rs`:
 | `DECISIONS` | Zwischenentscheidung innerhalb einer Tail-Call-Kette. |
 | `CURRENT_TIME` | Aktuelle Unix-Zeit für Stream-Policies. |
 | `CURRENT_TIME_ISO8601` | Aktuelle UTC-Zeit in Feldern wie Stunde, Minute, Sekunde. |
+| `CURRENT_DEFCON` | Aktueller DEFCON-Level für Stream-Policies. |
 
 Viele Maps sind gepinnt. Gepinnt bedeutet: Sie liegen unter `/sys/fs/bpf/tails-pdp/...` und können
-auch von anderen Prozessen geöffnet werden.
+auch von anderen Prozessen geöffnet werden [P12], [Q5], [Q23].
 
 ## Perf Events oder Ring Buffer
 
@@ -160,8 +165,6 @@ Deshalb ist der eBPF-Code hier bewusst einfach aufgebaut:
 - defensive Map-Zugriffe
 - Aufteilung über Tail Calls
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P8], [P9], [P10], [P12] und [P19] sowie
-auf die externen Quellen [Q1], [Q2], [Q4], [Q5], [Q7], [Q8], [Q9], [Q10] und [Q11]. Die vollständige
-Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Dokumentation](Documentation.md) | **Next:** [Architektur und Datenfluss](02-architektur-und-datenfluss.md)

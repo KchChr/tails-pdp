@@ -76,6 +76,7 @@ pub enum StreamAttributeArg {
     Hour,
     Minute,
     Second,
+    Defcon,
 }
 
 impl From<StreamAttributeArg> for StreamAttribute {
@@ -85,6 +86,7 @@ impl From<StreamAttributeArg> for StreamAttribute {
             StreamAttributeArg::Hour => StreamAttribute::Hour,
             StreamAttributeArg::Minute => StreamAttribute::Minute,
             StreamAttributeArg::Second => StreamAttribute::Second,
+            StreamAttributeArg::Defcon => StreamAttribute::Defcon,
         }
     }
 }
@@ -244,7 +246,7 @@ pub fn print_usage() {
     );
     println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
     println!(
-        "      [--subject <UID>] [--attribute <time|hour|minute|second>] --operator <...> [--modulo <N>] --value <N>"
+        "      [--subject <UID>] [--attribute <time|hour|minute|second|defcon>] --operator <...> [--modulo <N>] --value <N>"
     );
     println!(
         "      operator: <less-than|less-than-or-equal|equal|greater-than-or-equal|greater-than>"
@@ -255,6 +257,7 @@ pub fn print_usage() {
     println!("      attribute=hour: vergleicht die UTC-Stunde 0..23 direkt mit value.");
     println!("      attribute=minute: vergleicht die UTC-Minute 0..59 direkt mit value.");
     println!("      attribute=second: vergleicht die UTC-Sekunde 0..59 direkt mit value.");
+    println!("      attribute=defcon: vergleicht DEFCON 1..5 direkt mit value.");
     println!("      file-open: [--resource <PFAD>]");
     println!(
         "      socket-bind: [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--resource <IP>] [--port <N>]"
@@ -289,7 +292,7 @@ pub fn print_usage() {
     println!("      Nur fuer socket-bind.");
     println!("  --port <N>");
     println!("      Nur fuer socket-bind.");
-    println!("  --attribute <time|hour|minute|second>");
+    println!("  --attribute <time|hour|minute|second|defcon>");
     println!("      Nur fuer set-stream.");
     println!(
         "  --operator <less-than|less-than-or-equal|equal|greater-than-or-equal|greater-than>"
@@ -316,5 +319,8 @@ pub fn print_usage() {
     );
     println!(
         "  sudo tails-pdp-admintool set-stream 1 --entitlement deny --action file-open --subject 1000 --resource /home/hntr/test.txt --attribute hour --operator greater-than-or-equal --value 18"
+    );
+    println!(
+        "  sudo tails-pdp-admintool set-stream 2 --entitlement deny --action file-open --subject 1000 --resource /home/hntr/test.txt --attribute defcon --operator less-than-or-equal --value 2"
     );
 }

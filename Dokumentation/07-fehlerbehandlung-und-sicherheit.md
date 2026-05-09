@@ -3,7 +3,7 @@
 ## Fehlerbehandlung im Userspace
 
 Der Userspace-Code nutzt überwiegend `anyhow::Result` und ergänzt Fehler mit Kontext über
-`.context(...)` oder `.with_context(...)`.
+`.context(...)` oder `.with_context(...)` [P1], [P3], [P4], [P17].
 
 Beispiele:
 
@@ -28,7 +28,7 @@ Userspace und Kernel würden sonst dieselben Bytes unterschiedlich interpretiere
 ### Fehlgeschlagene Policy-Kompilierung
 
 Wenn eine `.sapl`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
-werden. `PolicyDirectorySync` hält deshalb die letzte funktionierende Generation aktiv.
+werden. `PolicyDirectorySync` hält deshalb die letzte funktionierende Generation aktiv [P3].
 
 ### eBPF-Verifier-Fehler
 
@@ -38,7 +38,7 @@ kritisch und sollten immer ernst genommen werden.
 ### FD-Revocation per `ptrace`
 
 `fd_revoker.rs` verändert kurz die Ausführung eines fremden Prozesses. Das ist mächtig, aber
-riskant. Fehler können den Zielprozess stören.
+riskant. Fehler können den Zielprozess stören [P7], [Q15].
 
 Schutzmechanismen im Code:
 
@@ -88,7 +88,7 @@ zugänglich sein.
 ## eBPF-spezifische Sicherheitsgrenzen
 
 eBPF ist sicherer als ein beliebiges Kernelmodul, weil der Verifier Programme vor dem Laden prüft.
-Trotzdem gilt:
+Trotzdem gilt [Q7], [Q8], [Q23]:
 
 - Falsche Logik kann legitime Zugriffe blockieren.
 - Zu komplexer Code kann vom Verifier abgelehnt werden.
@@ -106,8 +106,6 @@ Besonders wichtig wären:
 3. Abstraktion der Map-Zugriffe für bessere Testbarkeit.
 4. Dokumentierte Policy-Konfliktstrategie: Deny-overrides oder Permit-overrides.
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P4], [P6], [P7], [P8], [P14] und
-[P17] sowie auf die externen Quellen [Q7], [Q8], [Q11], [Q15] und [Q23]. Die vollständige
-Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Policy-Logik und Datenstrukturen](06-policy-logik-und-datenstrukturen.md) | **Next:** [Debugging und Analyse](08-debugging-und-analyse.md)

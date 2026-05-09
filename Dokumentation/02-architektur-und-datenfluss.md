@@ -13,7 +13,8 @@ Das Projekt ist ein Rust-Workspace mit vier Crates:
 
 Die Trennung ist wichtig, weil eBPF-Code andere Einschränkungen hat als normaler Userspace-Code.
 Die Policy-Logik liegt deshalb so weit wie möglich in `tails-pdp-common`, damit Kernel und
-Userspace dieselben Regeln verwenden.
+Userspace dieselben Regeln verwenden [P8]. Das Laden von eBPF-Programmen und Maps erfolgt im
+Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 
 ## Ordnerstruktur
 
@@ -24,6 +25,7 @@ Userspace dieselben Regeln verwenden.
 | `tails-pdp/src/monitor.rs` | Überwacht laufende Prozesse und FDs. |
 | `tails-pdp/src/fd_revoker.rs` | Schließt FDs in fremden Prozessen per `ptrace`. |
 | `tails-pdp/src/time.rs` | Aktualisiert Zeit-Maps. |
+| `tails-pdp/src/stream_attributes.rs` | Aktualisiert Stream-Attribute wie DEFCON. |
 | `tails-pdp/src/policy_loader.rs` | Prüft gepinnte Map-Layouts; enthält auch ältere Ladefunktionen. |
 | `tails-pdp-common/src/lib.rs` | Structs, Enums, Konstanten und Auswertungsfunktionen. |
 | `tails-pdp-ebpf/src/hooks.rs` | Einstieg in die LSM-Hooks. |
@@ -33,6 +35,7 @@ Userspace dieselben Regeln verwenden.
 | `tails-pdp-admintool/src/` | CLI-Parsing, Map-Zugriff und Ausgabe. |
 | `examples/` | Beispiel-Policies. |
 | `policies/` | Aktiver Policy-Ordner. |
+| `stream-attributes/` | Aktive Werte für Stream-Attribute, aktuell `DEFCON.txt`. |
 
 ## Grober Datenfluss
 
@@ -145,7 +148,8 @@ Sie werden im Userspace in `tails-pdp/src/main.rs` befüllt.
 
 ## Static Policies und Stream Policies
 
-Static Policies sind normale Regeln ohne Zeitbedingung. Stream Policies enthalten eine Zeitbedingung.
+Static Policies sind normale Regeln ohne Stream-Bedingung. Stream Policies enthalten eine Bedingung
+gegen einen dynamischen Wert, aktuell Zeit oder DEFCON [P3], [P8], [P23].
 
 Beispiel Static Policy:
 
@@ -168,11 +172,22 @@ deny
     environment.utc.hour < 8;
 ```
 
-Eine Stream Policy trifft nur eine Entscheidung, wenn ihre Zeitbedingung wahr ist. Wenn die
-Zeitbedingung falsch ist, ist die Policy nicht anwendbar.
+Eine Stream Policy trifft nur eine Entscheidung, wenn ihre Stream-Bedingung wahr ist. Wenn die
+Bedingung falsch ist, ist die Policy nicht anwendbar [P8].
 
-## Quellen dieses Kapitels
+Beispiel DEFCON-Stream-Policy:
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P2], [P3], [P8], [P10], [P12], [P14],
-[P15], [P16] und [P22] sowie auf die externen Quellen [Q5], [Q7], [Q8], [Q9], [Q11], [Q18] und
-[Q23]. Die vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+```sapl
+deny
+    action == "file_open";
+    subject.uid == 1000;
+    resource.path == "/home/hntr/test.txt";
+    environment.defcon.level <= 2;
+```
+
+Der Wert dafür kommt aus `stream-attributes/DEFCON.txt` und wird in `CURRENT_DEFCON` geschrieben
+[P12], [P23], [P24].
+
+---
+
+**Previous:** [Projektüberblick und Grundbegriffe](01-ueberblick-und-grundbegriffe.md) | **Next:** [Build, Start und Betrieb](03-build-start-und-betrieb.md)

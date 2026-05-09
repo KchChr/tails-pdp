@@ -45,6 +45,9 @@ sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
+sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
+sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 ```
 
 ## Admin Tool
@@ -88,11 +91,16 @@ Supported concepts:
   `command`, `resource.path`
 - `socket_bind` fields:
   `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
-- one optional time condition per policy:
+- one optional stream condition per policy:
   `environment.time % N <op> VALUE`
   `environment.utc.hour <op> VALUE`
   `environment.utc.minute <op> VALUE`
   `environment.utc.second <op> VALUE`
+  `environment.defcon.level <op> VALUE`
+
+`environment.defcon.level` reads the current test DEFCON level from
+`stream-attributes/DEFCON.txt`. Valid values are integers from `1` to `5`. The userspace process
+watches this file and writes valid changes to the pinned `CURRENT_DEFCON` eBPF map.
 
 Not supported:
 
@@ -103,7 +111,7 @@ Not supported:
 - `advice`
 - `transform`
 - `or`
-- multiple time conditions inside one file
+- multiple stream conditions inside one file
 
 Complex behavior is intentionally expressed by multiple files. Example: “deny before 08:00 and
 from 16:00 onwards” is represented by two policies.
@@ -134,12 +142,24 @@ permit
 Example workflow:
 
 ```shell
-cp examples/01-file-open-static-deny-cat-test.sapl policies/
-cp examples/04-file-open-stream-deny-before-08.sapl policies/
-cp examples/05-file-open-stream-deny-after-16.sapl policies/
+cp examples/10-file-open-static-deny-cat-test.sapl policies/
+cp examples/13-file-open-stream-deny-before-08.sapl policies/
+cp examples/14-file-open-stream-deny-after-16.sapl policies/
 ```
 
 After at most one second, the loader detects the change and rewrites the pinned maps.
+
+Example DEFCON workflow:
+
+```shell
+cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
+echo 5 > stream-attributes/DEFCON.txt
+cat /home/hntr/test.txt
+echo 2 > stream-attributes/DEFCON.txt
+cat /home/hntr/test.txt
+```
+
+With the example policy active, DEFCON `5` does not trigger the deny condition. DEFCON `2` does.
 
 ## Examples
 
@@ -151,10 +171,12 @@ Current examples cover:
 - `file_open` modulo-based stream permit
 - `file_open` deny before 08:00 UTC
 - `file_open` deny from 16:00 UTC onwards
+- `file_open` deny at DEFCON 2 or lower
 - `socket_bind` static deny on `0.0.0.0:8080/tcp`
 - `socket_bind` modulo-based stream permit
 - `socket_bind` deny before 08:00 UTC
 - `socket_bind` deny from 16:00 UTC onwards
+- `socket_bind` deny at DEFCON 2 or lower
 
 ## Admin Tool
 
@@ -193,6 +215,7 @@ Notes:
   `--transport` is `tcp` or `udp`, and `--port` is the local port
 - `0.0.0.0` matches any IPv4 address for the selected port and transport
 - `::` matches any IPv6 address for the selected port and transport
+- stream attributes accepted by the admin tool are `time`, `hour`, `minute`, `second`, and `defcon`
 
 ## Monitoring
 

@@ -1,14 +1,14 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    Entitlement, POLICY_BANK_SIZE, SocketBindRequest, evaluate_socket_bind_stream_policy,
-    policy_bank_offset,
+    DEFAULT_DEFCON_LEVEL, Entitlement, POLICY_BANK_SIZE, SocketBindRequest,
+    evaluate_socket_bind_stream_policy, policy_bank_offset,
 };
 
 use crate::{
     helpers::{SocketBindResource, read_socket_bind_resource},
     maps::{
-        CURRENT_TIME, CURRENT_TIME_ISO8601, SOCKET_BIND_JUMP_TABLE, SOCKET_BIND_STREAM_POLICIES,
-        TAIL_IDX_SOCKET_BIND_COMBINE,
+        CURRENT_DEFCON, CURRENT_TIME, CURRENT_TIME_ISO8601, SOCKET_BIND_JUMP_TABLE,
+        SOCKET_BIND_STREAM_POLICIES, TAIL_IDX_SOCKET_BIND_COMBINE,
     },
     policies::decision::{DecisionMapExt, DecisionState},
 };
@@ -18,6 +18,7 @@ pub(crate) fn evaluate_policies(
     resource: &SocketBindResource,
     current_time: u64,
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
+    current_defcon: u32,
     generation: u32,
 ) -> DecisionState {
     let mut state = DecisionState::empty_for_generation(generation);
@@ -40,6 +41,7 @@ pub(crate) fn evaluate_policies(
                 &request,
                 current_time,
                 current_iso8601_time,
+                current_defcon,
                 policy,
             ) {
                 match entitlement {
@@ -64,13 +66,14 @@ pub(crate) fn evaluate_policies(
     }
 
     crate::debug_printk!(
-        b"sbsm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu fam=%d tr=%d port=%d",
+        b"sbsm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d fam=%d tr=%d port=%d",
         state.deny,
         state.permit,
         matched_deny_index,
         matched_permit_index,
         current_subject,
         current_time,
+        current_defcon,
         resource.family as u32,
         resource.transport as u32,
         resource.port as u32,
@@ -90,11 +93,16 @@ pub fn evaluate_socket_bind_stream_policies(ctx: LsmContext) -> i32 {
         .get(0)
         .copied()
         .unwrap_or(tails_pdp_common::Iso8601TimeParts::new(1970, 1, 1, 0, 0, 0));
+    let current_defcon = CURRENT_DEFCON
+        .get(0)
+        .copied()
+        .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let stream_state = evaluate_policies(
         current_subject,
         &resource,
         current_time,
         current_iso8601_time,
+        current_defcon,
         generation,
     );
     current_state.merge(stream_state);

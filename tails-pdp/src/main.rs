@@ -12,7 +12,8 @@ use tails_pdp::{
     monitor::run_policy_monitor,
     policy_loader::verify_pinned_map_layouts,
     policy_source::PolicyDirectorySync,
-    time::{open_current_time_maps, run_current_time_updater},
+    stream_attributes::{open_current_defcon_map, run_defcon_updater, write_current_defcon},
+    time::{open_current_time_maps, run_current_time_updater, write_current_time},
 };
 use tokio::signal;
 
@@ -75,6 +76,7 @@ async fn main() -> anyhow::Result<()> {
     .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
 
     let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
+    let mut current_defcon = open_current_defcon_map(&mut ebpf)?;
     let mut policy_sync = PolicyDirectorySync::new()?;
 
     for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
@@ -104,6 +106,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     policy_sync.sync_initial()?;
+    write_current_time(&mut current_time, &mut current_time_iso8601)?;
+    write_current_defcon(&mut current_defcon)?;
     info!(
         "Watching policy directory '{}'",
         policy_sync.directory().display()
@@ -126,6 +130,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
+        result = run_defcon_updater(&mut current_defcon) => result?,
         result = policy_sync.run() => result?,
         result = run_policy_monitor() => result?,
         result = signal::ctrl_c() => result?,

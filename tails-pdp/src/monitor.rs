@@ -13,8 +13,8 @@ use anyhow::Context;
 use aya::maps::{Array, Map, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
-    Entitlement, FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts,
-    POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
+    DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy,
+    Iso8601TimeParts, POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
     SocketBindStreamPolicy, SocketFamily, SocketTransport, command_name,
     evaluate_file_open_static_policy, evaluate_file_open_stream_policy,
     evaluate_socket_bind_static_policy, evaluate_socket_bind_stream_policy, policy_bank_offset,
@@ -28,6 +28,7 @@ type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
 type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
+type CurrentDefconMap = Array<MapData, u32>;
 
 #[derive(Clone, Debug)]
 struct ActiveSocket {
@@ -113,6 +114,7 @@ struct PolicyMaps {
     file_open_stream: FileOpenStreamPolicyMap,
     socket_bind_static: SocketBindStaticPolicyMap,
     socket_bind_stream: SocketBindStreamPolicyMap,
+    current_defcon: CurrentDefconMap,
 }
 
 pub async fn run_policy_monitor() -> anyhow::Result<()> {
@@ -172,6 +174,10 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
             &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STREAM_POLICIES"),
             "SOCKET_BIND_STREAM_POLICIES",
         )?,
+        current_defcon: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("CURRENT_DEFCON"),
+            "CURRENT_DEFCON",
+        )?,
     })
 }
 
@@ -195,6 +201,10 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let process_fds = read_process_fds(&socket_index);
     let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let (current_time, current_iso8601_time) = current_utc_time()?;
+    let current_defcon = policies
+        .current_defcon
+        .get(&0, 0)
+        .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let mut violations = Vec::new();
 
     for process_fd in process_fds {
@@ -206,6 +216,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
+                current_defcon,
                 bank_offset,
                 &inotify_fds,
                 &mut violations,
@@ -216,6 +227,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
+                current_defcon,
                 bank_offset,
                 &mut violations,
             )?,
@@ -233,6 +245,7 @@ fn collect_file_open_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
     bank_offset: u32,
     inotify_fds: &HashMap<u32, Vec<i32>>,
     violations: &mut Vec<Violation>,
@@ -280,8 +293,13 @@ fn collect_file_open_violations(
             .with_context(|| {
                 format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}] for monitor")
             })?;
-        if evaluate_file_open_stream_policy(&request, current_time, current_iso8601_time, &policy)
-            == Some(Entitlement::Deny)
+        if evaluate_file_open_stream_policy(
+            &request,
+            current_time,
+            current_iso8601_time,
+            current_defcon,
+            &policy,
+        ) == Some(Entitlement::Deny)
         {
             violations.push(file_violation(
                 process_fd,
@@ -336,6 +354,7 @@ fn collect_socket_bind_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
     bank_offset: u32,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
@@ -373,8 +392,13 @@ fn collect_socket_bind_violations(
             .with_context(|| {
                 format!("failed to read SOCKET_BIND_STREAM_POLICIES[{map_index}] for monitor")
             })?;
-        if evaluate_socket_bind_stream_policy(&request, current_time, current_iso8601_time, &policy)
-            == Some(Entitlement::Deny)
+        if evaluate_socket_bind_stream_policy(
+            &request,
+            current_time,
+            current_iso8601_time,
+            current_defcon,
+            &policy,
+        ) == Some(Entitlement::Deny)
         {
             violations.push(socket_violation(
                 process_fd,

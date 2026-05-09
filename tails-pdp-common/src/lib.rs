@@ -13,6 +13,10 @@ pub const POLICY_BANK_COUNT: u32 = 2;
 pub const POLICY_BANK_SIZE: u32 = MAX_POLICIES;
 pub const POLICY_MAP_MAX_ENTRIES: u32 = POLICY_BANK_COUNT * POLICY_BANK_SIZE;
 pub const POLICY_GENERATION_MAX_ENTRIES: u32 = 1;
+pub const STREAM_ATTRIBUTE_MAX_ENTRIES: u32 = 1;
+pub const DEFCON_MIN_LEVEL: u32 = 1;
+pub const DEFCON_MAX_LEVEL: u32 = 5;
+pub const DEFAULT_DEFCON_LEVEL: u32 = DEFCON_MAX_LEVEL;
 
 pub const FILE_OPEN_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 pub const FILE_OPEN_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
@@ -53,6 +57,7 @@ pub enum StreamAttribute {
     Hour = 2,
     Minute = 3,
     Second = 4,
+    Defcon = 5,
 }
 
 #[repr(u8)]
@@ -619,6 +624,7 @@ struct StreamEvaluation {
     value: u64,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
 }
 
 fn evaluate_stream_condition(evaluation: &StreamEvaluation) -> Option<bool> {
@@ -646,6 +652,11 @@ fn evaluate_stream_condition(evaluation: &StreamEvaluation) -> Option<bool> {
         StreamAttribute::Second => Some(matches_stream_operator(
             evaluation.operator,
             evaluation.current_iso8601_time.second as u64,
+            evaluation.value,
+        )),
+        StreamAttribute::Defcon => Some(matches_stream_operator(
+            evaluation.operator,
+            evaluation.current_defcon as u64,
             evaluation.value,
         )),
     }
@@ -690,6 +701,7 @@ pub fn evaluate_file_open_stream_policy(
     request: &FileOpenRequest,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
     policy: &FileOpenStreamPolicy,
 ) -> Option<Entitlement> {
     if policy.enabled == 0 || policy.action != PolicyAction::FileOpen {
@@ -714,6 +726,7 @@ pub fn evaluate_file_open_stream_policy(
         value: policy.value,
         current_time,
         current_iso8601_time,
+        current_defcon,
     };
     stream_entitlement(policy.entitlement, &evaluation)
 }
@@ -744,6 +757,7 @@ pub fn evaluate_socket_bind_stream_policy(
     request: &SocketBindRequest,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
     policy: &SocketBindStreamPolicy,
 ) -> Option<Entitlement> {
     if policy.enabled == 0 || policy.action != PolicyAction::SocketBind {
@@ -769,6 +783,7 @@ pub fn evaluate_socket_bind_stream_policy(
         value: policy.value,
         current_time,
         current_iso8601_time,
+        current_defcon,
     };
     stream_entitlement(policy.entitlement, &evaluation)
 }
@@ -816,6 +831,7 @@ mod tests {
             &file_open_request(),
             3,
             Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            DEFAULT_DEFCON_LEVEL,
             &policy,
         );
 
@@ -837,6 +853,7 @@ mod tests {
             &file_open_request(),
             8,
             Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            DEFAULT_DEFCON_LEVEL,
             &policy,
         );
 
@@ -858,6 +875,53 @@ mod tests {
             &file_open_request(),
             3,
             Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            DEFAULT_DEFCON_LEVEL,
+            &policy,
+        );
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn defcon_stream_policy_returns_entitlement_when_condition_matches() {
+        let mut policy = FileOpenStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "",
+            StreamOperator::LessThanOrEqual,
+            0,
+            2,
+        );
+        policy.attribute = StreamAttribute::Defcon;
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            2,
+            &policy,
+        );
+
+        assert_eq!(result, Some(Entitlement::Deny));
+    }
+
+    #[test]
+    fn defcon_stream_policy_is_not_applicable_when_condition_does_not_match() {
+        let mut policy = FileOpenStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "",
+            StreamOperator::LessThanOrEqual,
+            0,
+            2,
+        );
+        policy.attribute = StreamAttribute::Defcon;
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            3,
             &policy,
         );
 

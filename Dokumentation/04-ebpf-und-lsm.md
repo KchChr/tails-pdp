@@ -3,7 +3,8 @@
 ## Einstieg
 
 Der eBPF-Code liegt im Crate `tails-pdp-ebpf`. Der eigentliche eBPF-Binary-Einstieg ist
-`tails-pdp-ebpf/src/main.rs`.
+`tails-pdp-ebpf/src/main.rs` [P9]. Die allgemeinen Einschränkungen durch eBPF, BPF-Maps und den
+Verifier sind in der Linux-Kernel-Dokumentation beschrieben [Q4], [Q5], [Q7], [Q8].
 
 Wichtige Eigenschaften:
 
@@ -52,7 +53,7 @@ Beide Funktionen tun nur wenig:
 | 4 | `combine.rs::combine_socket_bind` |
 
 Warum so? Der eBPF-Verifier akzeptiert kleinere, klarere Programme eher als ein großes Programm mit
-viel Logik.
+viel Logik [Q7], [Q8].
 
 ## Maps im eBPF-Teil
 
@@ -71,9 +72,10 @@ Die Maps stehen in `tails-pdp-ebpf/src/maps.rs`.
 | `SOCKET_BIND_STREAM_POLICIES` | gepinnte `Array<SocketBindStreamPolicy>` | Socket-Stream-Policies. |
 | `CURRENT_TIME` | gepinnte `Array<u64>` | Aktuelle Unix-Zeit. |
 | `CURRENT_TIME_ISO8601` | gepinnte `Array<Iso8601TimeParts>` | Aktuelle UTC-Zeitfelder. |
+| `CURRENT_DEFCON` | gepinnte `Array<u32>` | Aktueller DEFCON-Level aus `stream-attributes/DEFCON.txt`. |
 
 `DECISIONS` ist eine Per-CPU-Map. Das reduziert Race Conditions, wenn mehrere CPUs gleichzeitig
-LSM-Hooks ausführen.
+LSM-Hooks ausführen [P12], [Q6].
 
 ## Gelesene Kernel-Daten
 
@@ -162,8 +164,6 @@ In LSM-eBPF gilt:
 `combine.rs::combine_decision` gibt aktuell `-1` zurück, sobald ein Deny gesehen wurde. Permit wird
 gespeichert, überschreibt Deny aber aktuell nicht.
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P8], [P9], [P10], [P11], [P12], [P13], [P14],
-[P15] und [P16] sowie auf die externen Quellen [Q5], [Q6], [Q7], [Q8], [Q9], [Q10] und [Q23]. Die
-vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Build, Start und Betrieb](03-build-start-und-betrieb.md) | **Next:** [Userspace-Komponenten](05-userspace-komponenten.md)

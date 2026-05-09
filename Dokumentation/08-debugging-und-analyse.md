@@ -28,6 +28,9 @@ In einem zweiten Terminal:
 sudo cat /sys/kernel/debug/tracing/trace_pipe
 ```
 
+Die Debug-Ausgaben kommen aus dem eBPF-Teil und werden über `DEBUG_LOGGING` gesteuert [P1], [P12],
+[P13].
+
 ## Prüfen, ob Programme geladen sind
 
 ```shell
@@ -60,6 +63,7 @@ Einzelne Map dumpen:
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 ```
 
 Lesbarer ist oft das Admin-Tool:
@@ -96,6 +100,21 @@ Die Policy-Map speichert den Kernel-Device-Wert. Der Userspace-Code konvertiert 
 ```
 
 Diese Logik steht in `tails-pdp-common/src/lib.rs` und `tails-pdp/src/monitor.rs`.
+Die Bedeutung von Inode- und Device-Werten ist in `inode(7)` beschrieben [Q22].
+
+## DEFCON testen
+
+Der DEFCON-Wert steht in `stream-attributes/DEFCON.txt`. Gültig sind Werte von `1` bis `5`.
+
+```shell
+echo 5 > stream-attributes/DEFCON.txt
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+echo 2 > stream-attributes/DEFCON.txt
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+```
+
+Der Userspace-Updater schreibt nur gültige Werte in `CURRENT_DEFCON`; ungültige Werte werden
+ignoriert und geloggt [P23].
 
 ## Socket-Bind testen
 
@@ -138,10 +157,13 @@ Prozessinformationen:
 cat /proc/<PID>/status
 ```
 
+Diese Dateien sind Linux-Procfs-Schnittstellen und werden vom Monitor ausgewertet [P6], [Q12],
+[Q13], [Q14].
+
 ## Verifier-Fehler untersuchen
 
 Das Hauptprogramm setzt `VerifierLogLevel::VERBOSE | VerifierLogLevel::STATS` in
-`tails-pdp/src/main.rs`. Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher.
+`tails-pdp/src/main.rs`. Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher [P1], [Q7].
 
 Typische Hinweise:
 
@@ -172,10 +194,9 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
+sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 ```
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P4], [P6], [P8], [P12] und [P17] sowie
-auf die externen Quellen [Q5], [Q7], [Q12], [Q13], [Q14], [Q16], [Q17], [Q22] und [Q23]. Die
-vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Fehlerbehandlung und Sicherheit](07-fehlerbehandlung-und-sicherheit.md) | **Next:** [Tests und Teststrategie](09-tests.md)

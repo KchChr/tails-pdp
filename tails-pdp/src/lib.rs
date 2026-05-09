@@ -2,6 +2,7 @@ pub mod fd_revoker;
 pub mod monitor;
 pub mod policy_loader;
 pub mod policy_source;
+pub mod stream_attributes;
 pub mod time;
 
 pub const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;

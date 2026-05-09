@@ -36,6 +36,8 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
+| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen von `stream-attributes/DEFCON.txt` und Schreiben der Map `CURRENT_DEFCON`. |
+| [P24] | [`stream-attributes/`](../stream-attributes) | Beispielhafter Ablageort für dynamische Stream-Attribute wie `DEFCON.txt`. |
 
 ## Externe Quellen
 
@@ -67,8 +69,7 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 
 ## Zitierweise in den Kapiteln
 
-Am Ende jedes Kapitels steht ein Abschnitt **Quellen dieses Kapitels**. Dort werden die IDs aus
-dieser Datei genannt. Beispiele:
+Quellenhinweise stehen direkt im Fließtext der Kapitel. Beispiele:
 
 - `[P10]` bedeutet: Die Aussage bezieht sich auf den konkreten Projektcode in
   `tails-pdp-ebpf/src/hooks.rs`.
@@ -77,3 +78,7 @@ dieser Datei genannt. Beispiele:
 
 Wenn ein Kapitel sowohl Projektverhalten als auch Linux-, Rust- oder Aya-Grundlagen erklärt, werden
 beide Quellenarten genannt.
+
+---
+
+**Previous:** [Glossar](11-glossar.md) | **Next:** -

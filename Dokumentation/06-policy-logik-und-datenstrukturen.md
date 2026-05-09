@@ -3,7 +3,9 @@
 ## Gemeinsame Logik
 
 Die zentrale Policy-Logik liegt in `tails-pdp-common/src/lib.rs`. Dieses Crate wird von Userspace
-und eBPF genutzt. Dadurch sollen beide Seiten dieselbe Entscheidung treffen.
+und eBPF genutzt. Dadurch sollen beide Seiten dieselbe Entscheidung treffen [P8]. Die Policies
+orientieren sich syntaktisch an einfachen SAPL-Policy-Dateien, werden aber in projektspezifische
+Rust-Structs übersetzt [P3], [Q11].
 
 Wichtige Funktionen:
 
@@ -54,7 +56,8 @@ keine Aussage.
 
 ## Stream Policies
 
-Stream Policies enthalten eine Zeitbedingung.
+Stream Policies enthalten eine Bedingung gegen einen dynamischen Wert. Aktuell sind Zeitwerte und
+DEFCON unterstützt [P8], [P23].
 
 Unterstützte Attribute:
 
@@ -64,9 +67,10 @@ Unterstützte Attribute:
 | `Hour` | UTC-Stunde |
 | `Minute` | UTC-Minute |
 | `Second` | UTC-Sekunde |
+| `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus `stream-attributes/DEFCON.txt` |
 
-Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Zeitbedingung wahr ist. Ist
-die Zeitbedingung falsch, ist die Policy nicht anwendbar.
+Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Stream-Bedingung wahr ist.
+Ist die Bedingung falsch, ist die Policy nicht anwendbar [P8].
 
 ## Wichtige Konstanten
 
@@ -79,6 +83,8 @@ die Zeitbedingung falsch, ist die Policy nicht anwendbar.
 | `MAX_POLICIES` | `16` | Anzahl logischer Policies pro Map und Generation. |
 | `POLICY_BANK_COUNT` | `2` | Zwei Bänke für atomare Generationenwechsel. |
 | `POLICY_MAP_MAX_ENTRIES` | `32` | Zwei Bänke mal 16 Policies. |
+| `DEFCON_MIN_LEVEL` | `1` | Kleinster gültiger DEFCON-Wert. |
+| `DEFCON_MAX_LEVEL` | `5` | Größter gültiger DEFCON-Wert. |
 
 ## File-Open-Policies
 
@@ -106,7 +112,7 @@ Zusätzlich zu Subject und Dateiressource enthält sie:
 
 | Feld | Bedeutung |
 | --- | --- |
-| `attribute` | Zeitquelle, z. B. `Hour`. |
+| `attribute` | Stream-Attribut, z. B. `Hour` oder `Defcon`. |
 | `operator` | Vergleichsoperator. |
 | `modulo` | Nur bei `Time` relevant. |
 | `value` | Vergleichswert. |
@@ -131,7 +137,7 @@ Wichtige Felder:
 
 ### `SocketBindStreamPolicy`
 
-Wie Static, zusätzlich mit Zeitbedingung.
+Wie Static, zusätzlich mit Stream-Bedingung.
 
 ## Warum feste Byte-Arrays?
 
@@ -152,10 +158,8 @@ Speicheranordnung. Das ist wichtig, weil dieselben Structs in eBPF-Maps zwischen
 Kernel gelesen werden.
 
 Wenn sich Felder ändern, ändern sich häufig auch Größe und Layout der Map-Werte. Dann müssen alte
-gepinnte Maps entfernt werden.
+gepinnte Maps entfernt werden [P4], [P12], [Q5], [Q23].
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P3], [P4], [P6], [P8], [P12], [P17] und [P19]
-sowie auf die externen Quellen [Q5], [Q11], [Q22] und [Q23]. Die vollständige Quellenliste steht in
-[Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Userspace-Komponenten](05-userspace-komponenten.md) | **Next:** [Fehlerbehandlung und Sicherheit](07-fehlerbehandlung-und-sicherheit.md)

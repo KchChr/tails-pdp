@@ -6,7 +6,7 @@ use tails_pdp_common::{
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
     SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
-    SocketBindStaticPolicy, SocketBindStreamPolicy,
+    STREAM_ATTRIBUTE_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
 };
 
 use crate::BPF_PIN_DIRECTORY;
@@ -87,6 +87,11 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         "CURRENT_TIME_ISO8601",
         size_of::<Iso8601TimeParts>() as u32,
         CURRENT_TIME_MAX_ENTRIES,
+    )?;
+    verify_pinned_map_layout(
+        "CURRENT_DEFCON",
+        size_of::<u32>() as u32,
+        STREAM_ATTRIBUTE_MAX_ENTRIES,
     )?;
     Ok(())
 }

@@ -12,11 +12,12 @@ Es ist verantwortlich für:
 - gepinnte Maps prüfen und öffnen
 - Policy-Verzeichnis überwachen
 - Zeit-Maps aktualisieren
+- DEFCON-Stream-Attribut aktualisieren
 - Userspace-Monitor starten
 - Logging konfigurieren
 
 Der zentrale Loader ist `EbpfLoader::new()`. Das eBPF-Objekt wird mit
-`aya::include_bytes_aligned!` eingebettet.
+`aya::include_bytes_aligned!` eingebettet [P1], [Q3], [Q20].
 
 ## Policy-Loader aus Dateien
 
@@ -98,6 +99,20 @@ Beispiel:
 environment.utc.hour < 8;
 ```
 
+## DEFCON-Updater
+
+`tails-pdp/src/stream_attributes.rs` überwacht `stream-attributes/DEFCON.txt`. Der Inhalt muss eine
+Zahl von `1` bis `5` sein. Bei einer gültigen Änderung schreibt der Updater den Wert in die Map
+`CURRENT_DEFCON`; bei ungültigem Inhalt bleibt der letzte gültige Wert aktiv [P12], [P23], [P24].
+
+Beispiel:
+
+```shell
+echo 2 > stream-attributes/DEFCON.txt
+```
+
+Eine Stream Policy kann diesen Wert mit `environment.defcon.level <= 2` auswerten [P3], [P8].
+
 ## Monitor
 
 Der Monitor steht in `tails-pdp/src/monitor.rs`.
@@ -119,7 +134,9 @@ Danach verwendet er dieselben Funktionen aus `tails-pdp-common` wie der Kernel-T
 - `evaluate_socket_bind_static_policy`
 - `evaluate_socket_bind_stream_policy`
 
-Wenn eine Deny-Policy zutrifft, erzeugt der Monitor eine Violation.
+Wenn eine Deny-Policy zutrifft, erzeugt der Monitor eine Violation. Die `/proc`-Schnittstellen und
+`ptrace` sind Linux-Interfaces und werden durch die Man-Pages beziehungsweise Kernel-Dokumentation
+beschrieben [Q12], [Q13], [Q14], [Q15].
 
 ## FD-Revocation
 
@@ -170,8 +187,6 @@ Kernel-Debug-Logging über `bpf_printk!` ist standardmäßig aus und wird über 
 `DEBUG_LOGGING` gesteuert. Das Hauptprogramm schreibt diese Map abhängig von
 `TAILS_PDP_EBPF_DEBUG`.
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P5], [P6], [P7], [P8], [P17] und
-[P19] sowie auf die externen Quellen [Q3], [Q12], [Q13], [Q14], [Q15], [Q18] und [Q20]. Die
-vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [eBPF- und LSM-Teil](04-ebpf-und-lsm.md) | **Next:** [Policy-Logik und Datenstrukturen](06-policy-logik-und-datenstrukturen.md)

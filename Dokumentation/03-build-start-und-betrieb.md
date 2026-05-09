@@ -3,7 +3,8 @@
 ## Abhängigkeiten
 
 Das Projekt benötigt eine Linux-Zielumgebung mit eBPF- und LSM-Unterstützung. Für Entwicklung und
-Build werden außerdem Rust-Tools benötigt.
+Build werden außerdem Rust-Tools benötigt. Die eBPF- und LSM-Anforderungen folgen aus dem
+Kernel-Teil und dem BPF-LSM-Modell [P10], [P12], [Q9], [Q10].
 
 Wichtige Werkzeuge:
 
@@ -133,6 +134,7 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
+sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 ```
 
 ### Verifier-Fehler
@@ -161,10 +163,8 @@ Ursache kann sein:
 
 Ein vollständiger `cargo check -p tails-pdp --bin tails-pdp` kann auf macOS scheitern, weil Aya
 Linux-only-Syscalls aus `libc` benötigt. Cross-Compilation ist möglich, aber die echte Ausführung
-und eBPF-Verifier-Prüfung muss auf Linux erfolgen.
+und eBPF-Verifier-Prüfung muss auf Linux erfolgen [Q3], [Q7], [Q18], [Q20].
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P4], [P5], [P20], [P21] und [P22] sowie
-auf die externen Quellen [Q3], [Q7], [Q8], [Q17], [Q18] und [Q20]. Die vollständige Quellenliste
-steht in [Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Architektur und Datenfluss](02-architektur-und-datenfluss.md) | **Next:** [eBPF- und LSM-Teil](04-ebpf-und-lsm.md)

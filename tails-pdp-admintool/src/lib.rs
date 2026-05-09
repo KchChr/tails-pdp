@@ -7,9 +7,10 @@ use std::env;
 use anyhow::{anyhow, bail};
 use clap::{Parser, error::ErrorKind};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    POLICY_BANK_SIZE, RESOURCE_LEN, SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily,
-    SocketTransport, policy_bank_offset,
+    ANY_SUBJECT, COMMAND_LEN, DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, POLICY_BANK_SIZE, RESOURCE_LEN,
+    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport,
+    policy_bank_offset,
 };
 
 use crate::{
@@ -30,6 +31,10 @@ fn validate_stream_condition(
     modulo: u64,
     value: u64,
 ) -> anyhow::Result<()> {
+    if attribute != cli::StreamAttributeArg::Time && modulo != 0 {
+        bail!("--modulo is only valid when --attribute time is used");
+    }
+
     match attribute {
         cli::StreamAttributeArg::Time => {
             if modulo == 0 {
@@ -44,6 +49,16 @@ fn validate_stream_condition(
         cli::StreamAttributeArg::Minute | cli::StreamAttributeArg::Second => {
             if value > 59 {
                 bail!("time component value out of range: {} > 59", value);
+            }
+        }
+        cli::StreamAttributeArg::Defcon => {
+            if !((DEFCON_MIN_LEVEL as u64)..=(DEFCON_MAX_LEVEL as u64)).contains(&value) {
+                bail!(
+                    "DEFCON value out of range: {} is not in {}..={}",
+                    value,
+                    DEFCON_MIN_LEVEL,
+                    DEFCON_MAX_LEVEL
+                );
             }
         }
     }

@@ -8,7 +8,12 @@ bereit.
 ## BTF
 
 BPF Type Format. Enthält Typinformationen des Kernels. Aya nutzt BTF, um LSM-Programme korrekt zu
-laden.
+laden [Q17].
+
+## DEFCON
+
+Hier ein Test-Stream-Attribut mit Werten von `1` bis `5`. Der Userspace liest
+`stream-attributes/DEFCON.txt` und schreibt den Wert in `CURRENT_DEFCON` [P23], [P24].
 
 ## eBPF
 
@@ -17,6 +22,8 @@ Linux-Technik, mit der kleine, geprüfte Programme im Kernel laufen können.
 ## eBPF-Map
 
 Gemeinsamer Speicher zwischen Userspace und eBPF-Programm. Vergleichbar mit einer kleinen Tabelle.
+Die Linux-Dokumentation beschreibt Maps als zentrale Schnittstelle zwischen eBPF und Userspace
+[Q5], [Q23].
 
 ## FD
 
@@ -100,11 +107,9 @@ Bereich, in dem normale Programme laufen, z. B. Shell, Loader oder Admin-Tool.
 
 ## Verifier
 
-Kernel-Komponente, die eBPF-Programme vor dem Laden prüft. Er verhindert viele unsichere Programme.
+Kernel-Komponente, die eBPF-Programme vor dem Laden prüft. Er verhindert viele unsichere Programme
+[Q7].
 
-## Quellen dieses Kapitels
+---
 
-Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P6], [P7], [P8], [P10], [P12],
-[P14] und [P17] sowie auf die externen Quellen [Q1], [Q4], [Q5], [Q7], [Q8], [Q9], [Q10], [Q11],
-[Q12], [Q15], [Q17], [Q22] und [Q23]. Die vollständige Quellenliste steht in
-[Quellen und Zitierweise](12-quellen.md).
+**Previous:** [Offene Punkte und Einschränkungen](10-offene-punkte.md) | **Next:** [Quellen und Zitierweise](12-quellen.md)
