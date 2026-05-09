@@ -171,3 +171,8 @@ deny
 Eine Stream Policy trifft nur eine Entscheidung, wenn ihre Zeitbedingung wahr ist. Wenn die
 Zeitbedingung falsch ist, ist die Policy nicht anwendbar.
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P2], [P3], [P8], [P10], [P12], [P14],
+[P15], [P16] und [P22] sowie auf die externen Quellen [Q5], [Q7], [Q8], [Q9], [Q11], [Q18] und
+[Q23]. Die vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

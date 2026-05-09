@@ -170,3 +170,8 @@ Kernel-Debug-Logging über `bpf_printk!` ist standardmäßig aus und wird über 
 `DEBUG_LOGGING` gesteuert. Das Hauptprogramm schreibt diese Map abhängig von
 `TAILS_PDP_EBPF_DEBUG`.
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P5], [P6], [P7], [P8], [P17] und
+[P19] sowie auf die externen Quellen [Q3], [Q12], [Q13], [Q14], [Q15], [Q18] und [Q20]. Die
+vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

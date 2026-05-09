@@ -162,3 +162,8 @@ In LSM-eBPF gilt:
 `combine.rs::combine_decision` gibt aktuell `-1` zurück, sobald ein Deny gesehen wurde. Permit wird
 gespeichert, überschreibt Deny aber aktuell nicht.
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P8], [P9], [P10], [P11], [P12], [P13], [P14],
+[P15] und [P16] sowie auf die externen Quellen [Q5], [Q6], [Q7], [Q8], [Q9], [Q10] und [Q23]. Die
+vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

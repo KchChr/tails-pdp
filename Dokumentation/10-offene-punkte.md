@@ -131,3 +131,9 @@ Vorschlag:
 
 - In Policy-Beispielen und CLI-Hilfe deutlich machen.
 - Falls lokale Zeit gewünscht ist, eigene Felder oder Konfiguration ergänzen.
+
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P3], [P4], [P6], [P7], [P8], [P14], [P17],
+[P18], [P19] und [P21] sowie auf die externen Quellen [Q11], [Q12], [Q14], [Q15] und [Q22]. Die
+vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

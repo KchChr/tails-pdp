@@ -163,3 +163,8 @@ Ein vollständiger `cargo check -p tails-pdp --bin tails-pdp` kann auf macOS sch
 Linux-only-Syscalls aus `libc` benötigt. Cross-Compilation ist möglich, aber die echte Ausführung
 und eBPF-Verifier-Prüfung muss auf Linux erfolgen.
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P4], [P5], [P20], [P21] und [P22] sowie
+auf die externen Quellen [Q3], [Q7], [Q8], [Q17], [Q18] und [Q20]. Die vollständige Quellenliste
+steht in [Quellen und Zitierweise](12-quellen.md).

@@ -174,3 +174,8 @@ sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
 ```
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P4], [P6], [P8], [P12] und [P17] sowie
+auf die externen Quellen [Q5], [Q7], [Q12], [Q13], [Q14], [Q16], [Q17], [Q22] und [Q23]. Die
+vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

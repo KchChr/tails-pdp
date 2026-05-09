@@ -154,3 +154,8 @@ Kernel gelesen werden.
 Wenn sich Felder ändern, ändern sich häufig auch Größe und Layout der Map-Werte. Dann müssen alte
 gepinnte Maps entfernt werden.
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P3], [P4], [P6], [P8], [P12], [P17] und [P19]
+sowie auf die externen Quellen [Q5], [Q11], [Q22] und [Q23]. Die vollständige Quellenliste steht in
+[Quellen und Zitierweise](12-quellen.md).

@@ -176,3 +176,9 @@ Priorität:
 2. Policy-Parser und Generationenlogik testen.
 3. Monitor testbar machen.
 4. Privilegierte Linux-Smoke-Tests automatisieren.
+
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P3], [P6], [P8], [P17], [P19] und [P21]
+sowie auf die externen Quellen [Q9], [Q11], [Q12], [Q14], [Q15] und [Q18]. Die vollständige
+Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).

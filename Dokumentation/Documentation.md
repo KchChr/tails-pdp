@@ -21,6 +21,18 @@ anzeigen.
 9. [Tests und Teststrategie](09-tests.md)
 10. [Offene Punkte und Einschränkungen](10-offene-punkte.md)
 11. [Glossar](11-glossar.md)
+12. [Quellen und Zitierweise](12-quellen.md)
+
+## Zitierweise
+
+Die Dokumentation unterscheidet zwischen Projektquellen und externen Quellen:
+
+- Projektquellen haben IDs wie `[P1]` und verweisen auf konkrete Dateien in diesem Repository.
+- Externe Quellen haben IDs wie `[Q1]` und verweisen auf offizielle Dokumentation oder technische
+  Referenzen.
+
+Die vollständige Quellenliste steht in [Quellen und Zitierweise](12-quellen.md). Am Ende jedes
+Kapitels steht zusätzlich, welche Quellen für dieses Kapitel verwendet wurden.
 
 ## Wichtigste Dateien
 
@@ -46,3 +58,8 @@ SAPL-inspirierten Textdateien befüllt. Der Monitor prüft zusätzlich nachträg
 weil eine Policy auch erst aktiv werden kann, nachdem ein Prozess bereits einen Socket oder eine
 Datei geöffnet hat.
 
+## Quellen dieses Kapitels
+
+Dieses Einstiegskapitel fasst die Projektstruktur und die Dokumentationsstruktur zusammen. Es nutzt
+vor allem die Projektquellen [P1], [P3], [P6], [P7], [P8], [P10], [P12], [P14], [P17], [P19] und
+[P22] aus [Quellen und Zitierweise](12-quellen.md).

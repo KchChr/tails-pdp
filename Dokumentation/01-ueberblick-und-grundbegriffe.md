@@ -160,3 +160,8 @@ Deshalb ist der eBPF-Code hier bewusst einfach aufgebaut:
 - defensive Map-Zugriffe
 - Aufteilung über Tail Calls
 
+## Quellen dieses Kapitels
+
+Dieses Kapitel stützt sich auf die Projektquellen [P1], [P8], [P9], [P10], [P12] und [P19] sowie
+auf die externen Quellen [Q1], [Q2], [Q4], [Q5], [Q7], [Q8], [Q9], [Q10] und [Q11]. Die vollständige
+Quellenliste steht in [Quellen und Zitierweise](12-quellen.md).
