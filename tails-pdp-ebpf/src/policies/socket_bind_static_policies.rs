@@ -1,7 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    Entitlement, POLICY_BANK_SIZE, SocketBindRequest, evaluate_socket_bind_static_policy,
-    policy_bank_offset,
+    COMMAND_LEN, Entitlement, POLICY_BANK_SIZE, SocketBindRequest,
+    evaluate_socket_bind_static_policy, policy_bank_offset,
 };
 
 use crate::{
@@ -12,12 +12,14 @@ use crate::{
 
 pub(crate) fn evaluate_policies(
     current_subject: u32,
+    current_command: &[u8; COMMAND_LEN],
     resource: &SocketBindResource,
     generation: u32,
 ) -> DecisionState {
     let mut state = DecisionState::empty_for_generation(generation);
     let request = SocketBindRequest {
         subject: current_subject,
+        command: *current_command,
         socket_family: resource.family,
         socket_transport: resource.transport,
         socket_port: resource.port,
@@ -54,7 +56,7 @@ pub(crate) fn evaluate_policies(
     }
 
     crate::debug_printk!(
-        b"sbs deny=%d permit=%d didx=%d pidx=%d uid=%d fam=%d tr=%d port=%d",
+        b"sbs deny=%d permit=%d didx=%d pidx=%d uid=%d fam=%d tr=%d port=%d cmd=%s",
         state.deny,
         state.permit,
         matched_deny_index,
@@ -63,6 +65,7 @@ pub(crate) fn evaluate_policies(
         resource.family as u32,
         resource.transport as u32,
         resource.port as u32,
+        current_command.as_ptr(),
     );
 
     state
@@ -71,9 +74,10 @@ pub(crate) fn evaluate_policies(
 #[lsm(hook = "socket_bind")]
 pub fn evaluate_socket_bind_static_policies(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
+    let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
     let resource = read_socket_bind_resource(&ctx);
     let generation = active_policy_generation();
-    let decision_state = evaluate_policies(subject, &resource, generation);
+    let decision_state = evaluate_policies(subject, &command, &resource, generation);
     decision_state.write_to_map();
 
     unsafe {

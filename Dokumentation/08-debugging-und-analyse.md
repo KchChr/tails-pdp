@@ -99,17 +99,17 @@ Die Policy-Map speichert den Kernel-Device-Wert. Der Userspace-Code konvertiert 
 (major << 20) | minor
 ```
 
-Diese Logik steht in `tails-pdp-common/src/lib.rs` und `tails-pdp/src/monitor.rs`.
+Diese Logik steht in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) und [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs).
 Die Bedeutung von Inode- und Device-Werten ist in `inode(7)` beschrieben [Q22].
 
 ## DEFCON testen
 
-Der DEFCON-Wert steht in `stream-attributes/DEFCON.txt`. Gültig sind Werte von `1` bis `5`.
+Der DEFCON-Wert steht in [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). Gültig sind Werte von `1` bis `5`.
 
 ```shell
-echo 5 > stream-attributes/DEFCON.txt
+echo 5 > environment/DEFCON.txt
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
-echo 2 > stream-attributes/DEFCON.txt
+echo 2 > environment/DEFCON.txt
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 ```
 
@@ -163,7 +163,7 @@ Diese Dateien sind Linux-Procfs-Schnittstellen und werden vom Monitor ausgewerte
 ## Verifier-Fehler untersuchen
 
 Das Hauptprogramm setzt `VerifierLogLevel::VERBOSE | VerifierLogLevel::STATS` in
-`tails-pdp/src/main.rs`. Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher [P1], [Q7].
+[`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs). Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher [P1], [Q7].
 
 Typische Hinweise:
 

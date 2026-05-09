@@ -7,10 +7,10 @@ Der Userspace-Code nutzt überwiegend `anyhow::Result` und ergänzt Fehler mit K
 
 Beispiele:
 
-- `tails-pdp/src/main.rs`: fehlende Programme oder Maps werden mit Namen gemeldet.
-- `tails-pdp/src/policy_source.rs`: Parserfehler enthalten Dateiname und Zeile.
-- `tails-pdp/src/policy_loader.rs`: inkompatible gepinnte Maps nennen erwartete und gefundene Größe.
-- `tails-pdp-admintool/src/lib.rs`: ungültige CLI-Werte werden abgelehnt.
+- [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs): fehlende Programme oder Maps werden mit Namen gemeldet.
+- [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs): Parserfehler enthalten Dateiname und Zeile.
+- [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs): inkompatible gepinnte Maps nennen erwartete und gefundene Größe.
+- [`tails-pdp-admintool/src/lib.rs`](../tails-pdp-admintool/src/lib.rs): ungültige CLI-Werte werden abgelehnt.
 
 Das ist für Debugging wichtig, weil viele eBPF-Fehler sonst schwer verständlich sind.
 
@@ -52,7 +52,7 @@ Schutzmechanismen im Code:
 Das Projekt nimmt aktuell an:
 
 - Der Loader läuft mit ausreichenden Rechten.
-- Policy-Dateien im Ordner `policies/` sind vertrauenswürdig.
+- Policy-Dateien im Ordner [`policies/`](../policies/) sind vertrauenswürdig.
 - Gepinnte Maps unter `/sys/fs/bpf/tails-pdp` gehören zu diesem Programm.
 - Der Kernel unterstützt eBPF-LSM.
 - `device + inode` identifiziert eine Datei ausreichend eindeutig für die gewünschte Policy.

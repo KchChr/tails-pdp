@@ -40,19 +40,19 @@ stehen direkt im Text, damit die Herkunft der jeweiligen Aussage beim Lesen sich
 
 | Pfad | Aufgabe |
 | --- | --- |
-| `tails-pdp/src/main.rs` | Lädt eBPF, richtet Maps und Tail Calls ein, startet Policy-Sync, Zeit-Update und Monitor. |
-| `tails-pdp/src/policy_source.rs` | Liest `.sapl`-Policies aus `policies/`, kompiliert sie und schreibt sie in Maps. |
-| `tails-pdp/src/stream_attributes.rs` | Liest `stream-attributes/DEFCON.txt` und schreibt `CURRENT_DEFCON`. |
-| `tails-pdp/src/monitor.rs` | Überwacht laufende Prozesse, FDs und Sockets im Userspace. |
-| `tails-pdp/src/fd_revoker.rs` | Schließt fremde File Descriptors per `ptrace` auf x86_64 Linux. |
-| `tails-pdp-common/src/lib.rs` | Gemeinsame Policy-Datenstrukturen und Auswertungslogik für Kernel und Userspace. |
-| `tails-pdp-ebpf/src/hooks.rs` | Einstiegspunkte der eBPF-LSM-Hooks `file_open` und `socket_bind`. |
-| `tails-pdp-ebpf/src/maps.rs` | Definition der eBPF-Maps. |
-| `tails-pdp-ebpf/src/policies/` | eBPF-Policy-Auswertung und Kombinieren der Entscheidungen. |
-| `tails-pdp-admintool/` | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
-| `examples/` | Beispiel-Policies, die nicht automatisch geladen werden. |
-| `policies/` | Aktiver Policy-Ordner, den der Loader überwacht. |
-| `stream-attributes/` | Aktive Stream-Attribute, aktuell `DEFCON.txt`. |
+| [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Lädt eBPF, richtet Maps und Tail Calls ein, startet Policy-Sync, Zeit-Update und Monitor. |
+| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest `.sapl`-Policies aus [`policies/`](../policies/), kompiliert sie und schreibt sie in Maps. |
+| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und schreibt `CURRENT_DEFCON`. |
+| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse, FDs und Sockets im Userspace. |
+| [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt fremde File Descriptors per `ptrace` auf x86_64 Linux. |
+| [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Policy-Datenstrukturen und Auswertungslogik für Kernel und Userspace. |
+| [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstiegspunkte der eBPF-LSM-Hooks `file_open` und `socket_bind`. |
+| [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | Definition der eBPF-Maps. |
+| [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | eBPF-Policy-Auswertung und Kombinieren der Entscheidungen. |
+| [`tails-pdp-admintool/`](../tails-pdp-admintool/) | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
+| [`examples/`](../examples/) | Beispiel-Policies, die nicht automatisch geladen werden. |
+| [`policies/`](../policies/) | Aktiver Policy-Ordner, den der Loader überwacht. |
+| [`stream-attributes/`](../environment/) | Aktive Stream-Attribute, aktuell `DEFCON.txt`. |
 
 ## Kurzzusammenfassung
 

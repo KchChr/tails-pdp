@@ -183,6 +183,8 @@ pub enum Command {
         action: ActionArg,
         #[arg(long, default_value_t = ANY_SUBJECT)]
         subject: u32,
+        #[arg(long, default_value = "")]
+        command: String,
         #[arg(long, value_enum, default_value_t = StreamAttributeArg::Time)]
         attribute: StreamAttributeArg,
         #[arg(long, default_value = "")]
@@ -242,11 +244,11 @@ pub fn print_usage() {
     println!("  set <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
     println!("      file-open: [--subject <UID>] [--command <NAME>] [--resource <PFAD>]");
     println!(
-        "      socket-bind: [--subject <UID>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--resource <IP>] [--port <N>]"
+        "      socket-bind: [--subject <UID>] [--command <NAME>] [--family <any|inet|inet6>] [--transport <any|tcp|udp>] [--resource <IP>] [--port <N>]"
     );
     println!("  set-stream <INDEX> --entitlement <permit|deny> --action <file-open|socket-bind>");
     println!(
-        "      [--subject <UID>] [--attribute <time|hour|minute|second|defcon>] --operator <...> [--modulo <N>] --value <N>"
+        "      [--subject <UID>] [--command <NAME>] [--attribute <time|hour|minute|second|defcon>] --operator <...> [--modulo <N>] --value <N>"
     );
     println!(
         "      operator: <less-than|less-than-or-equal|equal|greater-than-or-equal|greater-than>"
@@ -283,7 +285,7 @@ pub fn print_usage() {
     println!("  --subject <UID>");
     println!("      Subjekt der Policy; Standard ist ANY_SUBJECT.");
     println!("  --command <NAME>");
-    println!("      Nur fuer file-open static: Prozessname wie z. B. cat oder tail.");
+    println!("      Optionaler Prozessname wie z. B. cat, tail oder python3.");
     println!("  --resource <WERT>");
     println!("      file-open: Dateipfad; socket-bind: IP-Adresse.");
     println!("  --family <any|inet|inet6>");
@@ -312,15 +314,15 @@ pub fn print_usage() {
         "  sudo tails-pdp-admintool set 0 --entitlement deny --action file-open --subject 1000 --command cat --resource /home/hntr/test.txt"
     );
     println!(
-        "  sudo tails-pdp-admintool set 0 --entitlement deny --action socket-bind --subject 1000 --family inet --transport tcp --resource 0.0.0.0 --port 8080"
+        "  sudo tails-pdp-admintool set 0 --entitlement deny --action socket-bind --subject 1000 --command python3 --family inet --transport tcp --resource 0.0.0.0 --port 8080"
     );
     println!(
-        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action socket-bind --subject 1000 --attribute time --family inet --transport tcp --resource 0.0.0.0 --port 8080 --operator less-than --modulo 10 --value 5"
+        "  sudo tails-pdp-admintool set-stream 0 --entitlement permit --action socket-bind --subject 1000 --command python3 --attribute time --family inet --transport tcp --resource 0.0.0.0 --port 8080 --operator less-than --modulo 10 --value 5"
     );
     println!(
-        "  sudo tails-pdp-admintool set-stream 1 --entitlement deny --action file-open --subject 1000 --resource /home/hntr/test.txt --attribute hour --operator greater-than-or-equal --value 18"
+        "  sudo tails-pdp-admintool set-stream 1 --entitlement deny --action file-open --subject 1000 --command cat --resource /home/hntr/test.txt --attribute hour --operator greater-than-or-equal --value 18"
     );
     println!(
-        "  sudo tails-pdp-admintool set-stream 2 --entitlement deny --action file-open --subject 1000 --resource /home/hntr/test.txt --attribute defcon --operator less-than-or-equal --value 2"
+        "  sudo tails-pdp-admintool set-stream 2 --entitlement deny --action file-open --subject 1000 --command cat --resource /home/hntr/test.txt --attribute defcon --operator less-than-or-equal --value 2"
     );
 }

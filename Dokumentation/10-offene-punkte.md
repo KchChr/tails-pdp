@@ -17,7 +17,7 @@ Vorschlag:
 
 ## Admin-Tool kann Policies noch direkt setzen
 
-Die eigentliche Quelle der Wahrheit ist inzwischen `policies/`. Das Admin-Tool kann aber weiterhin
+Die eigentliche Quelle der Wahrheit ist inzwischen [`policies/`](../policies/). Das Admin-Tool kann aber weiterhin
 Maps direkt verändern [P3], [P17].
 
 Risiko:
@@ -32,7 +32,7 @@ Vorschlag:
 
 ## `policy_loader.rs` enthält ältere Ladefunktionen
 
-`tails-pdp/src/policy_loader.rs` wird aktuell vor allem für `verify_pinned_map_layouts` genutzt. Die
+[`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) wird aktuell vor allem für `verify_pinned_map_layouts` genutzt. Die
 Funktionen `load_file_open_static_policies`, `load_file_open_stream_policies`,
 `load_socket_bind_static_policies` und `load_socket_bind_stream_policies` wirken wie ältere
 Loader-Funktionen.
@@ -95,7 +95,7 @@ Vorschlag:
 
 ## Ungültige Stream-Attribute bleiben ein Bedienrisiko
 
-Der DEFCON-Updater ignoriert ungültige Werte in `stream-attributes/DEFCON.txt` und behält den
+Der DEFCON-Updater ignoriert ungültige Werte in [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und behält den
 letzten gültigen Wert bei [P23]. Das ist robust, kann aber verwirrend sein, wenn ein Tippfehler
 nicht sofort als Policy-Verhalten sichtbar wird.
 

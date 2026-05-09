@@ -2,7 +2,7 @@
 
 ## Hauptprogramm
 
-Das Hauptprogramm steht in `tails-pdp/src/main.rs`.
+Das Hauptprogramm steht in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs).
 
 Es ist verantwortlich für:
 
@@ -21,7 +21,7 @@ Der zentrale Loader ist `EbpfLoader::new()`. Das eBPF-Objekt wird mit
 
 ## Policy-Loader aus Dateien
 
-Die Datei `tails-pdp/src/policy_source.rs` lädt Policies aus dem Ordner `policies/`.
+Die Datei [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) lädt Policies aus dem Ordner [`policies/`](../policies/).
 
 Wichtige Typen:
 
@@ -77,7 +77,7 @@ unnötige Map-Schreibzugriffe.
 
 ## Zeit-Updater
 
-`tails-pdp/src/time.rs` aktualisiert zwei Maps:
+[`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) aktualisiert zwei Maps:
 
 - `CURRENT_TIME`
 - `CURRENT_TIME_ISO8601`
@@ -101,21 +101,24 @@ environment.utc.hour < 8;
 
 ## DEFCON-Updater
 
-`tails-pdp/src/stream_attributes.rs` überwacht `stream-attributes/DEFCON.txt`. Der Inhalt muss eine
+[`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) überwacht [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). Der Inhalt muss eine
 Zahl von `1` bis `5` sein. Bei einer gültigen Änderung schreibt der Updater den Wert in die Map
 `CURRENT_DEFCON`; bei ungültigem Inhalt bleibt der letzte gültige Wert aktiv [P12], [P23], [P24].
 
 Beispiel:
 
 ```shell
-echo 2 > stream-attributes/DEFCON.txt
+echo 2 > environment/DEFCON.txt
 ```
 
 Eine Stream Policy kann diesen Wert mit `environment.defcon.level <= 2` auswerten [P3], [P8].
+Zusätzlich darf eine Stream Policy dieselben statischen Hook-Filter nutzen wie die passende Static
+Policy, zum Beispiel `command` bei `file_open` oder `command`, `resource.port` und
+`resource.transport` bei `socket_bind` [P3], [P8].
 
 ## Monitor
 
-Der Monitor steht in `tails-pdp/src/monitor.rs`.
+Der Monitor steht in [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs).
 
 Er löst ein anderes Problem als der LSM-Hook. Der LSM-Hook sieht nur den Moment, in dem etwas
 passiert. Wenn eine Policy später aktiv wird, ist der Hook für bereits geöffnete Ressourcen schon
@@ -140,7 +143,7 @@ beschrieben [Q12], [Q13], [Q14], [Q15].
 
 ## FD-Revocation
 
-`tails-pdp/src/fd_revoker.rs` versucht, einen File Descriptor in einem fremden Prozess zu schließen.
+[`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) versucht, einen File Descriptor in einem fremden Prozess zu schließen.
 
 Das geschieht auf x86_64 Linux per `ptrace`:
 
@@ -156,7 +159,7 @@ Das ist technisch mächtig, aber auch riskant. Es funktioniert aktuell nur auf `
 
 ## Admin-Tool
 
-Das Admin-Tool liegt in `tails-pdp-admintool/src/`.
+Das Admin-Tool liegt in [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/).
 
 Wichtige Dateien:
 
@@ -169,7 +172,7 @@ Wichtige Dateien:
 | `main.rs` | Kleiner Einstieg, ruft `tails_pdp_admintool::run()`. |
 
 Heute ist das Admin-Tool primär ein Inspektionswerkzeug. Es kann Maps zwar direkt verändern, aber
-der Policy-Ordner `policies/` ist die eigentliche Quelle der Wahrheit. Direkte Map-Änderungen werden
+der Policy-Ordner [`policies/`](../policies/) ist die eigentliche Quelle der Wahrheit. Direkte Map-Änderungen werden
 beim nächsten erfolgreichen Policy-Sync überschrieben.
 
 ## Logging

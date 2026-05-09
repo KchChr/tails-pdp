@@ -27,17 +27,17 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 | [P11] | [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Kernel-Hilfsfunktionen, z. B. Datei- und Socket-Attributermittlung. |
 | [P12] | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | eBPF-Map-Definitionen, Policy-Maps, Zeit-Maps, Decision-Maps und Tail-Call-Tabelle. |
 | [P13] | [`tails-pdp-ebpf/src/logging.rs`](../tails-pdp-ebpf/src/logging.rs) | eBPF-Debug-Logging. |
-| [P14] | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies) | eBPF-Policy-Auswertung, Tail-Call-Ziele und Kombinieren der Entscheidungen. |
+| [P14] | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | eBPF-Policy-Auswertung, Tail-Call-Ziele und Kombinieren der Entscheidungen. |
 | [P15] | [`tails-pdp-ebpf/build.rs`](../tails-pdp-ebpf/build.rs) | Build-Schritte für den eBPF-Teil. |
 | [P16] | [`tails-pdp-ebpf/src/vmlinux.rs`](../tails-pdp-ebpf/src/vmlinux.rs) | Kernel-Typen, die aus BTF/vmlinux abgeleitet wurden. |
-| [P17] | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src) | Admin-Tool, CLI, Map-Zugriffe und Ausgabeformatierung. |
+| [P17] | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | Admin-Tool, CLI, Map-Zugriffe und Ausgabeformatierung. |
 | [P18] | [`scripts/load-test-policies.sh`](../scripts/load-test-policies.sh) | Testskript zum Laden vieler Policies. |
-| [P19] | [`examples/`](../examples) | Beispiel-Policies im SAPL-inspirierten Format. |
+| [P19] | [`examples/`](../examples/) | Beispiel-Policies im SAPL-inspirierten Format. |
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
-| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen von `stream-attributes/DEFCON.txt` und Schreiben der Map `CURRENT_DEFCON`. |
-| [P24] | [`stream-attributes/`](../stream-attributes) | Beispielhafter Ablageort für dynamische Stream-Attribute wie `DEFCON.txt`. |
+| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen von [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und Schreiben der Map `CURRENT_DEFCON`. |
+| [P24] | [`stream-attributes/`](../environment/) | Beispielhafter Ablageort für dynamische Stream-Attribute wie `DEFCON.txt`. |
 
 ## Externe Quellen
 
@@ -72,7 +72,7 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 Quellenhinweise stehen direkt im Fließtext der Kapitel. Beispiele:
 
 - `[P10]` bedeutet: Die Aussage bezieht sich auf den konkreten Projektcode in
-  `tails-pdp-ebpf/src/hooks.rs`.
+  [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs).
 - `[Q9]` bedeutet: Die allgemeine Aussage zu BPF-LSM stützt sich auf die offizielle
   Linux-Kernel-Dokumentation zu BPF-LSM.
 

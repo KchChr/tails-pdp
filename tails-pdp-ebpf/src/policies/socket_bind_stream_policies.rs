@@ -1,6 +1,6 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    DEFAULT_DEFCON_LEVEL, Entitlement, POLICY_BANK_SIZE, SocketBindRequest,
+    COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, POLICY_BANK_SIZE, SocketBindRequest,
     evaluate_socket_bind_stream_policy, policy_bank_offset,
 };
 
@@ -15,6 +15,7 @@ use crate::{
 
 pub(crate) fn evaluate_policies(
     current_subject: u32,
+    current_command: &[u8; COMMAND_LEN],
     resource: &SocketBindResource,
     current_time: u64,
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
@@ -24,6 +25,7 @@ pub(crate) fn evaluate_policies(
     let mut state = DecisionState::empty_for_generation(generation);
     let request = SocketBindRequest {
         subject: current_subject,
+        command: *current_command,
         socket_family: resource.family,
         socket_transport: resource.transport,
         socket_port: resource.port,
@@ -66,7 +68,7 @@ pub(crate) fn evaluate_policies(
     }
 
     crate::debug_printk!(
-        b"sbsm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d fam=%d tr=%d port=%d",
+        b"sbsm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d fam=%d tr=%d port=%d cmd=%s",
         state.deny,
         state.permit,
         matched_deny_index,
@@ -77,6 +79,7 @@ pub(crate) fn evaluate_policies(
         resource.family as u32,
         resource.transport as u32,
         resource.port as u32,
+        current_command.as_ptr(),
     );
 
     state
@@ -87,6 +90,7 @@ pub fn evaluate_socket_bind_stream_policies(ctx: LsmContext) -> i32 {
     let mut current_state = DecisionState::from_map();
     let generation = current_state.generation;
     let current_subject = ctx.uid();
+    let current_command = ctx.command().unwrap_or([0; COMMAND_LEN]);
     let resource = read_socket_bind_resource(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let current_iso8601_time = CURRENT_TIME_ISO8601
@@ -99,6 +103,7 @@ pub fn evaluate_socket_bind_stream_policies(ctx: LsmContext) -> i32 {
         .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let stream_state = evaluate_policies(
         current_subject,
+        &current_command,
         &resource,
         current_time,
         current_iso8601_time,

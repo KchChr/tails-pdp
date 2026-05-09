@@ -228,17 +228,20 @@ fn set_socket_bind_static_policy(
     bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
+    command: String,
     family: cli::SocketFamilyArg,
     transport: cli::SocketTransportArg,
     port: u16,
     resource: String,
 ) -> anyhow::Result<()> {
     let index = map_index(bank_offset, index)?;
+    validate_len("command", &command, COMMAND_LEN)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
 
     let policy = SocketBindStaticPolicy::new(
         entitlement.into(),
         subject,
+        &command,
         family.into(),
         transport.into(),
         port,
@@ -261,6 +264,7 @@ fn set_file_open_stream_policy(
     bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
+    command: String,
     attribute: cli::StreamAttributeArg,
     resource: String,
     operator: cli::StreamOperatorArg,
@@ -268,12 +272,14 @@ fn set_file_open_stream_policy(
     value: u64,
 ) -> anyhow::Result<()> {
     let index = map_index(bank_offset, index)?;
+    validate_len("command", &command, COMMAND_LEN)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
     validate_stream_condition(attribute, modulo, value)?;
 
     let mut policy = FileOpenStreamPolicy::time(
         entitlement.into(),
         subject,
+        &command,
         &resource,
         operator.into(),
         modulo,
@@ -297,6 +303,7 @@ fn set_socket_bind_stream_policy(
     bank_offset: u32,
     entitlement: cli::EntitlementArg,
     subject: u32,
+    command: String,
     attribute: cli::StreamAttributeArg,
     family: cli::SocketFamilyArg,
     transport: cli::SocketTransportArg,
@@ -307,12 +314,14 @@ fn set_socket_bind_stream_policy(
     value: u64,
 ) -> anyhow::Result<()> {
     let index = map_index(bank_offset, index)?;
+    validate_len("command", &command, COMMAND_LEN)?;
     validate_len("resource", &resource, RESOURCE_LEN)?;
     validate_stream_condition(attribute, modulo, value)?;
 
     let mut policy = SocketBindStreamPolicy::time(
         entitlement.into(),
         subject,
+        &command,
         family.into(),
         transport.into(),
         port,
@@ -366,6 +375,7 @@ fn load_example_static_policies(
     let socket_bind_examples = [SocketBindStaticPolicy::new(
         Entitlement::Deny,
         1000,
+        "",
         SocketFamily::Inet,
         SocketTransport::Tcp,
         8080,
@@ -426,6 +436,7 @@ fn load_example_stream_policies(
     let file_open_examples = [FileOpenStreamPolicy::time(
         Entitlement::Permit,
         1000,
+        "",
         "/home/hntr/test.txt",
         tails_pdp_common::StreamOperator::LessThan,
         10,
@@ -434,6 +445,7 @@ fn load_example_stream_policies(
     let socket_bind_examples = [SocketBindStreamPolicy::time(
         Entitlement::Permit,
         1000,
+        "",
         SocketFamily::Inet,
         SocketTransport::Tcp,
         8080,
@@ -607,6 +619,7 @@ pub fn run() -> anyhow::Result<()> {
                     bank_offset,
                     entitlement,
                     subject,
+                    command,
                     family,
                     transport,
                     port,
@@ -619,6 +632,7 @@ pub fn run() -> anyhow::Result<()> {
             entitlement,
             action,
             subject,
+            command,
             attribute,
             resource,
             family,
@@ -636,6 +650,7 @@ pub fn run() -> anyhow::Result<()> {
                     bank_offset,
                     entitlement,
                     subject,
+                    command,
                     attribute,
                     resource,
                     operator,
@@ -651,6 +666,7 @@ pub fn run() -> anyhow::Result<()> {
                     bank_offset,
                     entitlement,
                     subject,
+                    command,
                     attribute,
                     family,
                     transport,

@@ -49,7 +49,7 @@ cargo run --bin tails-pdp --release
 ## Warum gibt es Build-Skripte?
 
 `tails-pdp/build.rs` baut das eBPF-Crate `tails-pdp-ebpf` als Teil des Userspace-Builds und bindet
-das Ergebnis später über `include_bytes_aligned!` in `tails-pdp/src/main.rs` ein.
+das Ergebnis später über `include_bytes_aligned!` in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) ein.
 
 Wichtig ist dabei:
 
@@ -84,7 +84,7 @@ TAILS_PDP_EBPF_DEBUG=1 RUST_LOG=info sudo -E ./target/release/tails-pdp
 
 ## Was passiert beim Start?
 
-`tails-pdp/src/main.rs` führt vereinfacht folgende Schritte aus:
+[`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) führt vereinfacht folgende Schritte aus:
 
 1. Logging initialisieren.
 2. `RLIMIT_MEMLOCK` erhöhen.

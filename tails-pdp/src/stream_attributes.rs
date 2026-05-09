@@ -9,7 +9,7 @@ use log::{info, warn};
 use tails_pdp_common::{DEFAULT_DEFCON_LEVEL, DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL};
 use tokio::time::{self, Duration};
 
-const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "stream-attributes";
+const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "environment";
 const DEFCON_FILE_NAME: &str = "DEFCON.txt";
 const STREAM_ATTRIBUTE_SCAN_INTERVAL: Duration = Duration::from_secs(1);
 

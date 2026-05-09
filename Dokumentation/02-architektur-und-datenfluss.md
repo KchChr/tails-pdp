@@ -20,22 +20,22 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 
 | Pfad | Bedeutung |
 | --- | --- |
-| `tails-pdp/src/main.rs` | Startpunkt des Hauptprogramms. |
-| `tails-pdp/src/policy_source.rs` | Liest Policy-Dateien und schreibt Maps. |
-| `tails-pdp/src/monitor.rs` | Überwacht laufende Prozesse und FDs. |
-| `tails-pdp/src/fd_revoker.rs` | Schließt FDs in fremden Prozessen per `ptrace`. |
-| `tails-pdp/src/time.rs` | Aktualisiert Zeit-Maps. |
-| `tails-pdp/src/stream_attributes.rs` | Aktualisiert Stream-Attribute wie DEFCON. |
-| `tails-pdp/src/policy_loader.rs` | Prüft gepinnte Map-Layouts; enthält auch ältere Ladefunktionen. |
-| `tails-pdp-common/src/lib.rs` | Structs, Enums, Konstanten und Auswertungsfunktionen. |
-| `tails-pdp-ebpf/src/hooks.rs` | Einstieg in die LSM-Hooks. |
-| `tails-pdp-ebpf/src/helpers.rs` | Liest Kernel-Daten wie Inode, Device, IP und Port. |
-| `tails-pdp-ebpf/src/maps.rs` | Definiert alle eBPF-Maps. |
-| `tails-pdp-ebpf/src/policies/` | Static-/Stream-Auswertung und Kombinieren. |
-| `tails-pdp-admintool/src/` | CLI-Parsing, Map-Zugriff und Ausgabe. |
-| `examples/` | Beispiel-Policies. |
-| `policies/` | Aktiver Policy-Ordner. |
-| `stream-attributes/` | Aktive Werte für Stream-Attribute, aktuell `DEFCON.txt`. |
+| [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Startpunkt des Hauptprogramms. |
+| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest Policy-Dateien und schreibt Maps. |
+| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse und FDs. |
+| [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt FDs in fremden Prozessen per `ptrace`. |
+| [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Aktualisiert Zeit-Maps. |
+| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Aktualisiert Stream-Attribute wie DEFCON. |
+| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft gepinnte Map-Layouts; enthält auch ältere Ladefunktionen. |
+| [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Structs, Enums, Konstanten und Auswertungsfunktionen. |
+| [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstieg in die LSM-Hooks. |
+| [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Liest Kernel-Daten wie Inode, Device, IP und Port. |
+| [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | Definiert alle eBPF-Maps. |
+| [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | Static-/Stream-Auswertung und Kombinieren. |
+| [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | CLI-Parsing, Map-Zugriff und Ausgabe. |
+| [`examples/`](../examples/) | Beispiel-Policies. |
+| [`policies/`](../policies/) | Aktiver Policy-Ordner. |
+| [`stream-attributes/`](../environment/) | Aktive Werte für Stream-Attribute, aktuell `DEFCON.txt`. |
 
 ## Grober Datenfluss
 
@@ -43,7 +43,7 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 Policy-Dateien in ./policies
         |
         v
-tails-pdp/src/policy_source.rs
+Policy-Compiler im Userspace
         |
         | kompiliert Policies
         v
@@ -60,6 +60,9 @@ Policy-Auswertung in tails-pdp-common
 Entscheidung: permit oder deny
 ```
 
+Der Policy-Compiler in diesem Ablauf steht in
+[`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs).
+
 ## Datenfluss bei `file_open`
 
 ```text
@@ -69,7 +72,7 @@ Prozess ruft open() auf
 LSM-Hook file_open
         |
         v
-tails-pdp-ebpf/src/hooks.rs::file_open
+Hook-Einstieg
         |
         | Tail Call
         v
@@ -87,11 +90,14 @@ combine_file_open
 0 = erlauben, -1 = verweigern
 ```
 
+Der Hook-Einstieg liegt in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) in der
+Funktion `file_open`.
+
 Die konkrete Auswertung liegt in:
 
-- `tails-pdp-ebpf/src/policies/file_open_static_policies.rs`
-- `tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`
-- `tails-pdp-ebpf/src/policies/combine.rs`
+- [`tails-pdp-ebpf/src/policies/file_open_static_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_static_policies.rs)
+- [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs)
+- [`tails-pdp-ebpf/src/policies/combine.rs`](../tails-pdp-ebpf/src/policies/combine.rs)
 
 Der Kernel-Teil liest die Ressource als `device + inode`, nicht als Pfad. Das ist robuster, weil im
 LSM-Hook ein vollständiger Pfad schwer und verifier-unfreundlich zu ermitteln ist.
@@ -105,7 +111,7 @@ Prozess ruft bind() auf
 LSM-Hook socket_bind
         |
         v
-tails-pdp-ebpf/src/hooks.rs::socket_bind
+Hook-Einstieg
         |
         | Tail Call
         v
@@ -123,8 +129,11 @@ combine_socket_bind
 0 = erlauben, -1 = verweigern
 ```
 
+Der Hook-Einstieg liegt in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) in der
+Funktion `socket_bind`.
+
 Der Hook liest lokale IP, Port, IP-Familie und Transportprotokoll. Das passiert in
-`tails-pdp-ebpf/src/helpers.rs`, besonders in `read_socket_bind_resource`.
+[`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs), besonders in `read_socket_bind_resource`.
 
 ## Warum Tail Calls?
 
@@ -144,7 +153,7 @@ Die ProgramArray-Maps heißen:
 - `FILE_OPEN_JUMP_TABLE`
 - `SOCKET_BIND_JUMP_TABLE`
 
-Sie werden im Userspace in `tails-pdp/src/main.rs` befüllt.
+Sie werden im Userspace in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) befüllt.
 
 ## Static Policies und Stream Policies
 
@@ -185,7 +194,7 @@ deny
     environment.defcon.level <= 2;
 ```
 
-Der Wert dafür kommt aus `stream-attributes/DEFCON.txt` und wird in `CURRENT_DEFCON` geschrieben
+Der Wert dafür kommt aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und wird in `CURRENT_DEFCON` geschrieben
 [P12], [P23], [P24].
 
 ---

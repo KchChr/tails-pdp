@@ -575,18 +575,14 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
         }
         (PolicyAction::FileOpen, Some(stream_condition)) => {
             ensure_no_socket_fields(&parsed)?;
-            if parsed.command.is_some() {
-                bail!(
-                    "policy '{}' in '{}' cannot use 'command' with file_open stream policies",
-                    parsed.name,
-                    parsed.source_path.display()
-                );
-            }
+            let command = parsed.command.as_deref().unwrap_or("");
             let resource = parsed.file_resource.as_deref().unwrap_or("");
+            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
             ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
             let mut policy = FileOpenStreamPolicy::time(
                 parsed.entitlement,
                 parsed.subject,
+                command,
                 resource,
                 stream_operator(stream_condition),
                 stream_modulo(stream_condition),
@@ -603,12 +599,15 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
             compiled.file_open_stream.push(policy);
         }
         (PolicyAction::SocketBind, None) => {
-            ensure_no_file_open_fields(&parsed)?;
+            ensure_no_file_open_resource(&parsed)?;
+            let command = parsed.command.as_deref().unwrap_or("");
+            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
             let resource = parsed.socket_resource.as_deref().unwrap_or("");
             ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
             let policy = SocketBindStaticPolicy::new(
                 parsed.entitlement,
                 parsed.subject,
+                command,
                 parsed.socket_family,
                 parsed.socket_transport,
                 parsed.socket_port,
@@ -624,12 +623,15 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
             compiled.socket_bind_static.push(policy);
         }
         (PolicyAction::SocketBind, Some(stream_condition)) => {
-            ensure_no_file_open_fields(&parsed)?;
+            ensure_no_file_open_resource(&parsed)?;
+            let command = parsed.command.as_deref().unwrap_or("");
+            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
             let resource = parsed.socket_resource.as_deref().unwrap_or("");
             ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
             let mut policy = SocketBindStreamPolicy::time(
                 parsed.entitlement,
                 parsed.subject,
+                command,
                 parsed.socket_family,
                 parsed.socket_transport,
                 parsed.socket_port,
@@ -730,10 +732,10 @@ fn ensure_no_socket_fields(policy: &ParsedPolicy) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn ensure_no_file_open_fields(policy: &ParsedPolicy) -> anyhow::Result<()> {
-    if policy.command.is_some() || policy.file_resource.is_some() {
+fn ensure_no_file_open_resource(policy: &ParsedPolicy) -> anyhow::Result<()> {
+    if policy.file_resource.is_some() {
         bail!(
-            "policy '{}' in '{}' uses file_open-only fields with action socket_bind",
+            "policy '{}' in '{}' uses file_open-only resource fields with action socket_bind",
             policy.name,
             policy.source_path.display()
         );

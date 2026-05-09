@@ -2,10 +2,17 @@
 
 ## Gemeinsame Logik
 
-Die zentrale Policy-Logik liegt in `tails-pdp-common/src/lib.rs`. Dieses Crate wird von Userspace
+Die zentrale Policy-Logik liegt in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs). Dieses Crate wird von Userspace
 und eBPF genutzt. Dadurch sollen beide Seiten dieselbe Entscheidung treffen [P8]. Die Policies
 orientieren sich syntaktisch an einfachen SAPL-Policy-Dateien, werden aber in projektspezifische
 Rust-Structs übersetzt [P3], [Q11].
+
+Stream Policies bestehen weiterhin aus genau einer dynamischen Bedingung. Sie dürfen jetzt aber
+zusätzlich die statischen Filter des jeweiligen Hooks mitbenutzen. Eine `file_open`-Stream-Policy
+kann also `subject`, `command` und `resource.path` mit `environment.defcon.level` oder
+`environment.utc.hour` kombinieren. Eine `socket_bind`-Stream-Policy kann entsprechend `subject`,
+`command`, `resource.family`, `resource.transport`, `resource.ip` und `resource.port` mit einer
+dynamischen Bedingung kombinieren [P3], [P8].
 
 Wichtige Funktionen:
 
@@ -67,7 +74,7 @@ Unterstützte Attribute:
 | `Hour` | UTC-Stunde |
 | `Minute` | UTC-Minute |
 | `Second` | UTC-Sekunde |
-| `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus `stream-attributes/DEFCON.txt` |
+| `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) |
 
 Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Stream-Bedingung wahr ist.
 Ist die Bedingung falsch, ist die Policy nicht anwendbar [P8].
@@ -149,7 +156,7 @@ Maps eine feste Größe haben. Deshalb verwendet das Projekt feste Byte-Arrays:
 - `[u8; SOCKET_IP_LEN]`
 
 Ein String ist dabei bis zum ersten Nullbyte gültig. Das Admin-Tool rekonstruiert Strings in
-`tails-pdp-admintool/src/output.rs` mit der Hilfsfunktion `fixed_string`.
+[`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) mit der Hilfsfunktion `fixed_string`.
 
 ## `#[repr(C)]`
 

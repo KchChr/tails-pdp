@@ -40,7 +40,7 @@ Datei lesen darf oder ob ein Port erreichbar ist. `tails-pdp` versucht, feiner z
 
 Der Begriff PDP steht für Policy Decision Point. Das ist die Komponente, die eine Policy auswertet
 und eine Entscheidung trifft. Die konkrete Auswertung liegt in `tails-pdp-common`, die Kernel-Hooks
-in `tails-pdp-ebpf/src/hooks.rs`, und die aktiven Policies werden über eBPF-Maps bereitgestellt
+in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs), und die aktiven Policies werden über eBPF-Maps bereitgestellt
 [P8], [P10], [P12]. Die Begriffe eBPF, Map und LSM orientieren sich an der Linux-Kernel-
 Dokumentation [Q4], [Q5], [Q9], [Q10].
 
@@ -73,10 +73,10 @@ Security-Hooks.
 
 In diesem Projekt liegen die eBPF-Programme im Crate `tails-pdp-ebpf`, vor allem in:
 
-- `tails-pdp-ebpf/src/hooks.rs`
-- `tails-pdp-ebpf/src/policies/`
-- `tails-pdp-ebpf/src/helpers.rs`
-- `tails-pdp-ebpf/src/maps.rs`
+- [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs)
+- [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/)
+- [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs)
+- [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 
 ## Aya
 
@@ -87,9 +87,9 @@ Aya ist eine Rust-Bibliothek für eBPF. Sie hat zwei Seiten:
 
 Konkrete Beispiele:
 
-- `tails-pdp/src/main.rs` nutzt `aya::EbpfLoader`.
-- `tails-pdp-ebpf/src/hooks.rs` nutzt `#[lsm(hook = "...")]`.
-- `tails-pdp-ebpf/src/maps.rs` nutzt `#[map]`.
+- [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) nutzt `aya::EbpfLoader`.
+- [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) nutzt `#[lsm(hook = "...")]`.
+- [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) nutzt `#[map]`.
 
 ## Linux Security Modules
 
@@ -108,7 +108,7 @@ In diesem Projekt hängen eBPF-Programme an genau diesen Hooks.
 Eine eBPF-Map ist ein Speicherbereich, den eBPF-Programme und Userspace-Programme gemeinsam nutzen
 können. Man kann sie sich wie eine kleine Tabelle vorstellen.
 
-Beispiele aus `tails-pdp-ebpf/src/maps.rs`:
+Beispiele aus [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs):
 
 | Map | Zweck |
 | --- | --- |

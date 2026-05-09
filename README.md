@@ -90,13 +90,17 @@ Supported concepts:
 - `file_open` fields:
   `command`, `resource.path`
 - `socket_bind` fields:
-  `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
+  `command`, `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
 - one optional stream condition per policy:
   `environment.time % N <op> VALUE`
   `environment.utc.hour <op> VALUE`
   `environment.utc.minute <op> VALUE`
   `environment.utc.second <op> VALUE`
   `environment.defcon.level <op> VALUE`
+
+Stream policies may use the same static hook filters as static policies. Example: a `file_open`
+stream policy may combine `command == "cat"` and `resource.path == "/home/hntr/test.txt"` with
+`environment.defcon.level <= 2`.
 
 `environment.defcon.level` reads the current test DEFCON level from
 `stream-attributes/DEFCON.txt`. Valid values are integers from `1` to `5`. The userspace process
@@ -153,13 +157,14 @@ Example DEFCON workflow:
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-echo 5 > stream-attributes/DEFCON.txt
+echo 5 > environment/DEFCON.txt
 cat /home/hntr/test.txt
-echo 2 > stream-attributes/DEFCON.txt
+echo 2 > environment/DEFCON.txt
 cat /home/hntr/test.txt
 ```
 
 With the example policy active, DEFCON `5` does not trigger the deny condition. DEFCON `2` does.
+The policy also contains `command == "cat"`, so another program name would not match it.
 
 ## Examples
 

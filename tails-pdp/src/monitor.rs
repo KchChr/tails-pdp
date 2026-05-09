@@ -360,6 +360,7 @@ fn collect_socket_bind_violations(
 ) -> anyhow::Result<()> {
     let request = SocketBindRequest {
         subject: process_fd.process.uid,
+        command: command_name(&process_fd.process.command),
         socket_family: socket.family,
         socket_transport: socket.transport,
         socket_port: socket.port,

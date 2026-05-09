@@ -5,6 +5,11 @@ These files are not loaded automatically. To activate a policy, copy it into `..
 Each `.sapl` file contains exactly one simple policy. More complex behavior is expressed by using
 multiple files, for example one policy for `hour < 8` and another for `hour >= 16`.
 
+Stream policies may use the same static hook filters as static policies, for example `command`,
+`subject.uid`, `resource.path`, `resource.family`, `resource.transport`, `resource.ip` or
+`resource.port`, plus exactly one dynamic stream condition such as `environment.utc.hour` or
+`environment.defcon.level`.
+
 Numbering convention:
 
 - `10-*` to `19-*`: `file_open` policies

@@ -1,6 +1,6 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest, POLICY_BANK_SIZE,
+    COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest, POLICY_BANK_SIZE,
     evaluate_file_open_stream_policy, policy_bank_offset,
 };
 
@@ -15,6 +15,7 @@ use crate::{
 
 pub(crate) fn evaluate_policies(
     current_subject: u32,
+    current_command: &[u8; COMMAND_LEN],
     resource: &FileOpenResource,
     current_time: u64,
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
@@ -24,7 +25,7 @@ pub(crate) fn evaluate_policies(
     let mut state = DecisionState::empty_for_generation(generation);
     let request = FileOpenRequest {
         subject: current_subject,
-        command: [0; tails_pdp_common::COMMAND_LEN],
+        command: *current_command,
         resource_device: resource.device,
         resource_inode: resource.inode,
     };
@@ -65,7 +66,7 @@ pub(crate) fn evaluate_policies(
     }
 
     crate::debug_printk!(
-        b"fosm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d dev=%llu ino=%llu",
+        b"fosm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d dev=%llu ino=%llu cmd=%s",
         state.deny,
         state.permit,
         matched_deny_index,
@@ -75,6 +76,7 @@ pub(crate) fn evaluate_policies(
         current_defcon,
         resource.device,
         resource.inode,
+        current_command.as_ptr(),
     );
 
     state
@@ -85,6 +87,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let mut current_state = DecisionState::from_map();
     let generation = current_state.generation;
     let current_subject = ctx.uid();
+    let current_command = ctx.command().unwrap_or([0; COMMAND_LEN]);
     let resource = read_file_open_resource(&ctx);
     let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
     let current_iso8601_time = CURRENT_TIME_ISO8601
@@ -97,6 +100,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let stream_state = evaluate_policies(
         current_subject,
+        &current_command,
         &resource,
         current_time,
         current_iso8601_time,

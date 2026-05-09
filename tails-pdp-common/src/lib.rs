@@ -270,6 +270,7 @@ pub struct FileOpenStreamPolicy {
     pub enabled: u8,
     pub _pad: [u8; 3],
     pub subject: u32,
+    pub command: [u8; COMMAND_LEN],
     pub resource: [u8; RESOURCE_LEN],
     pub resource_device: u64,
     pub resource_inode: u64,
@@ -287,6 +288,7 @@ impl FileOpenStreamPolicy {
             enabled: 0,
             _pad: [0; 3],
             subject: ANY_SUBJECT,
+            command: [0; COMMAND_LEN],
             resource: [0; RESOURCE_LEN],
             resource_device: 0,
             resource_inode: 0,
@@ -298,6 +300,7 @@ impl FileOpenStreamPolicy {
     pub fn time(
         entitlement: Entitlement,
         subject: u32,
+        command: &str,
         resource: &str,
         operator: StreamOperator,
         modulo: u64,
@@ -311,6 +314,7 @@ impl FileOpenStreamPolicy {
             enabled: 1,
             _pad: [0; 3],
             subject,
+            command: command_name(command),
             resource: resource_name(resource),
             resource_device: 0,
             resource_inode: 0,
@@ -357,6 +361,7 @@ pub struct SocketBindStaticPolicy {
     pub socket_transport: SocketTransport,
     pub _pad: [u8; 3],
     pub subject: u32,
+    pub command: [u8; COMMAND_LEN],
     pub socket_port: u16,
     pub _pad2: [u8; 6],
     pub resource: [u8; RESOURCE_LEN],
@@ -373,6 +378,7 @@ impl SocketBindStaticPolicy {
             socket_transport: SocketTransport::Any,
             _pad: [0; 3],
             subject: ANY_SUBJECT,
+            command: [0; COMMAND_LEN],
             socket_port: 0,
             _pad2: [0; 6],
             resource: [0; RESOURCE_LEN],
@@ -383,6 +389,7 @@ impl SocketBindStaticPolicy {
     pub fn new(
         entitlement: Entitlement,
         subject: u32,
+        command: &str,
         family: SocketFamily,
         transport: SocketTransport,
         port: u16,
@@ -396,6 +403,7 @@ impl SocketBindStaticPolicy {
             socket_transport: transport,
             _pad: [0; 3],
             subject,
+            command: command_name(command),
             socket_port: port,
             _pad2: [0; 6],
             resource: resource_name(resource),
@@ -426,6 +434,7 @@ pub struct SocketBindStreamPolicy {
     pub socket_transport: SocketTransport,
     pub _pad: u8,
     pub subject: u32,
+    pub command: [u8; COMMAND_LEN],
     pub socket_port: u16,
     pub _pad2: [u8; 6],
     pub resource: [u8; RESOURCE_LEN],
@@ -446,6 +455,7 @@ impl SocketBindStreamPolicy {
             socket_transport: SocketTransport::Any,
             _pad: 0,
             subject: ANY_SUBJECT,
+            command: [0; COMMAND_LEN],
             socket_port: 0,
             _pad2: [0; 6],
             resource: [0; RESOURCE_LEN],
@@ -458,6 +468,7 @@ impl SocketBindStreamPolicy {
     pub fn time(
         entitlement: Entitlement,
         subject: u32,
+        command: &str,
         family: SocketFamily,
         transport: SocketTransport,
         port: u16,
@@ -476,6 +487,7 @@ impl SocketBindStreamPolicy {
             socket_transport: transport,
             _pad: 0,
             subject,
+            command: command_name(command),
             socket_port: port,
             _pad2: [0; 6],
             resource: resource_name(resource),
@@ -548,6 +560,7 @@ pub struct FileOpenRequest {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct SocketBindRequest {
     pub subject: u32,
+    pub command: [u8; COMMAND_LEN],
     pub socket_family: SocketFamily,
     pub socket_transport: SocketTransport,
     pub socket_port: u16,
@@ -710,6 +723,9 @@ pub fn evaluate_file_open_stream_policy(
     if !matches_subject(policy.subject, request.subject) {
         return None;
     }
+    if !matches_bytes(&policy.command, &request.command) {
+        return None;
+    }
     if !matches_file_resource(
         policy.resource_device,
         policy.resource_inode,
@@ -741,6 +757,9 @@ pub fn evaluate_socket_bind_static_policy(
     if !matches_subject(policy.subject, request.subject) {
         return None;
     }
+    if !matches_bytes(&policy.command, &request.command) {
+        return None;
+    }
     if !matches_socket_resource(
         policy.socket_family,
         policy.socket_transport,
@@ -764,6 +783,9 @@ pub fn evaluate_socket_bind_stream_policy(
         return None;
     }
     if !matches_subject(policy.subject, request.subject) {
+        return None;
+    }
+    if !matches_bytes(&policy.command, &request.command) {
         return None;
     }
     if !matches_socket_resource(
@@ -816,11 +838,23 @@ mod tests {
         }
     }
 
+    fn socket_bind_request() -> SocketBindRequest {
+        SocketBindRequest {
+            subject: 1000,
+            command: command_name("python3"),
+            socket_family: SocketFamily::Inet,
+            socket_transport: SocketTransport::Tcp,
+            socket_port: 8080,
+            socket_ip: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        }
+    }
+
     #[test]
     fn stream_policy_returns_entitlement_when_condition_matches() {
         let policy = FileOpenStreamPolicy::time(
             Entitlement::Deny,
             1000,
+            "",
             "",
             StreamOperator::LessThan,
             10,
@@ -844,6 +878,7 @@ mod tests {
             Entitlement::Deny,
             1000,
             "",
+            "",
             StreamOperator::LessThan,
             10,
             5,
@@ -866,6 +901,7 @@ mod tests {
             Entitlement::Permit,
             1000,
             "",
+            "",
             StreamOperator::LessThan,
             0,
             5,
@@ -887,6 +923,7 @@ mod tests {
         let mut policy = FileOpenStreamPolicy::time(
             Entitlement::Deny,
             1000,
+            "",
             "",
             StreamOperator::LessThanOrEqual,
             0,
@@ -911,6 +948,7 @@ mod tests {
             Entitlement::Deny,
             1000,
             "",
+            "",
             StreamOperator::LessThanOrEqual,
             0,
             2,
@@ -926,5 +964,82 @@ mod tests {
         );
 
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn file_open_stream_policy_respects_command_filter() {
+        let mut policy = FileOpenStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "cat",
+            "",
+            StreamOperator::LessThanOrEqual,
+            0,
+            2,
+        );
+        policy.attribute = StreamAttribute::Defcon;
+
+        let denied = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            2,
+            &policy,
+        );
+
+        let allowed_request = FileOpenRequest {
+            command: command_name("tail"),
+            ..file_open_request()
+        };
+        let not_applicable = evaluate_file_open_stream_policy(
+            &allowed_request,
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            2,
+            &policy,
+        );
+
+        assert_eq!(denied, Some(Entitlement::Deny));
+        assert_eq!(not_applicable, None);
+    }
+
+    #[test]
+    fn socket_bind_stream_policy_respects_command_filter() {
+        let mut policy = SocketBindStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "python3",
+            SocketFamily::Inet,
+            SocketTransport::Tcp,
+            8080,
+            "0.0.0.0",
+            StreamOperator::LessThanOrEqual,
+            0,
+            2,
+        );
+        policy.attribute = StreamAttribute::Defcon;
+
+        let denied = evaluate_socket_bind_stream_policy(
+            &socket_bind_request(),
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            2,
+            &policy,
+        );
+
+        let different_command_request = SocketBindRequest {
+            command: command_name("nc"),
+            ..socket_bind_request()
+        };
+        let not_applicable = evaluate_socket_bind_stream_policy(
+            &different_command_request,
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            2,
+            &policy,
+        );
+
+        assert_eq!(denied, Some(Entitlement::Deny));
+        assert_eq!(not_applicable, None);
     }
 }

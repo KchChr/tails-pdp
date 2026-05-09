@@ -3,7 +3,7 @@
 ## Einstieg
 
 Der eBPF-Code liegt im Crate `tails-pdp-ebpf`. Der eigentliche eBPF-Binary-Einstieg ist
-`tails-pdp-ebpf/src/main.rs` [P9]. Die allgemeinen Einschränkungen durch eBPF, BPF-Maps und den
+[`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) [P9]. Die allgemeinen Einschränkungen durch eBPF, BPF-Maps und den
 Verifier sind in der Linux-Kernel-Dokumentation beschrieben [Q4], [Q5], [Q7], [Q8].
 
 Wichtige Eigenschaften:
@@ -16,7 +16,7 @@ Das ist typisch für eBPF-Programme.
 
 ## LSM-Programme
 
-Die Einstiegshooks stehen in `tails-pdp-ebpf/src/hooks.rs`:
+Die Einstiegshooks stehen in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs):
 
 | Funktion | Hook | Aufgabe |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ viel Logik [Q7], [Q8].
 
 ## Maps im eBPF-Teil
 
-Die Maps stehen in `tails-pdp-ebpf/src/maps.rs`.
+Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs).
 
 | Map | Typ | Zweck |
 | --- | --- | --- |
@@ -72,14 +72,14 @@ Die Maps stehen in `tails-pdp-ebpf/src/maps.rs`.
 | `SOCKET_BIND_STREAM_POLICIES` | gepinnte `Array<SocketBindStreamPolicy>` | Socket-Stream-Policies. |
 | `CURRENT_TIME` | gepinnte `Array<u64>` | Aktuelle Unix-Zeit. |
 | `CURRENT_TIME_ISO8601` | gepinnte `Array<Iso8601TimeParts>` | Aktuelle UTC-Zeitfelder. |
-| `CURRENT_DEFCON` | gepinnte `Array<u32>` | Aktueller DEFCON-Level aus `stream-attributes/DEFCON.txt`. |
+| `CURRENT_DEFCON` | gepinnte `Array<u32>` | Aktueller DEFCON-Level aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). |
 
 `DECISIONS` ist eine Per-CPU-Map. Das reduziert Race Conditions, wenn mehrere CPUs gleichzeitig
 LSM-Hooks ausführen [P12], [Q6].
 
 ## Gelesene Kernel-Daten
 
-Die Hilfsfunktionen stehen in `tails-pdp-ebpf/src/helpers.rs`.
+Die Hilfsfunktionen stehen in [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs).
 
 ### Dateiressource
 
@@ -119,9 +119,9 @@ Für IPv4 wird `sockaddr_in` gelesen, für IPv6 `sockaddr_in6`.
 Im eBPF-Code gibt es `unsafe`, weil Kernel-Pointer gelesen und Tail Calls ausgeführt werden.
 Beispiele:
 
-- `bpf_probe_read_kernel(...)` in `helpers.rs`
-- `tail_call(...)` in `hooks.rs` und Policy-Programmen
-- Schreiben in `DECISIONS` über `get_ptr_mut` in `policies/decision.rs`
+- `bpf_probe_read_kernel(...)` in [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs)
+- `tail_call(...)` in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) und den Dateien unter [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/)
+- Schreiben in `DECISIONS` über `get_ptr_mut` in [`tails-pdp-ebpf/src/policies/decision.rs`](../tails-pdp-ebpf/src/policies/decision.rs)
 
 `unsafe` heißt nicht automatisch „falsch“. Es heißt: Der Compiler kann die Sicherheit nicht allein
 prüfen. Deshalb muss der Code besonders defensiv sein.

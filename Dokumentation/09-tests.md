@@ -2,7 +2,7 @@
 
 ## Aktueller Stand
 
-Aktuell gibt es nur wenige Unit-Tests in `tails-pdp-common/src/lib.rs`. Diese prüfen vor allem
+Aktuell gibt es nur wenige Unit-Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs). Diese prüfen vor allem
 Stream-Policy-Semantik:
 
 - Zeitbedingung wahr ergibt Entitlement.
@@ -174,9 +174,9 @@ vergleichen.
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-echo 5 > stream-attributes/DEFCON.txt
+echo 5 > environment/DEFCON.txt
 cat /home/hntr/test.txt
-echo 2 > stream-attributes/DEFCON.txt
+echo 2 > environment/DEFCON.txt
 cat /home/hntr/test.txt
 ```
 
@@ -185,7 +185,7 @@ Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [P1
 #### Monitor nachträglich
 
 1. Prozess öffnet Datei oder bindet Socket.
-2. Policy wird danach in `policies/` kopiert.
+2. Policy wird danach in [`policies/`](../policies/) kopiert.
 3. Monitor erkennt Violation.
 4. Falls Enforcement aktiv ist, wird der FD geschlossen.
 
