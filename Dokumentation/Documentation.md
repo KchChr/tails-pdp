@@ -1,7 +1,6 @@
 # tails-pdp Dokumentation
 
-Diese Dokumentation beschreibt das Projekt `tails-pdp`. Sie richtet sich an Informatiker mit
-Grundlagenwissen, aber ohne tiefere Erfahrung mit Rust, eBPF, Aya oder Linux Security Modules.
+Diese Dokumentation beschreibt das Projekt `tails-pdp`. 
 
 `tails-pdp` ist ein experimentelles Policy Decision Point System für Linux. Es lädt eBPF-Programme
 in den Kernel, hängt sie an Linux-Security-Module-Hooks an und entscheidet dort, ob bestimmte
@@ -35,7 +34,7 @@ anzeigen.
 | `tails-pdp-ebpf/src/hooks.rs` | Einstiegspunkte der eBPF-LSM-Hooks `file_open` und `socket_bind`. |
 | `tails-pdp-ebpf/src/maps.rs` | Definition der eBPF-Maps. |
 | `tails-pdp-ebpf/src/policies/` | eBPF-Policy-Auswertung und Kombinieren der Entscheidungen. |
-| `tails-pdp-admintool/src/` | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
+| `tails-pdp-admintool/` | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
 | `examples/` | Beispiel-Policies, die nicht automatisch geladen werden. |
 | `policies/` | Aktiver Policy-Ordner, den der Loader überwacht. |
 
