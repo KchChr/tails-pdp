@@ -3,4 +3,5 @@ deny
     action == "file_open";
     subject.uid == 1000;
     resource.path == "/home/hntr/test.txt";
+    command == "cat";
     environment.defcon.level <= 2;
