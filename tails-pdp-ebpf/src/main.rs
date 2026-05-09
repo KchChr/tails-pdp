@@ -4,6 +4,7 @@
 
 mod helpers;
 mod hooks;
+mod logging;
 mod maps;
 mod policies;
 mod vmlinux;

@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
+use log::{error, info};
 use tails_pdp_common::{
     ANY_SUBJECT, COMMAND_LEN, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
     POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketBindStaticPolicy, SocketBindStreamPolicy,
@@ -124,7 +125,7 @@ impl PolicyDirectorySync {
                 print_policy_summary(&self.policy_dir, generation, &compiled);
             }
             Err(error) => {
-                eprintln!(
+                error!(
                     "POLICY initial sync failed for '{}'; keeping existing pinned generation active: {error:#}",
                     self.policy_dir.display()
                 );
@@ -162,7 +163,7 @@ impl PolicyDirectorySync {
                 print_policy_summary(&self.policy_dir, generation, &compiled);
             }
             Err(error) => {
-                eprintln!(
+                error!(
                     "POLICY sync failed for '{}'; previous generation remains active: {error:#}",
                     self.policy_dir.display()
                 );
@@ -940,7 +941,7 @@ fn stream_value(condition: ParsedTimeCondition) -> u64 {
 }
 
 fn print_policy_summary(policy_dir: &Path, generation: u32, compiled: &CompiledPolicies) {
-    println!(
+    info!(
         "POLICY sync ok dir={} generation={} file_open_static={} file_open_stream={} socket_bind_static={} socket_bind_stream={}",
         policy_dir.display(),
         generation,

@@ -11,6 +11,7 @@ use std::{
 
 use anyhow::Context;
 use aya::maps::{Array, Map, MapData};
+use log::{info, warn};
 use tails_pdp_common::{
     Entitlement, FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts,
     POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
@@ -143,7 +144,7 @@ pub async fn run_policy_monitor() -> anyhow::Result<()> {
                 previous_violations = current_keys;
             }
             Err(error) => {
-                eprintln!("MONITOR scan failed: {error:#}");
+                warn!("MONITOR scan failed: {error:#}");
             }
         }
     }
@@ -466,7 +467,7 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
 
     match close_remote_fd(violation.key.pid, violation.key.fd) {
         Ok(()) => {
-            println!(
+            info!(
                 "MONITOR closed pid={} fd={} for {:?} policy {:?}[{}]",
                 violation.key.pid,
                 violation.key.fd,
@@ -476,7 +477,7 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
             );
         }
         Err(error) => {
-            eprintln!(
+            warn!(
                 "MONITOR failed to close pid={} fd={} for {:?} policy {:?}[{}]: {error:#}",
                 violation.key.pid,
                 violation.key.fd,
@@ -773,7 +774,7 @@ fn current_utc_time() -> anyhow::Result<(u64, Iso8601TimeParts)> {
 fn print_violation(violation: &Violation) {
     match &violation.resource {
         ViolationResource::File { device, inode } => {
-            println!(
+            warn!(
                 "MONITOR file_open violation policy={:?}[{}] uid={} pid={} fd={} comm={} dev={} ino={}",
                 violation.key.policy_kind,
                 violation.key.policy_index,
@@ -792,7 +793,7 @@ fn print_violation(violation: &Violation) {
             port,
             inode,
         } => {
-            println!(
+            warn!(
                 "MONITOR socket_bind violation policy={:?}[{}] uid={} pid={} fd={} comm={} family={:?} transport={:?} local={}:{} socket_inode={}",
                 violation.key.policy_kind,
                 violation.key.policy_index,

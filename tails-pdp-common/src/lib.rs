@@ -1,6 +1,6 @@
 #![no_std]
 
-#[cfg(feature = "user")]
+#[cfg(any(feature = "user", test))]
 extern crate std;
 
 pub const COMMAND_LEN: usize = 16;
@@ -35,13 +35,6 @@ impl Entitlement {
         match self {
             Self::Permit => 0,
             Self::Deny => 1,
-        }
-    }
-
-    pub const fn inverse(self) -> Self {
-        match self {
-            Self::Permit => Self::Deny,
-            Self::Deny => Self::Permit,
         }
     }
 }
@@ -662,13 +655,11 @@ fn stream_entitlement(
     entitlement: Entitlement,
     evaluation: &StreamEvaluation,
 ) -> Option<Entitlement> {
-    let condition = evaluate_stream_condition(evaluation)?;
-
-    Some(if condition {
-        entitlement
+    if evaluate_stream_condition(evaluation)? {
+        Some(entitlement)
     } else {
-        entitlement.inverse()
-    })
+        None
+    }
 }
 
 pub fn evaluate_file_open_static_policy(
@@ -796,3 +787,80 @@ unsafe impl aya::Pod for SocketBindStreamPolicy {}
 
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for Iso8601TimeParts {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn file_open_request() -> FileOpenRequest {
+        FileOpenRequest {
+            subject: 1000,
+            command: command_name("cat"),
+            resource_device: 0,
+            resource_inode: 0,
+        }
+    }
+
+    #[test]
+    fn stream_policy_returns_entitlement_when_condition_matches() {
+        let policy = FileOpenStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "",
+            StreamOperator::LessThan,
+            10,
+            5,
+        );
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            3,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            &policy,
+        );
+
+        assert_eq!(result, Some(Entitlement::Deny));
+    }
+
+    #[test]
+    fn stream_policy_is_not_applicable_when_condition_does_not_match() {
+        let policy = FileOpenStreamPolicy::time(
+            Entitlement::Deny,
+            1000,
+            "",
+            StreamOperator::LessThan,
+            10,
+            5,
+        );
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            8,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            &policy,
+        );
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn stream_policy_with_zero_modulo_is_not_applicable() {
+        let policy = FileOpenStreamPolicy::time(
+            Entitlement::Permit,
+            1000,
+            "",
+            StreamOperator::LessThan,
+            0,
+            5,
+        );
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            3,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            &policy,
+        );
+
+        assert_eq!(result, None);
+    }
+}

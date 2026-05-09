@@ -196,26 +196,38 @@ Notes:
 
 ## Monitoring
 
-The userspace monitor currently observes active `socket_bind` states only.
+The userspace monitor observes active file descriptors and `socket_bind` states.
 
 It:
 
 - scans `/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, and `/proc/net/udp6`
 - maps socket inodes back to processes via `/proc/<pid>/fd`
+- maps file descriptors back to file `device + inode` identities
 - evaluates the same policy logic as the eBPF side
-- prints violations on the command line
+- logs violations on the command line
 
-The monitor currently does not enforce anything. It only reports violations.
+For file violations, the monitor currently tries to close only the offending file descriptors in the
+affected process.
 
 ## Debugging
 
-To inspect kernel debug output from `bpf_printk!`:
+Userspace logging is controlled with `RUST_LOG`. Without `RUST_LOG`, `tails-pdp` defaults to `info`.
+
+```shell
+RUST_LOG=debug sudo -E ./target/release/tails-pdp
+```
+
+Kernel debug output from `bpf_printk!` is disabled by default. Enable it explicitly:
+
+```shell
+TAILS_PDP_EBPF_DEBUG=1 RUST_LOG=info sudo -E ./target/release/tails-pdp
+```
+
+Then inspect the kernel trace output in a second terminal:
 
 ```shell
 sudo cat /sys/kernel/debug/tracing/trace_pipe
 ```
-
-Run that in a second terminal while `tails-pdp` is running.
 
 Useful checks during debugging:
 

@@ -1,9 +1,12 @@
-use anyhow::Context;
-use aya::{Btf, EbpfLoader, VerifierLogLevel, maps::ProgramArray, programs::Lsm};
-#[rustfmt::skip]
-use log::debug;
-use std::fs;
+use std::{env, fs};
 
+use anyhow::Context;
+use aya::{
+    Btf, EbpfLoader, VerifierLogLevel,
+    maps::{Array, ProgramArray},
+    programs::Lsm,
+};
+use log::{debug, info};
 use tails_pdp::{
     BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
     monitor::run_policy_monitor,
@@ -15,7 +18,7 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let rlim = libc::rlimit {
         rlim_cur: libc::RLIM_INFINITY,
@@ -49,6 +52,15 @@ async fn main() -> anyhow::Result<()> {
             .load(spec.hook, &btf)
             .with_context(|| format!("failed to load '{}' on hook '{}'", spec.name, spec.hook))?;
     }
+
+    let mut debug_logging = Array::try_from(
+        ebpf.take_map("DEBUG_LOGGING")
+            .context("map 'DEBUG_LOGGING' not found")?,
+    )
+    .context("failed to open DEBUG_LOGGING")?;
+    debug_logging
+        .set(0, u32::from(env_flag_enabled("TAILS_PDP_EBPF_DEBUG")), 0)
+        .context("failed to configure DEBUG_LOGGING")?;
 
     let mut file_open_jump_table = ProgramArray::try_from(
         ebpf.take_map("FILE_OPEN_JUMP_TABLE")
@@ -92,11 +104,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     policy_sync.sync_initial()?;
-    println!(
+    info!(
         "Watching policy directory '{}'",
         policy_sync.directory().display()
     );
-    println!("Waiting for Ctrl-C...");
+    info!("Waiting for Ctrl-C...");
 
     for spec in LSM_PROGRAMS {
         if !spec.attach {
@@ -118,7 +130,17 @@ async fn main() -> anyhow::Result<()> {
         result = run_policy_monitor() => result?,
         result = signal::ctrl_c() => result?,
     }
-    println!("Exiting...");
+    info!("Exiting...");
 
     Ok(())
+}
+
+fn env_flag_enabled(name: &str) -> bool {
+    match env::var(name) {
+        Ok(value) => !matches!(
+            value.as_str(),
+            "" | "0" | "false" | "False" | "FALSE" | "off" | "Off" | "OFF" | "no" | "No" | "NO"
+        ),
+        Err(_) => false,
+    }
 }

@@ -53,19 +53,17 @@ pub(crate) fn evaluate_policies(
         index += 1;
     }
 
-    unsafe {
-        aya_ebpf::bpf_printk!(
-            b"fos deny=%d permit=%d didx=%d pidx=%d uid=%d dev=%llu ino=%llu cmd=%s",
-            state.deny,
-            state.permit,
-            matched_deny_index,
-            matched_permit_index,
-            current_subject,
-            resource.device,
-            resource.inode,
-            current_command.as_ptr(),
-        );
-    }
+    crate::debug_printk!(
+        b"fos deny=%d permit=%d didx=%d pidx=%d uid=%d dev=%llu ino=%llu cmd=%s",
+        state.deny,
+        state.permit,
+        matched_deny_index,
+        matched_permit_index,
+        current_subject,
+        resource.device,
+        resource.inode,
+        current_command.as_ptr(),
+    );
 
     state
 }

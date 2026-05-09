@@ -29,6 +29,9 @@ pub(crate) static SOCKET_BIND_JUMP_TABLE: ProgramArray = ProgramArray::with_max_
 pub(crate) static DECISIONS: PerCpuArray<u32> = PerCpuArray::with_max_entries(3, 0);
 
 #[map]
+pub(crate) static DEBUG_LOGGING: Array<u32> = Array::with_max_entries(1, 0);
+
+#[map]
 pub(crate) static POLICY_GENERATION: Array<u32> = Array::pinned(POLICY_GENERATION_MAX_ENTRIES, 0);
 
 #[map]

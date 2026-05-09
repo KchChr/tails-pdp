@@ -17,12 +17,10 @@ macro_rules! define_combine_program {
         #[lsm(hook = $hook)]
         pub fn $fn_name(_ctx: LsmContext) -> i32 {
             let decision = combine_decision();
-            unsafe {
-                if decision != 0 {
-                    aya_ebpf::bpf_printk!($deny_log);
-                } else {
-                    aya_ebpf::bpf_printk!($permit_log);
-                }
+            if decision != 0 {
+                crate::debug_printk!($deny_log);
+            } else {
+                crate::debug_printk!($permit_log);
             }
             decision
         }
