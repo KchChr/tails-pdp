@@ -9,10 +9,10 @@ fn close_remote_fd_impl(pid: u32, fd: i32) -> anyhow::Result<()> {
     if fd < 0 {
         bail!("invalid negative fd {fd}");
     }
+    // 0: kein Userspace-Prozess, 1: systemd , std:process:id : der Prozess selbst
     if pid == 0 || pid == 1 || pid == std::process::id() {
         bail!("refusing to close fd {fd} in protected pid {pid}");
     }
-
     let mut process = TracedProcess::attach(pid as libc::pid_t)?;
     process.close_fd(fd)
 }

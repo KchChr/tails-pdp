@@ -237,6 +237,15 @@ It:
 For file violations, the monitor currently tries to close only the offending file descriptors in the
 affected process.
 
+## FD schließen
+
+```
+sudo gdb -q -p <PID> \
+  -ex 'call (int) close(<FD>)' \
+  -ex detach \
+  -ex quit
+```
+
 ## Debugging
 
 Userspace logging is controlled with `RUST_LOG`. Without `RUST_LOG`, `tails-pdp` defaults to `info`.
