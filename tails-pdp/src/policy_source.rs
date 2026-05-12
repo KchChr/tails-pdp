@@ -13,13 +13,13 @@ use tails_pdp_common::{
     SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute,
     StreamOperator, policy_bank_offset,
 };
-use tokio::time::{self, Duration};
+use tokio::time::{Duration, sleep};
 
-use crate::BPF_PIN_DIRECTORY;
+use crate::{BPF_PIN_DIRECTORY, fs_watch};
 
 const POLICY_DIRECTORY_NAME: &str = "policies";
 const POLICY_FILE_EXTENSION: &str = "sapl";
-const POLICY_SCAN_INTERVAL: Duration = Duration::from_secs(1);
+const POLICY_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
@@ -141,11 +141,11 @@ impl PolicyDirectorySync {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
-        let mut interval = time::interval(POLICY_SCAN_INTERVAL);
-        interval.tick().await;
+        let mut watcher = fs_watch::watch_directory_recursive(&self.policy_dir)?;
 
         loop {
-            interval.tick().await;
+            watcher.wait_for_change().await?;
+            sleep(POLICY_EVENT_DEBOUNCE).await;
             self.sync_if_changed()?;
         }
     }

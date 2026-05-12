@@ -7,11 +7,13 @@ use anyhow::{Context, bail};
 use aya::maps::{Array, MapData};
 use log::{info, warn};
 use tails_pdp_common::{DEFAULT_DEFCON_LEVEL, DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL};
-use tokio::time::{self, Duration};
+use tokio::time::{Duration, sleep};
+
+use crate::fs_watch;
 
 const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "environment";
 const DEFCON_FILE_NAME: &str = "DEFCON.txt";
-const STREAM_ATTRIBUTE_SCAN_INTERVAL: Duration = Duration::from_secs(1);
+const STREAM_ATTRIBUTE_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 pub fn default_stream_attributes_directory() -> anyhow::Result<PathBuf> {
     Ok(env::current_dir()
@@ -35,13 +37,17 @@ pub fn write_current_defcon(current_defcon: &mut Array<MapData, u32>) -> anyhow:
 
 pub async fn run_defcon_updater(current_defcon: &mut Array<MapData, u32>) -> anyhow::Result<()> {
     let defcon_path = ensure_defcon_file()?;
-    let mut ticker = time::interval(STREAM_ATTRIBUTE_SCAN_INTERVAL);
+    let directory = defcon_path
+        .parent()
+        .context("DEFCON path has no parent directory")?;
+    let mut watcher = fs_watch::watch_directory(directory)?;
     let mut last_applied = None;
 
     apply_defcon_file(&defcon_path, current_defcon, &mut last_applied)?;
 
     loop {
-        ticker.tick().await;
+        watcher.wait_for_change().await?;
+        sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
         apply_defcon_file(&defcon_path, current_defcon, &mut last_applied)?;
     }
 }
