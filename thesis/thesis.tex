@@ -1,0 +1,279 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[german]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xurl}
+\usepackage{hyperref}
+
+%Schrift
+\usepackage{newtxtext,newtxmath} 
+
+%BibTeX
+%\usepackage[authoryear,round]{natbib} % Autor–Jahr-Zitat, runde Klammern
+% Alternativ:
+\usepackage[numbers,square,sort&compress]{natbib} % numerisch, [1–3]
+% \usepackage[super,sort&compress]{natbib}          % numerisch als Hochzahlen
+
+\usepackage[left=4cm,right=2cm,top=3cm,bottom=3cm]{geometry}
+\author{Christian Koch}
+
+\title{Bachelorthesis\\Integration von SAPL in den Linux-Kernel}
+\begin{document}
+\maketitle
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Einleitung}
+% Inhalt einfügen.
+
+\subsection{Motivation}
+Die Sicherheit von Linux-Systemen ist ein fundamentales Anliegen in der heutigen IT-Landschaft. 
+Das Linux Security Module Framework stellt Mechanismen für verschiedene Sicherheitsprüfungen mittels Attribut Based Access Control im Linuxkernel dar \citep{kernelorgLSM}. 
+Anhand von Hooks, welche an den Aufruf einer Ressource gebunden sind, lassen sich mittels eines LSMs  Zugriffsentscheidungen treffen. Dieser Mechanismus stellt jedoch nur eine 
+einmalige Zugriffkontrolle dar. Wenn auf eine Ressource dauerhaft zugegriffen wird, kann anhand eines Hooks lediglich einmal geprüft werden, der Zugriff findet dann, auch bei geänderten Bedingungen weiterhin statt.
+
+
+
+\subsection{Zielsetzung}
+Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels Attribut Stream based Access Control im Linuxkernel stattfindet. 
+Hier sollen insbesondere Stream-Attribute, wie z.B. die Zeit und von außen in Echtzeit in den Kernel gestreamte Attribute, zur Entscheidung herangezogen werden.
+Ziel ist hier die Implementierung eines Prototypen, der Policies einliest und in den Kernel und Zugriffsentscheidunden anhand dieser Policies trifft. 
+Weiterhin sollen diese Policies auch überwacht und bei sich ändernden Bedingungen notwendigerweise auch mittels eines Enforcements umgesetzt werden.
+
+
+\subsection{Aufbau der Arbeit}
+% Inhalt einfügen.
+
+\newpage
+
+\section{Grundlagen}
+% Inhalt einfügen.
+
+\subsection{Linux Security Modules}
+% Inhalt einfügen.
+
+\subsection{Attribut Stream Based Access Control}
+% Inhalt einfügen.
+
+\subsection{SAPL}
+% Inhalt einfügen.
+
+\newpage
+
+\section{Anforderungsanalyse}
+In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen beschrieben. 
+Die Anforderungen ergeben sich aus der Zielsetzung, SAPL-basierte Zugriffskontrolle im Linux-Kernel zu untersuchen und prototypisch umzusetzen. 
+Dabei wird zwischen funktionalen Anforderungen, die das konkrete Verhalten des Systems beschreiben, und nichtfunktionalen Anforderungen, die qualitative Eigenschaften des Systems festlegen, unterschieden.
+
+\subsection{Funktionale Anforderungen}
+
+Die funktionalen Anforderungen beschreiben, welche Aufgaben der Prototyp erfüllen muss. 
+Sie beziehen sich insbesondere auf die Verarbeitung von Policies, die Kommunikation zwischen Userspace und Kernelspace sowie die Durchsetzung von Zugriffsentscheidungen.
+
+\begin{description}
+    \item[FA-01 Policy-Einlesen:]
+    Der Prototyp muss SAPL-Policies aus einer definierten Quelle im Userspace einlesen können.
+    
+    \textit{Akzeptanzkriterium:} Eine im Policy-Verzeichnis abgelegte Policy wird erkannt und für die weitere Verarbeitung bereitgestellt.
+
+    \item[FA-02 Policy-Verwaltung:]
+    Der Prototyp muss Änderungen an Policies erkennen und aktualisierte Policies in die Zugriffskontrolle übernehmen können.
+    
+    \textit{Akzeptanzkriterium:} Wird eine Policy geändert, hinzugefügt oder entfernt, wird diese Änderung vom System verarbeitet.
+
+    \item[FA-03 Kommunikation zwischen Userspace und Kernelspace:]
+    Der Prototyp muss eine Schnittstelle bereitstellen, über die Informationen zwischen Userspace und Kernelspace ausgetauscht werden können.
+    
+    \textit{Akzeptanzkriterium:} Der Userspace kann dem Kernel entscheidungsrelevante Informationen übermitteln.
+
+    \item[FA-04 Zugriffskontrolle über LSM-Hooks:]
+    Der Prototyp muss sicherheitsrelevante Operationen über geeignete Linux-Security-Module-Hooks abfangen können.
+    
+    \textit{Akzeptanzkriterium:} Mindestens ein relevanter Zugriff auf eine Ressource wird durch einen LSM-Hook kontrolliert.
+
+    \item[FA-05 Entscheidungsfindung anhand von Policies:]
+    Der Prototyp muss Zugriffsentscheidungen auf Grundlage der geladenen Policies treffen können.
+    
+    \textit{Akzeptanzkriterium:} Ein Zugriff wird abhängig von einer Policy erlaubt oder verweigert.
+
+    \item[FA-06 Unterstützung dynamischer Attribute:]
+    Der Prototyp muss dynamische Attribute, beispielsweise Zeitinformationen oder externe Zustandsinformationen, in Zugriffsentscheidungen einbeziehen können.
+    
+    \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
+
+    \item[FA-07 Überwachung bestehender Zugriffe:]
+    Der Prototyp muss bestehende Zugriffe überwachen können, wenn sich entscheidungsrelevante Attribute zur Laufzeit ändern.
+    
+    \textit{Akzeptanzkriterium:} Das System erkennt, wenn eine ursprünglich erlaubte Zugriffssituation aufgrund geänderter Attribute nicht mehr zulässig ist.
+
+    \item[FA-08 Enforcement bei geänderten Bedingungen:]
+    Der Prototyp muss bei geänderten Bedingungen eine zuvor erlaubte Zugriffssituation einschränken oder beenden können, soweit dies im Rahmen des Prototyps technisch vorgesehen ist.
+    
+    \textit{Akzeptanzkriterium:} Ein Zugriff wird nach einer relevanten Attributänderung entsprechend der Policy unterbunden oder eingeschränkt.
+
+    \item[FA-09 Administrationsschnittstelle:]
+    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die Policies oder Systemzustände eingesehen beziehungsweise gesteuert werden können.
+    
+    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen.
+
+    \item[FA-10 Gültige Policy-Generationen:]
+    \hypertarget{anf:gueltige-policy-generationen}{Der Prototyp muss sicherstellen, dass nur erfolgreich erzeugte und validierte Generationen von Policies für Zugriffsentscheidungen verwendet werden.}
+    Fehlerhafte, unvollständige oder nicht erfolgreich verarbeitete Policy-Generationen dürfen nicht als aktive Entscheidungsgrundlage gelten.
+    
+    \textit{Akzeptanzkriterium:} Eine neue Policy-Generation wird erst dann aktiviert, wenn sie vollständig verarbeitet und erfolgreich validiert wurde. Andernfalls bleibt die zuletzt gültige Policy-Generation aktiv.
+\end{description}
+
+
+\subsection{Nichtfunktionale Anforderungen}
+Die nichtfunktionalen Anforderungen beschreiben qualitative Eigenschaften des Prototyps. 
+Sie sind insbesondere relevant, da die Umsetzung im Kontext des Linux-Kernels erfolgt und daher Stabilität, Sicherheit und Nachvollziehbarkeit eine besondere Rolle spielen.
+
+\begin{description}
+    \item[NFA-01 Stabilität:]
+    Der Prototyp darf die Stabilität des Linux-Kernels nicht unnötig gefährden.
+    
+    \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
+
+    \item[NFA-02 Sicherheit:]
+    Die Kommunikation zwischen Userspace und Kernelspace muss so gestaltet sein, dass ungültige oder manipulierte Eingaben geprüft werden.
+    
+    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffentscheidungen verwendet werden.
+
+    \item[NFA-03 Nachvollziehbarkeit:]
+    Relevante Entscheidungen und Zustandsänderungen sollen nachvollziehbar protokolliert werden.
+    
+    \textit{Akzeptanzkriterium:} Für zentrale Zugriffentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
+
+    \item[NFA-04 Wartbarkeit:]
+    Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
+    
+    \textit{Akzeptanzkriterium:} Die zentralen Komponenten sind im Quellcode klar voneinander getrennt.
+
+    \item[NFA-05 Erweiterbarkeit:]
+    Der Prototyp soll so entworfen werden, dass weitere Attribute, Policies oder LSM-Hooks ergänzt werden können.
+    
+    \textit{Akzeptanzkriterium:} Die Architektur erlaubt die Ergänzung weiterer Attribute oder Hooks ohne grundlegende Umstrukturierung.
+
+    \item[NFA-06 Performance:]
+    Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
+    
+    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet.
+
+    \item[NFA-07 Begrenzter Kernel-Anteil:]
+    Komplexe Policy-Logik soll möglichst im Userspace verbleiben, um die Komplexität im Kernel zu reduzieren.
+    
+    \textit{Akzeptanzkriterium:} Der Kernel übernimmt vor allem die Durchsetzung der Entscheidung, während komplexere Verarbeitungsschritte im Userspace stattfinden.
+
+    \item[NFA-08 Reproduzierbarkeit:]
+    Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
+    
+    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen werden können.
+\end{description}
+
+\newpage
+
+\section{Konzeption}
+% Inhalt einfügen.
+
+\subsection{Architektur}
+
+Die Architektur des Prototyps ist in zwei zentrale Bereiche unterteilt: den Userspace und den Kernelspace. 
+Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-Systemen und ermöglicht es, komplexe Logik zur Policy-Verarbeitung außerhalb des Kernels auszuführen, während sicherheitskritische Zugriffsentscheidungen direkt im Kernel umgesetzt werden.
+
+\begin{itemize}
+    \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung der SAPL-Policies. 
+    Dazu gehört insbesondere das Einlesen, Parsen und Auswerten der Policies sowie die Bereitstellung dynamischer Attribute. 
+    Diese Attribute können sich zur Laufzeit ändern und werden dem Kernel zur Verfügung gestellt.
+
+    \item \textbf{Kernelspace:} Im Kernelspace wird das Linux Security Module integriert. 
+    Dieses greift über LSM-Hooks in sicherheitsrelevante Operationen ein und trifft Zugriffentscheidungen auf Basis der vom Userspace bereitgestellten Informationen. 
+    Zusätzlich muss der Kernel auf Änderungen von Attributen reagieren können, um bereits bestehende Zugriffe gegebenenfalls nachträglich einzuschränken oder zu entziehen.
+\end{itemize}
+
+Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
+Sie dient dazu, Policies, Entscheidungen oder Attribute zwischen beiden Bereichen auszutauschen. 
+Dadurch kann die Policy-Logik im Userspace verbleiben, während der Kernel die eigentliche Durchsetzung der Zugriffskontrolle übernimmt.
+
+\subsection{Komponenten}
+Die Architektur des Prototyps setzt sich aus mehreren Komponenten zusammen, die jeweils eine abgegrenzte Aufgabe innerhalb der Zugriffskontrolle übernehmen. 
+Im Folgenden werden die wichtigsten Komponenten beschrieben.
+
+\subsubsection{Policies}
+Im Userspace befinden sich Policies in einem Verzeichnis, welches von der Policyverwaltung überwacht wird. Es wird zwischen statischen Policies und Streampolicies unterschieden.
+Die statischen Policies können ohne die Einbeziehung von Streamingattributen evaluiert werden. Die Streamingpolicies evaluieren in Abhängigkeit von Streamingattributen.
+
+\subsubsection{Policyverwaltung}
+Die Policies werden in Textform und SAPL-Syntax in einem Verzeichnis hinterlegt. 
+Dieses Verzeichnis wird von der Policyverwaltung überwacht und bei einer Änderung in den Kernel geladen. Da es hier unter Reca COnditions zu Inkonsistenzen kommen kann,
+werden die Policies nur als atomare Einheit in den Kernel geladen. Dies wird durch ein Generationensystem gewährleistet.  
+Eine neue Generation Policies wird vor der Anwendung und dem Laden in den Kernelspace zuerst im Userspace validiert. Nach erfolgreicher Validierung 
+werden die Policies in den Kernelspace übertragen. Weiterhin wird hierdurch die Fehlertoleranz erhöht, da keine halb geschriebene Policygeneration aktiv ist.
+
+Die Policyverwaltung beinhaltet Gelesene Policy-Dokumente, geparste Policies, 
+kompilierte Policies, Policygenerationen und aktive und zuletzt gütlige Policyversionen. 
+
+\subsubsection{Monitor}
+Der Monitor überwacht Prozesse in Userspace und prüft, ob diese mit aktiven Policies in Konflikt stehen. 
+Ist dies der Fall, tritt eine Folge ein. Je nach Filehook, wird z.B. der Prozess aus dem Userspace heraus beendet oder der Fildedescriptor gelöscht.
+\subsubsection{Datenobjekte im Userspace}
+
+Weiterhin befinden sich im Userspace Stramingattribute. Diese sind die aktuelle Uhrzeit und ein DEFCON-Level. Diese Attribute werden bei Änderung, bzw. im Fall der Uhrzeit jede Sekunde in den Kernel gestreamt.
+Der Monitor 
+
+\subsubsection{Datenobjekte im Kernel}
+Datenobjekte im Kernel sind Policies. Diese werden nach Validierung aus dem Userspace in den Kernelspace geladen. 
+
+\subsubsection{LSM}
+
+\subsubsection{Administrationstool}
+
+
+\subsection{Entwurfsentscheidungen}
+% Inhalt einfügen.
+
+\newpage
+
+\section{Entwurf und Umsetzung}
+\subsection{Komponente 1}
+% Inhalt einfügen.
+
+\subsection{Komponente 2}
+% Inhalt einfügen.
+
+\subsection{Komponente 3}
+% Inhalt einfügen.
+
+\subsection{Implementierungsdetails}
+% Inhalt einfügen.
+
+\newpage
+
+\section{Evaluation}
+% Inhalt einfügen.
+
+\subsection{Testumgebung}
+% Inhalt einfügen.
+
+\subsection{Testszenarien}
+% Inhalt einfügen.
+
+\subsection{Ergebnisse}
+% Inhalt einfügen.
+
+\newpage
+
+\section{Zusammenfassung und Ausblick}
+% Inhalt einfügen.
+
+\newpage
+\bibliographystyle{plainnat}  % klassischer Stil für Autor–Jahr
+\bibliography{literatur}      % Datei "literatur.bib" im Projektordner
+\end{document}
