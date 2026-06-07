@@ -1,0 +1,90 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="tails-pdp-architecture" name="Architekturdiagramm">
+    <mxGraphModel dx="1143" dy="1016" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="userspace" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#444444;fontStyle=1;verticalAlign=top;spacingTop=8;" value="Userspace" vertex="1">
+          <mxGeometry height="650" width="380" x="70" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="kernelspace" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#444444;fontStyle=1;verticalAlign=top;spacingTop=8;" value="Kernelspace" vertex="1">
+          <mxGeometry height="650" width="410" x="680" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="policydir" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Policy-Verzeichnis&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;policies/&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="policymgmt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Policyverwaltung&lt;br&gt;Einlesen, Parsen, Validieren" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="attributes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;div&gt;Attributloader&lt;/div&gt;Stream-Attribute&lt;br&gt;Zeit, DEFCON" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="monitor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Monitor&lt;br&gt;bestehende Zugriffe" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="procfs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Prozess- und Ressourcenstatus&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;/proc/*/fd&lt;/font&gt;, &lt;font face=&quot;Courier New&quot;&gt;/proc/net/*&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="maps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="eBPF-Maps&lt;br&gt;Policies, Attribute, Entscheidungen" vertex="1">
+          <mxGeometry height="70" width="240" x="765" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="hooks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="LSM-Hooks&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;file_open&lt;/font&gt;, &lt;font face=&quot;Courier New&quot;&gt;socket_bind&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="240" x="765" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="evaluation" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Policy-Auswertung&lt;br&gt;static und stream" vertex="1">
+          <mxGeometry height="70" width="240" x="765" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="combining" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Combining&lt;br&gt;Permit oder Deny" vertex="1">
+          <mxGeometry height="70" width="240" x="765" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="kernelresult" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="LSM-Entscheidung&lt;br&gt;an den Kernel&lt;br&gt;0 oder -1" vertex="1">
+          <mxGeometry height="80" width="300" x="735" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-policydir-policymgmt" edge="1" parent="1" source="policydir" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="policymgmt" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-policymgmt-maps" edge="1" parent="1" source="policymgmt" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="maps" value="Policy-Generation">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="550" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-attributes-maps" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="maps" value="aktuelle Attribute">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-hooks-evaluation" edge="1" parent="1" source="hooks" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="evaluation" value="LSM-Kontext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-maps-evaluation" edge="1" parent="1" source="maps" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="evaluation" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="165" />
+              <mxPoint x="1060" y="385" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-evaluation-combining" edge="1" parent="1" source="evaluation" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="combining" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-combining-result" edge="1" parent="1" source="combining" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="kernelresult" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-policymgmt-monitor" edge="1" parent="1" source="policymgmt" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="aktive Policies">
+          <mxGeometry relative="1" x="0.0667" y="110" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-attributes-monitor" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="aktuelle Attribute">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="offene Dateien und Sockets">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-monitor-procfs" edge="1" parent="1" source="monitor" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="procfs" value="FD-Enforcement">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
