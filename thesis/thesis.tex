@@ -133,51 +133,7 @@ Sie beziehen sich insbesondere auf die Verarbeitung von Policies, die Kommunikat
 \end{description}
 
 
-\subsection{Nichtfunktionale Anforderungen}
-Die nichtfunktionalen Anforderungen beschreiben qualitative Eigenschaften des Prototyps. 
-Sie sind insbesondere relevant, da die Umsetzung im Kontext des Linux-Kernels erfolgt und daher Stabilität, Sicherheit und Nachvollziehbarkeit eine besondere Rolle spielen.
 
-\begin{description}
-    \item[NFA-01 Stabilität:]
-    Der Prototyp darf die Stabilität des Linux-Kernels nicht unnötig gefährden.
-    
-    \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
-
-    \item[NFA-02 Sicherheit:]
-    Die Kommunikation zwischen Userspace und Kernelspace muss so gestaltet sein, dass ungültige oder manipulierte Eingaben geprüft werden.
-    
-    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffsentscheidungen verwendet werden.
-
-    \item[NFA-03 Nachvollziehbarkeit:]
-    Relevante Entscheidungen und Zustandsänderungen sollen nachvollziehbar protokolliert werden.
-    
-    \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
-
-    \item[NFA-04 Wartbarkeit:]
-    Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
-    
-    \textit{Akzeptanzkriterium:} Die zentralen Komponenten sind im Quellcode klar voneinander getrennt.
-
-    \item[NFA-05 Erweiterbarkeit:]
-    Der Prototyp soll so entworfen werden, dass weitere Attribute, Policies oder LSM-Hooks ergänzt werden können.
-    
-    \textit{Akzeptanzkriterium:} Die Architektur erlaubt die Ergänzung weiterer Attribute oder Hooks ohne grundlegende Umstrukturierung.
-
-    \item[NFA-06 Performance:]
-    Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
-    
-    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet.
-
-    \item[NFA-07 Begrenzter Kernel-Anteil:]
-    Komplexe Policy-Logik soll möglichst im Userspace verbleiben, um die Komplexität im Kernel zu reduzieren.
-    
-    \textit{Akzeptanzkriterium:} Der Kernel übernimmt vor allem die Durchsetzung der Entscheidung, während komplexere Verarbeitungsschritte im Userspace stattfinden.
-
-    \item[NFA-08 Reproduzierbarkeit:]
-    Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
-    
-    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen werden können.
-\end{description}
 
 \newpage
 
