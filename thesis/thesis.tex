@@ -193,21 +193,27 @@ Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-System
     Dieser unterteilt sich in das Hauptprogramm, einen Atttributloader, einen Monitor und die Policyverwaltung. 
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
     Die Policyverwaltung liest die SAPL-Policies, parst diese und lädt sie bei in den Kernel. 
-    Der Monitor überwacht Dateizufgriffe und Socketzugriffe im Userspace und prüft etwaige Policyverletzungen.
+    Der Monitor überwacht Datei- und Socketzugriffe im Userspace und prüft etwaige Policyverletzungen.
     Mittels einem Enforcement kann der Prozess bei einer Policyverletzung beendet oder der Dateizugriff mittels löschen des FileDescriptors beendet werden.
     
-    \item \textbf{Kernelspace:} Im Kernelspace wird das Linux Security Module integriert. 
+    \item \textbf{Kernelspace:} Im Kernelspace wird ein Linux Security Module integriert. 
     Dieses greift über LSM-Hooks in sicherheitsrelevante Operationen ein und trifft Zugriffentscheidungen auf Basis der vom Userspace bereitgestellten Policies. 
     Hierbei wertet das LSM auch Streamingattribute, welche vom Userspace aus in den Kernel gestreamt werden aus.
 \end{itemize}
-
 Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
 Sie dient dazu, Policies, Entscheidungen oder Attribute zwischen beiden Bereichen auszutauschen. 
 Dadurch kann die Policy-Logik im Userspace verbleiben, 
 während der Kernel die eigentliche Durchsetzung der 
 Zugriffskontrolle vor Dateizugriff bzw. Socket-Bind übernimmt.
 Die nachträgliche Zugriffskontrolle bei schon erlaubtem Hook ist
-mit einem LSM nicht möglich, dies wird durch den Monitor überwacht und enforcet.
+mit einem LSM nicht möglich, dies wird durch den Monitor überwacht und durchgesetzt.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{architecture.jpg}
+    \caption{Konzeptionelle Architektur des Prototyps}
+    \label{fig:konzeption-architektur}
+\end{figure}
 
 
 \subsection{Datenfluss}
@@ -274,38 +280,166 @@ Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Monitor
 Die Architektur des Prototyps setzt sich aus mehreren Komponenten zusammen, die jeweils eine abgegrenzte Aufgabe innerhalb der Zugriffskontrolle übernehmen. 
 Im Folgenden werden die wichtigsten Komponenten beschrieben.
 
-\subsubsection{Policies}
-Im Userspace befinden sich Policies in einem Verzeichnis, welches von der Policyverwaltung überwacht wird. Es wird zwischen statischen Policies und Streampolicies unterschieden.
-Die statischen Policies können ohne die Einbeziehung von Streamingattributen evaluiert werden. Die Streamingpolicies evaluieren in Abhängigkeit von Streamingattributen.
 
-\subsubsection{Policyverwaltung}
-Die Policies werden in Textform und SAPL-Syntax in einem Verzeichnis hinterlegt. 
-Dieses Verzeichnis wird von der Policyverwaltung überwacht und bei einer Änderung in den Kernel geladen. Da es hier unter Reca COnditions zu Inkonsistenzen kommen kann,
-werden die Policies nur als atomare Einheit in den Kernel geladen. Dies wird durch ein Generationensystem gewährleistet.  
-Eine neue Generation Policies wird vor der Anwendung und dem Laden in den Kernelspace zuerst im Userspace validiert. Nach erfolgreicher Validierung 
-werden die Policies in den Kernelspace übertragen. Weiterhin wird hierdurch die Fehlertoleranz erhöht, da keine halb geschriebene Policygeneration aktiv ist.
+\subsubsection{Userspace-Komponenten}
 
-Die Policyverwaltung beinhaltet Gelesene Policy-Dokumente, geparste Policies, 
-kompilierte Policies, Policygenerationen und aktive und zuletzt gütlige Policyversionen. 
+Im Userspace befinden sich die Komponenten, die Policies verwalten, dynamische Attribute bereitstellen und bestehende Zugriffssituationen überwachen. 
+Dadurch verbleiben komplexere Verarbeitungsschritte außerhalb des Kernels.
 
-\subsubsection{Monitor}
-Der Monitor überwacht Prozesse in Userspace und prüft, ob diese mit aktiven Policies in Konflikt stehen. 
-Ist dies der Fall, tritt eine Folge ein. Je nach Filehook, wird z.B. der Prozess aus dem Userspace heraus beendet oder der Fildedescriptor gelöscht.
+\paragraph{Policies}
+Policies beschreiben die Zugriffsvorgaben des Systems. 
+Sie legen fest, welches Subjekt unter welchen Bedingungen auf welche Ressource zugreifen darf oder nicht darf. 
+Im Prototyp liegen sie als Textdateien im Policy-Verzeichnis \texttt{policies/}. 
+Dabei wird zwischen statischen Policies und Streampolicies unterschieden. 
+Statische Policies werden ausschließlich anhand vergleichsweise stabiler Eigenschaften wie Subjekt, Aktion oder Ressource bewertet. 
+Streampolicies beziehen zusätzlich dynamische Attribute ein, beispielsweise die aktuelle Zeit oder ein extern gesetztes Attribut. 
+Policies sind damit keine ausführbare Programmlogik, sondern Eingabedaten für die Policyverwaltung und die spätere Auswertung im Kernelspace.
+
+\paragraph{Policyverwaltung}
+Die Policyverwaltung bildet die Schnittstelle zwischen den menschenlesbaren Policy-Dateien und der im Kernel verwendbaren Policy-Repräsentation. 
+Sie überwacht das Verzeichnis \texttt{policies/}, liest die dort abgelegten Policies ein, verarbeitet sie und validiert sie vor der Aktivierung. 
+Nach erfolgreicher Validierung werden die Policies in eine Form überführt, die vom Kernelspace ausgewertet werden kann.
+
+Da Policies während des Betriebs geändert werden können, muss verhindert werden, dass der Kernel eine nur teilweise aktualisierte Policy-Menge verwendet. 
+Dazu aktiviert die Policyverwaltung Policies als atomare Einheit. 
+Dies wird durch ein Generationensystem gewährleistet: Eine neue Policy-Generation wird zunächst vollständig im Userspace vorbereitet und validiert. 
+Erst danach wird sie in den Kernelspace übertragen und als gültige Generation aktiviert. 
+Schlägt dieser Vorgang fehl, bleibt die zuletzt gültige Generation aktiv.
+
+Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kompilierte Policies, Policygenerationen sowie aktive und zuletzt gültige Policyversionen. 
+
+\paragraph{Attributloader}
+Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
+Diese Attribute sind nicht notwendigerweise Bestandteil eines einzelnen Zugriffsvorgangs, können aber die Entscheidung beeinflussen. 
+Im Prototyp betrifft dies insbesondere die aktuelle Zeit sowie externe Attribute aus dem Verzeichnis \texttt{environment/}. 
+Der Attributloader schreibt diese Werte in den Kernelspace, damit sie dort bei der Auswertung von Streampolicies berücksichtigt werden können.
+
+Der Attributloader trifft selbst keine Zugriffsentscheidung. 
+Seine Aufgabe besteht darin, die Entscheidungsgrundlage aktuell zu halten.
+
+\paragraph{Monitor}
+Der Monitor ergänzt die kernelbasierte Zugriffskontrolle um die nachträgliche Überwachung bereits bestehender Zugriffssituationen. 
+Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweiligen Kernelereignisses prüft. 
+Ändern sich danach dynamische Attribute, wird ein bereits bestehender Zugriff nicht automatisch erneut durch denselben Hook geprüft.
+
+Der Monitor betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen. 
+Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors und aktive Sockets. 
+Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
+Wird eine Verletzung erkannt, kann ein nachträgliches Enforcement ausgelöst werden. 
+Bei Dateizugriffen kann dies beispielsweise bedeuten, dass ein betroffener File Descriptor geschlossen und damit der Zugriff auf eine bereits geöffnete Ressource beendet wird.
+
+Der Monitor ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
+
+\subsubsection{Kernelspace-Komponenten}
+
+\paragraph{LSM}
+Die LSM-Komponente bildet den kernelbasierten Durchsetzungspunkt des Prototyps. 
+Sie greift über LSM-Hooks in sicherheitsrelevante Operationen ein und erhält dadurch Zugriff auf die für die Entscheidung relevanten Zugriffsdaten. 
+Auf dieser Grundlage werden die im Kernelspace vorliegenden Policies ausgewertet. 
+Das Ergebnis dieser Auswertung entscheidet, ob der jeweilige Zugriff erlaubt oder verweigert wird.
+
+\subsubsection{Administrationskomponente}
+
+\paragraph{Administrationstool}
+Das Administrationstool dient der Bedienung und Diagnose des Prototyps. 
+Es ermöglicht, zentrale Informationen zum Zustand des Systems einzusehen und administrative Operationen auszuführen. 
+Damit ist es nicht die primäre Quelle der Policies, sondern eine ergänzende Verwaltungs- und Diagnosekomponente.
+
+
+\subsection{Datenobjekte}
+
+Neben den aktiven Komponenten besitzt der Prototyp mehrere zentrale Datenobjekte. 
+Diese Datenobjekte beschreiben den Zustand des Systems und bilden die Grundlage für Policy-Verarbeitung, Zugriffsauswertung und Monitoring. 
+Im Folgenden wird zwischen Datenobjekten im Userspace und Datenobjekten im Kernelspace unterschieden.
+
 \subsubsection{Datenobjekte im Userspace}
 
-Weiterhin befinden sich im Userspace Stramingattribute. Diese sind die aktuelle Uhrzeit und ein DEFCON-Level. Diese Attribute werden bei Änderung, bzw. im Fall der Uhrzeit jede Sekunde in den Kernel gestreamt.
-Der Monitor 
+Im Userspace liegen die Datenobjekte, die für die Verwaltung, Vorbereitung und nachträgliche Überwachung von Policies benötigt werden. 
+Dazu gehören zunächst die Policy-Dateien im Verzeichnis \texttt{policies/}. 
+Sie stellen die menschenlesbare Beschreibung der Zugriffsvorgaben dar.
 
-\subsubsection{Datenobjekte im Kernel}
-Datenobjekte im Kernel sind Policies. Diese werden nach Validierung aus dem Userspace in den Kernelspace geladen. 
+Während der Verarbeitung entstehen daraus weitere Datenobjekte: gelesene Policy-Dokumente, geparste Policies und kompilierte Policies. 
+Diese Zwischenformen sind notwendig, um die textuellen Policies in eine strukturierte Form zu überführen, die später in den Kernelspace übertragen werden kann. 
+Zusätzlich verwaltet der Userspace Policygenerationen. 
+Eine Policygeneration beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
 
-\subsubsection{LSM}
+Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformationen oder externe Zustandswerte aus dem Verzeichnis \texttt{environment/}. 
+Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
 
-\subsubsection{Administrationstool}
+Für den Monitor sind außerdem Prozess- und Ressourceninformationen relevant. 
+Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene File Descriptors, geöffnete Dateien und aktive Sockets. 
+Diese Informationen stammen aus Betriebssystemquellen wie \texttt{/proc/<PID>/fd} und werden verwendet, um bestehende Zugriffssituationen gegen die aktiven Policies zu prüfen.
 
+\subsubsection{Datenobjekte im Kernelspace}
+
+Im Kernelspace liegen die Datenobjekte, die für die unmittelbare Zugriffskontrolle an den LSM-Hooks benötigt werden. 
+Dazu gehören die geladenen statischen Policies und Streampolicies. 
+Sie werden nach erfolgreicher Validierung aus dem Userspace übertragen und in eBPF-Maps abgelegt.
+
+Neben den Policies befinden sich auch dynamische Attribute im Kernelspace. 
+Dazu zählen insbesondere die aktuelle Zeit und externe Zustandswerte, die vom Attributloader bereitgestellt werden. 
+Diese Attribute dienen der Auswertung von Streampolicies.
+
+Bei einem Zugriff erzeugt der Kernelspace außerdem Zugriffsdaten. 
+Diese beschreiben die konkrete Anfrage, beispielsweise das Subjekt, den Prozessnamen, die betroffene Ressource oder Socket-Informationen. 
+Auf Grundlage dieser Zugriffsdaten werden die geladenen Policies ausgewertet.
+
+Schließlich existieren im Kernelspace Zwischenergebnisse der Entscheidungsfindung. 
+Sie halten fest, ob während der Auswertung eine anwendbare Permit- oder Deny-Policy gefunden wurde. 
+Diese Zwischenergebnisse werden im Combining zusammengeführt und bestimmen die finale Entscheidung des LSM-Hooks.
 
 \subsection{Entwurfsentscheidungen}
-% Inhalt einfügen.
+
+\subsubsection{Trennung von Userspace und Kernelspace}
+Das Reference-Monitor-Konzept bildet eine grundlegende theoretische 
+Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
+muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
+muss eine vollständige Überprüfung aller Zugriffe auf geschützte Ressourcen gewährleistet sein
+\cite{anderson1972computer}.
+Wright et al. beschreiben, dass das LSM-Framework Sicherheits-Hooks 
+an sicherheitskritischen Stellen des Kernels einfügt und dass diese Hooks
+Rückgabewerte liefern, welche über Erfolg oder Fehler der angeforderten Operation 
+entscheiden. Daraus folgt, dass die Zugriffskontrollentscheidung innerhalb des Kernel-Ausführungspfades 
+erfolgen muss \cite{wright2002linux}.
+
+Daraus folgt jedoch nicht, dass die gesamte Policy-Verarbeitung im Kernelspace erfolgen muss. 
+Insbesondere das Einlesen, Parsen und Validieren textueller SAPL-Policies ist vergleichsweise komplex und fehleranfällig. 
+Diese Verarbeitungsschritte eignen sich daher besser für den Userspace, da Fehler dort nicht unmittelbar die Stabilität des Kernels gefährden. 
+Der Kernelspace wird im Prototyp auf die sicherheitskritische Auswertung einer bereits vorbereiteten Policy-Repräsentation beschränkt.
+
+Die gewählte Architektur trennt daher zwischen Policy-Verarbeitung im Userspace und Zugriffsdurchsetzung im Kernelspace. 
+Der Userspace übernimmt die Verwaltung der Policies, die Bereitstellung dynamischer Attribute und die Überwachung bereits bestehender Zugriffssituationen. 
+Der Kernelspace übernimmt die unmittelbare Entscheidung an den LSM-Hooks. 
+Damit wird die Komplexität im Kernel reduziert, während die Zugriffskontrolle weiterhin im sicherheitskritischen Ausführungspfad des Kernels durchgesetzt wird.
+
+
+\subsubsection{Einsatz von eBPF-LSM statt klassischem Kernelmodul}
+
+\subsubsection{Auswahl der LSM-Hooks}
+
+\subsubsection{Policy-Verarbeitung im Userspace}
+
+\subsubsection{Reduzierte Policy-Repräsentation im Kernelspace}
+
+\subsubsection{Kommunikation über eBPF-Maps}
+
+\subsubsection{Generationenmodell für Policy-Aktualisierungen}
+
+\subsubsection{Trennung statischer Policies und Streampolicies}
+
+\subsubsection{Aufteilung der Policy-Maps nach Hook und Policy-Typ}
+
+\subsubsection{Tail-Call-basierte Aufteilung der eBPF-Programme}
+
+\subsubsection{Combining-Strategie für Policy-Entscheidungen}
+
+\subsubsection{Identifikation von Dateien über Device und Inode}
+
+\subsubsection{Nachträgliche Überwachung durch den Monitor}
+
+\subsubsection{Enforcement durch Schließen von File Descriptors}
+
+\subsubsection{Administration und Diagnose über ein separates Tool}
 
 \newpage
 

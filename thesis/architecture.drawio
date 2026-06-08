@@ -78,11 +78,15 @@
         <mxCell id="edge-attributes-monitor" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="aktuelle Attribute">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="offene Dateien und Sockets">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="geöffnete Dateien und Sockets">
+          <mxGeometry relative="1" y="90" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="edge-monitor-procfs" edge="1" parent="1" source="monitor" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="procfs" value="FD-Enforcement">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" y="60" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
