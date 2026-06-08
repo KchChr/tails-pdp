@@ -36,17 +36,18 @@
 
 \subsection{Motivation}
 Die Sicherheit von Linux-Systemen ist ein fundamentales Anliegen in der heutigen IT-Landschaft. 
-Das Linux Security Module Framework stellt Mechanismen für verschiedene Sicherheitsprüfungen mittels Attribut Based Access Control im Linuxkernel dar \citep{kernelorgLSM}. 
-Anhand von Hooks, welche an den Aufruf einer Ressource gebunden sind, lassen sich mittels eines LSMs  Zugriffsentscheidungen treffen. Dieser Mechanismus stellt jedoch nur eine 
-einmalige Zugriffkontrolle dar. Wenn auf eine Ressource dauerhaft zugegriffen wird, kann anhand eines Hooks lediglich einmal geprüft werden, der Zugriff findet dann, auch bei geänderten Bedingungen weiterhin statt.
+Das Linux Security Module Framework stellt Mechanismen für verschiedene Sicherheitsprüfungen mittels Attribute-Based Access Control im Linux-Kernel dar \citep{kernelorgLSM}. 
+LSM-Hooks ermöglichen es, sicherheitsrelevante Kerneloperationen abzufangen und auf dieser Grundlage Zugriffsentscheidungen zu treffen.
+Ein LSM-Hook prüft einen Zugriff jedoch grundsätzlich zu dem Zeitpunkt, an dem die jeweilige Kerneloperation ausgeführt wird.
+Bei dauerhaft bestehenden Zugriffen wird eine spätere Änderung der Entscheidungsgrundlage dadurch nicht automatisch erneut bewertet.
 
 
 
 \subsection{Zielsetzung}
-Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels Attribut Stream based Access Control im Linuxkernel stattfindet. 
-Hier sollen insbesondere Stream-Attribute, wie z.B. die Zeit und von außen in Echtzeit in den Kernel gestreamte Attribute, zur Entscheidung herangezogen werden.
-Ziel ist hier die Implementierung eines Prototypen, der Policies einliest und in den Kernel und Zugriffsentscheidunden anhand dieser Policies trifft. 
-Weiterhin sollen diese Policies auch überwacht und bei sich ändernden Bedingungen notwendigerweise auch mittels eines Enforcements umgesetzt werden.
+Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels Attribute Stream-Based Access Control im Linux-Kernel stattfindet. 
+Insbesondere sollen Stream-Attribute wie Zeitinformationen sowie externe, zur Laufzeit aktualisierte Attribute in die Zugriffsentscheidung einbezogen werden.
+Ziel ist die Implementierung eines Prototyps, der Policies einliest, in den Kernel überträgt und Zugriffsentscheidungen anhand dieser Policies trifft. 
+Darüber hinaus soll untersucht werden, wie bereits bestehende Zugriffssituationen bei nachträglich geänderten Bedingungen erkannt und eingeschränkt werden können.
 
 
 \subsection{Aufbau der Arbeit}
@@ -60,7 +61,7 @@ Weiterhin sollen diese Policies auch überwacht und bei sich ändernden Bedingun
 \subsection{Linux Security Modules}
 % Inhalt einfügen.
 
-\subsection{Attribut Stream Based Access Control}
+\subsection{Attribute Stream-Based Access Control}
 % Inhalt einfügen.
 
 \subsection{SAPL}
@@ -145,12 +146,12 @@ Sie sind insbesondere relevant, da die Umsetzung im Kontext des Linux-Kernels er
     \item[NFA-02 Sicherheit:]
     Die Kommunikation zwischen Userspace und Kernelspace muss so gestaltet sein, dass ungültige oder manipulierte Eingaben geprüft werden.
     
-    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffentscheidungen verwendet werden.
+    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffsentscheidungen verwendet werden.
 
     \item[NFA-03 Nachvollziehbarkeit:]
     Relevante Entscheidungen und Zustandsänderungen sollen nachvollziehbar protokolliert werden.
     
-    \textit{Akzeptanzkriterium:} Für zentrale Zugriffentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
+    \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
 
     \item[NFA-04 Wartbarkeit:]
     Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
@@ -190,23 +191,22 @@ Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-System
 
 \begin{itemize}
     \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung der SAPL-Policies. 
-    Dieser unterteilt sich in das Hauptprogramm, einen Atttributloader, einen Monitor und die Policyverwaltung. 
+    Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Monitor und die Policyverwaltung. 
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
-    Die Policyverwaltung liest die SAPL-Policies, parst diese und lädt sie bei in den Kernel. 
-    Der Monitor überwacht Datei- und Socketzugriffe im Userspace und prüft etwaige Policyverletzungen.
-    Mittels einem Enforcement kann der Prozess bei einer Policyverletzung beendet oder der Dateizugriff mittels löschen des FileDescriptors beendet werden.
+    Die Policyverwaltung liest die SAPL-Policies, parst diese und lädt sie in den Kernel.
+    Der Monitor überwacht Datei- und Socketzugriffe im Userspace und prüft mögliche Policy-Verletzungen.
+    Durch eine nachträgliche Durchsetzungsmaßnahme kann der Prozess bei einer Policy-Verletzung beendet oder der Dateizugriff durch das Schließen des File Descriptors beendet werden.
     
     \item \textbf{Kernelspace:} Im Kernelspace wird ein Linux Security Module integriert. 
-    Dieses greift über LSM-Hooks in sicherheitsrelevante Operationen ein und trifft Zugriffentscheidungen auf Basis der vom Userspace bereitgestellten Policies. 
+    Dieses greift über LSM-Hooks in sicherheitsrelevante Operationen ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies. 
     Hierbei wertet das LSM auch Streamingattribute, welche vom Userspace aus in den Kernel gestreamt werden aus.
 \end{itemize}
 Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
 Sie dient dazu, Policies, Entscheidungen oder Attribute zwischen beiden Bereichen auszutauschen. 
 Dadurch kann die Policy-Logik im Userspace verbleiben, 
-während der Kernel die eigentliche Durchsetzung der 
-Zugriffskontrolle vor Dateizugriff bzw. Socket-Bind übernimmt.
-Die nachträgliche Zugriffskontrolle bei schon erlaubtem Hook ist
-mit einem LSM nicht möglich, dies wird durch den Monitor überwacht und durchgesetzt.
+während der Kernel die unmittelbare Durchsetzung der Zugriffskontrolle bei Dateizugriffen und beim Binden von Sockets übernimmt.
+Für Zugriffe, die bereits durch einen LSM-Hook erlaubt wurden, erfolgt keine automatische erneute Bewertung durch denselben Hook.
+Diese nachträgliche Überwachung wird durch den Monitor übernommen.
 
 \begin{figure}[ht]
     \centering
@@ -242,12 +242,13 @@ Im Prototyp betrifft dies insbesondere Zeitinformationen sowie ein extern bereit
 Die Userspace-Komponente ermittelt diese Werte beziehungsweise liest sie aus einer definierten Quelle ein. 
 Anschließend werden die aktuellen Werte in dafür vorgesehene eBPF-Maps geschrieben. 
 Der Kernel kann diese Werte bei der Auswertung von Streampolicies lesen und in die Zugriffsentscheidung einbeziehen. 
+Eine Streampolicy bezeichnet in dieser Arbeit eine Policy, die neben statischen Zugriffsdaten auch dynamische Attribute auswertet.
 Dadurch können Policies formuliert werden, deren Entscheidung nicht nur von statischen Eigenschaften wie Benutzer-ID oder Ressource abhängt, sondern auch von veränderlichen Laufzeitzuständen.
 
 \subsubsection{Zugriffsentscheidungen im Kernel}
 
 Wenn ein kontrollierter Zugriff stattfindet, wird im Kernel ein LSM-Hook ausgelöst. 
-Bei einem Dateizugriff ist dies beispielsweise der Hook \texttt{file\_open}, bei einem Socket-Bind der Hook \texttt{socket\_bind}. 
+Bei einem Dateizugriff ist dies beispielsweise der Hook \texttt{file\_open}, bei einer Socket-Bind-Operation der Hook \texttt{socket\_bind}. 
 Das eBPF-Programm liest aus dem Hook-Kontext die für die Entscheidung relevanten Informationen aus. 
 Dazu gehören unter anderem das Subjekt, die angefragte Ressource und der aktuelle Prozesskontext.
 
@@ -306,7 +307,7 @@ Dies wird durch ein Generationensystem gewährleistet: Eine neue Policy-Generati
 Erst danach wird sie in den Kernelspace übertragen und als gültige Generation aktiviert. 
 Schlägt dieser Vorgang fehl, bleibt die zuletzt gültige Generation aktiv.
 
-Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kompilierte Policies, Policygenerationen sowie aktive und zuletzt gültige Policyversionen. 
+Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kompilierte Policies, Policy-Generationen sowie aktive und zuletzt gültige Policy-Versionen. 
 
 \paragraph{Attributloader}
 Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
@@ -360,8 +361,8 @@ Sie stellen die menschenlesbare Beschreibung der Zugriffsvorgaben dar.
 
 Während der Verarbeitung entstehen daraus weitere Datenobjekte: gelesene Policy-Dokumente, geparste Policies und kompilierte Policies. 
 Diese Zwischenformen sind notwendig, um die textuellen Policies in eine strukturierte Form zu überführen, die später in den Kernelspace übertragen werden kann. 
-Zusätzlich verwaltet der Userspace Policygenerationen. 
-Eine Policygeneration beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
+Zusätzlich verwaltet der Userspace Policy-Generationen. 
+Eine Policy-Generation beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
 
 Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformationen oder externe Zustandswerte aus dem Verzeichnis \texttt{environment/}. 
 Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
@@ -391,6 +392,13 @@ Diese Zwischenergebnisse werden im Combining zusammengeführt und bestimmen die 
 \subsection{Entwurfsentscheidungen}
 
 \subsubsection{Trennung von Userspace und Kernelspace}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 Das Reference-Monitor-Konzept bildet eine grundlegende theoretische 
 Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
 muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
@@ -400,7 +408,7 @@ Wright et al. beschreiben, dass das LSM-Framework Sicherheits-Hooks
 an sicherheitskritischen Stellen des Kernels einfügt und dass diese Hooks
 Rückgabewerte liefern, welche über Erfolg oder Fehler der angeforderten Operation 
 entscheiden. Daraus folgt, dass die Zugriffskontrollentscheidung innerhalb des Kernel-Ausführungspfades 
-erfolgen muss \cite{wright2002linux}.
+erfolgen muss~\cite{wright2002linux}.
 
 Daraus folgt jedoch nicht, dass die gesamte Policy-Verarbeitung im Kernelspace erfolgen muss. 
 Insbesondere das Einlesen, Parsen und Validieren textueller SAPL-Policies ist vergleichsweise komplex und fehleranfällig. 
@@ -415,31 +423,152 @@ Damit wird die Komplexität im Kernel reduziert, während die Zugriffskontrolle 
 
 \subsubsection{Einsatz von eBPF-LSM statt klassischem Kernelmodul}
 
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Ein klassisches LSM ist Teil des Kernelcodes oder wird als Kernelmodul entwickelt.
+Änderungen an einem solchen Modul erfordern einen erneuten Build- und Ladeprozess.
+Für einen experimentellen Prototyp führt dies zu vergleichsweise langen Entwicklungsiterationen.
+
+Gewählt wurde daher die Implementierung als eBPF-LSM.
+Diese Implementierung erlaubt es, eBPF-Programme an LSM-Hooks auszuführen und damit Zugriffskontrollentscheidungen im Kernel-Ausführungspfad zu treffen~\cite{kernelBpfLsm}.
+Die Programme können zur Laufzeit geladen werden und werden vor der Ausführung durch den eBPF-Verifier geprüft~\cite{kernelBpfVerifier}.
+
+Ein weiterer Grund für diese Entscheidung ist die Möglichkeit, eBPF-Programme mit Rust zu entwickeln.
+Der Prototyp nutzt dafür Aya.
+Aya ist eine Rust-Bibliothek für die Entwicklung von eBPF-Programmen und stellt damit eine Alternative zu einer C-basierten Implementierung dar~\cite{ayaBook}.
+Dadurch können Userspace- und eBPF-Anteile innerhalb desselben Rust-Workspaces entwickelt werden.
+Zusätzlich können gemeinsame Datenstrukturen und Teile der Policy-Auswertungslogik in einem gemeinsamen Crate abgebildet werden.
+Dies verbessert die Konsistenz zwischen Userspace und Kernelspace und reduziert doppelte Implementierungen.
+
+Eine Alternative wäre die Entwicklung eines klassischen LSM gewesen.
+Diese Alternative bietet grundsätzlich größere Freiheiten im Kernelcode, erhöht jedoch Entwicklungs- und Wartungsaufwand.
+Für den Prototyp ist eBPF-LSM geeigneter, da Änderungen schneller getestet werden können und gleichzeitig ein sicherheitsrelevanter Ausführungspunkt im Kernel genutzt wird.
+
+Konsequenzen dieser Entscheidung sind, dass die Implementierung die Einschränkungen von eBPF beachten muss, insbesondere die Prüfung durch den Verifier, die begrenzte Stack-Nutzung und die eingeschränkte Programmkomplexität.
+Diese Einschränkungen beeinflussen unter anderem die Aufteilung der eBPF-Programme in verschiedene Tail-Calls und die reduzierte Policy-Repräsentation im Kernelspace.
+
+
 \subsubsection{Auswahl der LSM-Hooks}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Policy-Verarbeitung im Userspace}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Reduzierte Policy-Repräsentation im Kernelspace}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Kommunikation über eBPF-Maps}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Generationenmodell für Policy-Aktualisierungen}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Trennung statischer Policies und Streampolicies}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Aufteilung der Policy-Maps nach Hook und Policy-Typ}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Tail-Call-basierte Aufteilung der eBPF-Programme}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Combining-Strategie für Policy-Entscheidungen}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Identifikation von Dateien über Device und Inode}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Nachträgliche Überwachung durch den Monitor}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \subsubsection{Administration und Diagnose über ein separates Tool}
+% Muster Entwurfsentscheidung:
+% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
+% 2. Entscheidung: Welche Lösung wurde gewählt?
+% 3. Begründung: Warum wurde diese Lösung gewählt?
+% 4. Alternativen: Welche anderen Möglichkeiten gab es?
+% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
+% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 
 \newpage
 

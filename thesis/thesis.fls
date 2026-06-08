@@ -903,6 +903,8 @@ INPUT ./thesis.bbl
 INPUT thesis.bbl
 INPUT ./thesis.bbl
 INPUT thesis.bbl
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/txfonts/t1xtt.tfm
+INPUT /usr/local/texlive/2021/texmf-dist/fonts/tfm/public/txfonts/t1xtt.tfm
 INPUT thesis.aux
 INPUT ./thesis.out
 INPUT ./thesis.out

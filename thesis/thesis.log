@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  8 JUN 2026 10:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  8 JUN 2026 12:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -699,67 +699,76 @@ LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
 (Font)              scaled to size 14.4pt on input line 37.
  [4] [5]
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/it' will be
-(Font)              scaled to size 12.0pt on input line 85.
+(Font)              scaled to size 12.0pt on input line 86.
 
-Overfull \hbox (6.47527pt too wide) in paragraph at lines 98--99
+Overfull \hbox (6.47527pt too wide) in paragraph at lines 99--100
 []\T1/ntxtlf/m/n/12 Der Pro-to-typ muss si-cher-heits-re-le-van-te Ope-
  []
 
 
-Overfull \hbox (6.17531pt too wide) in paragraph at lines 103--104
+Overfull \hbox (6.17531pt too wide) in paragraph at lines 104--105
 []\T1/ntxtlf/m/n/12 Der Pro-to-typ muss Zu-griffs-ent-schei-
  []
 
 
-Overfull \hbox (8.71921pt too wide) in paragraph at lines 113--114
+Overfull \hbox (8.71921pt too wide) in paragraph at lines 114--115
 []\T1/ntxtlf/m/n/12 Der Pro-to-typ muss be-ste-hen-de Zu-grif-fe über-
  []
 
 [6]
-Overfull \hbox (12.65631pt too wide) in paragraph at lines 156--157
+Overfull \hbox (12.65631pt too wide) in paragraph at lines 157--158
 []\T1/ntxtlf/m/n/12 Die Im-ple-men-tie-rung soll mo-du-lar auf-ge-baut sein, so
 -dass Userspace-
  []
 
 [7]
-Overfull \hbox (1.9992pt too wide) in paragraph at lines 171--172
+Overfull \hbox (1.9992pt too wide) in paragraph at lines 172--173
 []\T1/ntxtlf/m/n/12 Komplexe Policy-Logik soll mög-lichst im User-space
  []
 
 [8]
 LaTeX Font Info:    Trying to load font information for TS1+ntxtlf on input lin
-e 192.
+e 193.
  (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/ts1ntxtlf.fd
 File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 )
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
-(Font)              scaled to size 12.0pt on input line 192.
-<architecture.jpg, id=301, 1025.8325pt x 653.44125pt>
+(Font)              scaled to size 12.0pt on input line 193.
+<architecture.jpg, id=301, 1024.82875pt x 653.44125pt>
 File: architecture.jpg Graphic file (type jpg)
 <use architecture.jpg>
 Package pdftex.def Info: architecture.jpg  used on input line 213.
-(pdftex.def)             Requested size: 405.45047pt x 258.261pt.
+(pdftex.def)             Requested size: 405.45047pt x 258.52025pt.
  [9]
 LaTeX Font Info:    Trying to load font information for T1+ntxtt on input line 
-250.
+251.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/t1ntxtt.fd
 File: t1ntxtt.fd 2012/04/20 v3.1
 )
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 12.0pt on input line 250.
- [10 <./architecture.jpg>] [11] [12] [13] [14] [15] [16] [17] [18] (./thesis.bb
-l) [19]
-(./thesis.aux)
+(Font)              scaled to size 12.0pt on input line 251.
+ [10 <./architecture.jpg>] [11]
+Overfull \hbox (6.21725pt too wide) in paragraph at lines 310--311
+\T1/ntxtlf/m/n/12 kom-pi-lier-te Po-li-cies, Policy-Generationen so-wie ak-ti-v
+e und zu-letzt gül-ti-ge Policy-Versionen. 
+ []
+
+[12] [13] [14] [15] [16] [17] [18] (./thesis.bbl
+LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
+(Font)              scaled to size 8.8pt on input line 27.
+LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
+(Font)              scaled to size 6.6pt on input line 27.
+) [19] (./thesis.aux)
 Package rerunfilecheck Info: File `thesis.out' has not changed.
-(rerunfilecheck)             Checksum: 147D8F67F4693106D938A7054841075A;9868.
+(rerunfilecheck)             Checksum: 53F757DDD8E9B79C3655039DBDB8C901;9870.
  ) 
 Here is how much of TeX's memory you used:
- 14021 strings out of 478994
- 194569 string characters out of 5858184
- 512106 words of memory out of 5000000
- 31174 multiletter control sequences out of 15000+600000
- 452858 words of font info for 99 fonts, out of 8000000 for 9000
+ 14035 strings out of 478994
+ 194832 string characters out of 5858184
+ 512251 words of memory out of 5000000
+ 31185 multiletter control sequences out of 15000+600000
+ 453502 words of font info for 101 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  71i,6n,74p,397b,512s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/
@@ -769,10 +778,10 @@ e/2021/texmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021
 /texmf-dist/fonts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-di
 st/fonts/type1/public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/
 type1/public/newtx/ztmri.pfb>
-Output written on thesis.pdf (19 pages, 281304 bytes).
+Output written on thesis.pdf (19 pages, 282821 bytes).
 PDF statistics:
- 410 PDF objects out of 1000 (max. 8388607)
- 374 compressed objects within 4 object streams
- 84 named destinations out of 1000 (max. 500000)
+ 423 PDF objects out of 1000 (max. 8388607)
+ 387 compressed objects within 4 object streams
+ 87 named destinations out of 1000 (max. 500000)
  414 words of extra memory for PDF output out of 10000 (max. 10000000)
 
