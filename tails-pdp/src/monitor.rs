@@ -10,14 +10,17 @@ use std::{
 };
 
 use anyhow::Context;
-use aya::maps::{Array, Map, MapData};
+use aya::maps::{Array, HashMap as AyaHashMap, Map, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
-    DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    Iso8601TimeParts, POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
-    SocketBindStreamPolicy, SocketFamily, SocketTransport, command_name,
-    evaluate_file_open_static_policy, evaluate_file_open_stream_policy,
-    evaluate_socket_bind_static_policy, evaluate_socket_bind_stream_policy, policy_bank_offset,
+    AttributeKey, AttributeValue, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
+    FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS,
+    POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
+    SocketBindStreamPolicy, SocketFamily, SocketTransport, attribute_bank, attribute_object_id,
+    command_name, evaluate_file_open_static_policy, evaluate_socket_bind_static_policy,
+    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
+    matches_attribute_condition, policy_bank_offset, socket_bind_stream_legacy_entitlement,
+    socket_bind_stream_policy_applies_to_request,
 };
 use tokio::time;
 
@@ -29,6 +32,8 @@ type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
 type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
 type CurrentDefconMap = Array<MapData, u32>;
+type AttributeGenerationMap = Array<MapData, u32>;
+type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
 
 #[derive(Clone, Debug)]
 struct ActiveSocket {
@@ -115,6 +120,8 @@ struct PolicyMaps {
     socket_bind_static: SocketBindStaticPolicyMap,
     socket_bind_stream: SocketBindStreamPolicyMap,
     current_defcon: CurrentDefconMap,
+    attribute_generation: AttributeGenerationMap,
+    attributes: AttributeMap,
 }
 
 pub async fn run_policy_monitor() -> anyhow::Result<()> {
@@ -178,6 +185,14 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
             &Path::new(BPF_PIN_DIRECTORY).join("CURRENT_DEFCON"),
             "CURRENT_DEFCON",
         )?,
+        attribute_generation: open_array_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("ATTRIBUTE_GENERATION"),
+            "ATTRIBUTE_GENERATION",
+        )?,
+        attributes: open_hash_map(
+            &Path::new(BPF_PIN_DIRECTORY).join("ATTRIBUTES"),
+            "ATTRIBUTES",
+        )?,
     })
 }
 
@@ -186,6 +201,16 @@ fn open_array_map<T: aya::Pod>(path: &Path, label: &str) -> anyhow::Result<Array
         .with_context(|| format!("failed to open pinned map '{}'", path.display()))?;
     let map = Map::Array(map_data);
     Array::try_from(map).with_context(|| format!("failed to open {label} as array map"))
+}
+
+fn open_hash_map<K: aya::Pod, V: aya::Pod>(
+    path: &Path,
+    label: &str,
+) -> anyhow::Result<AyaHashMap<MapData, K, V>> {
+    let map_data = MapData::from_pin(path)
+        .with_context(|| format!("failed to open pinned map '{}'", path.display()))?;
+    let map = Map::HashMap(map_data);
+    AyaHashMap::try_from(map).with_context(|| format!("failed to open {label} as hash map"))
 }
 
 fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Violation>> {
@@ -205,6 +230,8 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
         .current_defcon
         .get(&0, 0)
         .unwrap_or(DEFAULT_DEFCON_LEVEL);
+    let current_attribute_bank =
+        attribute_bank(policies.attribute_generation.get(&0, 0).unwrap_or(0));
     let mut violations = Vec::new();
 
     for process_fd in process_fds {
@@ -217,6 +244,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 current_time,
                 current_iso8601_time,
                 current_defcon,
+                current_attribute_bank,
                 bank_offset,
                 &inotify_fds,
                 &mut violations,
@@ -228,6 +256,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 current_time,
                 current_iso8601_time,
                 current_defcon,
+                current_attribute_bank,
                 bank_offset,
                 &mut violations,
             )?,
@@ -246,6 +275,7 @@ fn collect_file_open_violations(
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
     current_defcon: u32,
+    current_attribute_bank: u32,
     bank_offset: u32,
     inotify_fds: &HashMap<u32, Vec<i32>>,
     violations: &mut Vec<Violation>,
@@ -293,13 +323,20 @@ fn collect_file_open_violations(
             .with_context(|| {
                 format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}] for monitor")
             })?;
-        if evaluate_file_open_stream_policy(
-            &request,
-            current_time,
-            current_iso8601_time,
-            current_defcon,
-            &policy,
-        ) == Some(Entitlement::Deny)
+        if file_open_stream_policy_applies_to_request(&request, &policy)
+            && attribute_conditions_match(
+                policy.attribute_condition_count,
+                &policy.attribute_conditions,
+                request.subject,
+                current_attribute_bank,
+                &policies.attributes,
+            )
+            && file_open_stream_legacy_entitlement(
+                current_time,
+                current_iso8601_time,
+                current_defcon,
+                &policy,
+            ) == Some(Entitlement::Deny)
         {
             violations.push(file_violation(
                 process_fd,
@@ -355,6 +392,7 @@ fn collect_socket_bind_violations(
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
     current_defcon: u32,
+    current_attribute_bank: u32,
     bank_offset: u32,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
@@ -393,13 +431,20 @@ fn collect_socket_bind_violations(
             .with_context(|| {
                 format!("failed to read SOCKET_BIND_STREAM_POLICIES[{map_index}] for monitor")
             })?;
-        if evaluate_socket_bind_stream_policy(
-            &request,
-            current_time,
-            current_iso8601_time,
-            current_defcon,
-            &policy,
-        ) == Some(Entitlement::Deny)
+        if socket_bind_stream_policy_applies_to_request(&request, &policy)
+            && attribute_conditions_match(
+                policy.attribute_condition_count,
+                &policy.attribute_conditions,
+                request.subject,
+                current_attribute_bank,
+                &policies.attributes,
+            )
+            && socket_bind_stream_legacy_entitlement(
+                current_time,
+                current_iso8601_time,
+                current_defcon,
+                &policy,
+            ) == Some(Entitlement::Deny)
         {
             violations.push(socket_violation(
                 process_fd,
@@ -411,6 +456,33 @@ fn collect_socket_bind_violations(
     }
 
     Ok(())
+}
+
+fn attribute_conditions_match(
+    condition_count: u8,
+    conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
+    subject: u32,
+    bank: u32,
+    attributes: &AttributeMap,
+) -> bool {
+    for condition in conditions
+        .iter()
+        .take((condition_count as usize).min(MAX_ATTRIBUTE_CONDITIONS))
+    {
+        let key = AttributeKey::new(
+            bank,
+            condition.namespace,
+            attribute_object_id(condition.namespace, subject),
+            condition.name_hash,
+        );
+        let Ok(value) = attributes.get(&key, 0) else {
+            return false;
+        };
+        if !matches_attribute_condition(condition, &value) {
+            return false;
+        }
+    }
+    true
 }
 
 fn file_violation(

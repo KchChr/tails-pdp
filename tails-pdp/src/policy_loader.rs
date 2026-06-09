@@ -3,6 +3,7 @@ use std::{mem::size_of, path::Path};
 use anyhow::{Context, bail};
 use aya::maps::{Array, MapInfo};
 use tails_pdp_common::{
+    ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
     SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
@@ -16,6 +17,7 @@ const CURRENT_TIME_MAX_ENTRIES: u32 = 1;
 
 fn verify_pinned_map_layout(
     map_name: &str,
+    expected_key_size: u32,
     expected_value_size: u32,
     expected_max_entries: u32,
 ) -> anyhow::Result<()> {
@@ -31,7 +33,7 @@ fn verify_pinned_map_layout(
     let actual_value_size = info.value_size();
     let actual_max_entries = info.max_entries();
 
-    if actual_key_size == ARRAY_KEY_SIZE
+    if actual_key_size == expected_key_size
         && actual_value_size == expected_value_size
         && actual_max_entries == expected_max_entries
     {
@@ -42,7 +44,7 @@ fn verify_pinned_map_layout(
         "pinned map '{}' at '{}' has an incompatible layout: expected key_size={}, value_size={}, max_entries={}, found key_size={}, value_size={}, max_entries={}. Remove the stale pinned map and restart, for example: sudo rm -f {}",
         map_name,
         pin_path.display(),
-        ARRAY_KEY_SIZE,
+        expected_key_size,
         expected_value_size,
         expected_max_entries,
         actual_key_size,
@@ -55,43 +57,63 @@ fn verify_pinned_map_layout(
 pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
     verify_pinned_map_layout(
         "FILE_OPEN_STATIC_POLICIES",
+        ARRAY_KEY_SIZE,
         size_of::<FileOpenStaticPolicy>() as u32,
         FILE_OPEN_STATIC_POLICY_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "FILE_OPEN_STREAM_POLICIES",
+        ARRAY_KEY_SIZE,
         size_of::<FileOpenStreamPolicy>() as u32,
         FILE_OPEN_STREAM_POLICY_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "SOCKET_BIND_STATIC_POLICIES",
+        ARRAY_KEY_SIZE,
         size_of::<SocketBindStaticPolicy>() as u32,
         SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "SOCKET_BIND_STREAM_POLICIES",
+        ARRAY_KEY_SIZE,
         size_of::<SocketBindStreamPolicy>() as u32,
         SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "POLICY_GENERATION",
+        ARRAY_KEY_SIZE,
         size_of::<u32>() as u32,
         POLICY_GENERATION_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "CURRENT_TIME",
+        ARRAY_KEY_SIZE,
         size_of::<u64>() as u32,
         CURRENT_TIME_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "CURRENT_TIME_ISO8601",
+        ARRAY_KEY_SIZE,
         size_of::<Iso8601TimeParts>() as u32,
         CURRENT_TIME_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "CURRENT_DEFCON",
+        ARRAY_KEY_SIZE,
         size_of::<u32>() as u32,
         STREAM_ATTRIBUTE_MAX_ENTRIES,
+    )?;
+    verify_pinned_map_layout(
+        "ATTRIBUTE_GENERATION",
+        ARRAY_KEY_SIZE,
+        size_of::<u32>() as u32,
+        ATTRIBUTE_GENERATION_MAX_ENTRIES,
+    )?;
+    verify_pinned_map_layout(
+        "ATTRIBUTES",
+        size_of::<AttributeKey>() as u32,
+        size_of::<AttributeValue>() as u32,
+        ATTRIBUTE_MAP_MAX_ENTRIES,
     )?;
     Ok(())
 }

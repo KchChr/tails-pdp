@@ -1,8 +1,9 @@
 use aya_ebpf::{
     macros::map,
-    maps::{Array, PerCpuArray, ProgramArray},
+    maps::{Array, HashMap, PerCpuArray, ProgramArray},
 };
 use tails_pdp_common::{
+    ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
     SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
@@ -58,3 +59,11 @@ pub(crate) static CURRENT_TIME_ISO8601: Array<Iso8601TimeParts> = Array::pinned(
 
 #[map]
 pub(crate) static CURRENT_DEFCON: Array<u32> = Array::pinned(STREAM_ATTRIBUTE_MAX_ENTRIES, 0);
+
+#[map]
+pub(crate) static ATTRIBUTE_GENERATION: Array<u32> =
+    Array::pinned(ATTRIBUTE_GENERATION_MAX_ENTRIES, 0);
+
+#[map]
+pub(crate) static ATTRIBUTES: HashMap<AttributeKey, AttributeValue> =
+    HashMap::pinned(ATTRIBUTE_MAP_MAX_ENTRIES, 0);

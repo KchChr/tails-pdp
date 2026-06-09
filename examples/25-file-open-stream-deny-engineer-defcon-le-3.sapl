@@ -1,0 +1,7 @@
+policy "deny file_open for engineers at DEFCON 3 or lower"
+deny
+    action == "file_open";
+    command == "cat";
+    resource.path == "/home/hntr/test.txt";
+    subject.position == "engineer";
+    system.defcon <= 3;

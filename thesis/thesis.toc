@@ -9,49 +9,51 @@
 \contentsline {subsection}{\numberline {2.3}SAPL}{5}{subsection.2.3}%
 \contentsline {section}{\numberline {3}Anforderungsanalyse}{6}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Funktionale Anforderungen}{6}{subsection.3.1}%
-\contentsline {section}{\numberline {4}Konzeption}{8}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Architektur}{8}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Datenfluss}{8}{subsection.4.2}%
-\contentsline {subsubsection}{\numberline {4.2.1}Policy-Datenfluss}{8}{subsubsection.4.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2}Datenfluss dynamischer Attribute}{9}{subsubsection.4.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.3}Zugriffsentscheidungen im Kernel}{9}{subsubsection.4.2.3}%
-\contentsline {subsubsection}{\numberline {4.2.4}Monitoring bestehender Zugriffe}{10}{subsubsection.4.2.4}%
-\contentsline {subsection}{\numberline {4.3}Komponenten}{10}{subsection.4.3}%
-\contentsline {subsubsection}{\numberline {4.3.1}Userspace-Komponenten}{10}{subsubsection.4.3.1}%
-\contentsline {paragraph}{Policies}{10}{section*.2}%
-\contentsline {paragraph}{Policyverwaltung}{11}{section*.3}%
-\contentsline {paragraph}{Attributloader}{11}{section*.4}%
-\contentsline {paragraph}{Monitor}{11}{section*.5}%
-\contentsline {subsubsection}{\numberline {4.3.2}Kernelspace-Komponenten}{12}{subsubsection.4.3.2}%
-\contentsline {paragraph}{LSM}{12}{section*.6}%
-\contentsline {subsubsection}{\numberline {4.3.3}Administrationskomponente}{12}{subsubsection.4.3.3}%
-\contentsline {paragraph}{Administrationstool}{12}{section*.7}%
-\contentsline {subsection}{\numberline {4.4}Datenobjekte}{12}{subsection.4.4}%
-\contentsline {subsubsection}{\numberline {4.4.1}Datenobjekte im Userspace}{12}{subsubsection.4.4.1}%
-\contentsline {subsubsection}{\numberline {4.4.2}Datenobjekte im Kernelspace}{12}{subsubsection.4.4.2}%
-\contentsline {subsection}{\numberline {4.5}Entwurfsentscheidungen}{13}{subsection.4.5}%
-\contentsline {subsubsection}{\numberline {4.5.1}Trennung von Userspace und Kernelspace}{13}{subsubsection.4.5.1}%
-\contentsline {subsubsection}{\numberline {4.5.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{13}{subsubsection.4.5.2}%
-\contentsline {subsubsection}{\numberline {4.5.3}Auswahl der LSM-Hooks}{14}{subsubsection.4.5.3}%
-\contentsline {subsubsection}{\numberline {4.5.4}Policy-Verarbeitung im Userspace}{14}{subsubsection.4.5.4}%
-\contentsline {subsubsection}{\numberline {4.5.5}Reduzierte Policy-Repräsentation im Kernelspace}{14}{subsubsection.4.5.5}%
-\contentsline {subsubsection}{\numberline {4.5.6}Kommunikation über eBPF-Maps}{14}{subsubsection.4.5.6}%
-\contentsline {subsubsection}{\numberline {4.5.7}Generationenmodell für Policy-Aktualisierungen}{14}{subsubsection.4.5.7}%
-\contentsline {subsubsection}{\numberline {4.5.8}Trennung statischer Policies und Streampolicies}{14}{subsubsection.4.5.8}%
-\contentsline {subsubsection}{\numberline {4.5.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{14}{subsubsection.4.5.9}%
-\contentsline {subsubsection}{\numberline {4.5.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{14}{subsubsection.4.5.10}%
-\contentsline {subsubsection}{\numberline {4.5.11}Combining-Strategie für Policy-Entscheidungen}{14}{subsubsection.4.5.11}%
-\contentsline {subsubsection}{\numberline {4.5.12}Identifikation von Dateien über Device und Inode}{14}{subsubsection.4.5.12}%
-\contentsline {subsubsection}{\numberline {4.5.13}Nachträgliche Überwachung durch den Monitor}{14}{subsubsection.4.5.13}%
-\contentsline {subsubsection}{\numberline {4.5.14}Enforcement durch Schließen von File Descriptors}{14}{subsubsection.4.5.14}%
-\contentsline {subsubsection}{\numberline {4.5.15}Administration und Diagnose über ein separates Tool}{14}{subsubsection.4.5.15}%
-\contentsline {section}{\numberline {5}Entwurf und Umsetzung}{15}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Komponente 1}{15}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Komponente 2}{15}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Komponente 3}{15}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Implementierungsdetails}{15}{subsection.5.4}%
-\contentsline {section}{\numberline {6}Evaluation}{16}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Testumgebung}{16}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Testszenarien}{16}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Ergebnisse}{16}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{17}{section.7}%
+\contentsline {subsection}{\numberline {3.2}Operationale Anforderungen}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Entwicklungsbezogene Anforderungen}{8}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Konzeption}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Architektur}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Datenfluss}{9}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Policy-Datenfluss}{9}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Datenfluss dynamischer Attribute}{10}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Zugriffsentscheidungen im Kernel}{10}{subsubsection.4.2.3}%
+\contentsline {subsubsection}{\numberline {4.2.4}Monitoring bestehender Zugriffe}{11}{subsubsection.4.2.4}%
+\contentsline {subsection}{\numberline {4.3}Komponenten}{11}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Userspace-Komponenten}{11}{subsubsection.4.3.1}%
+\contentsline {paragraph}{Policies}{11}{section*.2}%
+\contentsline {paragraph}{Policyverwaltung}{12}{section*.3}%
+\contentsline {paragraph}{Attributloader}{12}{section*.4}%
+\contentsline {paragraph}{Monitor}{12}{section*.5}%
+\contentsline {subsubsection}{\numberline {4.3.2}Kernelspace-Komponenten}{13}{subsubsection.4.3.2}%
+\contentsline {paragraph}{LSM}{13}{section*.6}%
+\contentsline {subsubsection}{\numberline {4.3.3}Administrationskomponente}{13}{subsubsection.4.3.3}%
+\contentsline {paragraph}{Administrationstool}{13}{section*.7}%
+\contentsline {subsection}{\numberline {4.4}Datenobjekte}{13}{subsection.4.4}%
+\contentsline {subsubsection}{\numberline {4.4.1}Datenobjekte im Userspace}{13}{subsubsection.4.4.1}%
+\contentsline {subsubsection}{\numberline {4.4.2}Datenobjekte im Kernelspace}{13}{subsubsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.5}Entwurfsentscheidungen}{14}{subsection.4.5}%
+\contentsline {subsubsection}{\numberline {4.5.1}Trennung von Userspace und Kernelspace}{14}{subsubsection.4.5.1}%
+\contentsline {subsubsection}{\numberline {4.5.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{14}{subsubsection.4.5.2}%
+\contentsline {subsubsection}{\numberline {4.5.3}Auswahl der LSM-Hooks}{15}{subsubsection.4.5.3}%
+\contentsline {subsubsection}{\numberline {4.5.4}Policy-Verarbeitung im Userspace}{15}{subsubsection.4.5.4}%
+\contentsline {subsubsection}{\numberline {4.5.5}Reduzierte Policy-Repräsentation im Kernelspace}{15}{subsubsection.4.5.5}%
+\contentsline {subsubsection}{\numberline {4.5.6}Kommunikation über eBPF-Maps}{15}{subsubsection.4.5.6}%
+\contentsline {subsubsection}{\numberline {4.5.7}Generationenmodell für Policy-Aktualisierungen}{15}{subsubsection.4.5.7}%
+\contentsline {subsubsection}{\numberline {4.5.8}Trennung statischer Policies und Streampolicies}{15}{subsubsection.4.5.8}%
+\contentsline {subsubsection}{\numberline {4.5.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{15}{subsubsection.4.5.9}%
+\contentsline {subsubsection}{\numberline {4.5.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{15}{subsubsection.4.5.10}%
+\contentsline {subsubsection}{\numberline {4.5.11}Combining-Strategie für Policy-Entscheidungen}{15}{subsubsection.4.5.11}%
+\contentsline {subsubsection}{\numberline {4.5.12}Identifikation von Dateien über Device und Inode}{15}{subsubsection.4.5.12}%
+\contentsline {subsubsection}{\numberline {4.5.13}Nachträgliche Überwachung durch den Monitor}{15}{subsubsection.4.5.13}%
+\contentsline {subsubsection}{\numberline {4.5.14}Enforcement durch Schließen von File Descriptors}{15}{subsubsection.4.5.14}%
+\contentsline {subsubsection}{\numberline {4.5.15}Administration und Diagnose über ein separates Tool}{15}{subsubsection.4.5.15}%
+\contentsline {section}{\numberline {5}Entwurf und Umsetzung}{16}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Komponente 1}{16}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Komponente 2}{16}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Komponente 3}{16}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Implementierungsdetails}{16}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Evaluation}{17}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Testumgebung}{17}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Testszenarien}{17}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Ergebnisse}{17}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{18}{section.7}%

@@ -8,10 +8,11 @@ use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, Map, MapData};
 use log::{error, info};
 use tails_pdp_common::{
-    ANY_SUBJECT, COMMAND_LEN, DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement,
-    FileOpenStaticPolicy, FileOpenStreamPolicy, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN,
-    SocketBindStaticPolicy, SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute,
-    StreamOperator, policy_bank_offset,
+    ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_LEN,
+    DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
+    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketBindStaticPolicy,
+    SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute, StreamOperator,
+    attribute_hash, policy_bank_offset,
 };
 use tokio::time::{Duration, sleep};
 
@@ -64,6 +65,7 @@ enum ParsedStreamCondition {
         operator: StreamOperator,
         value: u64,
     },
+    Dynamic(AttributeCondition),
 }
 
 struct ParsedPolicy {
@@ -78,7 +80,7 @@ struct ParsedPolicy {
     socket_transport: SocketTransport,
     socket_resource: Option<String>,
     socket_port: u16,
-    stream_condition: Option<ParsedStreamCondition>,
+    stream_conditions: Vec<ParsedStreamCondition>,
 }
 
 struct PinnedPolicyMaps {
@@ -412,7 +414,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     let mut socket_transport = None;
     let mut socket_resource = None;
     let mut socket_port = None;
-    let mut stream_condition = None;
+    let mut stream_conditions = Vec::new();
 
     for (line_no, line) in lines {
         let statement = line.strip_suffix(';').ok_or_else(|| {
@@ -512,13 +514,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         }
 
         if let Some(parsed_stream_condition) = parse_stream_condition(statement)? {
-            set_once(
-                &mut stream_condition,
-                parsed_stream_condition,
-                &document.relative_path,
-                line_no,
-                "stream condition",
-            )?;
+            stream_conditions.push(parsed_stream_condition);
             continue;
         }
 
@@ -550,105 +546,111 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         socket_transport: socket_transport.unwrap_or(SocketTransport::Any),
         socket_resource,
         socket_port: socket_port.unwrap_or(0),
-        stream_condition,
+        stream_conditions,
     })
 }
 
 fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyhow::Result<()> {
-    match (parsed.action, parsed.stream_condition) {
-        (PolicyAction::FileOpen, None) => {
-            ensure_no_socket_fields(&parsed)?;
-            let command = parsed.command.as_deref().unwrap_or("");
-            let resource = parsed.file_resource.as_deref().unwrap_or("");
-            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-            ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
-            let policy =
-                FileOpenStaticPolicy::new(parsed.entitlement, parsed.subject, command, resource)
-                    .resolve_resource_identity()
-                    .with_context(|| {
-                        format!(
-                            "failed to resolve file_open static resource in '{}'",
-                            parsed.source_path.display()
-                        )
-                    })?;
-            compiled.file_open_static.push(policy);
-        }
-        (PolicyAction::FileOpen, Some(stream_condition)) => {
-            ensure_no_socket_fields(&parsed)?;
-            let command = parsed.command.as_deref().unwrap_or("");
-            let resource = parsed.file_resource.as_deref().unwrap_or("");
-            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-            ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
-            let mut policy = FileOpenStreamPolicy::time(
-                parsed.entitlement,
-                parsed.subject,
-                command,
-                resource,
-                stream_operator(stream_condition),
-                stream_modulo(stream_condition),
-                stream_value(stream_condition),
-            )
-            .resolve_resource_identity()
-            .with_context(|| {
-                format!(
-                    "failed to resolve file_open stream resource in '{}'",
-                    parsed.source_path.display()
+    if parsed.stream_conditions.is_empty() {
+        match parsed.action {
+            PolicyAction::FileOpen => {
+                ensure_no_socket_fields(&parsed)?;
+                let command = parsed.command.as_deref().unwrap_or("");
+                let resource = parsed.file_resource.as_deref().unwrap_or("");
+                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
+                let policy = FileOpenStaticPolicy::new(
+                    parsed.entitlement,
+                    parsed.subject,
+                    command,
+                    resource,
                 )
-            })?;
-            policy.attribute = stream_attribute(stream_condition);
-            compiled.file_open_stream.push(policy);
-        }
-        (PolicyAction::SocketBind, None) => {
-            ensure_no_file_open_resource(&parsed)?;
-            let command = parsed.command.as_deref().unwrap_or("");
-            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-            let resource = parsed.socket_resource.as_deref().unwrap_or("");
-            ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
-            let policy = SocketBindStaticPolicy::new(
-                parsed.entitlement,
-                parsed.subject,
-                command,
-                parsed.socket_family,
-                parsed.socket_transport,
-                parsed.socket_port,
-                resource,
-            )
-            .resolve_resource_identity()
-            .with_context(|| {
-                format!(
-                    "failed to resolve socket_bind static resource in '{}'",
-                    parsed.source_path.display()
+                .resolve_resource_identity()
+                .with_context(|| {
+                    format!(
+                        "failed to resolve file_open static resource in '{}'",
+                        parsed.source_path.display()
+                    )
+                })?;
+                compiled.file_open_static.push(policy);
+            }
+            PolicyAction::SocketBind => {
+                ensure_no_file_open_resource(&parsed)?;
+                let command = parsed.command.as_deref().unwrap_or("");
+                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                let resource = parsed.socket_resource.as_deref().unwrap_or("");
+                ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
+                let policy = SocketBindStaticPolicy::new(
+                    parsed.entitlement,
+                    parsed.subject,
+                    command,
+                    parsed.socket_family,
+                    parsed.socket_transport,
+                    parsed.socket_port,
+                    resource,
                 )
-            })?;
-            compiled.socket_bind_static.push(policy);
+                .resolve_resource_identity()
+                .with_context(|| {
+                    format!(
+                        "failed to resolve socket_bind static resource in '{}'",
+                        parsed.source_path.display()
+                    )
+                })?;
+                compiled.socket_bind_static.push(policy);
+            }
         }
-        (PolicyAction::SocketBind, Some(stream_condition)) => {
-            ensure_no_file_open_resource(&parsed)?;
-            let command = parsed.command.as_deref().unwrap_or("");
-            ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-            let resource = parsed.socket_resource.as_deref().unwrap_or("");
-            ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
-            let mut policy = SocketBindStreamPolicy::time(
-                parsed.entitlement,
-                parsed.subject,
-                command,
-                parsed.socket_family,
-                parsed.socket_transport,
-                parsed.socket_port,
-                resource,
-                stream_operator(stream_condition),
-                stream_modulo(stream_condition),
-                stream_value(stream_condition),
-            )
-            .resolve_resource_identity()
-            .with_context(|| {
-                format!(
-                    "failed to resolve socket_bind stream resource in '{}'",
-                    parsed.source_path.display()
+    } else {
+        let (legacy_condition, attribute_conditions) = split_stream_conditions(&parsed)?;
+        match parsed.action {
+            PolicyAction::FileOpen => {
+                ensure_no_socket_fields(&parsed)?;
+                let command = parsed.command.as_deref().unwrap_or("");
+                let resource = parsed.file_resource.as_deref().unwrap_or("");
+                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
+                let mut policy = FileOpenStreamPolicy::stream(
+                    parsed.entitlement,
+                    parsed.subject,
+                    command,
+                    resource,
                 )
-            })?;
-            policy.attribute = stream_attribute(stream_condition);
-            compiled.socket_bind_stream.push(policy);
+                .resolve_resource_identity()
+                .with_context(|| {
+                    format!(
+                        "failed to resolve file_open stream resource in '{}'",
+                        parsed.source_path.display()
+                    )
+                })?;
+                apply_legacy_stream_condition_file_open(&mut policy, legacy_condition);
+                apply_attribute_conditions_file_open(&mut policy, &attribute_conditions);
+                compiled.file_open_stream.push(policy);
+            }
+            PolicyAction::SocketBind => {
+                ensure_no_file_open_resource(&parsed)?;
+                let command = parsed.command.as_deref().unwrap_or("");
+                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                let resource = parsed.socket_resource.as_deref().unwrap_or("");
+                ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
+                let mut policy = SocketBindStreamPolicy::stream(
+                    parsed.entitlement,
+                    parsed.subject,
+                    command,
+                    parsed.socket_family,
+                    parsed.socket_transport,
+                    parsed.socket_port,
+                    resource,
+                )
+                .resolve_resource_identity()
+                .with_context(|| {
+                    format!(
+                        "failed to resolve socket_bind stream resource in '{}'",
+                        parsed.source_path.display()
+                    )
+                })?;
+                apply_legacy_stream_condition_socket_bind(&mut policy, legacy_condition);
+                apply_attribute_conditions_socket_bind(&mut policy, &attribute_conditions);
+                compiled.socket_bind_stream.push(policy);
+            }
         }
     }
 
@@ -842,7 +844,113 @@ fn parse_stream_condition(statement: &str) -> anyhow::Result<Option<ParsedStream
         return parse_component_stream_condition(remainder, StreamAttribute::Defcon).map(Some);
     }
 
+    if let Some(condition) = parse_dynamic_attribute_condition(statement)? {
+        return Ok(Some(ParsedStreamCondition::Dynamic(condition)));
+    }
+
     Ok(None)
+}
+
+fn parse_dynamic_attribute_condition(
+    statement: &str,
+) -> anyhow::Result<Option<AttributeCondition>> {
+    let Some((lhs, operator, rhs)) = parse_comparison_statement(statement)? else {
+        return Ok(None);
+    };
+
+    let (namespace, attribute_name) = if let Some(attribute_name) = lhs.strip_prefix("subject.") {
+        if attribute_name == "uid" {
+            return Ok(None);
+        }
+        (AttributeNamespace::Subject, attribute_name)
+    } else if let Some(attribute_name) = lhs.strip_prefix("system.") {
+        (AttributeNamespace::System, attribute_name)
+    } else {
+        return Ok(None);
+    };
+
+    validate_dynamic_attribute_name(attribute_name)?;
+    let (value_kind, value_number, value_hash) = parse_dynamic_attribute_value(rhs)?;
+    if value_kind == AttributeValueKind::String && operator != StreamOperator::Equal {
+        bail!("string attributes only support '==' comparisons");
+    }
+
+    Ok(Some(AttributeCondition {
+        namespace,
+        operator,
+        value_kind,
+        _pad: [0; 5],
+        name_hash: attribute_hash(attribute_name),
+        value_number,
+        value_hash,
+    }))
+}
+
+fn parse_comparison_statement(
+    statement: &str,
+) -> anyhow::Result<Option<(&str, StreamOperator, &str)>> {
+    for (raw_operator, operator) in [
+        ("<=", StreamOperator::LessThanOrEqual),
+        (">=", StreamOperator::GreaterThanOrEqual),
+        ("==", StreamOperator::Equal),
+        ("<", StreamOperator::LessThan),
+        (">", StreamOperator::GreaterThan),
+    ] {
+        if let Some((lhs, rhs)) = statement.split_once(raw_operator) {
+            return Ok(Some((lhs.trim(), operator, rhs.trim())));
+        }
+    }
+
+    Ok(None)
+}
+
+fn validate_dynamic_attribute_name(name: &str) -> anyhow::Result<()> {
+    if name.is_empty() {
+        bail!("attribute name must not be empty");
+    }
+    if !name
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+    {
+        bail!("attribute name '{name}' contains unsupported characters");
+    }
+    Ok(())
+}
+
+fn parse_dynamic_attribute_value(
+    raw: &str,
+) -> anyhow::Result<(AttributeValueKind, u64, tails_pdp_common::AttributeHash)> {
+    if raw.starts_with('"') || raw.ends_with('"') {
+        let value = parse_quoted_string(raw)?;
+        return Ok((AttributeValueKind::String, 0, attribute_hash(&value)));
+    }
+
+    match raw {
+        "true" => {
+            return Ok((
+                AttributeValueKind::Bool,
+                1,
+                tails_pdp_common::AttributeHash::zero(),
+            ));
+        }
+        "false" => {
+            return Ok((
+                AttributeValueKind::Bool,
+                0,
+                tails_pdp_common::AttributeHash::zero(),
+            ));
+        }
+        _ => {}
+    }
+
+    let number = raw
+        .parse::<u64>()
+        .with_context(|| format!("attribute value '{raw}' is not a number, bool, or string"))?;
+    Ok((
+        AttributeValueKind::Number,
+        number,
+        tails_pdp_common::AttributeHash::zero(),
+    ))
 }
 
 fn parse_component_stream_condition(
@@ -928,6 +1036,7 @@ fn stream_attribute(condition: ParsedStreamCondition) -> StreamAttribute {
         ParsedStreamCondition::Minute { .. } => StreamAttribute::Minute,
         ParsedStreamCondition::Second { .. } => StreamAttribute::Second,
         ParsedStreamCondition::Defcon { .. } => StreamAttribute::Defcon,
+        ParsedStreamCondition::Dynamic(_) => StreamAttribute::Time,
     }
 }
 
@@ -938,6 +1047,7 @@ fn stream_operator(condition: ParsedStreamCondition) -> StreamOperator {
         | ParsedStreamCondition::Minute { operator, .. }
         | ParsedStreamCondition::Second { operator, .. }
         | ParsedStreamCondition::Defcon { operator, .. } => operator,
+        ParsedStreamCondition::Dynamic(condition) => condition.operator,
     }
 }
 
@@ -947,7 +1057,8 @@ fn stream_modulo(condition: ParsedStreamCondition) -> u64 {
         ParsedStreamCondition::Hour { .. }
         | ParsedStreamCondition::Minute { .. }
         | ParsedStreamCondition::Second { .. }
-        | ParsedStreamCondition::Defcon { .. } => 0,
+        | ParsedStreamCondition::Defcon { .. }
+        | ParsedStreamCondition::Dynamic(_) => 0,
     }
 }
 
@@ -958,6 +1069,92 @@ fn stream_value(condition: ParsedStreamCondition) -> u64 {
         | ParsedStreamCondition::Minute { value, .. }
         | ParsedStreamCondition::Second { value, .. }
         | ParsedStreamCondition::Defcon { value, .. } => value,
+        ParsedStreamCondition::Dynamic(_) => 0,
+    }
+}
+
+fn split_stream_conditions(
+    policy: &ParsedPolicy,
+) -> anyhow::Result<(Option<ParsedStreamCondition>, Vec<AttributeCondition>)> {
+    let mut legacy_condition = None;
+    let mut attribute_conditions = Vec::new();
+
+    for condition in policy.stream_conditions.iter().copied() {
+        match condition {
+            ParsedStreamCondition::Dynamic(attribute_condition) => {
+                attribute_conditions.push(attribute_condition);
+            }
+            _ => {
+                if legacy_condition.is_some() {
+                    bail!(
+                        "policy '{}' in '{}' uses more than one built-in stream condition",
+                        policy.name,
+                        policy.source_path.display()
+                    );
+                }
+                legacy_condition = Some(condition);
+            }
+        }
+    }
+
+    if attribute_conditions.len() > MAX_ATTRIBUTE_CONDITIONS {
+        bail!(
+            "policy '{}' in '{}' uses too many dynamic attribute conditions: {} > {}",
+            policy.name,
+            policy.source_path.display(),
+            attribute_conditions.len(),
+            MAX_ATTRIBUTE_CONDITIONS
+        );
+    }
+
+    Ok((legacy_condition, attribute_conditions))
+}
+
+fn apply_legacy_stream_condition_file_open(
+    policy: &mut FileOpenStreamPolicy,
+    condition: Option<ParsedStreamCondition>,
+) {
+    let Some(condition) = condition else {
+        return;
+    };
+    policy.stream_condition_enabled = 1;
+    policy.attribute = stream_attribute(condition);
+    policy.operator = stream_operator(condition);
+    policy.modulo = stream_modulo(condition);
+    policy.value = stream_value(condition);
+}
+
+fn apply_legacy_stream_condition_socket_bind(
+    policy: &mut SocketBindStreamPolicy,
+    condition: Option<ParsedStreamCondition>,
+) {
+    let Some(condition) = condition else {
+        return;
+    };
+    policy.stream_condition_enabled = 1;
+    policy.attribute = stream_attribute(condition);
+    policy.operator = stream_operator(condition);
+    policy.modulo = stream_modulo(condition);
+    policy.value = stream_value(condition);
+}
+
+fn apply_attribute_conditions_file_open(
+    policy: &mut FileOpenStreamPolicy,
+    conditions: &[AttributeCondition],
+) {
+    policy.attribute_condition_count = conditions.len() as u8;
+    for (index, condition) in conditions.iter().copied().enumerate() {
+        policy.attribute_conditions[index] = condition;
+    }
+}
+
+fn apply_attribute_conditions_socket_bind(
+    policy: &mut SocketBindStreamPolicy,
+    conditions: &[AttributeCondition],
+) {
+    policy.attribute_condition_count = conditions.len() as u8;
+    for (index, condition) in conditions.iter().copied().enumerate() {
+        policy.attribute_conditions[index] = condition;
     }
 }
 

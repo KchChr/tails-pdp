@@ -116,6 +116,24 @@ Zusätzlich darf eine Stream Policy dieselben statischen Hook-Filter nutzen wie 
 Policy, zum Beispiel `command` bei `file_open` oder `command`, `resource.port` und
 `resource.transport` bei `socket_bind` [P3], [P8].
 
+## Strukturierte Attribute
+
+Zusätzlich überwacht [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
+das Verzeichnis [`environment/`](../environment/). Globale Attribute stehen in `system.env`,
+subjektbezogene Attribute in `subjects/<uid>.env`. Gültige Änderungen werden in die gepinnte Map
+`ATTRIBUTES` geschrieben und über `ATTRIBUTE_GENERATION` atomar aktiviert. Bei ungültigen Dateien
+bleibt die zuletzt gültige Attributgeneration aktiv.
+
+Beispiel:
+
+```ini
+# environment/system.env
+defcon = 3
+
+# environment/subjects/1000.env
+position = "engineer"
+```
+
 ## Monitor
 
 Der Monitor steht in [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs).

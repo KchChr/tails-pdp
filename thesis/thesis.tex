@@ -72,12 +72,13 @@ Darüber hinaus soll untersucht werden, wie bereits bestehende Zugriffssituation
 \section{Anforderungsanalyse}
 In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen beschrieben. 
 Die Anforderungen ergeben sich aus der Zielsetzung, SAPL-basierte Zugriffskontrolle im Linux-Kernel zu untersuchen und prototypisch umzusetzen. 
-Dabei wird zwischen funktionalen Anforderungen, die das konkrete Verhalten des Systems beschreiben, und nichtfunktionalen Anforderungen, die qualitative Eigenschaften des Systems festlegen, unterschieden.
+Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit bereitstellen soll.
 
 \subsection{Funktionale Anforderungen}
 
-Die funktionalen Anforderungen beschreiben, welche Aufgaben der Prototyp erfüllen muss. 
-Sie beziehen sich insbesondere auf die Verarbeitung von Policies, die Kommunikation zwischen Userspace und Kernelspace sowie die Durchsetzung von Zugriffsentscheidungen.
+Funktionale Anforderungen beschreiben, welche fachlichen Funktionen der Prototyp bereitstellen muss. 
+Sie sind im Regelfall direkt testbar, da geprüft werden kann, ob eine Funktion vorhanden ist und das erwartete Verhalten zeigt. 
+Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten von Policies, die Zugriffskontrolle über LSM-Hooks sowie die nachträgliche Überwachung bestehender Zugriffe.
 
 \begin{description}
     \item[FA-01 Policy-Einlesen:]
@@ -121,15 +122,66 @@ Sie beziehen sich insbesondere auf die Verarbeitung von Policies, die Kommunikat
     \textit{Akzeptanzkriterium:} Ein Zugriff wird nach einer relevanten Attributänderung entsprechend der Policy unterbunden oder eingeschränkt.
 
     \item[FA-09 Administrationsschnittstelle:]
-    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die Policies oder Systemzustände eingesehen beziehungsweise gesteuert werden können.
+    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die Policies eingesehen und Attribute in den Kernel geschrieben werden können.
     
-    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen.
+    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen und mindestens ein Attribute in den Kernel schreiben.
 
     \item[FA-10 Gültige Policy-Generationen:]
     \hypertarget{anf:gueltige-policy-generationen}{Der Prototyp muss sicherstellen, dass nur erfolgreich erzeugte und validierte Generationen von Policies für Zugriffsentscheidungen verwendet werden.}
     Fehlerhafte, unvollständige oder nicht erfolgreich verarbeitete Policy-Generationen dürfen nicht als aktive Entscheidungsgrundlage gelten.
     
     \textit{Akzeptanzkriterium:} Eine neue Policy-Generation wird erst dann aktiviert, wenn sie vollständig verarbeitet und erfolgreich validiert wurde. Andernfalls bleibt die zuletzt gültige Policy-Generation aktiv.
+\end{description}
+
+\subsection{Operationale Anforderungen}
+
+Operationale Anforderungen beschreiben, wie gut der Prototyp seine Funktionen im Betrieb erfüllen soll. 
+Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation sichtbar sind, beispielsweise Stabilität, Sicherheit, Nachvollziehbarkeit, Performance und Reproduzierbarkeit.
+
+\begin{description}
+    \item[OA-01 Stabilität:]
+    Der Prototyp darf die Stabilität des Linux-Kernels nicht unnötig gefährden.
+    
+    \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
+
+    \item[OA-02 Sicherheit:]
+    Die Kommunikation zwischen Userspace und Kernelspace muss so gestaltet sein, dass ungültige oder manipulierte Eingaben geprüft werden.
+    
+    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffsentscheidungen verwendet werden.
+    
+    \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
+
+    \item[OA-03 Performance:]
+    Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
+    
+    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet.
+
+    \item[OA-04 Reproduzierbarkeit:]
+    Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
+    
+    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen werden können.
+\end{description}
+
+\subsection{Entwicklungsbezogene Anforderungen}
+
+Entwicklungsbezogene Anforderungen beschreiben Eigenschaften, die vor allem für die Entwicklung und spätere Erweiterung des Prototyps relevant sind. 
+Sie sind für Nutzer nicht immer unmittelbar sichtbar, beeinflussen aber, wie verständlich, änderbar und erweiterbar das System bleibt.
+
+\begin{description}
+    \item[EA-01 Wartbarkeit:]
+    Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
+    
+    \textit{Akzeptanzkriterium:} Die zentralen Komponenten sind im Quellcode klar voneinander getrennt.
+
+    \item[EA-02 Erweiterbarkeit:]
+    Der Prototyp soll so entworfen werden, dass weitere Attribute, Policies oder LSM-Hooks ergänzt werden können.
+    
+    \textit{Akzeptanzkriterium:} Die Architektur erlaubt die Ergänzung weiterer Attribute oder Hooks ohne grundlegende Umstrukturierung.
+
+    \item[EA-03 Begrenzter Kernel-Anteil:]
+    Komplexe Policy-Logik soll möglichst im Userspace verbleiben, um die Komplexität im Kernel zu reduzieren.
+    
+    \textit{Akzeptanzkriterium:} Der Kernel übernimmt vor allem die Durchsetzung der Entscheidung, während komplexere Verarbeitungsschritte im Userspace stattfinden.
 \end{description}
 
 

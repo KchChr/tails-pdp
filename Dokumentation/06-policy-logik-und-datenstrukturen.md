@@ -64,7 +64,7 @@ keine Aussage.
 ## Stream Policies
 
 Stream Policies enthalten eine Bedingung gegen einen dynamischen Wert. Aktuell sind Zeitwerte und
-DEFCON unterstützt [P8], [P23].
+DEFCON sowie strukturierte Attribute aus `environment/` unterstützt [P8], [P23].
 
 Unterstützte Attribute:
 
@@ -75,9 +75,15 @@ Unterstützte Attribute:
 | `Minute` | UTC-Minute |
 | `Second` | UTC-Sekunde |
 | `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) |
+| `system.<name>` | Globales Attribut aus `environment/system.env`, gespeichert in `ATTRIBUTES`. |
+| `subject.<name>` | Subjektattribut aus `environment/subjects/<uid>.env`, gespeichert in `ATTRIBUTES`. |
 
 Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Stream-Bedingung wahr ist.
 Ist die Bedingung falsch, ist die Policy nicht anwendbar [P8].
+
+Freie Attributnamen und Stringwerte werden im Userspace stabil gehasht. Der eBPF-Code vergleicht
+dadurch nur kleine feste Werte und muss keine Strings parsen. Pro Policy sind maximal vier
+strukturierte Attributbedingungen vorgesehen.
 
 ## Wichtige Konstanten
 
@@ -123,6 +129,7 @@ Zusätzlich zu Subject und Dateiressource enthält sie:
 | `operator` | Vergleichsoperator. |
 | `modulo` | Nur bei `Time` relevant. |
 | `value` | Vergleichswert. |
+| `attribute_conditions` | Bis zu vier freie `system.*`- oder `subject.*`-Bedingungen. |
 
 Stream-File-Policies enthalten aktuell kein `command`-Feld in der Auswertung.
 

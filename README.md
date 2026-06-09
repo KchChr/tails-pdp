@@ -47,6 +47,8 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
+sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 ```
 
@@ -91,20 +93,41 @@ Supported concepts:
   `command`, `resource.path`
 - `socket_bind` fields:
   `command`, `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
-- one optional stream condition per policy:
+- stream conditions per policy:
   `environment.time % N <op> VALUE`
   `environment.utc.hour <op> VALUE`
   `environment.utc.minute <op> VALUE`
   `environment.utc.second <op> VALUE`
   `environment.defcon.level <op> VALUE`
+  `system.<attribute> <op> VALUE`
+  `subject.<attribute> <op> VALUE`
 
 Stream policies may use the same static hook filters as static policies. Example: a `file_open`
 stream policy may combine `command == "cat"` and `resource.path == "/home/hntr/test.txt"` with
 `environment.defcon.level <= 2`.
 
-`environment.defcon.level` reads the current test DEFCON level from
-`stream-attributes/DEFCON.txt`. Valid values are integers from `1` to `5`. The userspace process
-watches this file and writes valid changes to the pinned `CURRENT_DEFCON` eBPF map.
+`system.<attribute>` and `subject.<attribute>` read external attributes from `environment/`.
+`system.env` contains global attributes. `subjects/<uid>.env` contains attributes for a concrete
+UID. The userspace process watches these files and writes valid changes to the pinned `ATTRIBUTES`
+and `ATTRIBUTE_GENERATION` eBPF maps.
+
+Example:
+
+```ini
+# environment/system.env
+defcon = 3
+
+# environment/subjects/1000.env
+position = "engineer"
+clearance = 2
+```
+
+The policy condition `subject.position == "engineer"` is resolved against the current request UID.
+The condition `system.defcon <= 3` is resolved against the global `system.env` attributes.
+
+`environment.defcon.level` remains supported for compatibility. It reads the current test DEFCON
+level from `environment/DEFCON.txt` and writes valid changes to the pinned `CURRENT_DEFCON` eBPF
+map.
 
 Not supported:
 
@@ -115,9 +138,9 @@ Not supported:
 - `advice`
 - `transform`
 - `or`
-- multiple stream conditions inside one file
+- more than four dynamic `system.*`/`subject.*` attribute conditions per policy
 
-Complex behavior is intentionally expressed by multiple files. Example: “deny before 08:00 and
+Complex disjunctions are intentionally expressed by multiple files. Example: “deny before 08:00 and
 from 16:00 onwards” is represented by two policies.
 
 Example `socket_bind` stream policy:
@@ -165,6 +188,16 @@ cat /home/hntr/test.txt
 
 With the example policy active, DEFCON `5` does not trigger the deny condition. DEFCON `2` does.
 The policy also contains `command == "cat"`, so another program name would not match it.
+
+Example structured attribute workflow:
+
+```shell
+cp examples/25-file-open-stream-deny-engineer-defcon-le-3.sapl policies/
+mkdir -p environment/subjects
+printf 'defcon = 3\n' > environment/system.env
+printf 'position = "engineer"\n' > environment/subjects/1000.env
+cat /home/hntr/test.txt
+```
 
 ## Examples
 

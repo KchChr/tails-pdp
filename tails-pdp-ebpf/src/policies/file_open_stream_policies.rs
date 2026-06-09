@@ -1,14 +1,16 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest, POLICY_BANK_SIZE,
-    evaluate_file_open_stream_policy, policy_bank_offset,
+    AttributeKey, COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
+    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, attribute_bank, attribute_object_id,
+    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
+    matches_attribute_condition, policy_bank_offset,
 };
 
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        CURRENT_DEFCON, CURRENT_TIME, CURRENT_TIME_ISO8601, FILE_OPEN_JUMP_TABLE,
-        FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
+        ATTRIBUTE_GENERATION, ATTRIBUTES, CURRENT_DEFCON, CURRENT_TIME, CURRENT_TIME_ISO8601,
+        FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
     },
     policies::decision::{DecisionMapExt, DecisionState},
 };
@@ -21,6 +23,7 @@ pub(crate) fn evaluate_policies(
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
     current_defcon: u32,
     generation: u32,
+    attribute_bank: u32,
 ) -> DecisionState {
     let mut state = DecisionState::empty_for_generation(generation);
     let request = FileOpenRequest {
@@ -37,13 +40,20 @@ pub(crate) fn evaluate_policies(
     while index < POLICY_BANK_SIZE {
         let map_index = bank_offset + index;
         if let Some(policy) = FILE_OPEN_STREAM_POLICIES.get(map_index) {
-            if let Some(entitlement) = evaluate_file_open_stream_policy(
-                &request,
-                current_time,
-                current_iso8601_time,
-                current_defcon,
-                policy,
-            ) {
+            if file_open_stream_policy_applies_to_request(&request, policy)
+                && attribute_conditions_match(
+                    policy.attribute_condition_count,
+                    &policy.attribute_conditions,
+                    current_subject,
+                    attribute_bank,
+                )
+                && let Some(entitlement) = file_open_stream_legacy_entitlement(
+                    current_time,
+                    current_iso8601_time,
+                    current_defcon,
+                    policy,
+                )
+            {
                 match entitlement {
                     Entitlement::Deny => {
                         if matched_deny_index == u32::MAX {
@@ -82,6 +92,35 @@ pub(crate) fn evaluate_policies(
     state
 }
 
+fn attribute_conditions_match(
+    condition_count: u8,
+    conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
+    current_subject: u32,
+    bank: u32,
+) -> bool {
+    let mut index = 0;
+    while index < MAX_ATTRIBUTE_CONDITIONS {
+        if index >= condition_count as usize {
+            return true;
+        }
+        let condition = &conditions[index];
+        let key = AttributeKey::new(
+            bank,
+            condition.namespace,
+            attribute_object_id(condition.namespace, current_subject),
+            condition.name_hash,
+        );
+        let Some(value) = (unsafe { ATTRIBUTES.get(&key) }) else {
+            return false;
+        };
+        if !matches_attribute_condition(condition, value) {
+            return false;
+        }
+        index += 1;
+    }
+    true
+}
+
 #[lsm(hook = "file_open")]
 pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let mut current_state = DecisionState::from_map();
@@ -98,6 +137,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         .get(0)
         .copied()
         .unwrap_or(DEFAULT_DEFCON_LEVEL);
+    let current_attribute_bank = attribute_bank(ATTRIBUTE_GENERATION.get(0).copied().unwrap_or(0));
     let stream_state = evaluate_policies(
         current_subject,
         &current_command,
@@ -106,6 +146,7 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         current_iso8601_time,
         current_defcon,
         generation,
+        current_attribute_bank,
     );
     current_state.merge(stream_state);
     current_state.write_to_map();

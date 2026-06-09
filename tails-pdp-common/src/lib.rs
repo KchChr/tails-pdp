@@ -14,6 +14,10 @@ pub const POLICY_BANK_SIZE: u32 = MAX_POLICIES;
 pub const POLICY_MAP_MAX_ENTRIES: u32 = POLICY_BANK_COUNT * POLICY_BANK_SIZE;
 pub const POLICY_GENERATION_MAX_ENTRIES: u32 = 1;
 pub const STREAM_ATTRIBUTE_MAX_ENTRIES: u32 = 1;
+pub const ATTRIBUTE_BANK_COUNT: u32 = 2;
+pub const ATTRIBUTE_MAP_MAX_ENTRIES: u32 = 1024;
+pub const ATTRIBUTE_GENERATION_MAX_ENTRIES: u32 = 1;
+pub const MAX_ATTRIBUTE_CONDITIONS: usize = 4;
 pub const DEFCON_MIN_LEVEL: u32 = 1;
 pub const DEFCON_MAX_LEVEL: u32 = 5;
 pub const DEFAULT_DEFCON_LEVEL: u32 = DEFCON_MAX_LEVEL;
@@ -25,6 +29,10 @@ pub const SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 
 pub const fn policy_bank_offset(generation: u32) -> u32 {
     (generation % POLICY_BANK_COUNT) * POLICY_BANK_SIZE
+}
+
+pub const fn attribute_bank(generation: u32) -> u32 {
+    generation % ATTRIBUTE_BANK_COUNT
 }
 
 #[repr(u8)]
@@ -84,6 +92,147 @@ pub enum SocketTransport {
     Any = 0,
     Tcp = 1,
     Udp = 2,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum AttributeNamespace {
+    System = 1,
+    Subject = 2,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum AttributeValueKind {
+    Number = 1,
+    String = 2,
+    Bool = 3,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct AttributeHash {
+    pub low: u64,
+    pub high: u64,
+}
+
+impl AttributeHash {
+    pub const fn zero() -> Self {
+        Self { low: 0, high: 0 }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct AttributeKey {
+    pub bank: u32,
+    pub namespace: AttributeNamespace,
+    pub _pad: [u8; 3],
+    pub object_id: u64,
+    pub name_hash: AttributeHash,
+}
+
+impl AttributeKey {
+    pub const fn new(
+        bank: u32,
+        namespace: AttributeNamespace,
+        object_id: u64,
+        name_hash: AttributeHash,
+    ) -> Self {
+        Self {
+            bank,
+            namespace,
+            _pad: [0; 3],
+            object_id,
+            name_hash,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct AttributeValue {
+    pub kind: AttributeValueKind,
+    pub _pad: [u8; 7],
+    pub number: u64,
+    pub hash: AttributeHash,
+}
+
+impl AttributeValue {
+    pub const fn number(value: u64) -> Self {
+        Self {
+            kind: AttributeValueKind::Number,
+            _pad: [0; 7],
+            number: value,
+            hash: AttributeHash::zero(),
+        }
+    }
+
+    pub const fn bool(value: bool) -> Self {
+        Self {
+            kind: AttributeValueKind::Bool,
+            _pad: [0; 7],
+            number: value as u64,
+            hash: AttributeHash::zero(),
+        }
+    }
+
+    pub const fn string(hash: AttributeHash) -> Self {
+        Self {
+            kind: AttributeValueKind::String,
+            _pad: [0; 7],
+            number: 0,
+            hash,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct AttributeCondition {
+    pub namespace: AttributeNamespace,
+    pub operator: StreamOperator,
+    pub value_kind: AttributeValueKind,
+    pub _pad: [u8; 5],
+    pub name_hash: AttributeHash,
+    pub value_number: u64,
+    pub value_hash: AttributeHash,
+}
+
+impl AttributeCondition {
+    pub const fn disabled() -> Self {
+        Self {
+            namespace: AttributeNamespace::System,
+            operator: StreamOperator::Equal,
+            value_kind: AttributeValueKind::Number,
+            _pad: [0; 5],
+            name_hash: AttributeHash::zero(),
+            value_number: 0,
+            value_hash: AttributeHash::zero(),
+        }
+    }
+}
+
+pub fn attribute_hash(value: &str) -> AttributeHash {
+    attribute_hash_bytes(value.as_bytes())
+}
+
+pub fn attribute_hash_bytes(bytes: &[u8]) -> AttributeHash {
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut low = 0xcbf2_9ce4_8422_2325u64;
+    let mut high = 0x6c62_272e_07bb_0142u64;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        let byte = bytes[index] as u64;
+        low ^= byte;
+        low = low.wrapping_mul(FNV_PRIME);
+        high ^= byte.rotate_left((index % 8) as u32);
+        high = high.wrapping_mul(FNV_PRIME);
+        index += 1;
+    }
+
+    AttributeHash { low, high }
 }
 
 #[repr(C)]
@@ -268,7 +417,9 @@ pub struct FileOpenStreamPolicy {
     pub attribute: StreamAttribute,
     pub operator: StreamOperator,
     pub enabled: u8,
-    pub _pad: [u8; 3],
+    pub stream_condition_enabled: u8,
+    pub attribute_condition_count: u8,
+    pub _pad: u8,
     pub subject: u32,
     pub command: [u8; COMMAND_LEN],
     pub resource: [u8; RESOURCE_LEN],
@@ -276,6 +427,7 @@ pub struct FileOpenStreamPolicy {
     pub resource_inode: u64,
     pub modulo: u64,
     pub value: u64,
+    pub attribute_conditions: [AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
 }
 
 impl FileOpenStreamPolicy {
@@ -286,7 +438,9 @@ impl FileOpenStreamPolicy {
             attribute: StreamAttribute::Time,
             operator: StreamOperator::LessThan,
             enabled: 0,
-            _pad: [0; 3],
+            stream_condition_enabled: 0,
+            attribute_condition_count: 0,
+            _pad: 0,
             subject: ANY_SUBJECT,
             command: [0; COMMAND_LEN],
             resource: [0; RESOURCE_LEN],
@@ -294,6 +448,28 @@ impl FileOpenStreamPolicy {
             resource_inode: 0,
             modulo: 0,
             value: 0,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
+        }
+    }
+
+    pub fn stream(entitlement: Entitlement, subject: u32, command: &str, resource: &str) -> Self {
+        Self {
+            entitlement,
+            action: PolicyAction::FileOpen,
+            attribute: StreamAttribute::Time,
+            operator: StreamOperator::LessThan,
+            enabled: 1,
+            stream_condition_enabled: 0,
+            attribute_condition_count: 0,
+            _pad: 0,
+            subject,
+            command: command_name(command),
+            resource: resource_name(resource),
+            resource_device: 0,
+            resource_inode: 0,
+            modulo: 0,
+            value: 0,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
         }
     }
 
@@ -312,7 +488,9 @@ impl FileOpenStreamPolicy {
             attribute: StreamAttribute::Time,
             operator,
             enabled: 1,
-            _pad: [0; 3],
+            stream_condition_enabled: 1,
+            attribute_condition_count: 0,
+            _pad: 0,
             subject,
             command: command_name(command),
             resource: resource_name(resource),
@@ -320,6 +498,7 @@ impl FileOpenStreamPolicy {
             resource_inode: 0,
             modulo,
             value,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
         }
     }
 
@@ -432,7 +611,9 @@ pub struct SocketBindStreamPolicy {
     pub enabled: u8,
     pub socket_family: SocketFamily,
     pub socket_transport: SocketTransport,
-    pub _pad: u8,
+    pub stream_condition_enabled: u8,
+    pub attribute_condition_count: u8,
+    pub _pad: [u8; 7],
     pub subject: u32,
     pub command: [u8; COMMAND_LEN],
     pub socket_port: u16,
@@ -441,6 +622,7 @@ pub struct SocketBindStreamPolicy {
     pub socket_ip: [u8; SOCKET_IP_LEN],
     pub modulo: u64,
     pub value: u64,
+    pub attribute_conditions: [AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
 }
 
 impl SocketBindStreamPolicy {
@@ -453,7 +635,9 @@ impl SocketBindStreamPolicy {
             enabled: 0,
             socket_family: SocketFamily::Any,
             socket_transport: SocketTransport::Any,
-            _pad: 0,
+            stream_condition_enabled: 0,
+            attribute_condition_count: 0,
+            _pad: [0; 7],
             subject: ANY_SUBJECT,
             command: [0; COMMAND_LEN],
             socket_port: 0,
@@ -462,6 +646,39 @@ impl SocketBindStreamPolicy {
             socket_ip: [0; SOCKET_IP_LEN],
             modulo: 0,
             value: 0,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
+        }
+    }
+
+    pub fn stream(
+        entitlement: Entitlement,
+        subject: u32,
+        command: &str,
+        family: SocketFamily,
+        transport: SocketTransport,
+        port: u16,
+        resource: &str,
+    ) -> Self {
+        Self {
+            entitlement,
+            action: PolicyAction::SocketBind,
+            attribute: StreamAttribute::Time,
+            operator: StreamOperator::LessThan,
+            enabled: 1,
+            socket_family: family,
+            socket_transport: transport,
+            stream_condition_enabled: 0,
+            attribute_condition_count: 0,
+            _pad: [0; 7],
+            subject,
+            command: command_name(command),
+            socket_port: port,
+            _pad2: [0; 6],
+            resource: resource_name(resource),
+            socket_ip: [0; SOCKET_IP_LEN],
+            modulo: 0,
+            value: 0,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
         }
     }
 
@@ -485,7 +702,9 @@ impl SocketBindStreamPolicy {
             enabled: 1,
             socket_family: family,
             socket_transport: transport,
-            _pad: 0,
+            stream_condition_enabled: 1,
+            attribute_condition_count: 0,
+            _pad: [0; 7],
             subject,
             command: command_name(command),
             socket_port: port,
@@ -494,6 +713,7 @@ impl SocketBindStreamPolicy {
             socket_ip: [0; SOCKET_IP_LEN],
             modulo,
             value,
+            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
         }
     }
 
@@ -686,6 +906,31 @@ fn stream_entitlement(
     }
 }
 
+pub fn matches_attribute_condition(condition: &AttributeCondition, value: &AttributeValue) -> bool {
+    if condition.value_kind != value.kind {
+        return false;
+    }
+
+    match condition.value_kind {
+        AttributeValueKind::Number => {
+            matches_stream_operator(condition.operator, value.number, condition.value_number)
+        }
+        AttributeValueKind::Bool => {
+            matches_stream_operator(condition.operator, value.number, condition.value_number)
+        }
+        AttributeValueKind::String => {
+            condition.operator == StreamOperator::Equal && value.hash == condition.value_hash
+        }
+    }
+}
+
+pub const fn attribute_object_id(namespace: AttributeNamespace, subject: u32) -> u64 {
+    match namespace {
+        AttributeNamespace::System => 0,
+        AttributeNamespace::Subject => subject as u64,
+    }
+}
+
 pub fn evaluate_file_open_static_policy(
     request: &FileOpenRequest,
     policy: &FileOpenStaticPolicy,
@@ -710,21 +955,18 @@ pub fn evaluate_file_open_static_policy(
     Some(policy.entitlement)
 }
 
-pub fn evaluate_file_open_stream_policy(
+pub fn file_open_stream_policy_applies_to_request(
     request: &FileOpenRequest,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
-    current_defcon: u32,
     policy: &FileOpenStreamPolicy,
-) -> Option<Entitlement> {
+) -> bool {
     if policy.enabled == 0 || policy.action != PolicyAction::FileOpen {
-        return None;
+        return false;
     }
     if !matches_subject(policy.subject, request.subject) {
-        return None;
+        return false;
     }
     if !matches_bytes(&policy.command, &request.command) {
-        return None;
+        return false;
     }
     if !matches_file_resource(
         policy.resource_device,
@@ -732,7 +974,19 @@ pub fn evaluate_file_open_stream_policy(
         request.resource_device,
         request.resource_inode,
     ) {
-        return None;
+        return false;
+    }
+    true
+}
+
+pub fn file_open_stream_legacy_entitlement(
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
+    policy: &FileOpenStreamPolicy,
+) -> Option<Entitlement> {
+    if policy.stream_condition_enabled == 0 {
+        return Some(policy.entitlement);
     }
 
     let evaluation = StreamEvaluation {
@@ -745,6 +999,22 @@ pub fn evaluate_file_open_stream_policy(
         current_defcon,
     };
     stream_entitlement(policy.entitlement, &evaluation)
+}
+
+pub fn evaluate_file_open_stream_policy(
+    request: &FileOpenRequest,
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
+    policy: &FileOpenStreamPolicy,
+) -> Option<Entitlement> {
+    if !file_open_stream_policy_applies_to_request(request, policy) {
+        return None;
+    }
+    if policy.attribute_condition_count != 0 {
+        return None;
+    }
+    file_open_stream_legacy_entitlement(current_time, current_iso8601_time, current_defcon, policy)
 }
 
 pub fn evaluate_socket_bind_static_policy(
@@ -772,21 +1042,18 @@ pub fn evaluate_socket_bind_static_policy(
     Some(policy.entitlement)
 }
 
-pub fn evaluate_socket_bind_stream_policy(
+pub fn socket_bind_stream_policy_applies_to_request(
     request: &SocketBindRequest,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
-    current_defcon: u32,
     policy: &SocketBindStreamPolicy,
-) -> Option<Entitlement> {
+) -> bool {
     if policy.enabled == 0 || policy.action != PolicyAction::SocketBind {
-        return None;
+        return false;
     }
     if !matches_subject(policy.subject, request.subject) {
-        return None;
+        return false;
     }
     if !matches_bytes(&policy.command, &request.command) {
-        return None;
+        return false;
     }
     if !matches_socket_resource(
         policy.socket_family,
@@ -795,7 +1062,19 @@ pub fn evaluate_socket_bind_stream_policy(
         &policy.socket_ip,
         request,
     ) {
-        return None;
+        return false;
+    }
+    true
+}
+
+pub fn socket_bind_stream_legacy_entitlement(
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
+    policy: &SocketBindStreamPolicy,
+) -> Option<Entitlement> {
+    if policy.stream_condition_enabled == 0 {
+        return Some(policy.entitlement);
     }
 
     let evaluation = StreamEvaluation {
@@ -809,6 +1088,39 @@ pub fn evaluate_socket_bind_stream_policy(
     };
     stream_entitlement(policy.entitlement, &evaluation)
 }
+
+pub fn evaluate_socket_bind_stream_policy(
+    request: &SocketBindRequest,
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    current_defcon: u32,
+    policy: &SocketBindStreamPolicy,
+) -> Option<Entitlement> {
+    if !socket_bind_stream_policy_applies_to_request(request, policy) {
+        return None;
+    }
+    if policy.attribute_condition_count != 0 {
+        return None;
+    }
+    socket_bind_stream_legacy_entitlement(
+        current_time,
+        current_iso8601_time,
+        current_defcon,
+        policy,
+    )
+}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for AttributeHash {}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for AttributeKey {}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for AttributeValue {}
+
+#[cfg(feature = "user")]
+unsafe impl aya::Pod for AttributeCondition {}
 
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for FileOpenStaticPolicy {}
@@ -847,6 +1159,128 @@ mod tests {
             socket_port: 8080,
             socket_ip: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         }
+    }
+
+    fn attribute_condition(
+        value_kind: AttributeValueKind,
+        operator: StreamOperator,
+        value_number: u64,
+        value_hash: AttributeHash,
+    ) -> AttributeCondition {
+        AttributeCondition {
+            namespace: AttributeNamespace::Subject,
+            operator,
+            value_kind,
+            _pad: [0; 5],
+            name_hash: attribute_hash("position"),
+            value_number,
+            value_hash,
+        }
+    }
+
+    #[test]
+    fn attribute_conditions_match_numbers_and_booleans() {
+        let number_condition = attribute_condition(
+            AttributeValueKind::Number,
+            StreamOperator::LessThanOrEqual,
+            3,
+            AttributeHash::zero(),
+        );
+        let bool_condition = attribute_condition(
+            AttributeValueKind::Bool,
+            StreamOperator::Equal,
+            1,
+            AttributeHash::zero(),
+        );
+
+        assert!(matches_attribute_condition(
+            &number_condition,
+            &AttributeValue::number(2)
+        ));
+        assert!(!matches_attribute_condition(
+            &number_condition,
+            &AttributeValue::number(4)
+        ));
+        assert!(matches_attribute_condition(
+            &bool_condition,
+            &AttributeValue::bool(true)
+        ));
+        assert!(!matches_attribute_condition(
+            &bool_condition,
+            &AttributeValue::bool(false)
+        ));
+    }
+
+    #[test]
+    fn attribute_conditions_match_string_hashes_only_by_equality() {
+        let condition = attribute_condition(
+            AttributeValueKind::String,
+            StreamOperator::Equal,
+            0,
+            attribute_hash("engineer"),
+        );
+        let unsupported_operator = attribute_condition(
+            AttributeValueKind::String,
+            StreamOperator::GreaterThan,
+            0,
+            attribute_hash("engineer"),
+        );
+
+        assert!(matches_attribute_condition(
+            &condition,
+            &AttributeValue::string(attribute_hash("engineer"))
+        ));
+        assert!(!matches_attribute_condition(
+            &condition,
+            &AttributeValue::string(attribute_hash("manager"))
+        ));
+        assert!(!matches_attribute_condition(
+            &unsupported_operator,
+            &AttributeValue::string(attribute_hash("engineer"))
+        ));
+    }
+
+    #[test]
+    fn attribute_conditions_reject_type_mismatches() {
+        let condition = attribute_condition(
+            AttributeValueKind::Number,
+            StreamOperator::Equal,
+            3,
+            AttributeHash::zero(),
+        );
+
+        assert!(!matches_attribute_condition(
+            &condition,
+            &AttributeValue::string(attribute_hash("3"))
+        ));
+    }
+
+    #[test]
+    fn attribute_object_ids_are_namespace_scoped() {
+        assert_eq!(attribute_object_id(AttributeNamespace::System, 1000), 0);
+        assert_eq!(attribute_object_id(AttributeNamespace::Subject, 1000), 1000);
+    }
+
+    #[test]
+    fn stream_policy_with_dynamic_attributes_requires_map_lookup() {
+        let mut policy = FileOpenStreamPolicy::stream(Entitlement::Deny, 1000, "", "");
+        policy.attribute_condition_count = 1;
+        policy.attribute_conditions[0] = attribute_condition(
+            AttributeValueKind::String,
+            StreamOperator::Equal,
+            0,
+            attribute_hash("engineer"),
+        );
+
+        let result = evaluate_file_open_stream_policy(
+            &file_open_request(),
+            0,
+            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            DEFAULT_DEFCON_LEVEL,
+            &policy,
+        );
+
+        assert_eq!(result, None);
     }
 
     #[test]
