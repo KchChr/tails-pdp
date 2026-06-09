@@ -1,9 +1,9 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     AttributeKey, COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, SocketBindRequest, attribute_bank, attribute_object_id,
-    matches_attribute_condition, policy_bank_offset, socket_bind_stream_legacy_entitlement,
-    socket_bind_stream_policy_applies_to_request,
+    POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindStreamPolicy, SocketFamily, SocketTransport,
+    attribute_bank, attribute_object_id, matches_attribute_condition, policy_bank_offset,
+    socket_bind_stream_legacy_entitlement,
 };
 
 use crate::{
@@ -26,14 +26,6 @@ pub(crate) fn evaluate_policies(
     attribute_bank: u32,
 ) -> DecisionState {
     let mut state = DecisionState::empty_for_generation(generation);
-    let request = SocketBindRequest {
-        subject: current_subject,
-        command: *current_command,
-        socket_family: resource.family,
-        socket_transport: resource.transport,
-        socket_port: resource.port,
-        socket_ip: resource.ip,
-    };
     let mut index = 0;
     let bank_offset = policy_bank_offset(generation);
     let mut matched_deny_index = u32::MAX;
@@ -42,20 +34,22 @@ pub(crate) fn evaluate_policies(
     while index < POLICY_BANK_SIZE {
         let map_index = bank_offset + index;
         if let Some(policy) = SOCKET_BIND_STREAM_POLICIES.get(map_index) {
-            if socket_bind_stream_policy_applies_to_request(&request, policy)
-                && attribute_conditions_match(
-                    policy.attribute_condition_count,
-                    &policy.attribute_conditions,
-                    current_subject,
-                    attribute_bank,
-                )
-                && let Some(entitlement) = socket_bind_stream_legacy_entitlement(
-                    current_time,
-                    current_iso8601_time,
-                    current_defcon,
-                    policy,
-                )
-            {
+            if socket_bind_stream_policy_matches_request(
+                policy,
+                current_subject,
+                current_command,
+                resource,
+            ) && attribute_conditions_match(
+                policy.attribute_condition_count,
+                &policy.attribute_conditions,
+                current_subject,
+                attribute_bank,
+            ) && let Some(entitlement) = socket_bind_stream_legacy_entitlement(
+                current_time,
+                current_iso8601_time,
+                current_defcon,
+                policy,
+            ) {
                 match entitlement {
                     Entitlement::Deny => {
                         if matched_deny_index == u32::MAX {
@@ -93,6 +87,82 @@ pub(crate) fn evaluate_policies(
     );
 
     state
+}
+
+fn socket_bind_stream_policy_matches_request(
+    policy: &SocketBindStreamPolicy,
+    current_subject: u32,
+    current_command: &[u8; COMMAND_LEN],
+    resource: &SocketBindResource,
+) -> bool {
+    if policy.enabled == 0 || policy.action != tails_pdp_common::PolicyAction::SocketBind {
+        return false;
+    }
+    if policy.subject != tails_pdp_common::ANY_SUBJECT && policy.subject != current_subject {
+        return false;
+    }
+    if !command_matches(&policy.command, current_command) {
+        return false;
+    }
+    if policy.socket_family != SocketFamily::Any && policy.socket_family != resource.family {
+        return false;
+    }
+    if policy.socket_transport != SocketTransport::Any
+        && policy.socket_transport != resource.transport
+    {
+        return false;
+    }
+    if policy.socket_port != 0 && policy.socket_port != resource.port {
+        return false;
+    }
+    socket_ip_matches(&policy.socket_ip, resource.family, &resource.ip)
+}
+
+fn command_matches(
+    policy_command: &[u8; COMMAND_LEN],
+    current_command: &[u8; COMMAND_LEN],
+) -> bool {
+    policy_command[0] == 0 || policy_command == current_command
+}
+
+fn socket_ip_matches(
+    policy_ip: &[u8; SOCKET_IP_LEN],
+    family: SocketFamily,
+    current_ip: &[u8; SOCKET_IP_LEN],
+) -> bool {
+    if ip_is_zero(policy_ip) {
+        return true;
+    }
+
+    match family {
+        SocketFamily::Inet => {
+            policy_ip[0] == current_ip[0]
+                && policy_ip[1] == current_ip[1]
+                && policy_ip[2] == current_ip[2]
+                && policy_ip[3] == current_ip[3]
+        }
+        SocketFamily::Inet6 => policy_ip == current_ip,
+        SocketFamily::Any => false,
+    }
+}
+
+fn ip_is_zero(ip: &[u8; SOCKET_IP_LEN]) -> bool {
+    ip[0] == 0
+        && ip[1] == 0
+        && ip[2] == 0
+        && ip[3] == 0
+        && ip[4] == 0
+        && ip[5] == 0
+        && ip[6] == 0
+        && ip[7] == 0
+        && ip[8] == 0
+        && ip[9] == 0
+        && ip[10] == 0
+        && ip[11] == 0
+        && ip[12] == 0
+        && ip[13] == 0
+        && ip[14] == 0
+        && ip[15] == 0
 }
 
 fn attribute_conditions_match(
