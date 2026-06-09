@@ -1,0 +1,5 @@
+policy "permit file_open on /home/hntr/test.txt for engineers"
+permit
+    action == "file_open";
+    resource.path == "/home/hntr/test.txt";
+    subject.position == "engineer";
