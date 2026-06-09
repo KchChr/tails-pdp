@@ -8,7 +8,7 @@ use aya::{
 };
 use log::{debug, info};
 use tails_pdp::{
-    BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS, SOCKET_BIND_TAIL_PROGRAMS,
+    BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS,
     monitor::run_policy_monitor,
     policy_loader::verify_pinned_map_layouts,
     policy_source::PolicyDirectorySync,
@@ -72,12 +72,6 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open FILE_OPEN_JUMP_TABLE")?;
 
-    let mut socket_bind_jump_table = ProgramArray::try_from(
-        ebpf.take_map("SOCKET_BIND_JUMP_TABLE")
-            .context("map 'SOCKET_BIND_JUMP_TABLE' not found")?,
-    )
-    .context("failed to open SOCKET_BIND_JUMP_TABLE")?;
-
     let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
     let mut current_defcon = open_current_defcon_map(&mut ebpf)?;
     let mut attribute_maps = open_attribute_maps(&mut ebpf)?;
@@ -93,19 +87,6 @@ async fn main() -> anyhow::Result<()> {
             .set(index, program.fd()?, 0)
             .with_context(|| {
                 format!("failed to set file_open jump table slot for '{program_name}'")
-            })?;
-    }
-
-    for (index, program_name) in SOCKET_BIND_TAIL_PROGRAMS {
-        let program: &Lsm = ebpf
-            .program(program_name)
-            .with_context(|| format!("program '{program_name}' not found"))?
-            .try_into()
-            .with_context(|| format!("program '{program_name}' has unexpected type"))?;
-        socket_bind_jump_table
-            .set(index, program.fd()?, 0)
-            .with_context(|| {
-                format!("failed to set socket_bind jump table slot for '{program_name}'")
             })?;
     }
 

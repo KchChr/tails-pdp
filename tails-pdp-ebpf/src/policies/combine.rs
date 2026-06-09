@@ -33,10 +33,3 @@ define_combine_program!(
     b"file_open final=deny",
     b"file_open final=permit"
 );
-
-define_combine_program!(
-    combine_socket_bind,
-    "socket_bind",
-    b"socket_bind final=deny",
-    b"socket_bind final=permit"
-);

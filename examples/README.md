@@ -6,14 +6,12 @@ Each `.sapl` file contains exactly one simple policy. More complex behavior is e
 multiple files, for example one policy for `hour < 8` and another for `hour >= 16`.
 
 Stream policies may use the same static hook filters as static policies, for example `command`,
-`subject.uid`, `resource.path`, `resource.family`, `resource.transport`, `resource.ip` or
-`resource.port`, plus stream conditions such as `environment.utc.hour`, `environment.defcon.level`,
-`system.<attribute>` or `subject.<attribute>`.
+`subject.uid` or `resource.path`, plus stream conditions such as `environment.utc.hour`,
+`environment.defcon.level`, `system.<attribute>` or `subject.<attribute>`.
 
 Numbering convention:
 
 - `10-*` to `19-*`: `file_open` policies
-- `20-*` to `29-*`: `socket_bind` policies
 
 DEFCON stream examples use `environment.defcon.level`. The current test DEFCON value is read from
 `../environment/DEFCON.txt` and must be an integer from `1` to `5`.

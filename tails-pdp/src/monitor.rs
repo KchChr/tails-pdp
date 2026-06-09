@@ -3,7 +3,6 @@ use std::{
     ffi::OsString,
     fs, io,
     mem::MaybeUninit,
-    net::{Ipv4Addr, Ipv6Addr},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -15,12 +14,9 @@ use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeValue, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
     FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, SOCKET_IP_LEN, SocketBindRequest, SocketBindStaticPolicy,
-    SocketBindStreamPolicy, SocketFamily, SocketTransport, attribute_bank, attribute_object_id,
-    command_name, evaluate_file_open_static_policy, evaluate_socket_bind_static_policy,
-    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
-    matches_attribute_condition, policy_bank_offset, socket_bind_stream_legacy_entitlement,
-    socket_bind_stream_policy_applies_to_request,
+    POLICY_BANK_SIZE, attribute_bank, attribute_object_id, command_name,
+    evaluate_file_open_static_policy, file_open_stream_legacy_entitlement,
+    file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
 };
 use tokio::time;
 
@@ -28,21 +24,10 @@ use crate::{BPF_PIN_DIRECTORY, fd_revoker::close_remote_fd};
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
-type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
-type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
 type CurrentDefconMap = Array<MapData, u32>;
 type AttributeGenerationMap = Array<MapData, u32>;
 type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
-
-#[derive(Clone, Debug)]
-struct ActiveSocket {
-    family: SocketFamily,
-    transport: SocketTransport,
-    ip: [u8; SOCKET_IP_LEN],
-    port: u16,
-    inode: u64,
-}
 
 #[derive(Clone, Debug)]
 struct ProcessInfo {
@@ -61,7 +46,6 @@ struct ProcessFd {
 #[derive(Clone, Debug)]
 enum FdTarget {
     File { device: u64, inode: u64 },
-    Socket { socket: ActiveSocket },
     Inotify,
 }
 
@@ -83,7 +67,6 @@ enum PolicyKind {
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 enum ResourceKind {
     File,
-    Socket,
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -100,25 +83,13 @@ struct Violation {
 }
 
 enum ViolationResource {
-    File {
-        device: u64,
-        inode: u64,
-    },
-    Socket {
-        family: SocketFamily,
-        transport: SocketTransport,
-        ip: [u8; SOCKET_IP_LEN],
-        port: u16,
-        inode: u64,
-    },
+    File { device: u64, inode: u64 },
 }
 
 struct PolicyMaps {
     policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
-    socket_bind_static: SocketBindStaticPolicyMap,
-    socket_bind_stream: SocketBindStreamPolicyMap,
     current_defcon: CurrentDefconMap,
     attribute_generation: AttributeGenerationMap,
     attributes: AttributeMap,
@@ -173,14 +144,6 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
             &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STREAM_POLICIES"),
             "FILE_OPEN_STREAM_POLICIES",
         )?,
-        socket_bind_static: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STATIC_POLICIES"),
-            "SOCKET_BIND_STATIC_POLICIES",
-        )?,
-        socket_bind_stream: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("SOCKET_BIND_STREAM_POLICIES"),
-            "SOCKET_BIND_STREAM_POLICIES",
-        )?,
         current_defcon: open_array_map(
             &Path::new(BPF_PIN_DIRECTORY).join("CURRENT_DEFCON"),
             "CURRENT_DEFCON",
@@ -219,11 +182,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
         .get(&0, 0)
         .context("failed to read POLICY_GENERATION[0] for monitor")?;
     let bank_offset = policy_bank_offset(generation);
-    let socket_index = read_active_sockets()
-        .into_iter()
-        .map(|socket| (socket.inode, socket))
-        .collect();
-    let process_fds = read_process_fds(&socket_index);
+    let process_fds = read_process_fds();
     let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let (current_time, current_iso8601_time) = current_utc_time()?;
     let current_defcon = policies
@@ -247,17 +206,6 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 current_attribute_bank,
                 bank_offset,
                 &inotify_fds,
-                &mut violations,
-            )?,
-            FdTarget::Socket { socket } => collect_socket_bind_violations(
-                &process_fd,
-                socket,
-                policies,
-                current_time,
-                current_iso8601_time,
-                current_defcon,
-                current_attribute_bank,
-                bank_offset,
                 &mut violations,
             )?,
             FdTarget::Inotify => {}
@@ -385,79 +333,6 @@ fn append_file_open_sidecar_violations(
     }
 }
 
-fn collect_socket_bind_violations(
-    process_fd: &ProcessFd,
-    socket: &ActiveSocket,
-    policies: &mut PolicyMaps,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
-    current_defcon: u32,
-    current_attribute_bank: u32,
-    bank_offset: u32,
-    violations: &mut Vec<Violation>,
-) -> anyhow::Result<()> {
-    let request = SocketBindRequest {
-        subject: process_fd.process.uid,
-        command: command_name(&process_fd.process.command),
-        socket_family: socket.family,
-        socket_transport: socket.transport,
-        socket_port: socket.port,
-        socket_ip: socket.ip,
-    };
-
-    for index in 0..POLICY_BANK_SIZE {
-        let map_index = bank_offset + index;
-        let policy = policies
-            .socket_bind_static
-            .get(&map_index, 0)
-            .with_context(|| {
-                format!("failed to read SOCKET_BIND_STATIC_POLICIES[{map_index}] for monitor")
-            })?;
-        if evaluate_socket_bind_static_policy(&request, &policy) == Some(Entitlement::Deny) {
-            violations.push(socket_violation(
-                process_fd,
-                PolicyKind::Static,
-                index,
-                socket,
-            ));
-        }
-    }
-
-    for index in 0..POLICY_BANK_SIZE {
-        let map_index = bank_offset + index;
-        let policy = policies
-            .socket_bind_stream
-            .get(&map_index, 0)
-            .with_context(|| {
-                format!("failed to read SOCKET_BIND_STREAM_POLICIES[{map_index}] for monitor")
-            })?;
-        if socket_bind_stream_policy_applies_to_request(&request, &policy)
-            && attribute_conditions_match(
-                policy.attribute_condition_count,
-                &policy.attribute_conditions,
-                request.subject,
-                current_attribute_bank,
-                &policies.attributes,
-            )
-            && socket_bind_stream_legacy_entitlement(
-                current_time,
-                current_iso8601_time,
-                current_defcon,
-                &policy,
-            ) == Some(Entitlement::Deny)
-        {
-            violations.push(socket_violation(
-                process_fd,
-                PolicyKind::Stream,
-                index,
-                socket,
-            ));
-        }
-    }
-
-    Ok(())
-}
-
 fn attribute_conditions_match(
     condition_count: u8,
     conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
@@ -524,32 +399,6 @@ fn file_violation_for_fd(
     }
 }
 
-fn socket_violation(
-    process_fd: &ProcessFd,
-    policy_kind: PolicyKind,
-    policy_index: u32,
-    socket: &ActiveSocket,
-) -> Violation {
-    Violation {
-        key: ViolationKey {
-            policy_kind,
-            policy_index,
-            resource_kind: ResourceKind::Socket,
-            pid: process_fd.process.pid,
-            fd: process_fd.fd,
-        },
-        subject: process_fd.process.uid,
-        command: process_fd.process.command.clone(),
-        resource: ViolationResource::Socket {
-            family: socket.family,
-            transport: socket.transport,
-            ip: socket.ip,
-            port: socket.port,
-            inode: socket.inode,
-        },
-    }
-}
-
 fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>) {
     let key = FdKey {
         pid: violation.key.pid,
@@ -606,7 +455,7 @@ fn should_skip_enforcement(pid: u32) -> bool {
     pid == 0 || pid == 1 || pid == std::process::id()
 }
 
-fn read_process_fds(socket_index: &HashMap<u64, ActiveSocket>) -> Vec<ProcessFd> {
+fn read_process_fds() -> Vec<ProcessFd> {
     let mut process_fds = Vec::new();
     let Ok(entries) = fs::read_dir("/proc") else {
         return process_fds;
@@ -619,17 +468,13 @@ fn read_process_fds(socket_index: &HashMap<u64, ActiveSocket>) -> Vec<ProcessFd>
         let Some(process) = read_process_info(pid) else {
             continue;
         };
-        append_process_fds(process, socket_index, &mut process_fds);
+        append_process_fds(process, &mut process_fds);
     }
 
     process_fds
 }
 
-fn append_process_fds(
-    process: ProcessInfo,
-    socket_index: &HashMap<u64, ActiveSocket>,
-    process_fds: &mut Vec<ProcessFd>,
-) {
+fn append_process_fds(process: ProcessInfo, process_fds: &mut Vec<ProcessFd>) {
     let fd_path = PathBuf::from(format!("/proc/{}/fd", process.pid));
     let Ok(entries) = fs::read_dir(fd_path) else {
         return;
@@ -639,7 +484,7 @@ fn append_process_fds(
         let Some(fd) = parse_fd(entry.file_name()) else {
             continue;
         };
-        let Some(target) = read_fd_target(&entry.path(), socket_index) else {
+        let Some(target) = read_fd_target(&entry.path()) else {
             continue;
         };
         process_fds.push(ProcessFd {
@@ -650,13 +495,10 @@ fn append_process_fds(
     }
 }
 
-fn read_fd_target(path: &Path, socket_index: &HashMap<u64, ActiveSocket>) -> Option<FdTarget> {
+fn read_fd_target(path: &Path) -> Option<FdTarget> {
     let target = fs::read_link(path).ok()?;
-    if let Some(inode) = parse_socket_symlink(&target) {
-        return socket_index
-            .get(&inode)
-            .cloned()
-            .map(|socket| FdTarget::Socket { socket });
+    if parse_socket_symlink(&target).is_some() {
+        return None;
     }
     if is_inotify_symlink(&target) {
         return Some(FdTarget::Inotify);
@@ -675,131 +517,6 @@ fn read_fd_target(path: &Path, socket_index: &HashMap<u64, ActiveSocket>) -> Opt
 
 fn is_inotify_symlink(target: &Path) -> bool {
     target.to_string_lossy() == "anon_inode:inotify"
-}
-
-fn read_active_sockets() -> Vec<ActiveSocket> {
-    let mut sockets = Vec::new();
-    append_proc_net_sockets(
-        "/proc/net/tcp",
-        SocketFamily::Inet,
-        SocketTransport::Tcp,
-        true,
-        &mut sockets,
-    );
-    append_proc_net_sockets(
-        "/proc/net/tcp6",
-        SocketFamily::Inet6,
-        SocketTransport::Tcp,
-        true,
-        &mut sockets,
-    );
-    append_proc_net_sockets(
-        "/proc/net/udp",
-        SocketFamily::Inet,
-        SocketTransport::Udp,
-        false,
-        &mut sockets,
-    );
-    append_proc_net_sockets(
-        "/proc/net/udp6",
-        SocketFamily::Inet6,
-        SocketTransport::Udp,
-        false,
-        &mut sockets,
-    );
-    sockets
-}
-
-fn append_proc_net_sockets(
-    path: &str,
-    family: SocketFamily,
-    transport: SocketTransport,
-    only_listening: bool,
-    sockets: &mut Vec<ActiveSocket>,
-) {
-    let Ok(content) = fs::read_to_string(path) else {
-        return;
-    };
-
-    for line in content.lines().skip(1) {
-        if let Some(socket) = parse_proc_net_socket_line(line, family, transport, only_listening) {
-            sockets.push(socket);
-        }
-    }
-}
-
-fn parse_proc_net_socket_line(
-    line: &str,
-    family: SocketFamily,
-    transport: SocketTransport,
-    only_listening: bool,
-) -> Option<ActiveSocket> {
-    let fields: Vec<&str> = line.split_whitespace().collect();
-    if fields.len() < 10 {
-        return None;
-    }
-
-    let state = fields[3];
-    if only_listening && state != "0A" {
-        return None;
-    }
-
-    let (ip, port) = parse_local_socket_address(fields[1], family)?;
-    let inode = fields[9].parse().ok()?;
-
-    Some(ActiveSocket {
-        family,
-        transport,
-        ip,
-        port,
-        inode,
-    })
-}
-
-fn parse_local_socket_address(
-    value: &str,
-    family: SocketFamily,
-) -> Option<([u8; SOCKET_IP_LEN], u16)> {
-    let (address, port) = value.split_once(':')?;
-    let mut ip = [0; SOCKET_IP_LEN];
-
-    match family {
-        SocketFamily::Inet => {
-            ip[..4].copy_from_slice(&parse_proc_net_ipv4(address)?);
-        }
-        SocketFamily::Inet6 => {
-            ip.copy_from_slice(&parse_proc_net_ipv6(address)?);
-        }
-        SocketFamily::Any => return None,
-    }
-
-    Some((ip, u16::from_str_radix(port, 16).ok()?))
-}
-
-fn parse_proc_net_ipv4(value: &str) -> Option<[u8; 4]> {
-    let raw = u32::from_str_radix(value, 16).ok()?;
-    Some(raw.to_le_bytes())
-}
-
-fn parse_proc_net_ipv6(value: &str) -> Option<[u8; 16]> {
-    if value.len() != 32 {
-        return None;
-    }
-
-    let mut raw = [0; 16];
-    for index in 0..16 {
-        raw[index] = u8::from_str_radix(&value[index * 2..index * 2 + 2], 16).ok()?;
-    }
-
-    let mut ip = [0; 16];
-    for index in 0..4 {
-        let offset = index * 4;
-        ip[offset] = raw[offset + 3];
-        ip[offset + 1] = raw[offset + 2];
-        ip[offset + 2] = raw[offset + 1];
-        ip[offset + 3] = raw[offset];
-    }
-    Some(ip)
 }
 
 fn parse_pid(name: OsString) -> Option<u32> {
@@ -883,35 +600,5 @@ fn print_violation(violation: &Violation) {
                 inode,
             );
         }
-        ViolationResource::Socket {
-            family,
-            transport,
-            ip,
-            port,
-            inode,
-        } => {
-            warn!(
-                "MONITOR socket_bind violation policy={:?}[{}] uid={} pid={} fd={} comm={} family={:?} transport={:?} local={}:{} socket_inode={}",
-                violation.key.policy_kind,
-                violation.key.policy_index,
-                violation.subject,
-                violation.key.pid,
-                violation.key.fd,
-                violation.command,
-                family,
-                transport,
-                format_ip(*family, ip),
-                port,
-                inode,
-            );
-        }
-    }
-}
-
-fn format_ip(family: SocketFamily, ip: &[u8; SOCKET_IP_LEN]) -> String {
-    match family {
-        SocketFamily::Inet => Ipv4Addr::new(ip[0], ip[1], ip[2], ip[3]).to_string(),
-        SocketFamily::Inet6 => Ipv6Addr::from(*ip).to_string(),
-        SocketFamily::Any => String::from("<any>"),
     }
 }

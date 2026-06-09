@@ -10,9 +10,8 @@ use log::{error, info};
 use tails_pdp_common::{
     ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_LEN,
     DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketBindStaticPolicy,
-    SocketBindStreamPolicy, SocketFamily, SocketTransport, StreamAttribute, StreamOperator,
-    attribute_hash, policy_bank_offset,
+    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily,
+    SocketTransport, StreamAttribute, StreamOperator, attribute_hash, policy_bank_offset,
 };
 use tokio::time::{Duration, sleep};
 
@@ -24,8 +23,6 @@ const POLICY_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
-type SocketBindStaticPolicyMap = Array<MapData, SocketBindStaticPolicy>;
-type SocketBindStreamPolicyMap = Array<MapData, SocketBindStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -38,8 +35,6 @@ struct PolicyDocument {
 struct CompiledPolicies {
     file_open_static: Vec<FileOpenStaticPolicy>,
     file_open_stream: Vec<FileOpenStreamPolicy>,
-    socket_bind_static: Vec<SocketBindStaticPolicy>,
-    socket_bind_stream: Vec<SocketBindStreamPolicy>,
 }
 
 #[derive(Copy, Clone)]
@@ -87,8 +82,6 @@ struct PinnedPolicyMaps {
     policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
-    socket_bind_static: SocketBindStaticPolicyMap,
-    socket_bind_stream: SocketBindStreamPolicyMap,
 }
 
 pub struct PolicyDirectorySync {
@@ -187,8 +180,6 @@ impl PinnedPolicyMaps {
             policy_generation: open_array_map("POLICY_GENERATION")?,
             file_open_static: open_array_map("FILE_OPEN_STATIC_POLICIES")?,
             file_open_stream: open_array_map("FILE_OPEN_STREAM_POLICIES")?,
-            socket_bind_static: open_array_map("SOCKET_BIND_STATIC_POLICIES")?,
-            socket_bind_stream: open_array_map("SOCKET_BIND_STREAM_POLICIES")?,
         })
     }
 
@@ -226,20 +217,6 @@ impl PinnedPolicyMaps {
             &compiled.file_open_stream,
             FileOpenStreamPolicy::disabled(),
             "FILE_OPEN_STREAM_POLICIES",
-            bank_offset,
-        )?;
-        write_array_bank(
-            &mut self.socket_bind_static,
-            &compiled.socket_bind_static,
-            SocketBindStaticPolicy::disabled(),
-            "SOCKET_BIND_STATIC_POLICIES",
-            bank_offset,
-        )?;
-        write_array_bank(
-            &mut self.socket_bind_stream,
-            &compiled.socket_bind_stream,
-            SocketBindStreamPolicy::disabled(),
-            "SOCKET_BIND_STREAM_POLICIES",
             bank_offset,
         )?;
         Ok(())
@@ -574,30 +551,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                 })?;
                 compiled.file_open_static.push(policy);
             }
-            PolicyAction::SocketBind => {
-                ensure_no_file_open_resource(&parsed)?;
-                let command = parsed.command.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-                let resource = parsed.socket_resource.as_deref().unwrap_or("");
-                ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
-                let policy = SocketBindStaticPolicy::new(
-                    parsed.entitlement,
-                    parsed.subject,
-                    command,
-                    parsed.socket_family,
-                    parsed.socket_transport,
-                    parsed.socket_port,
-                    resource,
-                )
-                .resolve_resource_identity()
-                .with_context(|| {
-                    format!(
-                        "failed to resolve socket_bind static resource in '{}'",
-                        parsed.source_path.display()
-                    )
-                })?;
-                compiled.socket_bind_static.push(policy);
-            }
+            PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
         }
     } else {
         let (legacy_condition, attribute_conditions) = split_stream_conditions(&parsed)?;
@@ -625,40 +579,13 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                 apply_attribute_conditions_file_open(&mut policy, &attribute_conditions);
                 compiled.file_open_stream.push(policy);
             }
-            PolicyAction::SocketBind => {
-                ensure_no_file_open_resource(&parsed)?;
-                let command = parsed.command.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
-                let resource = parsed.socket_resource.as_deref().unwrap_or("");
-                ensure_string_len(resource, RESOURCE_LEN, "resource.ip", &parsed)?;
-                let mut policy = SocketBindStreamPolicy::stream(
-                    parsed.entitlement,
-                    parsed.subject,
-                    command,
-                    parsed.socket_family,
-                    parsed.socket_transport,
-                    parsed.socket_port,
-                    resource,
-                )
-                .resolve_resource_identity()
-                .with_context(|| {
-                    format!(
-                        "failed to resolve socket_bind stream resource in '{}'",
-                        parsed.source_path.display()
-                    )
-                })?;
-                apply_legacy_stream_condition_socket_bind(&mut policy, legacy_condition);
-                apply_attribute_conditions_socket_bind(&mut policy, &attribute_conditions);
-                compiled.socket_bind_stream.push(policy);
-            }
+            PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
         }
     }
 
     ensure_policy_capacity(
         compiled.file_open_static.len(),
         compiled.file_open_stream.len(),
-        compiled.socket_bind_static.len(),
-        compiled.socket_bind_stream.len(),
     )?;
 
     Ok(())
@@ -667,8 +594,6 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
 fn ensure_policy_capacity(
     file_open_static_count: usize,
     file_open_stream_count: usize,
-    socket_bind_static_count: usize,
-    socket_bind_stream_count: usize,
 ) -> anyhow::Result<()> {
     if file_open_static_count > POLICY_BANK_SIZE as usize {
         bail!(
@@ -684,21 +609,15 @@ fn ensure_policy_capacity(
             POLICY_BANK_SIZE
         );
     }
-    if socket_bind_static_count > POLICY_BANK_SIZE as usize {
-        bail!(
-            "too many socket_bind static policies: {} > {}",
-            socket_bind_static_count,
-            POLICY_BANK_SIZE
-        );
-    }
-    if socket_bind_stream_count > POLICY_BANK_SIZE as usize {
-        bail!(
-            "too many socket_bind stream policies: {} > {}",
-            socket_bind_stream_count,
-            POLICY_BANK_SIZE
-        );
-    }
     Ok(())
+}
+
+fn bail_socket_bind_disabled(policy: &ParsedPolicy) -> anyhow::Result<()> {
+    bail!(
+        "policy '{}' in '{}' uses action socket_bind, but socket_bind support is currently disabled",
+        policy.name,
+        policy.source_path.display()
+    )
 }
 
 fn ensure_string_len(
@@ -727,17 +646,6 @@ fn ensure_no_socket_fields(policy: &ParsedPolicy) -> anyhow::Result<()> {
     {
         bail!(
             "policy '{}' in '{}' uses socket_bind-only fields with action file_open",
-            policy.name,
-            policy.source_path.display()
-        );
-    }
-    Ok(())
-}
-
-fn ensure_no_file_open_resource(policy: &ParsedPolicy) -> anyhow::Result<()> {
-    if policy.file_resource.is_some() {
-        bail!(
-            "policy '{}' in '{}' uses file_open-only resource fields with action socket_bind",
             policy.name,
             policy.source_path.display()
         );
@@ -1124,20 +1032,6 @@ fn apply_legacy_stream_condition_file_open(
     policy.value = stream_value(condition);
 }
 
-fn apply_legacy_stream_condition_socket_bind(
-    policy: &mut SocketBindStreamPolicy,
-    condition: Option<ParsedStreamCondition>,
-) {
-    let Some(condition) = condition else {
-        return;
-    };
-    policy.stream_condition_enabled = 1;
-    policy.attribute = stream_attribute(condition);
-    policy.operator = stream_operator(condition);
-    policy.modulo = stream_modulo(condition);
-    policy.value = stream_value(condition);
-}
-
 fn apply_attribute_conditions_file_open(
     policy: &mut FileOpenStreamPolicy,
     conditions: &[AttributeCondition],
@@ -1148,24 +1042,12 @@ fn apply_attribute_conditions_file_open(
     }
 }
 
-fn apply_attribute_conditions_socket_bind(
-    policy: &mut SocketBindStreamPolicy,
-    conditions: &[AttributeCondition],
-) {
-    policy.attribute_condition_count = conditions.len() as u8;
-    for (index, condition) in conditions.iter().copied().enumerate() {
-        policy.attribute_conditions[index] = condition;
-    }
-}
-
 fn print_policy_summary(policy_dir: &Path, generation: u32, compiled: &CompiledPolicies) {
     info!(
-        "POLICY sync ok dir={} generation={} file_open_static={} file_open_stream={} socket_bind_static={} socket_bind_stream={}",
+        "POLICY sync ok dir={} generation={} file_open_static={} file_open_stream={}",
         policy_dir.display(),
         generation,
         compiled.file_open_static.len(),
         compiled.file_open_stream.len(),
-        compiled.socket_bind_static.len(),
-        compiled.socket_bind_stream.len(),
     );
 }

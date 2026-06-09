@@ -6,8 +6,7 @@ use tails_pdp_common::{
     ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
-    SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES, SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
-    STREAM_ATTRIBUTE_MAX_ENTRIES, SocketBindStaticPolicy, SocketBindStreamPolicy,
+    STREAM_ATTRIBUTE_MAX_ENTRIES,
 };
 
 use crate::BPF_PIN_DIRECTORY;
@@ -66,18 +65,6 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         ARRAY_KEY_SIZE,
         size_of::<FileOpenStreamPolicy>() as u32,
         FILE_OPEN_STREAM_POLICY_MAX_ENTRIES,
-    )?;
-    verify_pinned_map_layout(
-        "SOCKET_BIND_STATIC_POLICIES",
-        ARRAY_KEY_SIZE,
-        size_of::<SocketBindStaticPolicy>() as u32,
-        SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES,
-    )?;
-    verify_pinned_map_layout(
-        "SOCKET_BIND_STREAM_POLICIES",
-        ARRAY_KEY_SIZE,
-        size_of::<SocketBindStreamPolicy>() as u32,
-        SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "POLICY_GENERATION",
@@ -181,74 +168,6 @@ pub fn load_file_open_stream_policies(
         })?;
         map.set(index as u32, policy, 0)
             .with_context(|| format!("failed to write FILE_OPEN_STREAM_POLICIES[{index}]"))?;
-    }
-
-    Ok(())
-}
-
-pub fn load_socket_bind_static_policies(
-    ebpf: &mut aya::Ebpf,
-    policies: &[SocketBindStaticPolicy],
-) -> anyhow::Result<()> {
-    let mut map: Array<_, SocketBindStaticPolicy> = Array::try_from(
-        ebpf.take_map("SOCKET_BIND_STATIC_POLICIES")
-            .context("map 'SOCKET_BIND_STATIC_POLICIES' not found")?,
-    )
-    .context("failed to open SOCKET_BIND_STATIC_POLICIES")?;
-
-    for index in 0..map.len() {
-        map.set(index, SocketBindStaticPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear SOCKET_BIND_STATIC_POLICIES[{index}]"))?;
-    }
-
-    if policies.len() > map.len() as usize {
-        bail!(
-            "too many socket_bind static policies: {} > {}",
-            policies.len(),
-            map.len()
-        );
-    }
-
-    for (index, policy) in policies.iter().copied().enumerate() {
-        let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve SOCKET_BIND_STATIC_POLICIES[{index}] resource identity")
-        })?;
-        map.set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write SOCKET_BIND_STATIC_POLICIES[{index}]"))?;
-    }
-
-    Ok(())
-}
-
-pub fn load_socket_bind_stream_policies(
-    ebpf: &mut aya::Ebpf,
-    policies: &[SocketBindStreamPolicy],
-) -> anyhow::Result<()> {
-    let mut map: Array<_, SocketBindStreamPolicy> = Array::try_from(
-        ebpf.take_map("SOCKET_BIND_STREAM_POLICIES")
-            .context("map 'SOCKET_BIND_STREAM_POLICIES' not found")?,
-    )
-    .context("failed to open SOCKET_BIND_STREAM_POLICIES")?;
-
-    for index in 0..map.len() {
-        map.set(index, SocketBindStreamPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear SOCKET_BIND_STREAM_POLICIES[{index}]"))?;
-    }
-
-    if policies.len() > map.len() as usize {
-        bail!(
-            "too many socket_bind stream policies: {} > {}",
-            policies.len(),
-            map.len()
-        );
-    }
-
-    for (index, policy) in policies.iter().copied().enumerate() {
-        let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve SOCKET_BIND_STREAM_POLICIES[{index}] resource identity")
-        })?;
-        map.set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write SOCKET_BIND_STREAM_POLICIES[{index}]"))?;
     }
 
     Ok(())
