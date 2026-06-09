@@ -39,17 +39,20 @@ pub(crate) fn evaluate_policies(
                 current_subject,
                 current_command,
                 resource,
-            ) && attribute_conditions_match(
-                policy.attribute_condition_count,
-                &policy.attribute_conditions,
-                current_subject,
-                attribute_bank,
-            ) && let Some(entitlement) = socket_bind_stream_legacy_entitlement(
-                current_time,
-                current_iso8601_time,
-                current_defcon,
-                policy,
-            ) {
+            ) && (policy.attribute_condition_count == 0
+                || attribute_conditions_match(
+                    policy.attribute_condition_count,
+                    &policy.attribute_conditions,
+                    current_subject,
+                    attribute_bank,
+                ))
+                && let Some(entitlement) = socket_bind_stream_legacy_entitlement(
+                    current_time,
+                    current_iso8601_time,
+                    current_defcon,
+                    policy,
+                )
+            {
                 match entitlement {
                     Entitlement::Deny => {
                         if matched_deny_index == u32::MAX {
@@ -122,7 +125,18 @@ fn command_matches(
     policy_command: &[u8; COMMAND_LEN],
     current_command: &[u8; COMMAND_LEN],
 ) -> bool {
-    policy_command[0] == 0 || policy_command == current_command
+    if policy_command[0] == 0 {
+        return true;
+    }
+
+    let mut index = 0;
+    while index < COMMAND_LEN {
+        if policy_command[index] != current_command[index] {
+            return false;
+        }
+        index += 1;
+    }
+    true
 }
 
 fn socket_ip_matches(
