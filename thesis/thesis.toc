@@ -9,7 +9,7 @@
 \contentsline {subsection}{\numberline {2.3}SAPL}{5}{subsection.2.3}%
 \contentsline {section}{\numberline {3}Anforderungsanalyse}{6}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Funktionale Anforderungen}{6}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Operationale Anforderungen}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.2}Operative Anforderungen}{7}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Entwicklungsbezogene Anforderungen}{8}{subsection.3.3}%
 \contentsline {section}{\numberline {4}Konzeption}{9}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Architektur}{9}{subsection.4.1}%
@@ -24,8 +24,8 @@
 \contentsline {paragraph}{Policyverwaltung}{12}{section*.3}%
 \contentsline {paragraph}{Attributloader}{12}{section*.4}%
 \contentsline {paragraph}{Monitor}{12}{section*.5}%
-\contentsline {subsubsection}{\numberline {4.3.2}Kernelspace-Komponenten}{13}{subsubsection.4.3.2}%
-\contentsline {paragraph}{LSM}{13}{section*.6}%
+\contentsline {subsubsection}{\numberline {4.3.2}Kernelspace-Komponenten}{12}{subsubsection.4.3.2}%
+\contentsline {paragraph}{LSM}{12}{section*.6}%
 \contentsline {subsubsection}{\numberline {4.3.3}Administrationskomponente}{13}{subsubsection.4.3.3}%
 \contentsline {paragraph}{Administrationstool}{13}{section*.7}%
 \contentsline {subsection}{\numberline {4.4}Datenobjekte}{13}{subsection.4.4}%

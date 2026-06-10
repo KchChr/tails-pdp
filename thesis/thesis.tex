@@ -44,10 +44,10 @@ Bei dauerhaft bestehenden Zugriffen wird eine spätere Änderung der Entscheidun
 
 
 \subsection{Zielsetzung}
-Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels Attribute Stream-Based Access Control im Linux-Kernel stattfindet. 
+Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels SAPL-ähnlicher Attribute Stream-Based Access Control im Linux-Kernel stattfindet.
 Insbesondere sollen Stream-Attribute wie Zeitinformationen sowie externe, zur Laufzeit aktualisierte Attribute in die Zugriffsentscheidung einbezogen werden.
 Ziel ist die Implementierung eines Prototyps, der Policies einliest, in den Kernel überträgt und Zugriffsentscheidungen anhand dieser Policies trifft. 
-Darüber hinaus soll untersucht werden, wie bereits bestehende Zugriffssituationen bei nachträglich geänderten Bedingungen erkannt und eingeschränkt werden können.
+Darüber hinaus soll der Prototyp bereits bestehende Zugriffssituationen bei nachträglich geänderten Bedingungen erkennen und einschränken können.
 
 
 \subsection{Aufbau der Arbeit}
@@ -58,21 +58,48 @@ Darüber hinaus soll untersucht werden, wie bereits bestehende Zugriffssituation
 \section{Grundlagen}
 % Inhalt einfügen.
 
-\subsection{Linux Security Modules}
+\subsection{Zugriffskontrolle und Reference-Monitor-Konzept}
+% Inhalt einfügen.
+
+\subsection{Attribute-Based Access Control}
 % Inhalt einfügen.
 
 \subsection{Attribute Stream-Based Access Control}
 % Inhalt einfügen.
 
-\subsection{SAPL}
+\subsection{SAPL und Policy-Beschreibungen}
+% Inhalt einfügen.
+
+\subsection{Userspace und Kernelspace in Linux}
+% Inhalt einfügen.
+
+\subsection{Linux Security Modules und LSM-Hooks}
+% Inhalt einfügen.
+
+\subsection{eBPF und eBPF-LSM}
+% Inhalt einfügen.
+
+\subsection{eBPF-Maps und gepinnte Maps}
+% Inhalt einfügen.
+
+\subsection{eBPF-Verifier, Stack und Programmkomplexität}
+% Inhalt einfügen.
+
+\subsection{Aya als Rust-Framework für eBPF}
+% Inhalt einfügen.
+
+\subsection{Dynamische Attribute und Policy-Generationen}
+% Inhalt einfügen.
+
+\subsection{Überwachung bestehender Zugriffe und File Descriptors}
 % Inhalt einfügen.
 
 \newpage
 
 \section{Anforderungsanalyse}
 In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen beschrieben. 
-Die Anforderungen ergeben sich aus der Zielsetzung, SAPL-basierte Zugriffskontrolle im Linux-Kernel zu untersuchen und prototypisch umzusetzen. 
-Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit bereitstellen soll.
+Die Anforderungen ergeben sich aus der Zielsetzung, zu untersuchen wie SAPL-ähnliche Zugriffskontrolle im Linux-Kernel zu untersuchen und prototypisch umzusetzen.
+Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit zeigen soll.
 
 \subsection{Funktionale Anforderungen}
 
@@ -82,7 +109,7 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
 
 \begin{description}
     \item[FA-01 Policy-Einlesen:]
-    Der Prototyp muss SAPL-Policies aus einer definierten Quelle im Userspace einlesen können.
+    Der Prototyp muss SAPL-ähnliche Policies aus einer definierten Quelle im Userspace einlesen können.
     
     \textit{Akzeptanzkriterium:} Eine im Policy-Verzeichnis abgelegte Policy wird erkannt und für die weitere Verarbeitung bereitgestellt.
 
@@ -122,21 +149,33 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \textit{Akzeptanzkriterium:} Ein Zugriff wird nach einer relevanten Attributänderung entsprechend der Policy unterbunden oder eingeschränkt.
 
     \item[FA-09 Administrationsschnittstelle:]
-    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die Policies eingesehen und Attribute in den Kernel geschrieben werden können.
+    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die zentrale Informationen zum Zustand des Prototyps lesend eingesehen werden können.
     
-    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen und mindestens ein Attribute in den Kernel schreiben.
+    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen, ohne über die Administrationsschnittstelle Policies, Attribute oder Kernelzustand zu verändern.
 
     \item[FA-10 Gültige Policy-Generationen:]
     \hypertarget{anf:gueltige-policy-generationen}{Der Prototyp muss sicherstellen, dass nur erfolgreich erzeugte und validierte Generationen von Policies für Zugriffsentscheidungen verwendet werden.}
     Fehlerhafte, unvollständige oder nicht erfolgreich verarbeitete Policy-Generationen dürfen nicht als aktive Entscheidungsgrundlage gelten.
     
     \textit{Akzeptanzkriterium:} Eine neue Policy-Generation wird erst dann aktiviert, wenn sie vollständig verarbeitet und erfolgreich validiert wurde. Andernfalls bleibt die zuletzt gültige Policy-Generation aktiv.
+
+    \item[FA-11 Eingabevalidierung:]
+    Der Prototyp muss Eingaben aus dem Userspace validieren, bevor diese im Kernel für Zugriffsentscheidungen verwendet werden.
+    
+    \textit{Akzeptanzkriterium:} Ungültige oder manipulierte Eingaben werden erkannt und nicht als Entscheidungsgrundlage im Kernel verwendet.
+
+    \item[FA-12 beliebige Attributnamen:]
+    In Policies muss es für den Nutzer möglich sein, Attributnamen frei zu vergeben, ohne dass diese vorher im Prototyp fest definiert sein müssen.
+    Zulässige Attributnamen dürfen nicht leer sein und bestehen aus ASCII-Buchstaben (\texttt{A-Z}, \texttt{a-z}), Ziffern (\texttt{0-9}), Unterstrich (\texttt{\_}) und Bindestrich (\texttt{-}).
+    
+    \textit{Akzeptanzkriterium:} Eine Policy mit einem gültigen, zuvor nicht bekannten Attributnamen, beispielsweise \texttt{subject.position == "engineer"}, wird erfolgreich verarbeitet. Eine Policy mit einem Attributnamen außerhalb des zulässigen Zeichensatzes wird abgelehnt.
+
 \end{description}
 
-\subsection{Operationale Anforderungen}
+\subsection{Operative Anforderungen}
 
-Operationale Anforderungen beschreiben, wie gut der Prototyp seine Funktionen im Betrieb erfüllen soll. 
-Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation sichtbar sind, beispielsweise Stabilität, Sicherheit, Nachvollziehbarkeit, Performance und Reproduzierbarkeit.
+Operative Anforderungen beschreiben, wie gut der Prototyp seine Funktionen im Betrieb erfüllen soll. 
+Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation sichtbar sind, beispielsweise Stabilität, Beobachtbarkeit, Nachvollziehbarkeit, Performance und Reproduzierbarkeit.
 
 \begin{description}
     \item[OA-01 Stabilität:]
@@ -144,10 +183,8 @@ Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation si
     
     \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
 
-    \item[OA-02 Sicherheit:]
-    Die Kommunikation zwischen Userspace und Kernelspace muss so gestaltet sein, dass ungültige oder manipulierte Eingaben geprüft werden.
-    
-    \textit{Akzeptanzkriterium:} Eingaben werden validiert, bevor sie im Kernel für Zugriffsentscheidungen verwendet werden.
+    \item[OA-02 Beobachtbarkeit und Nachvollziehbarkeit:]
+    Der Prototyp soll zentrale Zustände und Entscheidungen so sichtbar machen, dass Betrieb und Evaluation nachvollziehen können, welche Policies, Attribute oder Zustände eine Zugriffsentscheidung beeinflusst haben.
     
     \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
 
@@ -170,18 +207,12 @@ Sie sind für Nutzer nicht immer unmittelbar sichtbar, beeinflussen aber, wie ve
 \begin{description}
     \item[EA-01 Wartbarkeit:]
     Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
-    
-    \textit{Akzeptanzkriterium:} Die zentralen Komponenten sind im Quellcode klar voneinander getrennt.
 
     \item[EA-02 Erweiterbarkeit:]
     Der Prototyp soll so entworfen werden, dass weitere Attribute, Policies oder LSM-Hooks ergänzt werden können.
-    
-    \textit{Akzeptanzkriterium:} Die Architektur erlaubt die Ergänzung weiterer Attribute oder Hooks ohne grundlegende Umstrukturierung.
 
     \item[EA-03 Begrenzter Kernel-Anteil:]
     Komplexe Policy-Logik soll möglichst im Userspace verbleiben, um die Komplexität im Kernel zu reduzieren.
-    
-    \textit{Akzeptanzkriterium:} Der Kernel übernimmt vor allem die Durchsetzung der Entscheidung, während komplexere Verarbeitungsschritte im Userspace stattfinden.
 \end{description}
 
 
@@ -198,11 +229,11 @@ Die Architektur des Prototyps ist in zwei zentrale Bereiche unterteilt: den User
 Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-Systemen und ermöglicht es, komplexe Logik zur Policy-Verarbeitung außerhalb des Kernels auszuführen, während sicherheitskritische Zugriffsentscheidungen direkt im Kernel umgesetzt werden.
 
 \begin{itemize}
-    \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung der SAPL-Policies. 
-    Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Monitor und die Policyverwaltung. 
+    \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung von Policies.
+    Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Monitor und der Policyverwaltung.
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
-    Die Policyverwaltung liest die SAPL-Policies, parst diese und lädt sie in den Kernel.
-    Der Monitor überwacht Datei- und Socketzugriffe im Userspace und prüft mögliche Policy-Verletzungen.
+    Die Policyverwaltung liest die SAPL-Policies, parst diese und übersetzt die Policy-Dateien in kernelgeeignete Map-Einträge.
+    Der Monitor überwacht Dateizugriffe im Userspace und prüft mögliche Policy-Verletzungen.
     Durch eine nachträgliche Durchsetzungsmaßnahme kann der Prozess bei einer Policy-Verletzung beendet oder der Dateizugriff durch das Schließen des File Descriptors beendet werden.
     
     \item \textbf{Kernelspace:} Im Kernelspace wird ein Linux Security Module integriert. 
@@ -233,11 +264,11 @@ Diese Teilbereiche beschreiben, wie Policies in das System gelangen, wie dynamis
 
 Policies werden im Userspace in einem dafür vorgesehenen Policy-Verzeichnis abgelegt. 
 Die Policyverwaltung überwacht dieses Verzeichnis und erkennt, wenn Policies hinzugefügt, geändert oder entfernt werden. 
-Nach einer Änderung werden die vorhandenen Policy-Dateien eingelesen und in eine interne Darstellung überführt. 
+Nach einer Änderung werden die vorhandenen Policy-Dateien eingelesen und in kernelgeeignete Map-Einträge übersetzt. 
 Dabei wird geprüft, ob die Policies syntaktisch und semantisch für den Prototyp verarbeitbar sind.
 
 Erst wenn diese Verarbeitung erfolgreich abgeschlossen ist, werden die Policies als neue Policy-Generation in den Kernel übertragen. 
-Die Übertragung erfolgt über eBPF-Maps, die als gemeinsame Datenstruktur zwischen Userspace und Kernelspace dienen. 
+Die Übertragung erfolgt über gepinnte eBPF-Maps, die als gemeinsame Datenstruktur zwischen Userspace und Kernelspace dienen.
 Durch das Generationenmodell wird verhindert, dass der Kernel während einer Zugriffsentscheidung eine nur teilweise aktualisierte Policy-Menge verwendet. 
 Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Policy-Generation aktiv.
 
@@ -245,18 +276,17 @@ Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Po
 
 Neben den Policies werden dynamische Attribute aus dem Userspace in den Kernelspace übertragen. 
 Dynamische Attribute sind Werte, die sich zur Laufzeit ändern und deshalb regelmäßig aktualisiert werden müssen. 
-Im Prototyp betrifft dies insbesondere Zeitinformationen sowie ein extern bereitgestelltes DEFCON-Level.
+Im Prototyp betrifft dies insbesondere Zeitinformationen sowie vpm Nutzer frei wählbare Attribute (vlg. FA-12}).
 
 Die Userspace-Komponente ermittelt diese Werte beziehungsweise liest sie aus einer definierten Quelle ein. 
 Anschließend werden die aktuellen Werte in dafür vorgesehene eBPF-Maps geschrieben. 
-Der Kernel kann diese Werte bei der Auswertung von Streampolicies lesen und in die Zugriffsentscheidung einbeziehen. 
-Eine Streampolicy bezeichnet in dieser Arbeit eine Policy, die neben statischen Zugriffsdaten auch dynamische Attribute auswertet.
-Dadurch können Policies formuliert werden, deren Entscheidung nicht nur von statischen Eigenschaften wie Benutzer-ID oder Ressource abhängt, sondern auch von veränderlichen Laufzeitzuständen.
+Der Kernel kann diese Werte bei der Auswertung von Policies lesen und in die Zugriffsentscheidung einbeziehen.
+
 
 \subsubsection{Zugriffsentscheidungen im Kernel}
 
 Wenn ein kontrollierter Zugriff stattfindet, wird im Kernel ein LSM-Hook ausgelöst. 
-Bei einem Dateizugriff ist dies beispielsweise der Hook \texttt{file\_open}, bei einer Socket-Bind-Operation der Hook \texttt{socket\_bind}. 
+Bei einem Dateizugriff ist dies beispielsweise der Hook \texttt{file\_open}
 Das eBPF-Programm liest aus dem Hook-Kontext die für die Entscheidung relevanten Informationen aus. 
 Dazu gehören unter anderem das Subjekt, die angefragte Ressource und der aktuelle Prozesskontext.
 
@@ -273,7 +303,7 @@ Der Kernel unterbindet daraufhin den Zugriff.
 \subsubsection{Monitoring bestehender Zugriffe}
 
 LSM-Hooks prüfen einen Zugriff zu dem Zeitpunkt, an dem das jeweilige Kernelereignis auftritt. 
-Bei streambasierten Policies kann sich die Entscheidungslage jedoch nachträglich ändern, beispielsweise wenn sich die Uhrzeit oder das DEFCON-Level ändert. 
+Bei streambasierten Policies kann sich die Entscheidungslage jedoch nachträglich ändern, beispielsweise wenn sich die Uhrzeit oder andere Attribute ändern.
 Ein bereits geöffneter Zugriff wird dadurch nicht automatisch erneut durch denselben LSM-Hook geprüft.
 
 Aus diesem Grund enthält der Prototyp zusätzlich einen Monitor im Userspace. 
@@ -297,17 +327,14 @@ Dadurch verbleiben komplexere Verarbeitungsschritte außerhalb des Kernels.
 
 \paragraph{Policies}
 Policies beschreiben die Zugriffsvorgaben des Systems. 
-Sie legen fest, welches Subjekt unter welchen Bedingungen auf welche Ressource zugreifen darf oder nicht darf. 
-Im Prototyp liegen sie als Textdateien im Policy-Verzeichnis \texttt{policies/}. 
-Dabei wird zwischen statischen Policies und Streampolicies unterschieden. 
-Statische Policies werden ausschließlich anhand vergleichsweise stabiler Eigenschaften wie Subjekt, Aktion oder Ressource bewertet. 
-Streampolicies beziehen zusätzlich dynamische Attribute ein, beispielsweise die aktuelle Zeit oder ein extern gesetztes Attribut. 
+Sie legen fest, welches Subjekt unter welchen Bedingungen auf welche Ressource zugreifen darf oder nicht zugreifen darf.
+Im Prototyp liegen sie als Textdateien im Policy-Verzeichnis \texttt{policies/}.
 Policies sind damit keine ausführbare Programmlogik, sondern Eingabedaten für die Policyverwaltung und die spätere Auswertung im Kernelspace.
 
 \paragraph{Policyverwaltung}
-Die Policyverwaltung bildet die Schnittstelle zwischen den menschenlesbaren Policy-Dateien und der im Kernel verwendbaren Policy-Repräsentation. 
+Die Policyverwaltung bildet die Schnittstelle zwischen den menschenlesbaren Policy-Dateien und den im Kernel verwendbaren Map-Einträgen. 
 Sie überwacht das Verzeichnis \texttt{policies/}, liest die dort abgelegten Policies ein, verarbeitet sie und validiert sie vor der Aktivierung. 
-Nach erfolgreicher Validierung werden die Policies in eine Form überführt, die vom Kernelspace ausgewertet werden kann.
+Nach erfolgreicher Validierung übersetzt der Userspace die Policy-Dateien in kernelgeeignete Map-Einträge.
 
 Da Policies während des Betriebs geändert werden können, muss verhindert werden, dass der Kernel eine nur teilweise aktualisierte Policy-Menge verwendet. 
 Dazu aktiviert die Policyverwaltung Policies als atomare Einheit. 
@@ -315,7 +342,7 @@ Dies wird durch ein Generationensystem gewährleistet: Eine neue Policy-Generati
 Erst danach wird sie in den Kernelspace übertragen und als gültige Generation aktiviert. 
 Schlägt dieser Vorgang fehl, bleibt die zuletzt gültige Generation aktiv.
 
-Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kompilierte Policies, Policy-Generationen sowie aktive und zuletzt gültige Policy-Versionen. 
+Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kernelgeeignete Map-Einträge, Policy-Generationen sowie aktive und zuletzt gültige Policy-Versionen. 
 
 \paragraph{Attributloader}
 Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
@@ -332,7 +359,7 @@ Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweil
 Ändern sich danach dynamische Attribute, wird ein bereits bestehender Zugriff nicht automatisch erneut durch denselben Hook geprüft.
 
 Der Monitor betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen. 
-Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors und aktive Sockets. 
+Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
 Wird eine Verletzung erkannt, kann ein nachträgliches Enforcement ausgelöst werden. 
 Bei Dateizugriffen kann dies beispielsweise bedeuten, dass ein betroffener File Descriptor geschlossen und damit der Zugriff auf eine bereits geöffnete Ressource beendet wird.
@@ -350,10 +377,8 @@ Das Ergebnis dieser Auswertung entscheidet, ob der jeweilige Zugriff erlaubt ode
 \subsubsection{Administrationskomponente}
 
 \paragraph{Administrationstool}
-Das Administrationstool dient der Bedienung und Diagnose des Prototyps. 
-Es ermöglicht, zentrale Informationen zum Zustand des Systems einzusehen und administrative Operationen auszuführen. 
-Damit ist es nicht die primäre Quelle der Policies, sondern eine ergänzende Verwaltungs- und Diagnosekomponente.
-
+Das Administrationstool dient der Diagnose des Prototyps.
+Es ermöglicht, zentrale Informationen zum Zustand des Systems, über geladene Polices und Attribute lesend einzusehen. Zur Gewähleistung der Konsistenz des Systems wird hier auf eine schreibende Funktion verzichtet.
 
 \subsection{Datenobjekte}
 
@@ -367,8 +392,8 @@ Im Userspace liegen die Datenobjekte, die für die Verwaltung, Vorbereitung und 
 Dazu gehören zunächst die Policy-Dateien im Verzeichnis \texttt{policies/}. 
 Sie stellen die menschenlesbare Beschreibung der Zugriffsvorgaben dar.
 
-Während der Verarbeitung entstehen daraus weitere Datenobjekte: gelesene Policy-Dokumente, geparste Policies und kompilierte Policies. 
-Diese Zwischenformen sind notwendig, um die textuellen Policies in eine strukturierte Form zu überführen, die später in den Kernelspace übertragen werden kann. 
+Während der Verarbeitung entstehen daraus weitere Datenobjekte: gelesene Policy-Dokumente, geparste Policies und kernelgeeignete Map-Einträge. 
+Diese Zwischenformen sind notwendig, um die textuellen Policies in eine strukturierte Form zu überführen, die später in eBPF-Maps im Kernelspace übertragen werden kann. 
 Zusätzlich verwaltet der Userspace Policy-Generationen. 
 Eine Policy-Generation beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
 
