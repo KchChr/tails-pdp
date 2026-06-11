@@ -1,52 +1,63 @@
 \babel@toc {german}{}
 \contentsline {section}{\numberline {1}Einleitung}{4}{section.1}%
 \contentsline {subsection}{\numberline {1.1}Motivation}{4}{subsection.1.1}%
-\contentsline {subsection}{\numberline {1.2}Zielsetzung}{4}{subsection.1.2}%
-\contentsline {subsection}{\numberline {1.3}Aufbau der Arbeit}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.2}Wissenschaftliche Fragestellung}{4}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Zielsetzung}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Aufbau der Arbeit}{4}{subsection.1.4}%
 \contentsline {section}{\numberline {2}Grundlagen}{5}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Linux Security Modules}{5}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Attribute Stream-Based Access Control}{5}{subsection.2.2}%
-\contentsline {subsection}{\numberline {2.3}SAPL}{5}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.1}Zugriffskontrolle und Reference-Monitor-Konzept}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Attribute-Based Access Control}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Attribute Stream-Based Access Control}{5}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Policy-Beschreibungen für ASBAC}{5}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Userspace und Kernelspace in Linux}{5}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Linux Security Modules und LSM-Hooks}{5}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}eBPF und eBPF-LSM}{5}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}eBPF-Maps und gepinnte Maps}{5}{subsection.2.8}%
+\contentsline {subsection}{\numberline {2.9}eBPF-Verifier, Stack und Programmkomplexität}{5}{subsection.2.9}%
+\contentsline {subsection}{\numberline {2.10}Aya als Rust-Framework für eBPF}{5}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.11}Dynamische Attribute und Policy-Generationen}{5}{subsection.2.11}%
+\contentsline {subsection}{\numberline {2.12}Überwachung bestehender Zugriffe und File Descriptors}{5}{subsection.2.12}%
 \contentsline {section}{\numberline {3}Anforderungsanalyse}{6}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Funktionale Anforderungen}{6}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Operative Anforderungen}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.2}Operative Anforderungen}{8}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Entwicklungsbezogene Anforderungen}{8}{subsection.3.3}%
 \contentsline {section}{\numberline {4}Konzeption}{9}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Architektur}{9}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Datenfluss}{9}{subsection.4.2}%
-\contentsline {subsubsection}{\numberline {4.2.1}Policy-Datenfluss}{9}{subsubsection.4.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2}Datenfluss dynamischer Attribute}{10}{subsubsection.4.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.3}Zugriffsentscheidungen im Kernel}{10}{subsubsection.4.2.3}%
-\contentsline {subsubsection}{\numberline {4.2.4}Monitoring bestehender Zugriffe}{11}{subsubsection.4.2.4}%
-\contentsline {subsection}{\numberline {4.3}Komponenten}{11}{subsection.4.3}%
-\contentsline {subsubsection}{\numberline {4.3.1}Userspace-Komponenten}{11}{subsubsection.4.3.1}%
-\contentsline {paragraph}{Policies}{11}{section*.2}%
+\contentsline {subsection}{\numberline {4.1}praktische Einschränkungen von eBPF}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Architektur}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Datenfluss}{9}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Policy-Datenfluss}{10}{subsubsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.2}Datenfluss dynamischer Attribute}{10}{subsubsection.4.3.2}%
+\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{11}{subsubsection.4.3.3}%
+\contentsline {subsubsection}{\numberline {4.3.4}Monitoring bestehender Zugriffe}{11}{subsubsection.4.3.4}%
+\contentsline {subsection}{\numberline {4.4}Komponenten}{11}{subsection.4.4}%
+\contentsline {subsubsection}{\numberline {4.4.1}Userspace-Komponenten}{11}{subsubsection.4.4.1}%
+\contentsline {paragraph}{Policies}{12}{section*.2}%
 \contentsline {paragraph}{Policyverwaltung}{12}{section*.3}%
 \contentsline {paragraph}{Attributloader}{12}{section*.4}%
 \contentsline {paragraph}{Monitor}{12}{section*.5}%
-\contentsline {subsubsection}{\numberline {4.3.2}Kernelspace-Komponenten}{12}{subsubsection.4.3.2}%
-\contentsline {paragraph}{LSM}{12}{section*.6}%
-\contentsline {subsubsection}{\numberline {4.3.3}Administrationskomponente}{13}{subsubsection.4.3.3}%
+\contentsline {subsubsection}{\numberline {4.4.2}Kernelspace-Komponenten}{13}{subsubsection.4.4.2}%
+\contentsline {paragraph}{LSM}{13}{section*.6}%
+\contentsline {subsubsection}{\numberline {4.4.3}Administrationskomponente}{13}{subsubsection.4.4.3}%
 \contentsline {paragraph}{Administrationstool}{13}{section*.7}%
-\contentsline {subsection}{\numberline {4.4}Datenobjekte}{13}{subsection.4.4}%
-\contentsline {subsubsection}{\numberline {4.4.1}Datenobjekte im Userspace}{13}{subsubsection.4.4.1}%
-\contentsline {subsubsection}{\numberline {4.4.2}Datenobjekte im Kernelspace}{13}{subsubsection.4.4.2}%
-\contentsline {subsection}{\numberline {4.5}Entwurfsentscheidungen}{14}{subsection.4.5}%
-\contentsline {subsubsection}{\numberline {4.5.1}Trennung von Userspace und Kernelspace}{14}{subsubsection.4.5.1}%
-\contentsline {subsubsection}{\numberline {4.5.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{14}{subsubsection.4.5.2}%
-\contentsline {subsubsection}{\numberline {4.5.3}Auswahl der LSM-Hooks}{15}{subsubsection.4.5.3}%
-\contentsline {subsubsection}{\numberline {4.5.4}Policy-Verarbeitung im Userspace}{15}{subsubsection.4.5.4}%
-\contentsline {subsubsection}{\numberline {4.5.5}Reduzierte Policy-Repräsentation im Kernelspace}{15}{subsubsection.4.5.5}%
-\contentsline {subsubsection}{\numberline {4.5.6}Kommunikation über eBPF-Maps}{15}{subsubsection.4.5.6}%
-\contentsline {subsubsection}{\numberline {4.5.7}Generationenmodell für Policy-Aktualisierungen}{15}{subsubsection.4.5.7}%
-\contentsline {subsubsection}{\numberline {4.5.8}Trennung statischer Policies und Streampolicies}{15}{subsubsection.4.5.8}%
-\contentsline {subsubsection}{\numberline {4.5.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{15}{subsubsection.4.5.9}%
-\contentsline {subsubsection}{\numberline {4.5.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{15}{subsubsection.4.5.10}%
-\contentsline {subsubsection}{\numberline {4.5.11}Combining-Strategie für Policy-Entscheidungen}{15}{subsubsection.4.5.11}%
-\contentsline {subsubsection}{\numberline {4.5.12}Identifikation von Dateien über Device und Inode}{15}{subsubsection.4.5.12}%
-\contentsline {subsubsection}{\numberline {4.5.13}Nachträgliche Überwachung durch den Monitor}{15}{subsubsection.4.5.13}%
-\contentsline {subsubsection}{\numberline {4.5.14}Enforcement durch Schließen von File Descriptors}{15}{subsubsection.4.5.14}%
-\contentsline {subsubsection}{\numberline {4.5.15}Administration und Diagnose über ein separates Tool}{15}{subsubsection.4.5.15}%
+\contentsline {subsection}{\numberline {4.5}Datenobjekte}{13}{subsection.4.5}%
+\contentsline {subsubsection}{\numberline {4.5.1}Datenobjekte im Userspace}{13}{subsubsection.4.5.1}%
+\contentsline {subsubsection}{\numberline {4.5.2}Datenobjekte im Kernelspace}{13}{subsubsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.6}Entwurfsentscheidungen}{14}{subsection.4.6}%
+\contentsline {subsubsection}{\numberline {4.6.1}Trennung von Userspace und Kernelspace}{14}{subsubsection.4.6.1}%
+\contentsline {subsubsection}{\numberline {4.6.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{14}{subsubsection.4.6.2}%
+\contentsline {subsubsection}{\numberline {4.6.3}Auswahl der LSM-Hooks}{15}{subsubsection.4.6.3}%
+\contentsline {subsubsection}{\numberline {4.6.4}Policy-Verarbeitung im Userspace}{15}{subsubsection.4.6.4}%
+\contentsline {subsubsection}{\numberline {4.6.5}Reduzierte Policy-Repräsentation im Kernelspace}{15}{subsubsection.4.6.5}%
+\contentsline {subsubsection}{\numberline {4.6.6}Kommunikation über eBPF-Maps}{15}{subsubsection.4.6.6}%
+\contentsline {subsubsection}{\numberline {4.6.7}Generationenmodell für Policy-Aktualisierungen}{15}{subsubsection.4.6.7}%
+\contentsline {subsubsection}{\numberline {4.6.8}Trennung statischer Policies und Streampolicies}{15}{subsubsection.4.6.8}%
+\contentsline {subsubsection}{\numberline {4.6.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{15}{subsubsection.4.6.9}%
+\contentsline {subsubsection}{\numberline {4.6.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{15}{subsubsection.4.6.10}%
+\contentsline {subsubsection}{\numberline {4.6.11}Combining-Strategie für Policy-Entscheidungen}{15}{subsubsection.4.6.11}%
+\contentsline {subsubsection}{\numberline {4.6.12}Identifikation von Dateien über Device und Inode}{15}{subsubsection.4.6.12}%
+\contentsline {subsubsection}{\numberline {4.6.13}Nachträgliche Überwachung durch den Monitor}{15}{subsubsection.4.6.13}%
+\contentsline {subsubsection}{\numberline {4.6.14}Enforcement durch Schließen von File Descriptors}{15}{subsubsection.4.6.14}%
+\contentsline {subsubsection}{\numberline {4.6.15}Administration und Diagnose über ein separates Tool}{15}{subsubsection.4.6.15}%
 \contentsline {section}{\numberline {5}Entwurf und Umsetzung}{16}{section.5}%
 \contentsline {subsection}{\numberline {5.1}Komponente 1}{16}{subsection.5.1}%
 \contentsline {subsection}{\numberline {5.2}Komponente 2}{16}{subsection.5.2}%
