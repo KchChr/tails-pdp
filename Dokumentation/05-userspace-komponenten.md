@@ -12,7 +12,7 @@ Es ist verantwortlich für:
 - gepinnte Maps prüfen und öffnen
 - Policy-Verzeichnis überwachen
 - Zeit-Maps aktualisieren
-- DEFCON-Stream-Attribut aktualisieren
+- strukturierte Attribute wie `system.defcon` aktualisieren
 - Userspace-Monitor starten
 - Logging konfigurieren
 
@@ -99,23 +99,6 @@ Beispiel:
 environment.utc.hour < 8;
 ```
 
-## DEFCON-Updater
-
-[`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) überwacht [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). Der Inhalt muss eine
-Zahl von `1` bis `5` sein. Bei einer gültigen Änderung schreibt der Updater den Wert in die Map
-`CURRENT_DEFCON`; bei ungültigem Inhalt bleibt der letzte gültige Wert aktiv [P12], [P23], [P24].
-
-Beispiel:
-
-```shell
-echo 2 > environment/DEFCON.txt
-```
-
-Eine Stream Policy kann diesen Wert mit `environment.defcon.level <= 2` auswerten [P3], [P8].
-Zusätzlich darf eine Stream Policy dieselben statischen Hook-Filter nutzen wie die passende Static
-Policy, zum Beispiel `command` bei `file_open` oder `command`, `resource.port` und
-`resource.transport` bei `socket_bind` [P3], [P8].
-
 ## Strukturierte Attribute
 
 Zusätzlich überwacht [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
@@ -129,6 +112,10 @@ ungültigen Dateien bleibt die zuletzt gültige Attributgeneration aktiv.
 Ressourcenattribute werden nicht über einen Pfad-Hash, sondern über die Dateiidentität aus Device
 und Inode adressiert. Dadurch nutzt der Kernel beim `file_open` dieselbe Objektidentität wie der
 Userspace beim Laden der Attributdateien.
+
+DEFCON wird ebenfalls als strukturiertes Systemattribut geführt. Der Wert steht als `defcon = <wert>`
+in `environment/system.env`, wird als `system.defcon` in Policies verwendet und muss im Bereich
+`1..=5` liegen.
 
 Beispiel:
 

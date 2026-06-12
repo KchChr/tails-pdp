@@ -7,15 +7,14 @@ multiple files, for example one policy for `hour < 8` and another for `hour >= 1
 
 Stream policies may use the same static hook filters as static policies, for example `command`,
 `subject.uid` or `resource.path`, plus stream conditions such as `environment.utc.hour`,
-`environment.defcon.level`, `system.<attribute>`, `subject.<attribute>` or
-`resource.<attribute>`.
+`system.<attribute>`, `subject.<attribute>` or `resource.<attribute>`.
 
 Numbering convention:
 
 - `10-*` to `19-*`: `file_open` policies
 
-DEFCON stream examples use `environment.defcon.level`. The current test DEFCON value is read from
-`../environment/DEFCON.txt` and must be an integer from `1` to `5`.
+DEFCON examples use `system.defcon`. The current DEFCON value is read from
+`../environment/system.env` and must be an integer from `1` to `5`.
 
 Structured attribute examples are stored in `environment/`. These files are not loaded from the
 example directory automatically; copy them into the runtime `../environment/` directory before

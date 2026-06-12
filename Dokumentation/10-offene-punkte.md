@@ -93,11 +93,11 @@ Vorschlag:
 - Architektur explizit dokumentieren.
 - Für ARM64 eine separate Implementierung planen, falls nötig.
 
-## Ungültige Stream-Attribute bleiben ein Bedienrisiko
+## Ungültige strukturierte Attribute bleiben ein Bedienrisiko
 
-Der DEFCON-Updater ignoriert ungültige Werte in [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und behält den
-letzten gültigen Wert bei [P23]. Das ist robust, kann aber verwirrend sein, wenn ein Tippfehler
-nicht sofort als Policy-Verhalten sichtbar wird.
+Der Attribut-Updater ignoriert ungültige Werte in [`environment/system.env`](../environment/system.env)
+und behält die letzte gültige Attributgeneration bei [P23]. Das ist robust, kann aber verwirrend
+sein, wenn ein Tippfehler nicht sofort als Policy-Verhalten sichtbar wird.
 
 Vorschlag:
 

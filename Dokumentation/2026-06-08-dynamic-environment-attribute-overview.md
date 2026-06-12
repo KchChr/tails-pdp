@@ -74,9 +74,8 @@ Code:
 
 Sinn:
 
-Stream-Policies können jetzt neben den bestehenden eingebauten Stream-Bedingungen auch dynamische
-Attributbedingungen tragen. Die bestehenden Bedingungen wie `environment.utc.hour` und
-`environment.defcon.level` bleiben erhalten.
+Stream-Policies können neben den eingebauten Zeitbedingungen auch dynamische Attributbedingungen
+tragen. DEFCON wird im aktuellen Stand als strukturiertes Systemattribut `system.defcon` behandelt.
 
 Gedanke dahinter:
 
@@ -167,7 +166,6 @@ Die Runtime-Umgebung sieht so aus:
 
 ```text
 environment/
-  DEFCON.txt
   system.env
   subjects/
     1000.env
@@ -386,4 +384,3 @@ Zielsystem:
 
 Wegen neuer gepinnter Maps und geänderter Stream-Policy-Structs können alte Pins inkompatibel sein.
 Die Layoutprüfung erkennt das und fordert zum Entfernen der stale pinned map auf.
-

@@ -58,7 +58,7 @@ Sinnvolle Fälle:
 - gültige `file_open` Stream Policy
 - gültige `socket_bind` Static Policy
 - gültige `socket_bind` Stream Policy
-- gültige `environment.defcon.level <= 2`
+- gültige `system.defcon <= 2`
 - ungültige DEFCON-Werte `0` und `6`
 - doppelte Policy-Namen werden abgelehnt
 - fehlendes Semikolon wird abgelehnt
@@ -170,13 +170,13 @@ Erwartung: Bind schlägt fehl.
 Eine Policy mit `environment.utc.hour < 8` oder `>= 16` aktivieren und mit aktueller UTC-Zeit
 vergleichen.
 
-#### DEFCON-Stream-Policy
+#### DEFCON-Policy über system.env
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-echo 5 > environment/DEFCON.txt
+printf 'defcon = 5\n' > environment/system.env
 cat /home/hntr/test.txt
-echo 2 > environment/DEFCON.txt
+printf 'defcon = 2\n' > environment/system.env
 cat /home/hntr/test.txt
 ```
 

@@ -42,7 +42,7 @@ stehen direkt im Text, damit die Herkunft der jeweiligen Aussage beim Lesen sich
 | --- | --- |
 | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Lädt eBPF, richtet Maps und Tail Calls ein, startet Policy-Sync, Zeit-Update und Monitor. |
 | [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest `.sapl`-Policies aus [`policies/`](../policies/), kompiliert sie und schreibt sie in Maps. |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und schreibt `CURRENT_DEFCON`. |
+| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest strukturierte Attribute aus [`environment/`](../environment/) und schreibt `ATTRIBUTES`. |
 | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse, FDs und Sockets im Userspace. |
 | [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt fremde File Descriptors per `ptrace` auf x86_64 Linux. |
 | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Policy-Datenstrukturen und Auswertungslogik für Kernel und Userspace. |
@@ -52,7 +52,7 @@ stehen direkt im Text, damit die Herkunft der jeweiligen Aussage beim Lesen sich
 | [`tails-pdp-admintool/`](../tails-pdp-admintool/) | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
 | [`examples/`](../examples/) | Beispiel-Policies, die nicht automatisch geladen werden. |
 | [`policies/`](../policies/) | Aktiver Policy-Ordner, den der Loader überwacht. |
-| [`stream-attributes/`](../environment/) | Aktive Stream-Attribute, aktuell `DEFCON.txt`. |
+| [`environment/`](../environment/) | Aktive strukturierte Attribute, darunter `system.defcon`. |
 
 ## Kurzzusammenfassung
 

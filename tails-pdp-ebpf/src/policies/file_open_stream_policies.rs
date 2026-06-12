@@ -1,16 +1,15 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    AttributeKey, COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
-    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, attribute_bank, attribute_object_ids,
-    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
-    matches_attribute_condition, policy_bank_offset,
+    AttributeKey, COMMAND_LEN, Entitlement, FileOpenRequest, MAX_ATTRIBUTE_CONDITIONS,
+    POLICY_BANK_SIZE, attribute_bank, attribute_object_ids, file_open_stream_legacy_entitlement,
+    file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
 };
 
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        ATTRIBUTE_GENERATION, ATTRIBUTES, CURRENT_DEFCON, CURRENT_TIME, CURRENT_TIME_ISO8601,
-        FILE_OPEN_JUMP_TABLE, FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
+        ATTRIBUTE_GENERATION, ATTRIBUTES, CURRENT_TIME, CURRENT_TIME_ISO8601, FILE_OPEN_JUMP_TABLE,
+        FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
     },
     policies::decision::{DecisionMapExt, DecisionState},
 };
@@ -21,7 +20,6 @@ pub(crate) fn evaluate_policies(
     resource: &FileOpenResource,
     current_time: u64,
     current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
-    current_defcon: u32,
     generation: u32,
     attribute_bank: u32,
 ) -> DecisionState {
@@ -49,12 +47,8 @@ pub(crate) fn evaluate_policies(
                     resource.inode,
                     attribute_bank,
                 )
-                && let Some(entitlement) = file_open_stream_legacy_entitlement(
-                    current_time,
-                    current_iso8601_time,
-                    current_defcon,
-                    policy,
-                )
+                && let Some(entitlement) =
+                    file_open_stream_legacy_entitlement(current_time, current_iso8601_time, policy)
             {
                 match entitlement {
                     Entitlement::Deny => {
@@ -78,14 +72,13 @@ pub(crate) fn evaluate_policies(
     }
 
     crate::debug_printk!(
-        b"fosm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu defcon=%d dev=%llu ino=%llu cmd=%s",
+        b"fosm deny=%d permit=%d didx=%d pidx=%d uid=%d t=%llu dev=%llu ino=%llu cmd=%s",
         state.deny,
         state.permit,
         matched_deny_index,
         matched_permit_index,
         current_subject,
         current_time,
-        current_defcon,
         resource.device,
         resource.inode,
         current_command.as_ptr(),
@@ -144,10 +137,6 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         .get(0)
         .copied()
         .unwrap_or(tails_pdp_common::Iso8601TimeParts::new(1970, 1, 1, 0, 0, 0));
-    let current_defcon = CURRENT_DEFCON
-        .get(0)
-        .copied()
-        .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let current_attribute_bank = attribute_bank(ATTRIBUTE_GENERATION.get(0).copied().unwrap_or(0));
     let stream_state = evaluate_policies(
         current_subject,
@@ -155,7 +144,6 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         &resource,
         current_time,
         current_iso8601_time,
-        current_defcon,
         generation,
         current_attribute_bank,
     );

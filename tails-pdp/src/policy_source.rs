@@ -9,9 +9,9 @@ use aya::maps::{Array, Map, MapData};
 use log::{error, info};
 use tails_pdp_common::{
     ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_LEN,
-    DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy,
-    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily,
-    SocketTransport, StreamAttribute, StreamOperator, attribute_hash, policy_bank_offset,
+    Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy, MAX_ATTRIBUTE_CONDITIONS,
+    POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily, SocketTransport, StreamAttribute,
+    StreamOperator, attribute_hash, policy_bank_offset,
 };
 use tokio::time::{Duration, sleep};
 
@@ -53,10 +53,6 @@ enum ParsedStreamCondition {
         value: u64,
     },
     Second {
-        operator: StreamOperator,
-        value: u64,
-    },
-    Defcon {
         operator: StreamOperator,
         value: u64,
     },
@@ -748,10 +744,6 @@ fn parse_stream_condition(statement: &str) -> anyhow::Result<Option<ParsedStream
     if let Some(remainder) = statement.strip_prefix("environment.utc.second ") {
         return parse_component_stream_condition(remainder, StreamAttribute::Second).map(Some);
     }
-    if let Some(remainder) = statement.strip_prefix("environment.defcon.level ") {
-        return parse_component_stream_condition(remainder, StreamAttribute::Defcon).map(Some);
-    }
-
     if let Some(condition) = parse_dynamic_attribute_condition(statement)? {
         return Ok(Some(ParsedStreamCondition::Dynamic(condition)));
     }
@@ -883,17 +875,10 @@ fn parse_component_stream_condition(
         .parse()
         .map_err(|error| anyhow!("invalid stream attribute value '{}': {error}", tokens[1]))?;
 
-    if attribute == StreamAttribute::Defcon
-        && !((DEFCON_MIN_LEVEL as u64)..=(DEFCON_MAX_LEVEL as u64)).contains(&value)
-    {
-        bail!("invalid DEFCON level {value}; expected {DEFCON_MIN_LEVEL}..={DEFCON_MAX_LEVEL}");
-    }
-
     match attribute {
         StreamAttribute::Hour => Ok(ParsedStreamCondition::Hour { operator, value }),
         StreamAttribute::Minute => Ok(ParsedStreamCondition::Minute { operator, value }),
         StreamAttribute::Second => Ok(ParsedStreamCondition::Second { operator, value }),
-        StreamAttribute::Defcon => Ok(ParsedStreamCondition::Defcon { operator, value }),
         StreamAttribute::Time => bail!("unexpected StreamAttribute::Time"),
     }
 }
@@ -951,7 +936,6 @@ fn stream_attribute(condition: ParsedStreamCondition) -> StreamAttribute {
         ParsedStreamCondition::Hour { .. } => StreamAttribute::Hour,
         ParsedStreamCondition::Minute { .. } => StreamAttribute::Minute,
         ParsedStreamCondition::Second { .. } => StreamAttribute::Second,
-        ParsedStreamCondition::Defcon { .. } => StreamAttribute::Defcon,
         ParsedStreamCondition::Dynamic(_) => StreamAttribute::Time,
     }
 }
@@ -961,8 +945,7 @@ fn stream_operator(condition: ParsedStreamCondition) -> StreamOperator {
         ParsedStreamCondition::TimeModulo { operator, .. }
         | ParsedStreamCondition::Hour { operator, .. }
         | ParsedStreamCondition::Minute { operator, .. }
-        | ParsedStreamCondition::Second { operator, .. }
-        | ParsedStreamCondition::Defcon { operator, .. } => operator,
+        | ParsedStreamCondition::Second { operator, .. } => operator,
         ParsedStreamCondition::Dynamic(condition) => condition.operator,
     }
 }
@@ -973,7 +956,6 @@ fn stream_modulo(condition: ParsedStreamCondition) -> u64 {
         ParsedStreamCondition::Hour { .. }
         | ParsedStreamCondition::Minute { .. }
         | ParsedStreamCondition::Second { .. }
-        | ParsedStreamCondition::Defcon { .. }
         | ParsedStreamCondition::Dynamic(_) => 0,
     }
 }
@@ -983,8 +965,7 @@ fn stream_value(condition: ParsedStreamCondition) -> u64 {
         ParsedStreamCondition::TimeModulo { value, .. }
         | ParsedStreamCondition::Hour { value, .. }
         | ParsedStreamCondition::Minute { value, .. }
-        | ParsedStreamCondition::Second { value, .. }
-        | ParsedStreamCondition::Defcon { value, .. } => value,
+        | ParsedStreamCondition::Second { value, .. } => value,
         ParsedStreamCondition::Dynamic(_) => 0,
     }
 }

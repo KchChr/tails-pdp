@@ -46,7 +46,6 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
-sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
@@ -98,14 +97,13 @@ Supported concepts:
   `environment.utc.hour <op> VALUE`
   `environment.utc.minute <op> VALUE`
   `environment.utc.second <op> VALUE`
-  `environment.defcon.level <op> VALUE`
   `system.<attribute> <op> VALUE`
   `subject.<attribute> <op> VALUE`
   `resource.<attribute> <op> VALUE`
 
 Stream policies may use the same static hook filters as static policies. Example: a `file_open`
 stream policy may combine `command == "cat"` and `resource.path == "/home/hntr/test.txt"` with
-`environment.defcon.level <= 2`.
+`system.defcon <= 2`.
 
 `system.<attribute>`, `subject.<attribute>`, and `resource.<attribute>` read external attributes
 from `environment/`. `system.env` contains global attributes. `subjects/<uid>.env` contains
@@ -134,10 +132,6 @@ The policy condition `subject.position == "engineer"` is resolved against the cu
 The condition `system.defcon <= 3` is resolved against the global `system.env` attributes.
 The condition `resource.classification == "internal"` is resolved against the opened file resource
 using its device and inode identity.
-
-`environment.defcon.level` remains supported for compatibility. It reads the current test DEFCON
-level from `environment/DEFCON.txt` and writes valid changes to the pinned `CURRENT_DEFCON` eBPF
-map.
 
 Not supported:
 
@@ -190,9 +184,9 @@ Example DEFCON workflow:
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-echo 5 > environment/DEFCON.txt
+printf 'defcon = 5\n' > environment/system.env
 cat /home/hntr/test.txt
-echo 2 > environment/DEFCON.txt
+printf 'defcon = 2\n' > environment/system.env
 cat /home/hntr/test.txt
 ```
 
@@ -263,7 +257,8 @@ Notes:
   `--transport` is `tcp` or `udp`, and `--port` is the local port
 - `0.0.0.0` matches any IPv4 address for the selected port and transport
 - `::` matches any IPv6 address for the selected port and transport
-- stream attributes accepted by the admin tool are `time`, `hour`, `minute`, `second`, and `defcon`
+- stream attributes accepted by the admin tool are `time`, `hour`, `minute`, and `second`; DEFCON is
+  represented as the structured system attribute `system.defcon`
 
 ## Monitoring
 

@@ -25,7 +25,7 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse und FDs. |
 | [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt FDs in fremden Prozessen per `ptrace`. |
 | [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Aktualisiert Zeit-Maps. |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Aktualisiert Stream-Attribute wie DEFCON. |
+| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Aktualisiert strukturierte Attribute wie `system.defcon`. |
 | [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft gepinnte Map-Layouts; enthält auch ältere Ladefunktionen. |
 | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Structs, Enums, Konstanten und Auswertungsfunktionen. |
 | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstieg in die LSM-Hooks. |
@@ -35,7 +35,7 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | CLI-Parsing, Map-Zugriff und Ausgabe. |
 | [`examples/`](../examples/) | Beispiel-Policies. |
 | [`policies/`](../policies/) | Aktiver Policy-Ordner. |
-| [`stream-attributes/`](../environment/) | Aktive Werte für Stream-Attribute, aktuell `DEFCON.txt`. |
+| [`environment/`](../environment/) | Aktive Werte für strukturierte Attribute wie `system.defcon`, Subjekt- und Ressourcenattribute. |
 
 ## Grober Datenfluss
 
@@ -158,7 +158,8 @@ Sie werden im Userspace in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) b
 ## Static Policies und Stream Policies
 
 Static Policies sind normale Regeln ohne Stream-Bedingung. Stream Policies enthalten eine Bedingung
-gegen einen dynamischen Wert, aktuell Zeit oder DEFCON [P3], [P8], [P23].
+gegen einen dynamischen Wert, aktuell Zeit oder strukturierte Attribute wie `system.defcon` [P3],
+[P8], [P23].
 
 Beispiel Static Policy:
 
@@ -184,18 +185,18 @@ deny
 Eine Stream Policy trifft nur eine Entscheidung, wenn ihre Stream-Bedingung wahr ist. Wenn die
 Bedingung falsch ist, ist die Policy nicht anwendbar [P8].
 
-Beispiel DEFCON-Stream-Policy:
+Beispiel DEFCON-Policy über strukturierte Attribute:
 
 ```sapl
 deny
     action == "file_open";
     subject.uid == 1000;
     resource.path == "/home/hntr/test.txt";
-    environment.defcon.level <= 2;
+    system.defcon <= 2;
 ```
 
-Der Wert dafür kommt aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und wird in `CURRENT_DEFCON` geschrieben
-[P12], [P23], [P24].
+Der Wert dafür kommt aus [`environment/system.env`](../environment/system.env) und wird in
+`ATTRIBUTES` geschrieben [P12], [P23], [P24].
 
 ---
 

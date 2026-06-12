@@ -204,10 +204,6 @@ mod imp {
 
 pub use imp::DirectoryWatcher;
 
-pub fn watch_directory(path: &Path) -> anyhow::Result<DirectoryWatcher> {
-    DirectoryWatcher::new(path, false)
-}
-
 pub fn watch_directory_recursive(path: &Path) -> anyhow::Result<DirectoryWatcher> {
     DirectoryWatcher::new(path, true)
 }

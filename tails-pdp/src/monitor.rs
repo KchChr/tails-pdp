@@ -12,11 +12,11 @@ use anyhow::Context;
 use aya::maps::{Array, HashMap as AyaHashMap, Map, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
-    AttributeKey, AttributeValue, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
-    FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, attribute_bank, attribute_object_ids, command_name,
-    evaluate_file_open_static_policy, file_open_stream_legacy_entitlement,
-    file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
+    AttributeKey, AttributeValue, Entitlement, FileOpenRequest, FileOpenStaticPolicy,
+    FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE,
+    attribute_bank, attribute_object_ids, command_name, evaluate_file_open_static_policy,
+    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
+    matches_attribute_condition, policy_bank_offset,
 };
 use tokio::time;
 
@@ -25,7 +25,6 @@ use crate::{BPF_PIN_DIRECTORY, fd_revoker::close_remote_fd};
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
-type CurrentDefconMap = Array<MapData, u32>;
 type AttributeGenerationMap = Array<MapData, u32>;
 type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
 
@@ -90,7 +89,6 @@ struct PolicyMaps {
     policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
-    current_defcon: CurrentDefconMap,
     attribute_generation: AttributeGenerationMap,
     attributes: AttributeMap,
 }
@@ -144,10 +142,6 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
             &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STREAM_POLICIES"),
             "FILE_OPEN_STREAM_POLICIES",
         )?,
-        current_defcon: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("CURRENT_DEFCON"),
-            "CURRENT_DEFCON",
-        )?,
         attribute_generation: open_array_map(
             &Path::new(BPF_PIN_DIRECTORY).join("ATTRIBUTE_GENERATION"),
             "ATTRIBUTE_GENERATION",
@@ -185,10 +179,6 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let process_fds = read_process_fds();
     let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let (current_time, current_iso8601_time) = current_utc_time()?;
-    let current_defcon = policies
-        .current_defcon
-        .get(&0, 0)
-        .unwrap_or(DEFAULT_DEFCON_LEVEL);
     let current_attribute_bank =
         attribute_bank(policies.attribute_generation.get(&0, 0).unwrap_or(0));
     let mut violations = Vec::new();
@@ -202,7 +192,6 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 policies,
                 current_time,
                 current_iso8601_time,
-                current_defcon,
                 current_attribute_bank,
                 bank_offset,
                 &inotify_fds,
@@ -222,7 +211,6 @@ fn collect_file_open_violations(
     policies: &mut PolicyMaps,
     current_time: u64,
     current_iso8601_time: Iso8601TimeParts,
-    current_defcon: u32,
     current_attribute_bank: u32,
     bank_offset: u32,
     inotify_fds: &HashMap<u32, Vec<i32>>,
@@ -281,12 +269,8 @@ fn collect_file_open_violations(
                 current_attribute_bank,
                 &policies.attributes,
             )
-            && file_open_stream_legacy_entitlement(
-                current_time,
-                current_iso8601_time,
-                current_defcon,
-                &policy,
-            ) == Some(Entitlement::Deny)
+            && file_open_stream_legacy_entitlement(current_time, current_iso8601_time, &policy)
+                == Some(Entitlement::Deny)
         {
             violations.push(file_violation(
                 process_fd,

@@ -134,7 +134,6 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
-sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
 ```

@@ -9,8 +9,8 @@ Rust-Structs übersetzt [P3], [Q11].
 
 Stream Policies bestehen weiterhin aus genau einer dynamischen Bedingung. Sie dürfen jetzt aber
 zusätzlich die statischen Filter des jeweiligen Hooks mitbenutzen. Eine `file_open`-Stream-Policy
-kann also `subject`, `command` und `resource.path` mit `environment.defcon.level` oder
-`environment.utc.hour` kombinieren. Eine `socket_bind`-Stream-Policy kann entsprechend `subject`,
+kann also `subject`, `command` und `resource.path` mit `system.defcon` oder `environment.utc.hour`
+kombinieren. Eine `socket_bind`-Stream-Policy kann entsprechend `subject`,
 `command`, `resource.family`, `resource.transport`, `resource.ip` und `resource.port` mit einer
 dynamischen Bedingung kombinieren [P3], [P8].
 
@@ -63,8 +63,8 @@ keine Aussage.
 
 ## Stream Policies
 
-Stream Policies enthalten eine Bedingung gegen einen dynamischen Wert. Aktuell sind Zeitwerte und
-DEFCON sowie strukturierte Attribute aus `environment/` unterstützt [P8], [P23].
+Stream Policies enthalten eine Bedingung gegen einen dynamischen Wert. Aktuell sind Zeitwerte sowie
+strukturierte Attribute aus `environment/` unterstützt [P8], [P23].
 
 Unterstützte Attribute:
 
@@ -74,7 +74,6 @@ Unterstützte Attribute:
 | `Hour` | UTC-Stunde |
 | `Minute` | UTC-Minute |
 | `Second` | UTC-Sekunde |
-| `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) |
 | `system.<name>` | Globales Attribut aus `environment/system.env`, gespeichert in `ATTRIBUTES`. |
 | `subject.<name>` | Subjektattribut aus `environment/subjects/<uid>.env`, gespeichert in `ATTRIBUTES`. |
 | `resource.<name>` | Dateibezogenes Ressourcenattribut aus `environment/resources/<pfad>.env`, gespeichert in `ATTRIBUTES`. |

@@ -8,15 +8,14 @@ use anyhow::{Context, bail};
 use aya::maps::{Array, HashMap as AyaHashMap, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
-    AttributeKey, AttributeNamespace, AttributeValue, DEFAULT_DEFCON_LEVEL, DEFCON_MAX_LEVEL,
-    DEFCON_MIN_LEVEL, attribute_bank, attribute_hash, encode_kernel_dev_t,
+    AttributeKey, AttributeNamespace, AttributeValue, AttributeValueKind, DEFAULT_DEFCON_LEVEL,
+    DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, attribute_bank, attribute_hash, encode_kernel_dev_t,
 };
 use tokio::time::{Duration, sleep};
 
 use crate::fs_watch;
 
 const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "environment";
-const DEFCON_FILE_NAME: &str = "DEFCON.txt";
 const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.env";
 const SUBJECT_ATTRIBUTES_DIRECTORY_NAME: &str = "subjects";
 const RESOURCE_ATTRIBUTES_DIRECTORY_NAME: &str = "resources";
@@ -45,14 +44,6 @@ pub fn default_stream_attributes_directory() -> anyhow::Result<PathBuf> {
         .join(STREAM_ATTRIBUTES_DIRECTORY_NAME))
 }
 
-pub fn open_current_defcon_map(ebpf: &mut aya::Ebpf) -> anyhow::Result<Array<MapData, u32>> {
-    Array::try_from(
-        ebpf.take_map("CURRENT_DEFCON")
-            .context("map 'CURRENT_DEFCON' not found")?,
-    )
-    .context("failed to open CURRENT_DEFCON")
-}
-
 pub fn open_attribute_maps(ebpf: &mut aya::Ebpf) -> anyhow::Result<AttributeMaps> {
     let attributes = AyaHashMap::try_from(
         ebpf.take_map("ATTRIBUTES")
@@ -71,33 +62,10 @@ pub fn open_attribute_maps(ebpf: &mut aya::Ebpf) -> anyhow::Result<AttributeMaps
     })
 }
 
-pub fn write_current_defcon(current_defcon: &mut Array<MapData, u32>) -> anyhow::Result<()> {
-    let defcon_path = ensure_defcon_file()?;
-    let mut last_applied = None;
-    apply_defcon_file(&defcon_path, current_defcon, &mut last_applied)
-}
-
 pub fn write_current_attributes(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
     let directory = ensure_attribute_environment()?;
     let attributes = read_attribute_environment(&directory)?;
     commit_attributes(attribute_maps, &attributes)
-}
-
-pub async fn run_defcon_updater(current_defcon: &mut Array<MapData, u32>) -> anyhow::Result<()> {
-    let defcon_path = ensure_defcon_file()?;
-    let directory = defcon_path
-        .parent()
-        .context("DEFCON path has no parent directory")?;
-    let mut watcher = fs_watch::watch_directory(directory)?;
-    let mut last_applied = None;
-
-    apply_defcon_file(&defcon_path, current_defcon, &mut last_applied)?;
-
-    loop {
-        watcher.wait_for_change().await?;
-        sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
-        apply_defcon_file(&defcon_path, current_defcon, &mut last_applied)?;
-    }
 }
 
 pub async fn run_attribute_updater(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
@@ -112,32 +80,6 @@ pub async fn run_attribute_updater(attribute_maps: &mut AttributeMaps) -> anyhow
         sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
         apply_attribute_environment(&directory, attribute_maps, &mut last_applied)?;
     }
-}
-
-fn ensure_defcon_file() -> anyhow::Result<PathBuf> {
-    let directory = default_stream_attributes_directory()?;
-    fs::create_dir_all(&directory).with_context(|| {
-        format!(
-            "failed to create stream attributes directory '{}'",
-            directory.display()
-        )
-    })?;
-
-    let defcon_path = directory.join(DEFCON_FILE_NAME);
-    if !defcon_path.exists() {
-        fs::write(&defcon_path, format!("{DEFAULT_DEFCON_LEVEL}\n")).with_context(|| {
-            format!(
-                "failed to create default DEFCON file '{}'",
-                defcon_path.display()
-            )
-        })?;
-    }
-
-    info!(
-        "Watching DEFCON stream attribute '{}'",
-        defcon_path.display()
-    );
-    Ok(defcon_path)
 }
 
 fn ensure_attribute_environment() -> anyhow::Result<PathBuf> {
@@ -175,37 +117,6 @@ fn ensure_attribute_environment() -> anyhow::Result<PathBuf> {
 
     info!("Watching stream attributes '{}'", directory.display());
     Ok(directory)
-}
-
-fn apply_defcon_file(
-    defcon_path: &Path,
-    current_defcon: &mut Array<MapData, u32>,
-    last_applied: &mut Option<u32>,
-) -> anyhow::Result<()> {
-    match read_defcon_level(defcon_path) {
-        Ok(level) if Some(level) != *last_applied => {
-            current_defcon
-                .set(0, level, 0)
-                .context("failed to write CURRENT_DEFCON[0]")?;
-            *last_applied = Some(level);
-            info!("DEFCON stream attribute set to {level}");
-        }
-        Ok(_) => {}
-        Err(error) => {
-            if last_applied.is_none() {
-                current_defcon
-                    .set(0, DEFAULT_DEFCON_LEVEL, 0)
-                    .context("failed to write default CURRENT_DEFCON[0]")?;
-                *last_applied = Some(DEFAULT_DEFCON_LEVEL);
-            }
-            warn!(
-                "Ignoring invalid DEFCON stream attribute '{}': {error:#}",
-                defcon_path.display()
-            );
-        }
-    }
-
-    Ok(())
 }
 
 fn apply_attribute_environment(
@@ -371,6 +282,13 @@ fn read_env_file(
             .with_context(|| format!("{}:{}: invalid attribute name", path.display(), line_no))?;
         let value = parse_attribute_value(raw_value.trim())
             .with_context(|| format!("{}:{}: invalid attribute value", path.display(), line_no))?;
+        validate_system_defcon_attribute(namespace, name, &value).with_context(|| {
+            format!(
+                "{}:{}: invalid system DEFCON attribute",
+                path.display(),
+                line_no
+            )
+        })?;
 
         attributes.push(ParsedAttribute {
             namespace,
@@ -417,6 +335,28 @@ fn parse_attribute_value(raw: &str) -> anyhow::Result<AttributeValue> {
         .parse::<u64>()
         .with_context(|| format!("value '{raw}' is not a number, bool, or quoted string"))?;
     Ok(AttributeValue::number(number))
+}
+
+fn validate_system_defcon_attribute(
+    namespace: AttributeNamespace,
+    name: &str,
+    value: &AttributeValue,
+) -> anyhow::Result<()> {
+    if namespace != AttributeNamespace::System || name != "defcon" {
+        return Ok(());
+    }
+    if value.kind != AttributeValueKind::Number {
+        bail!("system.defcon must be a number");
+    }
+    if !(DEFCON_MIN_LEVEL as u64..=DEFCON_MAX_LEVEL as u64).contains(&value.number) {
+        bail!(
+            "system.defcon value {} is outside {}..={}",
+            value.number,
+            DEFCON_MIN_LEVEL,
+            DEFCON_MAX_LEVEL
+        );
+    }
+    Ok(())
 }
 
 fn sort_attributes(attributes: &mut [ParsedAttribute]) {
@@ -505,19 +445,4 @@ fn clear_attribute_bank(attributes: &mut AttributeMap, bank: u32) -> anyhow::Res
     }
 
     Ok(())
-}
-
-fn read_defcon_level(defcon_path: &Path) -> anyhow::Result<u32> {
-    let raw = fs::read_to_string(defcon_path)
-        .with_context(|| format!("failed to read '{}'", defcon_path.display()))?;
-    let trimmed = raw.trim();
-    let level: u32 = trimmed
-        .parse()
-        .with_context(|| format!("DEFCON value '{trimmed}' is not an integer"))?;
-
-    if !(DEFCON_MIN_LEVEL..=DEFCON_MAX_LEVEL).contains(&level) {
-        bail!("DEFCON value {level} is outside {DEFCON_MIN_LEVEL}..={DEFCON_MAX_LEVEL}");
-    }
-
-    Ok(level)
 }

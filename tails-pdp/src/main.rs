@@ -12,10 +12,7 @@ use tails_pdp::{
     monitor::run_policy_monitor,
     policy_loader::verify_pinned_map_layouts,
     policy_source::PolicyDirectorySync,
-    stream_attributes::{
-        open_attribute_maps, open_current_defcon_map, run_attribute_updater, run_defcon_updater,
-        write_current_attributes, write_current_defcon,
-    },
+    stream_attributes::{open_attribute_maps, run_attribute_updater, write_current_attributes},
     time::{open_current_time_maps, run_current_time_updater, write_current_time},
 };
 use tokio::signal;
@@ -73,7 +70,6 @@ async fn main() -> anyhow::Result<()> {
     .context("failed to open FILE_OPEN_JUMP_TABLE")?;
 
     let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
-    let mut current_defcon = open_current_defcon_map(&mut ebpf)?;
     let mut attribute_maps = open_attribute_maps(&mut ebpf)?;
     let mut policy_sync = PolicyDirectorySync::new()?;
 
@@ -92,7 +88,6 @@ async fn main() -> anyhow::Result<()> {
 
     policy_sync.sync_initial()?;
     write_current_time(&mut current_time, &mut current_time_iso8601)?;
-    write_current_defcon(&mut current_defcon)?;
     write_current_attributes(&mut attribute_maps)?;
     info!(
         "Watching policy directory '{}'",
@@ -116,7 +111,6 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
-        result = run_defcon_updater(&mut current_defcon) => result?,
         result = run_attribute_updater(&mut attribute_maps) => result?,
         result = policy_sync.run() => result?,
         result = run_policy_monitor() => result?,

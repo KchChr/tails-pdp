@@ -36,8 +36,8 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
-| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen von [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und Schreiben der Map `CURRENT_DEFCON`. |
-| [P24] | [`stream-attributes/`](../environment/) | Beispielhafter Ablageort für dynamische Stream-Attribute wie `DEFCON.txt`. |
+| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen strukturierter Attribute aus [`environment/`](../environment/) und Schreiben der Map `ATTRIBUTES`. |
+| [P24] | [`environment/`](../environment/) | Beispielhafter Ablageort für strukturierte System-, Subjekt- und Ressourcenattribute. |
 
 ## Externe Quellen
 

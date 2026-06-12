@@ -63,7 +63,7 @@ Einzelne Map dumpen:
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
-sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
 ```
 
 Lesbarer ist oft das Admin-Tool:
@@ -104,16 +104,17 @@ Die Bedeutung von Inode- und Device-Werten ist in `inode(7)` beschrieben [Q22].
 
 ## DEFCON testen
 
-Der DEFCON-Wert steht in [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). Gültig sind Werte von `1` bis `5`.
+Der DEFCON-Wert steht als `defcon = <wert>` in
+[`environment/system.env`](../environment/system.env). Gültig sind Werte von `1` bis `5`.
 
 ```shell
-echo 5 > environment/DEFCON.txt
-sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
-echo 2 > environment/DEFCON.txt
-sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
+printf 'defcon = 5\n' > environment/system.env
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
+printf 'defcon = 2\n' > environment/system.env
+sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
 ```
 
-Der Userspace-Updater schreibt nur gültige Werte in `CURRENT_DEFCON`; ungültige Werte werden
+Der Userspace-Updater schreibt nur gültige DEFCON-Werte in `ATTRIBUTES`; ungültige Werte werden
 ignoriert und geloggt [P23].
 
 ## Socket-Bind testen
@@ -194,7 +195,6 @@ sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
-sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_DEFCON
 ```
 
 ---

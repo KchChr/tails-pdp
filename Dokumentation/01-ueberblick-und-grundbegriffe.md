@@ -120,7 +120,7 @@ Beispiele aus [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs):
 | `DECISIONS` | Zwischenentscheidung innerhalb einer Tail-Call-Kette. |
 | `CURRENT_TIME` | Aktuelle Unix-Zeit für Stream-Policies. |
 | `CURRENT_TIME_ISO8601` | Aktuelle UTC-Zeit in Feldern wie Stunde, Minute, Sekunde. |
-| `CURRENT_DEFCON` | Aktueller DEFCON-Level für Stream-Policies. |
+| `ATTRIBUTES` | Strukturierte System-, Subjekt- und Ressourcenattribute, darunter `system.defcon`. |
 
 Viele Maps sind gepinnt. Gepinnt bedeutet: Sie liegen unter `/sys/fs/bpf/tails-pdp/...` und können
 auch von anderen Prozessen geöffnet werden [P12], [Q5], [Q23].

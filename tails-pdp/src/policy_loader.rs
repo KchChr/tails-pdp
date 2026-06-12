@@ -6,7 +6,6 @@ use tails_pdp_common::{
     ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
-    STREAM_ATTRIBUTE_MAX_ENTRIES,
 };
 
 use crate::BPF_PIN_DIRECTORY;
@@ -83,12 +82,6 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         ARRAY_KEY_SIZE,
         size_of::<Iso8601TimeParts>() as u32,
         CURRENT_TIME_MAX_ENTRIES,
-    )?;
-    verify_pinned_map_layout(
-        "CURRENT_DEFCON",
-        ARRAY_KEY_SIZE,
-        size_of::<u32>() as u32,
-        STREAM_ATTRIBUTE_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(
         "ATTRIBUTE_GENERATION",

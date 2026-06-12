@@ -1,7 +1,7 @@
-policy "deny file_open on /home/hntr/test.txt for uid 1000 at DEFCON 2 or lower"
+policy "deny file_open on /home/hntr/test.txt for uid 1000 at system DEFCON 2 or lower"
 deny
     action == "file_open";
     subject.uid == 1000;
     resource.path == "/home/hntr/test.txt";
     command == "cat";
-    environment.defcon.level <= 2;
+    system.defcon <= 2;

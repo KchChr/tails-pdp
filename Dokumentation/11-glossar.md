@@ -12,8 +12,9 @@ laden [Q17].
 
 ## DEFCON
 
-Hier ein Test-Stream-Attribut mit Werten von `1` bis `5`. Der Userspace liest
-[`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) und schreibt den Wert in `CURRENT_DEFCON` [P23], [P24].
+Hier ein Test-Systemattribut mit Werten von `1` bis `5`. Der Userspace liest den Wert als
+`defcon = <wert>` aus [`environment/system.env`](../environment/system.env) und schreibt ihn als
+`system.defcon` in `ATTRIBUTES` [P23], [P24].
 
 ## eBPF
 
