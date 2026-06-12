@@ -81,40 +81,191 @@ Abschließend werden die für den Prototyp spezifischen Grundlagen betrachtet: d
 Damit schafft das Kapitel die Grundlage für die anschließende Anforderungsanalyse und die spätere Architektur des Systems.
 
 \subsection{Zugriffskontrolle und Reference-Monitor-Konzept}
-% Inhalt einfügen.
+
+Zugriffskontrolle beschreibt Mechanismen, mit denen entschieden wird, ob ein Subjekt eine bestimmte Operation auf einer Ressource ausführen darf.
+Ein Subjekt kann dabei beispielsweise ein Prozess oder ein Benutzer sein, während Ressourcen Dateien, Netzwerkendpunkte oder andere geschützte Objekte des Systems sein können.
+Eine Zugriffsentscheidung basiert auf einer Menge von Regeln oder Policies, die festlegen, unter welchen Bedingungen eine Operation erlaubt oder verweigert wird.
+Diese Sichtweise knüpft an grundlegende Begriffe der Informationsschutzmechanismen an, bei denen Akteure, geschützte Objekte und Berechtigungen als zentrale Elemente der Zugriffskontrolle betrachtet werden \citep{saltzer1975protection}.
+
+Ein grundlegendes Konzept für die Durchsetzung von Zugriffskontrolle ist der Reference Monitor.
+Der Reference Monitor ist eine abstrakte Sicherheitskomponente, die jeden Zugriff eines Subjekts auf ein geschütztes Objekt überprüft, bevor dieser Zugriff ausgeführt wird.
+Damit ein Reference Monitor wirksam ist, muss er insbesondere drei Eigenschaften erfüllen: Er muss bei jedem relevanten Zugriff durchlaufen werden, gegen Manipulation geschützt sein und hinreichend klein beziehungsweise nachvollziehbar sein, damit seine Korrektheit überprüft werden kann \citep{anderson1972computer}.
+
+Für Betriebssysteme ist dieses Konzept besonders relevant, da Zugriffe auf Dateien, Prozesse oder andere Systemressourcen letztlich über den Kernel vermittelt werden.
+Wird Zugriffskontrolle erst außerhalb des Kernels umgesetzt, besteht die Gefahr, dass sicherheitsrelevante Operationen nicht vollständig erfasst oder durch alternative Zugriffspfade umgangen werden.
+Eine Zugriffskontrolle im Kernel kann dagegen an zentralen Stellen ansetzen, an denen Operationen auf geschützte Ressourcen tatsächlich ausgeführt werden.
+Dies steht im Zusammenhang mit dem Prinzip der vollständigen Vermittlung, nach dem jeder Zugriff auf ein geschütztes Objekt vor seiner Ausführung geprüft werden muss \citep{saltzer1975protection}.
+
+Im Kontext dieser Arbeit bildet das Reference-Monitor-Konzept die Grundlage für die Frage, wie Attribute Stream-Based Access Control im Linux-Kernel umgesetzt werden kann.
+Der Prototyp soll Zugriffe nicht nur anhand statischer Regeln bewerten, sondern dynamische Attribute in die Entscheidung einbeziehen.
+Dadurch entsteht zusätzlich die Herausforderung, dass eine zunächst erlaubte Zugriffssituation später unzulässig werden kann, wenn sich entscheidungsrelevante Attribute ändern.
+Das klassische Reference-Monitor-Konzept erklärt daher zunächst die unmittelbare Kontrolle eines Zugriffs, während die spätere Arbeit zusätzlich betrachtet, wie bestehende Zugriffssituationen nachträglich überwacht werden können.
 
 \subsection{Attribute-Based Access Control}
-% Inhalt einfügen.
+Attribute-Based Access Control (ABAC) ist ein Zugriffskontrollmodell, bei dem eine Autorisierungsentscheidung nicht allein anhand einer festen Identität oder Rolle getroffen wird. 
+Stattdessen werden Attribute ausgewertet, die sich auf das Subjekt, die Ressource, die angeforderte Operation und gegebenenfalls auf die Umgebung beziehen. 
+NIST beschreibt ABAC als logische Zugriffskontrollmethode, bei der solche Attribute gegen Policies, Regeln oder Beziehungen geprüft werden, um zu entscheiden, ob eine Operation zulässig ist \citep{nistSP800162}.
+
+Für diese Arbeit ist ABAC relevant, weil dadurch Zugriffsentscheidungen feiner modelliert werden können als bei rein rollenbasierten oder benutzerbasierten Ansätzen. 
+Ein Subjekt kann beispielsweise über Attribute wie Position, Benutzerkennung oder Gruppenzugehörigkeit beschrieben werden. 
+Eine Ressource kann Attribute wie Pfad, Typ oder Schutzstufe besitzen. 
+Zusätzlich können Umwelt- oder Systemattribute, etwa Uhrzeit oder Systemzustand, in die Entscheidung einbezogen werden. 
+Damit entsteht ein flexibles Modell, in dem Policies Bedingungen über mehrere Attributklassen ausdrücken können.
+
+ABAC trennt damit die Beschreibung der Entscheidungsgrundlage von der konkreten technischen Durchsetzung. 
+Die Policy beschreibt, unter welchen Bedingungen ein Zugriff erlaubt oder verweigert werden soll. 
+Die Auswertung dieser Bedingungen und die Durchsetzung der Entscheidung können dagegen von unterschiedlichen Systemkomponenten übernommen werden. 
+Diese Trennung ist für den Prototyp wichtig, weil die Policy-Verarbeitung im Userspace stattfinden kann, während die Zugriffsdurchsetzung später im Kernel betrachtet wird.
 
 \subsection{Attribute Stream-Based Access Control}
-% Inhalt einfügen.
+Attribute Stream-Based Access Control (ASBAC) wird in dieser Arbeit als Erweiterung von ABAC verstanden, bei der Attribute nicht nur als statische Werte betrachtet werden. 
+Stattdessen können Attribute zur Laufzeit aktualisiert werden und dadurch einen Strom von Zustandsänderungen bilden. 
+Eine Zugriffsentscheidung hängt dann nicht nur von den Attributwerten zum Zeitpunkt der ersten Prüfung ab, sondern auch davon, ob sich diese Werte während einer bestehenden Zugriffssituation ändern.
+
+Diese Sichtweise steht inhaltlich in der Nähe von Usage-Control-Modellen. 
+Usage Control erweitert klassische Zugriffskontrolle unter anderem um die Veränderbarkeit von Attributen und die Fortdauer von Entscheidungen während einer Nutzung. 
+Gouglidis et al. beschreiben diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} \citep{gouglidis2018usecon}. 
+Für ASBAC bedeutet dies, dass ein zunächst erlaubter Zugriff später erneut relevant werden kann, wenn sich ein entscheidungsrelevantes Attribut ändert.
+
+Im Kontext dieser Arbeit ist dieser Punkt zentral. 
+Ein Zugriff auf eine Datei kann beim Öffnen zunächst zulässig sein, weil die aktuellen Attribute die Policy erfüllen. 
+Ändert sich später beispielsweise ein Subjektattribut oder ein Systemattribut, kann dieselbe Zugriffssituation nach der aktuellen Policy-Lage unzulässig werden. 
+ASBAC beschreibt damit den fachlichen Bedarf, Attributänderungen nicht nur für zukünftige Zugriffe, sondern auch für bereits bestehende Zugriffssituationen zu berücksichtigen.
 
 \subsection{Policy-Beschreibungen für ASBAC}
-% Inhalt einfügen.
+Policies beschreiben die Bedingungen, unter denen eine Zugriffsentscheidung getroffen wird. 
+In einem attributbasierten Modell beziehen sich diese Bedingungen auf Attribute von Subjekt, Ressource, Aktion und Umgebung. 
+NIST beschreibt Policies in ABAC als Regeln oder Beziehungen, gegen die Attribute ausgewertet werden \citep{nistSP800162}. 
+Für ASBAC bleibt diese Grundidee erhalten, sie wird jedoch um dynamisch veränderliche Attribute erweitert.
+
+Eine Policy-Beschreibung muss dafür ausdrücken können, welche Aktion auf welche Ressource bezogen ist und welche Attributbedingungen erfüllt sein müssen. 
+Im Prototyp kann dies beispielsweise bedeuten, dass das Öffnen einer bestimmten Datei nur erlaubt ist, wenn ein Subjektattribut einen bestimmten Wert besitzt. 
+Die Policy-Datei bleibt dabei eine textuelle Beschreibung im Userspace. 
+Für die Auswertung im Kernel muss diese Beschreibung später in eine kernelgeeignete Repräsentation überführt werden.
+
+Etablierte Zugriffskontrollarchitekturen unterscheiden häufig zwischen Komponenten zur Entscheidung und Komponenten zur Durchsetzung. 
+XACML beschreibt beispielsweise eine Architektur mit Policy Decision Point und Policy Enforcement Point sowie eine Policy-Sprache zur Beschreibung attributbasierter Entscheidungen \citep{oasisXacml30}. 
+Diese Arbeit übernimmt nicht XACML als Sprache, nutzt aber dieselbe grundsätzliche Trennung: Policies werden außerhalb des Durchsetzungspunktes verwaltet und in eine Form überführt, die zur technischen Zugriffskontrolle verwendet werden kann.
 
 \subsection{Userspace und Kernelspace in Linux}
-% Inhalt einfügen.
+Linux trennt zwischen Userspace und Kernelspace. 
+Anwendungen laufen im Userspace und greifen auf Betriebssystemfunktionen über Systemaufrufe oder andere definierte Schnittstellen zu. 
+Der Kernelspace enthält dagegen den Kernel und damit Code, der privilegiert ausgeführt wird und zentrale Ressourcen wie Prozesse, Speicher, Dateien und Geräte verwaltet. 
+Die Kernel-Dokumentation beschreibt unterschiedliche Ausführungskontexte, darunter Code, der einem Prozess im Kernelspace zugeordnet ist, sowie Prozesse, die im Userspace laufen \citep{linuxKernelHacking}.
+
+Diese Trennung ist für Sicherheitsmechanismen wesentlich. 
+Komplexe Verarbeitung, Dateiparsing und Validierung sind im Userspace leichter zu entwickeln, zu testen und bei Fehlern weniger kritisch für die Stabilität des Gesamtsystems. 
+Code im Kernelspace hat dagegen unmittelbaren Einfluss auf das Betriebssystem. 
+Fehler in Kernelcode können nicht nur eine Anwendung, sondern das gesamte System beeinträchtigen. 
+Daher ist es sinnvoll, umfangreiche Policy-Verarbeitung im Userspace zu belassen und den Kernelspace auf die sicherheitskritische Durchsetzung vorbereiteter Entscheidungen zu beschränken.
+
+Für diese Arbeit ergibt sich daraus eine Architekturgrenze. 
+Der Userspace liest Policies und Attribute ein, validiert sie und übersetzt sie in eine Form, die im Kernel effizient ausgewertet werden kann. 
+Der Kernelspace übernimmt dagegen die Entscheidung an den relevanten Zugriffspunkten. 
+Diese Aufteilung reduziert die Komplexität im Kernel, ohne die Durchsetzung vollständig aus dem sicherheitsrelevanten Ausführungspfad herauszulösen.
 
 \subsection{Linux Security Modules und LSM-Hooks}
-% Inhalt einfügen.
+Linux Security Modules (LSM) stellen ein Framework bereit, über das Sicherheitsmodule an sicherheitsrelevanten Stellen des Kernels Entscheidungen treffen können. 
+Die Kernel-Dokumentation beschreibt LSM als Schnittstelle für Sicherheitsmodule wie SELinux, Smack, AppArmor oder TOMOYO \citep{kernelorgLSM}. 
+Aus technischer Sicht werden dafür Hooks verwendet, die an bestimmten Punkten im Kernel-Ausführungspfad aufgerufen werden.
+
+LSM-Hooks sind für Zugriffskontrolle besonders relevant, weil sie Operationen an Stellen erfassen können, an denen der Kernel ohnehin über die Zulässigkeit einer Operation entscheidet. 
+Wright et al. beschreiben das LSM-Framework als allgemeine Sicherheitsunterstützung im Linux-Kernel, bei der Hooks Zugriff auf Kernelobjekte vermitteln und Rückgabewerte über Erfolg oder Fehler der Operation entscheiden können \citep{wright2002linux}. 
+Damit eignen sich LSM-Hooks grundsätzlich als technische Grundlage für einen Reference-Monitor-ähnlichen Durchsetzungspunkt.
+
+Für den Prototyp ist insbesondere der Hook \texttt{file\_open} relevant. 
+Er erlaubt eine Kontrolle beim Öffnen einer Datei und passt damit zur funktionalen Einschränkung dieser Arbeit auf Dateiöffnungen. 
+LSM-Hooks bewerten jedoch jeweils konkrete Kerneloperationen. 
+Ein beim Öffnen erlaubter Zugriff wird nicht automatisch erneut durch denselben Hook geprüft, wenn sich später Attribute ändern. 
+Diese Eigenschaft erklärt, warum zusätzlich eine Überwachung bestehender Zugriffssituationen betrachtet werden muss.
 
 \subsection{eBPF und eBPF-LSM}
-% Inhalt einfügen.
+eBPF ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können. 
+Die Programme werden vor der Ausführung durch den Kernel geprüft und können an verschiedene Ereignisse oder Hook-Typen gebunden werden. 
+Die Kernel-Dokumentation beschreibt BPF als im Kernel verwendetes Instruktionsformat und betont, dass BPF-Programme auf definierte Hilfsfunktionen und Kernelobjekte wie Maps beschränkt sind \citep{kernelBpfDesignQA}.
+
+eBPF-LSM verbindet eBPF mit dem LSM-Framework. 
+Die Kernel-Dokumentation beschreibt LSM-BPF-Programme als Möglichkeit, LSM-Hooks zur Laufzeit durch privilegierte Benutzer zu instrumentieren, um systemweite Mandatory-Access-Control- oder Audit-Policies mit eBPF umzusetzen \citep{kernelBpfLsm}. 
+Damit kann ein eBPF-Programm an einem LSM-Hook ausgeführt werden und dort eine Entscheidung über die angeforderte Operation zurückgeben.
+
+In den Grundlagen wird eBPF noch nicht als endgültige Lösung begründet, sondern als technischer Mechanismus eingeordnet. 
+Für diese Arbeit ist eBPF interessant, weil es eine Ausführung im Kernel ermöglicht, ohne ein klassisches Kernelmodul zu entwickeln. 
+Gleichzeitig ist eBPF durch Verifier, eingeschränkte Sprachelemente, begrenzten Stack und definierte Hilfsfunktionen deutlich stärker beschränkt als allgemeiner Kernelcode. 
+Diese Einschränkungen müssen in der späteren Konzeption gegen die Vorteile abgewogen werden.
 
 \subsection{eBPF-Maps und gepinnte Maps}
-% Inhalt einfügen.
+eBPF-Maps sind Datenstrukturen im Kernel, die von eBPF-Programmen und Userspace-Anwendungen gemeinsam genutzt werden können. 
+Die Kernel-Dokumentation beschreibt Maps als generischen Speicher für unterschiedliche Datentypen, der unter anderem den Datenaustausch zwischen Kernelspace und Userspace ermöglicht \citep{kernelBpfMaps}. 
+Über den Systemaufruf \texttt{bpf()} können Maps erzeugt sowie Einträge gelesen, aktualisiert oder gelöscht werden \citep{manBpf}.
+
+Für Zugriffskontrolle sind Maps relevant, weil eBPF-Programme nicht beliebige komplexe Userspace-Datenstrukturen direkt verwenden können. 
+Policies und Attribute müssen daher in eine feste, kernelgeeignete Struktur gebracht werden. 
+Hash-Maps oder Arrays können beispielsweise verwendet werden, um Policy-Einträge, Attributwerte, Generationen oder Statusinformationen bereitzustellen. 
+Der Kernel kann diese Werte während einer Zugriffskontrolle auslesen, während der Userspace sie bei Policy- oder Attributänderungen aktualisiert.
+
+Gepinnte Maps erweitern diese Idee um einen stabilen Zugriffspfad im BPF-Dateisystem. 
+Pinning erlaubt es, eBPF-Objekte wie Maps über einen Pfad zugänglich zu machen, sodass andere Prozesse sie später wieder öffnen können \citep{ebpfPinning}. 
+Dies ist für den Prototyp wichtig, weil nicht nur der Loader, sondern auch ein Monitor oder Administrationswerkzeug den aktuellen Zustand lesen können muss. 
+Gepinnte Maps bilden damit eine zentrale Schnittstelle zwischen den getrennten Userspace-Komponenten und dem Kernelzustand.
 
 \subsection{eBPF-Verifier, Stack und Programmkomplexität}
-% Inhalt einfügen.
+Bevor ein eBPF-Programm im Kernel ausgeführt werden darf, prüft der eBPF-Verifier dessen Sicherheit. 
+Die Kernel-Dokumentation beschreibt die Prüfung als mehrstufigen Prozess, bei dem unter anderem Kontrollfluss, Registerzustände, Stackzugriffe und Speicherzugriffe analysiert werden \citep{kernelBpfVerifier}. 
+Ein Programm wird nur geladen, wenn der Verifier zeigen kann, dass es die Sicherheitsregeln erfüllt.
+
+Diese Prüfung hat direkte Auswirkungen auf die Gestaltung von eBPF-Programmen. 
+Zugriffe auf Map-Werte, Stackbereiche oder Kontextdaten müssen für den Verifier nachvollziehbar sein. 
+Der Verifier verfolgt unter anderem, ob Register initialisiert sind, welche Zeigerarten verwendet werden und ob Speicherzugriffe innerhalb bekannter Grenzen liegen. 
+Unklare oder zu komplexe Zugriffsmuster können dazu führen, dass ein Programm abgelehnt wird, auch wenn die fachliche Logik korrekt erscheint.
+
+Zusätzlich bestehen praktische Begrenzungen bei Stack und Programmkomplexität. 
+Die BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}. 
+Das Aya-Buch weist ebenfalls darauf hin, dass eBPF-Programme ohne Heap auskommen und Daten stattdessen über Maps ablegen müssen \citep{ayaBook}. 
+Für die Arbeit bedeutet dies, dass komplexe Policy-Logik möglichst im Userspace vorbereitet werden sollte, während das eBPF-Programm nur eine kompakte, vorher strukturierte Repräsentation auswertet.
 
 \subsection{Aya als Rust-Framework für eBPF}
-% Inhalt einfügen.
+Aya ist ein Rust-Framework zur Entwicklung von eBPF-Anwendungen. 
+Das Aya-Buch beschreibt Aya als Möglichkeit, eBPF-Programme mit Rust zu entwickeln und dabei Cargo, Rust-Strukturen sowie gemeinsame Codeanteile zwischen Userspace und eBPF-Programm zu nutzen \citep{ayaBook}. 
+Aya stellt damit eine Alternative zu einer Implementierung auf Basis von C, libbpf oder BCC dar.
+
+Für den Prototyp ist Aya vor allem deshalb relevant, weil Userspace-Komponenten und eBPF-Programm in derselben Programmiersprache entwickelt werden können. 
+Gemeinsame Datentypen können in einer gemeinsamen Bibliothek definiert werden, wodurch sich die Gefahr verringert, dass Userspace und Kernelspace unterschiedliche Annahmen über die Struktur von Map-Schlüsseln oder Map-Werten treffen. 
+Gerade bei Policies und Attributen ist diese Konsistenz wichtig, weil dieselben binären Strukturen auf beiden Seiten der Map-Schnittstelle interpretiert werden.
+
+Gleichzeitig hebt Aya die Einschränkungen von eBPF nicht auf. 
+Auch mit Rust gelten die Vorgaben des eBPF-Verifiers, die Stackbegrenzung, der Verzicht auf Heap-Allokation im eBPF-Programm und die Beschränkung auf unterstützte Hilfsfunktionen. 
+Aya ist daher als Entwicklungswerkzeug zu verstehen, nicht als fachliches Zugriffskontrollmodell. 
+Die Entscheidung für Aya betrifft die spätere Implementierung, während die fachlichen Anforderungen weiterhin aus ASBAC und der Kernel-Durchsetzung abgeleitet werden.
 
 \subsection{Dynamische Attribute und Policy-Generationen}
-% Inhalt einfügen.
+Dynamische Attribute sind Attributwerte, die sich zur Laufzeit ändern können. 
+Im Unterschied zu statischen Eigenschaften, etwa einem festen Dateipfad, können dynamische Attribute zeitabhängig oder durch externe Ereignisse beeinflusst sein. 
+Beispiele sind Uhrzeit, Systemzustand oder vom Nutzer frei definierte Subjektattribute. 
+Die Idee veränderlicher Attribute knüpft an Usage-Control-Modelle an, in denen Attributmutabilität als ausdrückliches Merkmal betrachtet wird \citep{gouglidis2018usecon}.
+
+Für den Prototyp bedeutet dies, dass Attribute nicht nur beim Start einmalig geladen werden dürfen. 
+Änderungen müssen vom Userspace erkannt, validiert und in die kernelgeeignete Repräsentation übertragen werden. 
+Da eBPF-Programme zur Laufzeit auf Maps zugreifen können, bieten Maps eine geeignete Schnittstelle, um aktuelle Attributwerte für Zugriffsentscheidungen bereitzustellen \citep{kernelBpfMaps}. 
+Die Attributnamen und Werte müssen dabei im Userspace so verarbeitet werden, dass das eBPF-Programm mit festen Schlüssel- und Wertstrukturen arbeiten kann.
+
+Policy-Generationen beschreiben zusammengehörige gültige Stände von Policies. 
+Dieser Begriff ist für den Prototyp wichtig, weil Policy-Dateien im Userspace geparst und validiert werden, bevor sie für Zugriffsentscheidungen verwendet werden. 
+Eine neue Generation sollte erst dann aktiv werden, wenn alle dazugehörigen Map-Einträge vollständig erzeugt und konsistent bereitgestellt wurden. 
+Dadurch wird vermieden, dass der Kernel während einer Aktualisierung auf einen unvollständigen oder widersprüchlichen Policy-Zustand zugreift.
 
 \subsection{Überwachung bestehender Zugriffe und File Descriptors}
-% Inhalt einfügen.
+Ein Dateizugriff in Linux wird häufig über einen File Descriptor repräsentiert. 
+Der Systemaufruf \texttt{open()} liefert bei Erfolg einen nichtnegativen File Descriptor zurück, der in nachfolgenden Systemaufrufen wie \texttt{read()}, \texttt{write()} oder \texttt{lseek()} als Referenz auf die geöffnete Datei verwendet wird \citep{manOpen}. 
+Damit entsteht nach dem Öffnen eine bestehende Zugriffssituation, die unabhängig vom ursprünglichen Pfad weiter über den File Descriptor genutzt werden kann.
+
+Für eine Zugriffskontrolle über \texttt{file\_open} ist das wichtig, weil der LSM-Hook beim Öffnen der Datei greift. 
+Wenn sich danach entscheidungsrelevante Attribute ändern, wird derselbe bereits geöffnete File Descriptor nicht automatisch erneut durch \texttt{file\_open} bewertet. 
+Eine ASBAC-orientierte Zugriffskontrolle muss deshalb zusätzlich betrachten, wie bestehende File Descriptors überwacht und bei geänderter Entscheidungsgrundlage behandelt werden können.
+
+Linux stellt über \texttt{/proc/<pid>/fd} Informationen über die geöffneten File Descriptors eines Prozesses bereit. 
+Die man-pages beschreiben die Einträge in diesem Verzeichnis als symbolische Links auf die geöffneten Dateien oder andere referenzierte Objekte; der Zugriff darauf unterliegt eigenen Berechtigungsprüfungen \citep{manProcPidFd}. 
+Für den Prototyp kann ein Userspace-Monitor diese Informationen nutzen, um zu erkennen, welcher Prozess über welchen File Descriptor auf welche Datei zugreift. 
+Wird eine bestehende Zugriffssituation durch neue Attribute oder Policies unzulässig, kann der Monitor gezielt den betroffenen Zugriff behandeln, ohne notwendigerweise alle Zugriffe desselben Prozesses zu beenden.
 
 \newpage
 
@@ -145,10 +296,10 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     
     %\textit{Akzeptanzkriterium:} Der Userspace kann dem Kernel entscheidungsrelevante Informationen übermitteln.
 
-    \item[FA-04 Zugriffskontrolle über LSM-Hooks:]
-    Der Prototyp muss sicherheitsrelevante Operationen über Linux-Security-Module-Hooks abfangen können.
+    \item[FA-04 Zugriffskontrolle bei Dateiöffnungen:]
+    Der Prototyp muss Dateiöffnungen über den Linux-Security-Module-Hook \texttt{file\_open} abfangen können.
     
-    \textit{Akzeptanzkriterium:} Ein relevanter Zugriff auf eine Ressource wird durch einen LSM-Hook kontrolliert.
+    \textit{Akzeptanzkriterium:} Das Öffnen einer durch eine Policy erfassten Datei wird durch den LSM-Hook \texttt{file\_open} kontrolliert.
 
     \item[FA-05 Entscheidungsfindung anhand von Policies:]
     Der Prototyp muss Zugriffsentscheidungen auf Grundlage der geladenen Policies treffen können.
@@ -304,7 +455,7 @@ Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Po
 
 Neben den Policies werden dynamische Attribute aus dem Userspace in den Kernelspace übertragen. 
 Dynamische Attribute sind Werte, die sich zur Laufzeit ändern und deshalb regelmäßig aktualisiert werden müssen. 
-Im Prototyp betrifft dies insbesondere Zeitinformationen sowie vpm Nutzer frei wählbare Attribute (vlg. FA-12}).
+Im Prototyp betrifft dies insbesondere Zeitinformationen sowie vom Nutzer frei wählbare Attribute (vgl. FA-12).
 
 Die Userspace-Komponente ermittelt diese Werte beziehungsweise liest sie aus einer definierten Quelle ein. 
 Anschließend werden die aktuellen Werte in dafür vorgesehene eBPF-Maps geschrieben. 

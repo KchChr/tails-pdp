@@ -34,6 +34,7 @@ fn namespace_prefix(namespace: AttributeNamespace) -> &'static str {
     match namespace {
         AttributeNamespace::System => "system",
         AttributeNamespace::Subject => "subject",
+        AttributeNamespace::Resource => "resource",
     }
 }
 
@@ -183,7 +184,8 @@ pub fn show_attributes(
     rows.sort_by_key(|(key, _)| {
         (
             key.namespace as u8,
-            key.object_id,
+            key.object_id_primary,
+            key.object_id_secondary,
             key.name_hash.high,
             key.name_hash.low,
         )
@@ -197,7 +199,13 @@ pub fn show_attributes(
                 println!("system.{name} = {value}");
             }
             AttributeNamespace::Subject => {
-                println!("subject:{} subject.{name} = {value}", key.object_id);
+                println!("subject:{} subject.{name} = {value}", key.object_id_primary);
+            }
+            AttributeNamespace::Resource => {
+                println!(
+                    "resource:{}:{} resource.{name} = {value}",
+                    key.object_id_primary, key.object_id_secondary
+                );
             }
         }
     }

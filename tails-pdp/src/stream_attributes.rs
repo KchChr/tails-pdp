@@ -1,5 +1,6 @@
 use std::{
     env, fs,
+    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
@@ -8,7 +9,7 @@ use aya::maps::{Array, HashMap as AyaHashMap, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeNamespace, AttributeValue, DEFAULT_DEFCON_LEVEL, DEFCON_MAX_LEVEL,
-    DEFCON_MIN_LEVEL, attribute_bank, attribute_hash,
+    DEFCON_MIN_LEVEL, attribute_bank, attribute_hash, encode_kernel_dev_t,
 };
 use tokio::time::{Duration, sleep};
 
@@ -18,6 +19,7 @@ const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "environment";
 const DEFCON_FILE_NAME: &str = "DEFCON.txt";
 const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.env";
 const SUBJECT_ATTRIBUTES_DIRECTORY_NAME: &str = "subjects";
+const RESOURCE_ATTRIBUTES_DIRECTORY_NAME: &str = "resources";
 const STREAM_ATTRIBUTE_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 pub type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
@@ -31,7 +33,8 @@ pub struct AttributeMaps {
 #[derive(Clone, Eq, PartialEq)]
 struct ParsedAttribute {
     namespace: AttributeNamespace,
-    object_id: u64,
+    object_id_primary: u64,
+    object_id_secondary: u64,
     name_hash: tails_pdp_common::AttributeHash,
     value: AttributeValue,
 }
@@ -151,6 +154,12 @@ fn ensure_attribute_environment() -> anyhow::Result<PathBuf> {
             directory.join(SUBJECT_ATTRIBUTES_DIRECTORY_NAME).display()
         )
     })?;
+    fs::create_dir_all(directory.join(RESOURCE_ATTRIBUTES_DIRECTORY_NAME)).with_context(|| {
+        format!(
+            "failed to create resource attributes directory '{}'",
+            directory.join(RESOURCE_ATTRIBUTES_DIRECTORY_NAME).display()
+        )
+    })?;
 
     let system_path = directory.join(SYSTEM_ATTRIBUTES_FILE_NAME);
     if !system_path.exists() {
@@ -225,7 +234,13 @@ fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttr
     let mut attributes = Vec::new();
     let system_path = directory.join(SYSTEM_ATTRIBUTES_FILE_NAME);
     if system_path.exists() {
-        read_env_file(&system_path, AttributeNamespace::System, 0, &mut attributes)?;
+        read_env_file(
+            &system_path,
+            AttributeNamespace::System,
+            0,
+            0,
+            &mut attributes,
+        )?;
     }
 
     let subjects_directory = directory.join(SUBJECT_ATTRIBUTES_DIRECTORY_NAME);
@@ -252,8 +267,17 @@ fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttr
                         path.display()
                     )
                 })?;
-            read_env_file(&path, AttributeNamespace::Subject, uid, &mut attributes)?;
+            read_env_file(&path, AttributeNamespace::Subject, uid, 0, &mut attributes)?;
         }
+    }
+
+    let resources_directory = directory.join(RESOURCE_ATTRIBUTES_DIRECTORY_NAME);
+    if resources_directory.exists() {
+        read_resource_attributes_recursive(
+            &resources_directory,
+            &resources_directory,
+            &mut attributes,
+        )?;
     }
 
     sort_attributes(&mut attributes);
@@ -261,10 +285,64 @@ fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttr
     Ok(attributes)
 }
 
+fn read_resource_attributes_recursive(
+    root: &Path,
+    current: &Path,
+    attributes: &mut Vec<ParsedAttribute>,
+) -> anyhow::Result<()> {
+    let mut entries = fs::read_dir(current)
+        .with_context(|| format!("failed to read '{}'", current.display()))?
+        .collect::<Result<Vec<_>, _>>()
+        .with_context(|| format!("failed to iterate '{}'", current.display()))?;
+    entries.sort_by_key(|entry| entry.path());
+
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            read_resource_attributes_recursive(root, &path, attributes)?;
+            continue;
+        }
+        if path.extension().and_then(|ext| ext.to_str()) != Some("env") {
+            continue;
+        }
+
+        let mut relative_resource_path = path
+            .strip_prefix(root)
+            .with_context(|| {
+                format!(
+                    "failed to create resource-relative path for '{}'",
+                    path.display()
+                )
+            })?
+            .to_path_buf();
+        relative_resource_path.set_extension("");
+        let resource_path = Path::new("/").join(&relative_resource_path);
+        let metadata = fs::metadata(&resource_path).with_context(|| {
+            format!(
+                "resource attribute file '{}' refers to missing resource '{}'",
+                path.display(),
+                resource_path.display()
+            )
+        })?;
+        let resource_device = encode_kernel_dev_t(metadata.dev());
+        let resource_inode = metadata.ino();
+        read_env_file(
+            &path,
+            AttributeNamespace::Resource,
+            resource_device,
+            resource_inode,
+            attributes,
+        )?;
+    }
+
+    Ok(())
+}
+
 fn read_env_file(
     path: &Path,
     namespace: AttributeNamespace,
-    object_id: u64,
+    object_id_primary: u64,
+    object_id_secondary: u64,
     attributes: &mut Vec<ParsedAttribute>,
 ) -> anyhow::Result<()> {
     let source =
@@ -296,7 +374,8 @@ fn read_env_file(
 
         attributes.push(ParsedAttribute {
             namespace,
-            object_id,
+            object_id_primary,
+            object_id_secondary,
             name_hash: attribute_hash(name),
             value,
         });
@@ -344,7 +423,8 @@ fn sort_attributes(attributes: &mut [ParsedAttribute]) {
     attributes.sort_by_key(|attribute| {
         (
             attribute.namespace as u8,
-            attribute.object_id,
+            attribute.object_id_primary,
+            attribute.object_id_secondary,
             attribute.name_hash.low,
             attribute.name_hash.high,
         )
@@ -354,7 +434,8 @@ fn sort_attributes(attributes: &mut [ParsedAttribute]) {
 fn ensure_unique_attributes(attributes: &[ParsedAttribute]) -> anyhow::Result<()> {
     for window in attributes.windows(2) {
         if window[0].namespace == window[1].namespace
-            && window[0].object_id == window[1].object_id
+            && window[0].object_id_primary == window[1].object_id_primary
+            && window[0].object_id_secondary == window[1].object_id_secondary
             && window[0].name_hash == window[1].name_hash
         {
             bail!("duplicate stream attribute definition");
@@ -377,7 +458,8 @@ fn commit_attributes(
         let key = AttributeKey::new(
             bank,
             attribute.namespace,
-            attribute.object_id,
+            attribute.object_id_primary,
+            attribute.object_id_secondary,
             attribute.name_hash,
         );
         attribute_maps
@@ -385,8 +467,11 @@ fn commit_attributes(
             .insert(key, attribute.value, 0)
             .with_context(|| {
                 format!(
-                    "failed to write ATTRIBUTES bank={} namespace={:?} object_id={}",
-                    bank, attribute.namespace, attribute.object_id
+                    "failed to write ATTRIBUTES bank={} namespace={:?} object_id_primary={} object_id_secondary={}",
+                    bank,
+                    attribute.namespace,
+                    attribute.object_id_primary,
+                    attribute.object_id_secondary
                 )
             })?;
     }

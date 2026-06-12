@@ -14,7 +14,7 @@ use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeValue, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
     FileOpenStaticPolicy, FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, attribute_bank, attribute_object_id, command_name,
+    POLICY_BANK_SIZE, attribute_bank, attribute_object_ids, command_name,
     evaluate_file_open_static_policy, file_open_stream_legacy_entitlement,
     file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
 };
@@ -276,6 +276,8 @@ fn collect_file_open_violations(
                 policy.attribute_condition_count,
                 &policy.attribute_conditions,
                 request.subject,
+                request.resource_device,
+                request.resource_inode,
                 current_attribute_bank,
                 &policies.attributes,
             )
@@ -337,6 +339,8 @@ fn attribute_conditions_match(
     condition_count: u8,
     conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
     subject: u32,
+    resource_device: u64,
+    resource_inode: u64,
     bank: u32,
     attributes: &AttributeMap,
 ) -> bool {
@@ -344,10 +348,17 @@ fn attribute_conditions_match(
         .iter()
         .take((condition_count as usize).min(MAX_ATTRIBUTE_CONDITIONS))
     {
+        let (object_id_primary, object_id_secondary) = attribute_object_ids(
+            condition.namespace,
+            subject,
+            resource_device,
+            resource_inode,
+        );
         let key = AttributeKey::new(
             bank,
             condition.namespace,
-            attribute_object_id(condition.namespace, subject),
+            object_id_primary,
+            object_id_secondary,
             condition.name_hash,
         );
         let Ok(value) = attributes.get(&key, 0) else {

@@ -99,6 +99,7 @@ pub enum SocketTransport {
 pub enum AttributeNamespace {
     System = 1,
     Subject = 2,
+    Resource = 3,
 }
 
 #[repr(u8)]
@@ -128,7 +129,8 @@ pub struct AttributeKey {
     pub bank: u32,
     pub namespace: AttributeNamespace,
     pub _pad: [u8; 3],
-    pub object_id: u64,
+    pub object_id_primary: u64,
+    pub object_id_secondary: u64,
     pub name_hash: AttributeHash,
 }
 
@@ -136,14 +138,16 @@ impl AttributeKey {
     pub const fn new(
         bank: u32,
         namespace: AttributeNamespace,
-        object_id: u64,
+        object_id_primary: u64,
+        object_id_secondary: u64,
         name_hash: AttributeHash,
     ) -> Self {
         Self {
             bank,
             namespace,
             _pad: [0; 3],
-            object_id,
+            object_id_primary,
+            object_id_secondary,
             name_hash,
         }
     }
@@ -302,7 +306,7 @@ fn fixed_string_len(bytes: &[u8]) -> usize {
 }
 
 #[cfg(feature = "user")]
-fn encode_kernel_dev_t(device: u64) -> u64 {
+pub fn encode_kernel_dev_t(device: u64) -> u64 {
     let major = libc::major(device) as u64;
     let minor = libc::minor(device) as u64;
     (major << 20) | minor
@@ -924,10 +928,16 @@ pub fn matches_attribute_condition(condition: &AttributeCondition, value: &Attri
     }
 }
 
-pub const fn attribute_object_id(namespace: AttributeNamespace, subject: u32) -> u64 {
+pub const fn attribute_object_ids(
+    namespace: AttributeNamespace,
+    subject: u32,
+    resource_device: u64,
+    resource_inode: u64,
+) -> (u64, u64) {
     match namespace {
-        AttributeNamespace::System => 0,
-        AttributeNamespace::Subject => subject as u64,
+        AttributeNamespace::System => (0, 0),
+        AttributeNamespace::Subject => (subject as u64, 0),
+        AttributeNamespace::Resource => (resource_device, resource_inode),
     }
 }
 
@@ -1257,8 +1267,18 @@ mod tests {
 
     #[test]
     fn attribute_object_ids_are_namespace_scoped() {
-        assert_eq!(attribute_object_id(AttributeNamespace::System, 1000), 0);
-        assert_eq!(attribute_object_id(AttributeNamespace::Subject, 1000), 1000);
+        assert_eq!(
+            attribute_object_ids(AttributeNamespace::System, 1000, 42, 99),
+            (0, 0)
+        );
+        assert_eq!(
+            attribute_object_ids(AttributeNamespace::Subject, 1000, 42, 99),
+            (1000, 0)
+        );
+        assert_eq!(
+            attribute_object_ids(AttributeNamespace::Resource, 1000, 42, 99),
+            (42, 99)
+        );
     }
 
     #[test]

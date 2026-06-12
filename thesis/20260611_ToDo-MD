@@ -1,0 +1,64 @@
+Hallo, Christian,
+
+Hier einmal ein paar Kommentare.
+
+
+Grüße,
+
+Dominic
+
+
+Kqpitel 3:
+
+- FA-01
+
+- [X] Was sind "SAPL-Ähnliche Policies" ?
+  Am besten eher unabhängig von SAPL und eher als ASBAC Policies herleiten.
+-> geändert in ASBAC Policies
+
+- [ ] Du musst hier schon viel mehr über die Zielstruktur und woher du die ableitest sagen.
+
+
+- [X] FA-03
+-> gelöscht
+
+  Das ist eine architektonische Konsequenz und keine Grundanforderung.
+ Warum ist das so was ist das eigentliche Ziel?
+
+- [X] FA-04
+  "geeignete" was soll das heißen, was ist das Kriterium dafür und für die Vollständigkeit der gewählten Hooks? "Mindestens einer" ist schon ein sehr schwaches Kriterium.
+-> "geeignete" entfernt. Nur ein Hook
+
+
+- FA-06
+
+   Das ist ja teil von FA-01 so wie ich es anfrage.
+
+- Fa-07
+
+  Sehr unpräzise
+
+- FA-08
+
+  sehr unpräzise. Was für Bedingungen ?
+  Ist der Prototyp hier definiert ?
+
+
+- FA-10
+  Der Begriff Generationen fällt vom Himmel.
+  Das kann hier niemand verstehen.
+
+- FA-11
+
+  Was für eingaben anhand welcher Kriterien validieren.
+
+- FA-11
+
+  Das ist doch wieder nur ein teil von FA01 wo du beschreibst was für policies ausdrückbar sein sollen. Und dann ggf. sogqar eher schon design Entscheidungen für Kqpitel 4?
+
+
+Du bist generell relativ unpräzise. Du musst alles herleiten und begründen. Begriffe müssen vor ihrer Nutzung definiert werden.
+
+Zu Beginn von Kapitel 4 solltest du die praktischen Constraints von eBPF auch darstellen und daraus ableiten und begründen was deine Polices können und was genau nicht und warum nicht.
+
+Du musst deinen Eigenen Text klar an einem wissenschaftlichen Diskursmodell ausrichten und auch aus der Perspektive nochmal lesen und planen.

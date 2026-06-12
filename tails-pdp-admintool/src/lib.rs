@@ -76,6 +76,29 @@ fn collect_environment_dictionary(
         }
     }
 
+    let resources_dir = environment_dir.join("resources");
+    if resources_dir.exists() {
+        collect_env_dictionary_recursive(&resources_dir, dictionary)?;
+    }
+
+    Ok(())
+}
+
+fn collect_env_dictionary_recursive(
+    directory: &Path,
+    dictionary: &mut HashDictionary,
+) -> anyhow::Result<()> {
+    let entries = fs::read_dir(directory)
+        .with_context(|| format!("failed to read '{}'", directory.display()))?;
+    for entry in entries {
+        let entry = entry.with_context(|| format!("failed to read '{}'", directory.display()))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_env_dictionary_recursive(&path, dictionary)?;
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("env") {
+            collect_env_file_dictionary(&path, dictionary)?;
+        }
+    }
     Ok(())
 }
 
@@ -137,6 +160,7 @@ fn collect_policy_file_dictionary(
         }
         collect_dynamic_attribute_statement(statement, "subject.", dictionary);
         collect_dynamic_attribute_statement(statement, "system.", dictionary);
+        collect_dynamic_attribute_statement(statement, "resource.", dictionary);
         for quoted in quoted_strings(statement) {
             remember(dictionary, &quoted);
         }
@@ -159,7 +183,12 @@ fn collect_dynamic_attribute_statement(
             character.is_ascii_alphanumeric() || *character == '_' || *character == '-'
         })
         .collect();
-    if attribute_name.is_empty() || attribute_name == "uid" {
+    if attribute_name.is_empty()
+        || matches!(
+            attribute_name.as_str(),
+            "uid" | "path" | "family" | "transport" | "ip" | "port"
+        )
+    {
         return;
     }
     remember(dictionary, &attribute_name);

@@ -1,7 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     AttributeKey, COMMAND_LEN, DEFAULT_DEFCON_LEVEL, Entitlement, FileOpenRequest,
-    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, attribute_bank, attribute_object_id,
+    MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, attribute_bank, attribute_object_ids,
     file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
     matches_attribute_condition, policy_bank_offset,
 };
@@ -45,6 +45,8 @@ pub(crate) fn evaluate_policies(
                     policy.attribute_condition_count,
                     &policy.attribute_conditions,
                     current_subject,
+                    resource.device,
+                    resource.inode,
                     attribute_bank,
                 )
                 && let Some(entitlement) = file_open_stream_legacy_entitlement(
@@ -96,6 +98,8 @@ fn attribute_conditions_match(
     condition_count: u8,
     conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
     current_subject: u32,
+    resource_device: u64,
+    resource_inode: u64,
     bank: u32,
 ) -> bool {
     let mut index = 0;
@@ -104,10 +108,17 @@ fn attribute_conditions_match(
             return true;
         }
         let condition = &conditions[index];
+        let (object_id_primary, object_id_secondary) = attribute_object_ids(
+            condition.namespace,
+            current_subject,
+            resource_device,
+            resource_inode,
+        );
         let key = AttributeKey::new(
             bank,
             condition.namespace,
-            attribute_object_id(condition.namespace, current_subject),
+            object_id_primary,
+            object_id_secondary,
             condition.name_hash,
         );
         let Some(value) = (unsafe { ATTRIBUTES.get(&key) }) else {

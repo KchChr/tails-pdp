@@ -1,0 +1,6 @@
+policy "deny intern on internal test resource"
+deny
+    action == "file_open";
+    resource.path == "/home/hntr/test.txt";
+    subject.position == "intern";
+    resource.classification == "internal";

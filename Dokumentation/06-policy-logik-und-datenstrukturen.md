@@ -77,6 +77,7 @@ Unterstützte Attribute:
 | `Defcon` | Wert aus `CURRENT_DEFCON`, gespeist aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt) |
 | `system.<name>` | Globales Attribut aus `environment/system.env`, gespeichert in `ATTRIBUTES`. |
 | `subject.<name>` | Subjektattribut aus `environment/subjects/<uid>.env`, gespeichert in `ATTRIBUTES`. |
+| `resource.<name>` | Dateibezogenes Ressourcenattribut aus `environment/resources/<pfad>.env`, gespeichert in `ATTRIBUTES`. |
 
 Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Stream-Bedingung wahr ist.
 Ist die Bedingung falsch, ist die Policy nicht anwendbar [P8].

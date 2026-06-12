@@ -101,15 +101,19 @@ Supported concepts:
   `environment.defcon.level <op> VALUE`
   `system.<attribute> <op> VALUE`
   `subject.<attribute> <op> VALUE`
+  `resource.<attribute> <op> VALUE`
 
 Stream policies may use the same static hook filters as static policies. Example: a `file_open`
 stream policy may combine `command == "cat"` and `resource.path == "/home/hntr/test.txt"` with
 `environment.defcon.level <= 2`.
 
-`system.<attribute>` and `subject.<attribute>` read external attributes from `environment/`.
-`system.env` contains global attributes. `subjects/<uid>.env` contains attributes for a concrete
-UID. The userspace process watches these files and writes valid changes to the pinned `ATTRIBUTES`
-and `ATTRIBUTE_GENERATION` eBPF maps.
+`system.<attribute>`, `subject.<attribute>`, and `resource.<attribute>` read external attributes
+from `environment/`. `system.env` contains global attributes. `subjects/<uid>.env` contains
+attributes for a concrete UID. `resources/<path>.env` contains attributes for a concrete file
+resource, where `<path>` is the absolute resource path without the leading `/`, plus a `.env`
+suffix. For example, `/home/hntr/test.txt` is described by
+`resources/home/hntr/test.txt.env`. The userspace process watches these files and writes valid
+changes to the pinned `ATTRIBUTES` and `ATTRIBUTE_GENERATION` eBPF maps.
 
 Example:
 
@@ -120,10 +124,16 @@ defcon = 3
 # environment/subjects/1000.env
 position = "engineer"
 clearance = 2
+
+# environment/resources/home/hntr/test.txt.env
+clearanceLevel = 3
+classification = "internal"
 ```
 
 The policy condition `subject.position == "engineer"` is resolved against the current request UID.
 The condition `system.defcon <= 3` is resolved against the global `system.env` attributes.
+The condition `resource.classification == "internal"` is resolved against the opened file resource
+using its device and inode identity.
 
 `environment.defcon.level` remains supported for compatibility. It reads the current test DEFCON
 level from `environment/DEFCON.txt` and writes valid changes to the pinned `CURRENT_DEFCON` eBPF
@@ -138,7 +148,7 @@ Not supported:
 - `advice`
 - `transform`
 - `or`
-- more than four dynamic `system.*`/`subject.*` attribute conditions per policy
+- more than four dynamic `system.*`/`subject.*`/`resource.*` attribute conditions per policy
 
 Complex disjunctions are intentionally expressed by multiple files. Example: “deny before 08:00 and
 from 16:00 onwards” is represented by two policies.

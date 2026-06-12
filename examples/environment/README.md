@@ -8,5 +8,5 @@ cp -R examples/environment/. environment/
 ```
 
 `system.env` contains system-wide attributes. `subjects/<uid>.env` contains attributes for one
-subject UID.
-
+subject UID. `resources/<path>.env` contains attributes for one file resource, where `<path>` is
+the absolute resource path without the leading `/`.

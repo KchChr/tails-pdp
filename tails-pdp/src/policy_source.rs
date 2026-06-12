@@ -773,6 +773,14 @@ fn parse_dynamic_attribute_condition(
         (AttributeNamespace::Subject, attribute_name)
     } else if let Some(attribute_name) = lhs.strip_prefix("system.") {
         (AttributeNamespace::System, attribute_name)
+    } else if let Some(attribute_name) = lhs.strip_prefix("resource.") {
+        if matches!(
+            attribute_name,
+            "path" | "family" | "transport" | "ip" | "port"
+        ) {
+            return Ok(None);
+        }
+        (AttributeNamespace::Resource, attribute_name)
     } else {
         return Ok(None);
     };

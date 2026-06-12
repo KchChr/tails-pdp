@@ -7,7 +7,8 @@ multiple files, for example one policy for `hour < 8` and another for `hour >= 1
 
 Stream policies may use the same static hook filters as static policies, for example `command`,
 `subject.uid` or `resource.path`, plus stream conditions such as `environment.utc.hour`,
-`environment.defcon.level`, `system.<attribute>` or `subject.<attribute>`.
+`environment.defcon.level`, `system.<attribute>`, `subject.<attribute>` or
+`resource.<attribute>`.
 
 Numbering convention:
 
@@ -19,4 +20,4 @@ DEFCON stream examples use `environment.defcon.level`. The current test DEFCON v
 Structured attribute examples are stored in `environment/`. These files are not loaded from the
 example directory automatically; copy them into the runtime `../environment/` directory before
 starting `tails-pdp` if you want to try policies that reference `system.<attribute>` or
-`subject.<attribute>`.
+`subject.<attribute>` or `resource.<attribute>`.

@@ -120,9 +120,15 @@ Policy, zum Beispiel `command` bei `file_open` oder `command`, `resource.port` u
 
 Zusätzlich überwacht [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
 das Verzeichnis [`environment/`](../environment/). Globale Attribute stehen in `system.env`,
-subjektbezogene Attribute in `subjects/<uid>.env`. Gültige Änderungen werden in die gepinnte Map
-`ATTRIBUTES` geschrieben und über `ATTRIBUTE_GENERATION` atomar aktiviert. Bei ungültigen Dateien
-bleibt die zuletzt gültige Attributgeneration aktiv.
+subjektbezogene Attribute in `subjects/<uid>.env` und dateibezogene Ressourcenattribute in
+`resources/<pfad>.env`. Für Ressourcen wird der absolute Pfad ohne führenden `/` verwendet, zum
+Beispiel `resources/home/hntr/test.txt.env` für `/home/hntr/test.txt`. Gültige Änderungen werden
+in die gepinnte Map `ATTRIBUTES` geschrieben und über `ATTRIBUTE_GENERATION` atomar aktiviert. Bei
+ungültigen Dateien bleibt die zuletzt gültige Attributgeneration aktiv.
+
+Ressourcenattribute werden nicht über einen Pfad-Hash, sondern über die Dateiidentität aus Device
+und Inode adressiert. Dadurch nutzt der Kernel beim `file_open` dieselbe Objektidentität wie der
+Userspace beim Laden der Attributdateien.
 
 Beispiel:
 
@@ -132,6 +138,10 @@ defcon = 3
 
 # environment/subjects/1000.env
 position = "engineer"
+
+# environment/resources/home/hntr/test.txt.env
+classification = "internal"
+clearanceLevel = 3
 ```
 
 ## Monitor

@@ -50,7 +50,7 @@
   author       = {{The Kernel Development Community}},
   title        = {LSM BPF Programs},
   howpublished = {\url{https://docs.kernel.org/bpf/prog_lsm.html}},
-  note         = {Zugriff am 08.06.2026},
+  note         = {Zugriff am 12.06.2026},
   year         = {2026}
 }
 
@@ -58,7 +58,7 @@
   author       = {{The Kernel Development Community}},
   title        = {eBPF verifier},
   howpublished = {\url{https://docs.kernel.org/bpf/verifier.html}},
-  note         = {Zugriff am 08.06.2026},
+  note         = {Zugriff am 12.06.2026},
   year         = {2026}
 }
 
@@ -66,7 +66,7 @@
   author       = {{The Aya Contributors}},
   title        = {Building eBPF Programs with Aya},
   howpublished = {\url{https://aya-rs.dev/book/}},
-  note         = {Zugriff am 08.06.2026},
+  note         = {Zugriff am 12.06.2026},
   year         = {2026}
 }
 
@@ -110,12 +110,12 @@
   year    = {2025}
 }
 
-@online{kernelorgLSM,
-  author  = {{The Kernel Development Community}},
-  title   = {Linux Security Module Usage},
-  url     = {https://docs.kernel.org/admin-guide/LSM/index.html},
-  urldate = {2025-09-21},
-  year    = {2025}
+@misc{kernelorgLSM,
+  author       = {{The Kernel Development Community}},
+  title        = {Linux Security Module Usage},
+  howpublished = {\url{https://docs.kernel.org/admin-guide/LSM/index.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
 }
 
 @online{SAPL,
@@ -144,7 +144,103 @@
 }
 
 @techreport{anderson1972computer,
-  title={Computer security technology planning study},
-  author={Anderson, James P},
-  year={1972}
+  author      = {Anderson, James P.},
+  title       = {Computer Security Technology Planning Study},
+  institution = {Air Force Electronic Systems Division},
+  number      = {ESD-TR-73-51},
+  year        = {1972},
+  url         = {http://csrc.nist.gov/publications/history/ande72.pdf}
+}
+
+@misc{saltzer1975protection,
+  author       = {Saltzer, Jerome H. and Schroeder, Michael D.},
+  title        = {The Protection of Information in Computer Systems},
+  howpublished = {\url{https://web.mit.edu/Saltzer/www/publications/protection/}},
+  note         = {Online-Fassung, Zugriff am 12.06.2026},
+  year         = {1975}
+}
+
+@techreport{nistSP800162,
+  author      = {Hu, Vincent C. and Ferraiolo, David and Kuhn, Rick and Schnitzer, Adam and Sandlin, Kenneth and Miller, Robert and Scarfone, Karen},
+  title       = {Guide to Attribute Based Access Control (ABAC) Definition and Considerations},
+  institution = {National Institute of Standards and Technology},
+  number      = {NIST Special Publication 800-162},
+  year        = {2014},
+  doi         = {10.6028/NIST.SP.800-162},
+  url         = {https://csrc.nist.gov/pubs/sp/800/162/upd2/final}
+}
+
+@misc{oasisXacml30,
+  author       = {{OASIS}},
+  title        = {eXtensible Access Control Markup Language (XACML) Version 3.0},
+  howpublished = {\url{https://docs.oasis-open.org/xacml/3.0/xacml-3.0-core-spec-en.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2010}
+}
+
+@article{gouglidis2018usecon,
+  author  = {Gouglidis, Antonios and Grompanopoulos, Christos and Mavridou, Anastasia},
+  title   = {Formal Verification of Usage Control Models: A Case Study of UseCON Using TLA+},
+  journal = {Electronic Proceedings in Theoretical Computer Science},
+  volume  = {272},
+  pages   = {52--64},
+  year    = {2018},
+  doi     = {10.4204/EPTCS.272.5},
+  url     = {https://arxiv.org/abs/1806.09848}
+}
+
+@misc{linuxKernelHacking,
+  author       = {Russell, Rusty},
+  title        = {Unreliable Guide To Hacking The Linux Kernel},
+  howpublished = {\url{https://docs.kernel.org/kernel-hacking/hacking.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{kernelBpfDesignQA,
+  author       = {{The Kernel Development Community}},
+  title        = {BPF Design Q\&A},
+  howpublished = {\url{https://docs.kernel.org/bpf/bpf_design_QA.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{kernelBpfMaps,
+  author       = {{The Kernel Development Community}},
+  title        = {BPF maps},
+  howpublished = {\url{https://docs.kernel.org/bpf/maps.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{manBpf,
+  author       = {Kerrisk, Michael},
+  title        = {bpf(2) Linux manual page},
+  howpublished = {\url{https://man7.org/linux/man-pages/man2/bpf.2.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{ebpfPinning,
+  author       = {{eBPF Docs}},
+  title        = {Pinning},
+  howpublished = {\url{https://docs.ebpf.io/linux/concepts/pinning/}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{manOpen,
+  author       = {Kerrisk, Michael},
+  title        = {open(2) Linux manual page},
+  howpublished = {\url{https://man7.org/linux/man-pages/man2/open.2.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
+}
+
+@misc{manProcPidFd,
+  author       = {Kerrisk, Michael},
+  title        = {proc\_pid\_fd(5) Linux manual page},
+  howpublished = {\url{https://man7.org/linux/man-pages/man5/proc_pid_fd.5.html}},
+  note         = {Zugriff am 12.06.2026},
+  year         = {2026}
 }

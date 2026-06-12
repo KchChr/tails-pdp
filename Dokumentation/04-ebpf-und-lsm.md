@@ -74,7 +74,7 @@ Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 | `CURRENT_TIME_ISO8601` | gepinnte `Array<Iso8601TimeParts>` | Aktuelle UTC-Zeitfelder. |
 | `CURRENT_DEFCON` | gepinnte `Array<u32>` | Aktueller DEFCON-Level aus [`stream-attributes/DEFCON.txt`](../environment/DEFCON.txt). |
 | `ATTRIBUTE_GENERATION` | gepinnte `Array<u32>` | Aktive Generation strukturierter Attribute. |
-| `ATTRIBUTES` | gepinnte `HashMap<AttributeKey, AttributeValue>` | Strukturierte Attribute aus `environment/system.env` und `environment/subjects/<uid>.env`. |
+| `ATTRIBUTES` | gepinnte `HashMap<AttributeKey, AttributeValue>` | Strukturierte Attribute aus `environment/system.env`, `environment/subjects/<uid>.env` und `environment/resources/<pfad>.env`. |
 
 `DECISIONS` ist eine Per-CPU-Map. Das reduziert Race Conditions, wenn mehrere CPUs gleichzeitig
 LSM-Hooks ausführen [P12], [Q6].
