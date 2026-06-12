@@ -183,7 +183,7 @@ pub fn show_attributes(
 
     rows.sort_by_key(|(key, _)| {
         (
-            key.namespace as u8,
+            key.namespace,
             key.object_id_primary,
             key.object_id_secondary,
             key.name_hash.high,
@@ -195,15 +195,21 @@ pub fn show_attributes(
         let name = describe_hash(key.name_hash, dictionary);
         let value = describe_value(value, dictionary);
         match key.namespace {
-            AttributeNamespace::System => {
+            namespace if namespace == AttributeNamespace::System as u32 => {
                 println!("system.{name} = {value}");
             }
-            AttributeNamespace::Subject => {
+            namespace if namespace == AttributeNamespace::Subject as u32 => {
                 println!("subject:{} subject.{name} = {value}", key.object_id_primary);
             }
-            AttributeNamespace::Resource => {
+            namespace if namespace == AttributeNamespace::Resource as u32 => {
                 println!(
                     "resource:{}:{} resource.{name} = {value}",
+                    key.object_id_primary, key.object_id_secondary
+                );
+            }
+            namespace => {
+                println!(
+                    "namespace:{namespace}:{}:{} attribute.{name} = {value}",
                     key.object_id_primary, key.object_id_secondary
                 );
             }

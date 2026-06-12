@@ -127,8 +127,7 @@ impl AttributeHash {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct AttributeKey {
     pub bank: u32,
-    pub namespace: AttributeNamespace,
-    pub _pad: [u8; 3],
+    pub namespace: u32,
     pub object_id_primary: u64,
     pub object_id_secondary: u64,
     pub name_hash: AttributeHash,
@@ -144,8 +143,7 @@ impl AttributeKey {
     ) -> Self {
         Self {
             bank,
-            namespace,
-            _pad: [0; 3],
+            namespace: namespace as u32,
             object_id_primary,
             object_id_secondary,
             name_hash,
