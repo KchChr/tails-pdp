@@ -102,9 +102,9 @@ Dadurch entsteht zusätzlich die Herausforderung, dass eine zunächst erlaubte Z
 Das klassische Reference-Monitor-Konzept erklärt daher zunächst die unmittelbare Kontrolle eines Zugriffs, während die spätere Arbeit zusätzlich betrachtet, wie bestehende Zugriffssituationen nachträglich überwacht werden können.
 
 \subsection{Attribute-Based Access Control}
-Attribute-Based Access Control (ABAC) ist ein Zugriffskontrollmodell, bei dem eine Autorisierungsentscheidung nicht allein anhand einer festen Identität oder Rolle getroffen wird. 
-Stattdessen werden Attribute ausgewertet, die sich auf das Subjekt, die Ressource, die angeforderte Operation und gegebenenfalls auf die Umgebung beziehen. 
-NIST beschreibt ABAC als logische Zugriffskontrollmethode, bei der solche Attribute gegen Policies, Regeln oder Beziehungen geprüft werden, um zu entscheiden, ob eine Operation zulässig ist \citep{nistSP800162}.
+Attribute-Based Access Control (ABAC) ist ein Zugriffskontrollmodell, bei dem eine Autorisierungsentscheidung nicht allein anhand einer festen Subjektidentität, wie bei ACL- oder identitätsbasierter Zugriffskontrolle, oder anhand einer zugewiesenen Rolle, wie bei Role-Based Access Control (RBAC), getroffen wird.
+Stattdessen werden Attribute ausgewertet, die sich auf das Subjekt, die Ressource, die angeforderte Operation und gegebenenfalls auf die Umgebung beziehen.
+Das National Institute of Standards and Technology (NIST) beschreibt ABAC als logische Zugriffskontrollmethode, bei der solche Attribute gegen Policies, Regeln oder Beziehungen geprüft werden, um zu entscheiden, ob eine Operation zulässig ist \citep{nistSP800162}.
 
 Für diese Arbeit ist ABAC relevant, weil dadurch Zugriffsentscheidungen feiner modelliert werden können als bei rein rollenbasierten oder benutzerbasierten Ansätzen. 
 Ein Subjekt kann beispielsweise über Attribute wie Position, Benutzerkennung oder Gruppenzugehörigkeit beschrieben werden. 
@@ -122,8 +122,9 @@ Attribute Stream-Based Access Control (ASBAC) wird in dieser Arbeit als Erweiter
 Stattdessen können Attribute zur Laufzeit aktualisiert werden und dadurch einen Strom von Zustandsänderungen bilden. 
 Eine Zugriffsentscheidung hängt dann nicht nur von den Attributwerten zum Zeitpunkt der ersten Prüfung ab, sondern auch davon, ob sich diese Werte während einer bestehenden Zugriffssituation ändern.
 
-Diese Sichtweise steht inhaltlich in der Nähe von Usage-Control-Modellen. 
-Usage Control erweitert klassische Zugriffskontrolle unter anderem um die Veränderbarkeit von Attributen und die Fortdauer von Entscheidungen während einer Nutzung. 
+Diese Sichtweise steht inhaltlich in der Nähe von Usage Control.
+Unter Usage Control werden Zugriffskontrollmodelle verstanden, die eine Nutzung nicht nur zum Zeitpunkt der initialen Autorisierung betrachten, sondern auch Bedingungen während der laufenden Nutzung einbeziehen.
+Usage Control erweitert klassische Zugriffskontrolle unter anderem um die Veränderbarkeit von Attributen und die Fortdauer von Entscheidungen während einer Nutzung.
 Gouglidis et al. beschreiben diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} \citep{gouglidis2018usecon}. 
 Für ASBAC bedeutet dies, dass ein zunächst erlaubter Zugriff später erneut relevant werden kann, wenn sich ein entscheidungsrelevantes Attribut ändert.
 
@@ -182,6 +183,10 @@ Diese Eigenschaft erklärt, warum zusätzlich eine Überwachung bestehender Zugr
 \subsection{eBPF und eBPF-LSM}
 eBPF ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können. 
 Die Programme werden vor der Ausführung durch den Kernel geprüft und können an verschiedene Ereignisse oder Hook-Typen gebunden werden. 
+Historisch steht BPF für Berkeley Packet Filter. 
+Die heute im Linux-Kernel verwendete erweiterte Form wird meist als eBPF bezeichnet; die Kernel-Dokumentation verwendet für das moderne Subsystem jedoch häufig weiterhin die Bezeichnung BPF. 
+In dieser Arbeit wird deshalb eBPF verwendet, wenn der moderne Mechanismus für Programme, Maps und Verifier gemeint ist. 
+Der Begriff BPF wird nur dort aufgegriffen, wo er in offiziellen Bezeichnungen wie \texttt{bpf()}-Systemaufruf, BPF-Dateisystem oder in der Kernel-Dokumentation selbst verwendet wird.
 Die Kernel-Dokumentation beschreibt BPF als im Kernel verwendetes Instruktionsformat und betont, dass BPF-Programme auf definierte Hilfsfunktionen und Kernelobjekte wie Maps beschränkt sind \citep{kernelBpfDesignQA}.
 
 eBPF-LSM verbindet eBPF mit dem LSM-Framework. 
@@ -190,7 +195,7 @@ Damit kann ein eBPF-Programm an einem LSM-Hook ausgeführt werden und dort eine 
 
 In den Grundlagen wird eBPF noch nicht als endgültige Lösung begründet, sondern als technischer Mechanismus eingeordnet. 
 Für diese Arbeit ist eBPF interessant, weil es eine Ausführung im Kernel ermöglicht, ohne ein klassisches Kernelmodul zu entwickeln. 
-Gleichzeitig ist eBPF durch Verifier, eingeschränkte Sprachelemente, begrenzten Stack und definierte Hilfsfunktionen deutlich stärker beschränkt als allgemeiner Kernelcode. 
+Gleichzeitig ist eBPF durch Verifier, eingeschränkte Sprachelemente, begrenzten Stack, fehlende allgemeine Heap-Allokation und definierte Hilfsfunktionen deutlich stärker beschränkt als allgemeiner Kernelcode. 
 Diese Einschränkungen müssen in der späteren Konzeption gegen die Vorteile abgewogen werden.
 
 \subsection{eBPF-Maps und gepinnte Maps}
@@ -220,13 +225,19 @@ Unklare oder zu komplexe Zugriffsmuster können dazu führen, dass ein Programm 
 
 Zusätzlich bestehen praktische Begrenzungen bei Stack und Programmkomplexität. 
 Die BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}. 
-Das Aya-Buch weist ebenfalls darauf hin, dass eBPF-Programme ohne Heap auskommen und Daten stattdessen über Maps ablegen müssen \citep{ayaBook}. 
+Die offizielle Aya-Dokumentation weist ebenfalls darauf hin, dass eBPF-Programme ohne Heap auskommen und Daten stattdessen über Maps ablegen müssen \citep{ayaBook}. 
+Der Stack eignet sich damit nur für kleine lokale Hilfsdaten, etwa Schlüsselstrukturen für Map-Zugriffe oder wenige temporäre Werte. 
+Größere lokale Puffer, dynamisch wachsende Listen oder Zeichenketten können dort nicht sinnvoll abgelegt werden. 
+Ein allgemeiner Heap, wie er in Userspace-Programmen für dynamische Datenstrukturen wie Listen, Strings oder Objekte genutzt wird, steht eBPF-Programmen nicht zur Verfügung. 
+Veränderliche oder größere Zustände müssen daher typischerweise in eBPF-Maps ausgelagert werden.
 Für die Arbeit bedeutet dies, dass komplexe Policy-Logik möglichst im Userspace vorbereitet werden sollte, während das eBPF-Programm nur eine kompakte, vorher strukturierte Repräsentation auswertet.
 
 \subsection{Aya als Rust-Framework für eBPF}
 Aya ist ein Rust-Framework zur Entwicklung von eBPF-Anwendungen. 
-Das Aya-Buch beschreibt Aya als Möglichkeit, eBPF-Programme mit Rust zu entwickeln und dabei Cargo, Rust-Strukturen sowie gemeinsame Codeanteile zwischen Userspace und eBPF-Programm zu nutzen \citep{ayaBook}. 
-Aya stellt damit eine Alternative zu einer Implementierung auf Basis von C, libbpf oder BCC dar.
+Die offizielle Aya-Dokumentation beschreibt Aya als Möglichkeit, eBPF-Programme mit Rust zu entwickeln und dabei Cargo, Rust-Strukturen sowie gemeinsame Codeanteile zwischen Userspace und eBPF-Programm zu nutzen \citep{ayaBook}. 
+Neben Rust-basierten Frameworks existieren etablierte eBPF-Werkzeuge im C- und Skriptsprachenumfeld.
+libbpf ist eine C-Bibliothek für die Entwicklung und das Laden von BPF- beziehungsweise eBPF-Programmen, während BCC (BPF Compiler Collection) ein Toolkit für BPF-basierte Analyse-, Tracing- und Monitoring-Werkzeuge ist \citep{libbpf,bcc}.
+Aya stellt dazu eine Rust-basierte Alternative dar.
 
 Für den Prototyp ist Aya vor allem deshalb relevant, weil Userspace-Komponenten und eBPF-Programm in derselben Programmiersprache entwickelt werden können. 
 Gemeinsame Datentypen können in einer gemeinsamen Bibliothek definiert werden, wodurch sich die Gefahr verringert, dass Userspace und Kernelspace unterschiedliche Annahmen über die Struktur von Map-Schlüsseln oder Map-Werten treffen. 
