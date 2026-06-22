@@ -47,44 +47,46 @@ fn remember(dictionary: &mut HashDictionary, value: &str) {
 
 fn build_hash_dictionary(
     policy_dir: &Path,
-    environment_dir: &Path,
+    attributes_dir: &Path,
 ) -> anyhow::Result<HashDictionary> {
     let mut dictionary = HashMap::new();
-    collect_environment_dictionary(environment_dir, &mut dictionary)?;
+    collect_attributes_dictionary(attributes_dir, &mut dictionary)?;
     collect_policy_dictionary(policy_dir, &mut dictionary)?;
     Ok(dictionary)
 }
 
-fn collect_environment_dictionary(
-    environment_dir: &Path,
+fn collect_attributes_dictionary(
+    attributes_dir: &Path,
     dictionary: &mut HashDictionary,
 ) -> anyhow::Result<()> {
-    let system_path = environment_dir.join("system.env");
+    let system_path = attributes_dir.join("system.attributes");
     if system_path.exists() {
-        collect_env_file_dictionary(&system_path, dictionary)?;
+        collect_attribute_file_dictionary(&system_path, dictionary)?;
     }
 
-    let subjects_dir = environment_dir.join("subjects");
+    let subjects_dir = attributes_dir.join("subjects");
     if let Ok(entries) = fs::read_dir(&subjects_dir) {
         for entry in entries {
             let entry =
                 entry.with_context(|| format!("failed to read '{}'", subjects_dir.display()))?;
             let path = entry.path();
-            if path.is_file() {
-                collect_env_file_dictionary(&path, dictionary)?;
+            if path.is_file()
+                && path.extension().and_then(|extension| extension.to_str()) == Some("attributes")
+            {
+                collect_attribute_file_dictionary(&path, dictionary)?;
             }
         }
     }
 
-    let resources_dir = environment_dir.join("resources");
+    let resources_dir = attributes_dir.join("resources");
     if resources_dir.exists() {
-        collect_env_dictionary_recursive(&resources_dir, dictionary)?;
+        collect_attributes_dictionary_recursive(&resources_dir, dictionary)?;
     }
 
     Ok(())
 }
 
-fn collect_env_dictionary_recursive(
+fn collect_attributes_dictionary_recursive(
     directory: &Path,
     dictionary: &mut HashDictionary,
 ) -> anyhow::Result<()> {
@@ -94,15 +96,18 @@ fn collect_env_dictionary_recursive(
         let entry = entry.with_context(|| format!("failed to read '{}'", directory.display()))?;
         let path = entry.path();
         if path.is_dir() {
-            collect_env_dictionary_recursive(&path, dictionary)?;
-        } else if path.extension().and_then(|extension| extension.to_str()) == Some("env") {
-            collect_env_file_dictionary(&path, dictionary)?;
+            collect_attributes_dictionary_recursive(&path, dictionary)?;
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("attributes") {
+            collect_attribute_file_dictionary(&path, dictionary)?;
         }
     }
     Ok(())
 }
 
-fn collect_env_file_dictionary(path: &Path, dictionary: &mut HashDictionary) -> anyhow::Result<()> {
+fn collect_attribute_file_dictionary(
+    path: &Path,
+    dictionary: &mut HashDictionary,
+) -> anyhow::Result<()> {
     let source =
         fs::read_to_string(path).with_context(|| format!("failed to read '{}'", path.display()))?;
     for line in source.lines() {
@@ -246,7 +251,7 @@ fn print_usage() {
     println!("  --attribute-generation-pin-path <PFAD>");
     println!("  --attributes-pin-path <PFAD>");
     println!("  --policy-dir <PFAD>       Quelle fuer Hash-Namen, Standard: policies");
-    println!("  --environment-dir <PFAD>  Quelle fuer Hash-Namen, Standard: environment");
+    println!("  --attributes-dir <PFAD>   Quelle fuer Hash-Namen, Standard: attributes");
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -279,7 +284,7 @@ pub fn run() -> anyhow::Result<()> {
     let attribute_generation =
         read_generation(&cli.attribute_generation_pin_path, "ATTRIBUTE_GENERATION")?;
     let attribute_bank = attribute_bank(attribute_generation);
-    let dictionary = build_hash_dictionary(&cli.policy_dir, &cli.environment_dir)?;
+    let dictionary = build_hash_dictionary(&cli.policy_dir, &cli.attributes_dir)?;
 
     println!(
         "generation policy={} policy_bank_offset={} attribute={} attribute_bank={}",

@@ -11,7 +11,7 @@ pub const DEFAULT_ATTRIBUTE_GENERATION_PIN_PATH: &str =
     "/sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION";
 pub const DEFAULT_ATTRIBUTES_PIN_PATH: &str = "/sys/fs/bpf/tails-pdp/ATTRIBUTES";
 pub const DEFAULT_POLICY_DIRECTORY: &str = "policies";
-pub const DEFAULT_ENVIRONMENT_DIRECTORY: &str = "environment";
+pub const DEFAULT_ATTRIBUTES_DIRECTORY: &str = "attributes";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -38,8 +38,8 @@ pub struct Cli {
     #[arg(long, default_value = DEFAULT_POLICY_DIRECTORY)]
     pub policy_dir: PathBuf,
 
-    #[arg(long, default_value = DEFAULT_ENVIRONMENT_DIRECTORY)]
-    pub environment_dir: PathBuf,
+    #[arg(long, default_value = DEFAULT_ATTRIBUTES_DIRECTORY)]
+    pub attributes_dir: PathBuf,
 
     #[command(subcommand)]
     pub command: Command,

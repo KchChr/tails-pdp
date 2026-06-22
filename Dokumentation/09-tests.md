@@ -170,13 +170,13 @@ Erwartung: Bind schlägt fehl.
 Eine Policy mit `environment.utc.hour < 8` oder `>= 16` aktivieren und mit aktueller UTC-Zeit
 vergleichen.
 
-#### DEFCON-Policy über system.env
+#### DEFCON-Policy über system.attributes
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-printf 'defcon = 5\n' > environment/system.env
+printf 'defcon = 5\n' > attributes/system.attributes
 cat /home/hntr/test.txt
-printf 'defcon = 2\n' > environment/system.env
+printf 'defcon = 2\n' > attributes/system.attributes
 cat /home/hntr/test.txt
 ```
 

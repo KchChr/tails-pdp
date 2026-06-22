@@ -35,7 +35,7 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | CLI-Parsing, Map-Zugriff und Ausgabe. |
 | [`examples/`](../examples/) | Beispiel-Policies. |
 | [`policies/`](../policies/) | Aktiver Policy-Ordner. |
-| [`environment/`](../environment/) | Aktive Werte für strukturierte Attribute wie `system.defcon`, Subjekt- und Ressourcenattribute. |
+| [`attributes/`](../attributes/) | Aktive Werte für strukturierte Attribute wie `system.defcon`, Subjekt- und Ressourcenattribute. |
 
 ## Grober Datenfluss
 
@@ -195,7 +195,7 @@ deny
     system.defcon <= 2;
 ```
 
-Der Wert dafür kommt aus [`environment/system.env`](../environment/system.env) und wird in
+Der Wert dafür kommt aus [`attributes/system.attributes`](../attributes/system.attributes) und wird in
 `ATTRIBUTES` geschrieben [P12], [P23], [P24].
 
 ---

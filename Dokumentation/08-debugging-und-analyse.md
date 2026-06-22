@@ -105,12 +105,12 @@ Die Bedeutung von Inode- und Device-Werten ist in `inode(7)` beschrieben [Q22].
 ## DEFCON testen
 
 Der DEFCON-Wert steht als `defcon = <wert>` in
-[`environment/system.env`](../environment/system.env). Gültig sind Werte von `1` bis `5`.
+[`attributes/system.attributes`](../attributes/system.attributes). Gültig sind Werte von `1` bis `5`.
 
 ```shell
-printf 'defcon = 5\n' > environment/system.env
+printf 'defcon = 5\n' > attributes/system.attributes
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
-printf 'defcon = 2\n' > environment/system.env
+printf 'defcon = 2\n' > attributes/system.attributes
 sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
 ```
 

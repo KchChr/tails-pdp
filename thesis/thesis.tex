@@ -576,7 +576,7 @@ Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies,
 \paragraph{Attributloader}
 Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
 Diese Attribute sind nicht notwendigerweise Bestandteil eines einzelnen Zugriffsvorgangs, können aber die Entscheidung beeinflussen. 
-Im Prototyp betrifft dies insbesondere die aktuelle Zeit sowie externe Attribute aus dem Verzeichnis \texttt{environment/}. 
+Im Prototyp betrifft dies insbesondere die aktuelle Zeit sowie externe Attribute aus dem Verzeichnis \texttt{attributes/}. 
 Der Attributloader schreibt diese Werte in den Kernelspace, damit sie dort bei der Auswertung von Streampolicies berücksichtigt werden können.
 
 Der Attributloader trifft selbst keine Zugriffsentscheidung. 
@@ -626,7 +626,7 @@ Diese Zwischenformen sind notwendig, um die textuellen Policies in eine struktur
 Zusätzlich verwaltet der Userspace Policy-Generationen. 
 Eine Policy-Generation beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
 
-Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformationen oder externe Zustandswerte aus dem Verzeichnis \texttt{environment/}. 
+Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformationen oder externe Zustandswerte aus dem Verzeichnis \texttt{attributes/}. 
 Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
 
 Für den Monitor sind außerdem Prozess- und Ressourceninformationen relevant. 
@@ -1024,7 +1024,7 @@ Gerade bei dynamischen Attributen und gehashten Attributnamen ist eine Diagnosem
 
 Die Entscheidung lautet, Administration und Diagnose über ein separates, lesendes Werkzeug umzusetzen.
 Das Administrationswerkzeug öffnet die gepinnten Maps und gibt aktive Policy-Bänke, statische Policies, Streampolicies und Attribute aus.
-Für gehashte Attributnamen und Zeichenkettenwerte baut es zusätzlich ein Wörterbuch aus den Policy- und Environment-Dateien auf.
+Für gehashte Attributnamen und Zeichenkettenwerte baut es zusätzlich ein Wörterbuch aus den Policy- und Attributdateien auf.
 Dadurch können viele Hashwerte wieder einer lesbaren Bezeichnung zugeordnet werden, ohne dass die Kernel-Maps selbst Klartextnamen speichern müssen.
 
 Diese Trennung verhindert, dass Diagnosefunktionen mit der eigentlichen Policyverwaltung vermischt werden.
@@ -1039,7 +1039,7 @@ Dies würde jedoch Zuständigkeiten vermischen und die Beobachtung des Zustands 
 
 Die Konsequenz ist ein zusätzliches Werkzeug im Prototyp.
 Dafür können geladene Policies und Attribute unabhängig von der Policyverwaltung eingesehen werden.
-Die Diagnose bleibt allerdings teilweise best-effort: Wenn ein Hashwert nicht aus den vorhandenen Policy- oder Environment-Dateien rekonstruiert werden kann, kann das Tool ihn nur als Hash beziehungsweise unbekannten Wert anzeigen.
+Die Diagnose bleibt allerdings teilweise best-effort: Wenn ein Hashwert nicht aus den vorhandenen Policy- oder Attributdateien rekonstruiert werden kann, kann das Tool ihn nur als Hash beziehungsweise unbekannten Wert anzeigen.
 
 \newpage
 

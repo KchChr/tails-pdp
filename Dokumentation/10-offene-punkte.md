@@ -95,7 +95,7 @@ Vorschlag:
 
 ## Ungültige strukturierte Attribute bleiben ein Bedienrisiko
 
-Der Attribut-Updater ignoriert ungültige Werte in [`environment/system.env`](../environment/system.env)
+Der Attribut-Updater ignoriert ungültige Werte in [`attributes/system.attributes`](../attributes/system.attributes)
 und behält die letzte gültige Attributgeneration bei [P23]. Das ist robust, kann aber verwirrend
 sein, wenn ein Tippfehler nicht sofort als Policy-Verhalten sichtbar wird.
 

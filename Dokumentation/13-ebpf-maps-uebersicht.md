@@ -488,10 +488,10 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest `environment/` und schreibt Attributwerte in die inaktive Bank. |
+| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest `attributes/` und schreibt Attributwerte in die inaktive Bank. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest Attributwerte für dynamische Stream-Policy-Bedingungen. |
 | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest Attributwerte für die Userspace-Nachbewertung bestehender FDs. |
-| [`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) | Gibt Attribute aus und versucht Hashwerte über Policy-/Environment-Dateien lesbar zu machen. |
+| [`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) | Gibt Attribute aus und versucht Hashwerte über Policy- und Attributdateien lesbar zu machen. |
 | [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
@@ -505,9 +505,9 @@ Beispiele:
 
 | Datei | Policy-Name | Map-Key |
 | --- | --- | --- |
-| `environment/system.env` | `system.defcon` | `namespace=System`, Objekt `(0, 0)`, `name_hash=hash("defcon")` |
-| `environment/subjects/1000.env` | `subject.position` | `namespace=Subject`, Objekt `(1000, 0)`, `name_hash=hash("position")` |
-| `environment/resources/home/hntr/test.txt.env` | `resource.classification` | `namespace=Resource`, Objekt `(device, inode)`, `name_hash=hash("classification")` |
+| `attributes/system.attributes` | `system.defcon` | `namespace=System`, Objekt `(0, 0)`, `name_hash=hash("defcon")` |
+| `attributes/subjects/1000.attributes` | `subject.position` | `namespace=Subject`, Objekt `(1000, 0)`, `name_hash=hash("position")` |
+| `attributes/resources/home/hntr/test.txt.attributes` | `resource.classification` | `namespace=Resource`, Objekt `(device, inode)`, `name_hash=hash("classification")` |
 
 ## Gepinnte Maps und Layout-Prüfung
 

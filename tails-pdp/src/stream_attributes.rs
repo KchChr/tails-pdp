@@ -15,8 +15,9 @@ use tokio::time::{Duration, sleep};
 
 use crate::fs_watch;
 
-const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "environment";
-const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.env";
+const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "attributes";
+const ATTRIBUTE_FILE_EXTENSION: &str = "attributes";
+const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.attributes";
 const SUBJECT_ATTRIBUTES_DIRECTORY_NAME: &str = "subjects";
 const RESOURCE_ATTRIBUTES_DIRECTORY_NAME: &str = "resources";
 const STREAM_ATTRIBUTE_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
@@ -63,26 +64,26 @@ pub fn open_attribute_maps(ebpf: &mut aya::Ebpf) -> anyhow::Result<AttributeMaps
 }
 
 pub fn write_current_attributes(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
-    let directory = ensure_attribute_environment()?;
-    let attributes = read_attribute_environment(&directory)?;
+    let directory = ensure_attribute_directory()?;
+    let attributes = read_attribute_directory(&directory)?;
     commit_attributes(attribute_maps, &attributes)
 }
 
 pub async fn run_attribute_updater(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
-    let directory = ensure_attribute_environment()?;
+    let directory = ensure_attribute_directory()?;
     let mut watcher = fs_watch::watch_directory_recursive(&directory)?;
     let mut last_applied = None;
 
-    apply_attribute_environment(&directory, attribute_maps, &mut last_applied)?;
+    apply_attribute_directory(&directory, attribute_maps, &mut last_applied)?;
 
     loop {
         watcher.wait_for_change().await?;
         sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
-        apply_attribute_environment(&directory, attribute_maps, &mut last_applied)?;
+        apply_attribute_directory(&directory, attribute_maps, &mut last_applied)?;
     }
 }
 
-fn ensure_attribute_environment() -> anyhow::Result<PathBuf> {
+fn ensure_attribute_directory() -> anyhow::Result<PathBuf> {
     let directory = default_stream_attributes_directory()?;
     fs::create_dir_all(&directory).with_context(|| {
         format!(
@@ -119,12 +120,12 @@ fn ensure_attribute_environment() -> anyhow::Result<PathBuf> {
     Ok(directory)
 }
 
-fn apply_attribute_environment(
+fn apply_attribute_directory(
     directory: &Path,
     attribute_maps: &mut AttributeMaps,
     last_applied: &mut Option<Vec<ParsedAttribute>>,
 ) -> anyhow::Result<()> {
-    match read_attribute_environment(directory) {
+    match read_attribute_directory(directory) {
         Ok(attributes) if last_applied.as_ref() != Some(&attributes) => {
             commit_attributes(attribute_maps, &attributes)?;
             *last_applied = Some(attributes);
@@ -132,7 +133,7 @@ fn apply_attribute_environment(
         Ok(_) => {}
         Err(error) => {
             warn!(
-                "Ignoring invalid stream attribute environment '{}': {error:#}",
+                "Ignoring invalid stream attributes directory '{}': {error:#}",
                 directory.display()
             );
         }
@@ -141,11 +142,11 @@ fn apply_attribute_environment(
     Ok(())
 }
 
-fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttribute>> {
+fn read_attribute_directory(directory: &Path) -> anyhow::Result<Vec<ParsedAttribute>> {
     let mut attributes = Vec::new();
     let system_path = directory.join(SYSTEM_ATTRIBUTES_FILE_NAME);
     if system_path.exists() {
-        read_env_file(
+        read_attribute_file(
             &system_path,
             AttributeNamespace::System,
             0,
@@ -164,7 +165,7 @@ fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttr
 
         for entry in entries {
             let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("env") {
+            if path.extension().and_then(|ext| ext.to_str()) != Some(ATTRIBUTE_FILE_EXTENSION) {
                 continue;
             }
             let uid = path
@@ -174,11 +175,11 @@ fn read_attribute_environment(directory: &Path) -> anyhow::Result<Vec<ParsedAttr
                 .parse::<u64>()
                 .with_context(|| {
                     format!(
-                        "subject attribute file '{}' must be named '<uid>.env'",
+                        "subject attribute file '{}' must be named '<uid>.attributes'",
                         path.display()
                     )
                 })?;
-            read_env_file(&path, AttributeNamespace::Subject, uid, 0, &mut attributes)?;
+            read_attribute_file(&path, AttributeNamespace::Subject, uid, 0, &mut attributes)?;
         }
     }
 
@@ -213,7 +214,7 @@ fn read_resource_attributes_recursive(
             read_resource_attributes_recursive(root, &path, attributes)?;
             continue;
         }
-        if path.extension().and_then(|ext| ext.to_str()) != Some("env") {
+        if path.extension().and_then(|ext| ext.to_str()) != Some(ATTRIBUTE_FILE_EXTENSION) {
             continue;
         }
 
@@ -237,7 +238,7 @@ fn read_resource_attributes_recursive(
         })?;
         let resource_device = encode_kernel_dev_t(metadata.dev());
         let resource_inode = metadata.ino();
-        read_env_file(
+        read_attribute_file(
             &path,
             AttributeNamespace::Resource,
             resource_device,
@@ -249,7 +250,7 @@ fn read_resource_attributes_recursive(
     Ok(())
 }
 
-fn read_env_file(
+fn read_attribute_file(
     path: &Path,
     namespace: AttributeNamespace,
     object_id_primary: u64,

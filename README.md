@@ -106,30 +106,31 @@ stream policy may combine `command == "cat"` and `resource.path == "/home/hntr/t
 `system.defcon <= 2`.
 
 `system.<attribute>`, `subject.<attribute>`, and `resource.<attribute>` read external attributes
-from `environment/`. `system.env` contains global attributes. `subjects/<uid>.env` contains
-attributes for a concrete UID. `resources/<path>.env` contains attributes for a concrete file
-resource, where `<path>` is the absolute resource path without the leading `/`, plus a `.env`
+from `attributes/`. `system.attributes` contains global attributes. `subjects/<uid>.attributes` contains
+attributes for a concrete UID. `resources/<path>.attributes` contains attributes for a concrete file
+resource, where `<path>` is the absolute resource path without the leading `/`, plus a `.attributes`
 suffix. For example, `/home/hntr/test.txt` is described by
-`resources/home/hntr/test.txt.env`. The userspace process watches these files and writes valid
+`resources/home/hntr/test.txt.attributes`. The userspace process watches these files and writes valid
 changes to the pinned `ATTRIBUTES` and `ATTRIBUTE_GENERATION` eBPF maps.
 
 Example:
 
 ```ini
-# environment/system.env
+# attributes/system.attributes
 defcon = 3
 
-# environment/subjects/1000.env
+# attributes/subjects/1000.attributes
 position = "engineer"
 clearance = 2
 
-# environment/resources/home/hntr/test.txt.env
+# attributes/resources/home/hntr/test.txt.attributes
 clearanceLevel = 3
 classification = "internal"
 ```
 
 The policy condition `subject.position == "engineer"` is resolved against the current request UID.
-The condition `system.defcon <= 3` is resolved against the global `system.env` attributes.
+The condition `system.defcon <= 3` is resolved against the global attributes in
+`system.attributes`.
 The condition `resource.classification == "internal"` is resolved against the opened file resource
 using its device and inode identity.
 
@@ -184,9 +185,9 @@ Example DEFCON workflow:
 
 ```shell
 cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-printf 'defcon = 5\n' > environment/system.env
+printf 'defcon = 5\n' > attributes/system.attributes
 cat /home/hntr/test.txt
-printf 'defcon = 2\n' > environment/system.env
+printf 'defcon = 2\n' > attributes/system.attributes
 cat /home/hntr/test.txt
 ```
 
@@ -197,9 +198,9 @@ Example structured attribute workflow:
 
 ```shell
 cp examples/25-file-open-stream-deny-engineer-defcon-le-3.sapl policies/
-mkdir -p environment/subjects
-printf 'defcon = 3\n' > environment/system.env
-printf 'position = "engineer"\n' > environment/subjects/1000.env
+mkdir -p attributes/subjects
+printf 'defcon = 3\n' > attributes/system.attributes
+printf 'position = "engineer"\n' > attributes/subjects/1000.attributes
 cat /home/hntr/test.txt
 ```
 

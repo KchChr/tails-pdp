@@ -14,9 +14,9 @@ Numbering convention:
 - `10-*` to `19-*`: `file_open` policies
 
 DEFCON examples use `system.defcon`. The current DEFCON value is read from
-`../environment/system.env` and must be an integer from `1` to `5`.
+`../attributes/system.attributes` and must be an integer from `1` to `5`.
 
-Structured attribute examples are stored in `environment/`. These files are not loaded from the
-example directory automatically; copy them into the runtime `../environment/` directory before
+Structured attribute examples are stored in `attributes/`. These files are not loaded from the
+example directory automatically; copy them into the runtime `../attributes/` directory before
 starting `tails-pdp` if you want to try policies that reference `system.<attribute>` or
 `subject.<attribute>` or `resource.<attribute>`.

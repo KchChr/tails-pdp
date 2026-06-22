@@ -64,7 +64,7 @@ keine Aussage.
 ## Stream Policies
 
 Stream Policies enthalten eine Bedingung gegen einen dynamischen Wert. Aktuell sind Zeitwerte sowie
-strukturierte Attribute aus `environment/` unterstützt [P8], [P23].
+strukturierte Attribute aus `attributes/` unterstützt [P8], [P23].
 
 Unterstützte Attribute:
 
@@ -74,9 +74,9 @@ Unterstützte Attribute:
 | `Hour` | UTC-Stunde |
 | `Minute` | UTC-Minute |
 | `Second` | UTC-Sekunde |
-| `system.<name>` | Globales Attribut aus `environment/system.env`, gespeichert in `ATTRIBUTES`. |
-| `subject.<name>` | Subjektattribut aus `environment/subjects/<uid>.env`, gespeichert in `ATTRIBUTES`. |
-| `resource.<name>` | Dateibezogenes Ressourcenattribut aus `environment/resources/<pfad>.env`, gespeichert in `ATTRIBUTES`. |
+| `system.<name>` | Globales Attribut aus `attributes/system.attributes`, gespeichert in `ATTRIBUTES`. |
+| `subject.<name>` | Subjektattribut aus `attributes/subjects/<uid>.attributes`, gespeichert in `ATTRIBUTES`. |
+| `resource.<name>` | Dateibezogenes Ressourcenattribut aus `attributes/resources/<pfad>.attributes`, gespeichert in `ATTRIBUTES`. |
 
 Wichtig: Eine Stream Policy trifft nur dann eine Entscheidung, wenn die Stream-Bedingung wahr ist.
 Ist die Bedingung falsch, ist die Policy nicht anwendbar [P8].

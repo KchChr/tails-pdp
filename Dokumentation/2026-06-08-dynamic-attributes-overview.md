@@ -1,4 +1,4 @@
-# Dynamic Environment Attributes - Änderungsübersicht
+# Dynamic Attributes - Änderungsübersicht
 
 Stand: 2026-06-08
 
@@ -142,19 +142,19 @@ sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
 ```
 
-## Environment-Dateien und Loader
+## Attributdateien und Loader
 
 Code:
 
-- `tails-pdp/src/stream_attributes.rs:17`: Runtime-Verzeichnis `environment`
-- `tails-pdp/src/stream_attributes.rs:19`: `system.env`
+- `tails-pdp/src/stream_attributes.rs:17`: Runtime-Verzeichnis `attributes`
+- `tails-pdp/src/stream_attributes.rs:19`: `system.attributes`
 - `tails-pdp/src/stream_attributes.rs:20`: `subjects`
 - `tails-pdp/src/stream_attributes.rs:53`: Öffnen der `ATTRIBUTES` und `ATTRIBUTE_GENERATION` Maps
 - `tails-pdp/src/stream_attributes.rs:77`: initiales Schreiben der Attribute
 - `tails-pdp/src/stream_attributes.rs:100`: Watcher für Attributänderungen
 - `tails-pdp/src/stream_attributes.rs:140`: Default-Struktur anlegen
-- `tails-pdp/src/stream_attributes.rs:224`: Environment einlesen
-- `tails-pdp/src/stream_attributes.rs:264`: `.env` Datei parsen
+- `tails-pdp/src/stream_attributes.rs:224`: Attributverzeichnis einlesen
+- `tails-pdp/src/stream_attributes.rs:264`: `.attributes` Datei parsen
 - `tails-pdp/src/stream_attributes.rs:308`: Attributnamen validieren
 - `tails-pdp/src/stream_attributes.rs:321`: Attributwerte parsen
 - `tails-pdp/src/stream_attributes.rs:366`: Commit in die Maps
@@ -165,14 +165,14 @@ Sinn:
 Die Runtime-Umgebung sieht so aus:
 
 ```text
-environment/
-  system.env
+attributes/
+  system.attributes
   subjects/
-    1000.env
-    1001.env
+    1000.attributes
+    1001.attributes
 ```
 
-`system.env` enthält globale Attribute. `subjects/<uid>.env` enthält Attribute für genau eine UID.
+`system.attributes` enthält globale Attribute. `subjects/<uid>.attributes` enthält Attribute für genau eine UID.
 Änderungen werden rekursiv beobachtet und nach kurzem Debounce neu in die eBPF Maps geschrieben.
 
 Gedanke dahinter:
@@ -187,7 +187,7 @@ access-level = 3
 ```
 
 Attributnamen müssen nicht vorher bekannt sein. Sie werden beim Einlesen gehasht. Die Policy nutzt
-denselben Hash, dadurch treffen sich Policy-Bedingung und Environment-Wert in der Map.
+denselben Hash, dadurch treffen sich Policy-Bedingung und Attributwert in der Map.
 
 ## Atomic Update über Generationen
 
@@ -311,7 +311,7 @@ die Watcher weiterlaufen. Danach hält der Prozess die Maps aktuell.
 Gedanke dahinter:
 
 Das passt zum vorhandenen Zielsystem-Workflow: `run.sh` startet das System, der Userspace-Prozess
-lädt eBPF, pinnt Maps und überwacht danach Policies und Environment-Dateien.
+lädt eBPF, pinnt Maps und überwacht danach Policies und Attributdateien.
 
 ## Beispiele und Dokumentation
 
@@ -319,21 +319,21 @@ Code/Dokumentation:
 
 - `README.md:96`: unterstützte Stream Conditions
 - `README.md:109`: Beschreibung von `system.<attribute>` und `subject.<attribute>`
-- `environment/README.md:8`: Runtime-Dateien für strukturierte Attribute
+- `attributes/README.md:8`: Runtime-Dateien für strukturierte Attribute
 - `examples/25-file-open-stream-deny-engineer-defcon-le-3.sapl:1`: Beispielpolicy
-- `examples/environment/system.env:1`: Beispiel für Systemattribute
-- `examples/environment/subjects/1000.env:1`: Beispiel für Subject UID 1000
-- `examples/environment/subjects/1001.env:1`: Beispiel für Subject UID 1001
+- `examples/attributes/system.attributes:1`: Beispiel für Systemattribute
+- `examples/attributes/subjects/1000.attributes:1`: Beispiel für Subject UID 1000
+- `examples/attributes/subjects/1001.attributes:1`: Beispiel für Subject UID 1001
 
 Sinn:
 
-Es gibt jetzt sowohl aktive Runtime-Beispiele in `environment/` als auch kopierbare Beispiele unter
-`examples/environment/`.
+Es gibt jetzt sowohl aktive Runtime-Beispiele in `attributes/` als auch kopierbare Beispiele unter
+`examples/attributes/`.
 
 Gedanke dahinter:
 
 `examples/` soll nicht automatisch aktiv werden. Die Dateien dort sind Vorlagen. Aktiv ist nur das
-Runtime-Verzeichnis `environment/`, das vom laufenden Prozess beobachtet wird.
+Runtime-Verzeichnis `attributes/`, das vom laufenden Prozess beobachtet wird.
 
 ## Tests und Build-Prüfung
 

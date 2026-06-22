@@ -36,8 +36,8 @@ Rust-Dokumentation und Aya-Dokumentation.
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
-| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen strukturierter Attribute aus [`environment/`](../environment/) und Schreiben der Map `ATTRIBUTES`. |
-| [P24] | [`environment/`](../environment/) | Beispielhafter Ablageort für strukturierte System-, Subjekt- und Ressourcenattribute. |
+| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen strukturierter Attribute aus [`attributes/`](../attributes/) und Schreiben der Map `ATTRIBUTES`. |
+| [P24] | [`attributes/`](../attributes/) | Beispielhafter Ablageort für strukturierte System-, Subjekt- und Ressourcenattribute. |
 
 ## Externe Quellen
 

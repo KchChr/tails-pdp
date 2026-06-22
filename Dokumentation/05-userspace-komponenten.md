@@ -102,10 +102,10 @@ environment.utc.hour < 8;
 ## Strukturierte Attribute
 
 Zusätzlich überwacht [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
-das Verzeichnis [`environment/`](../environment/). Globale Attribute stehen in `system.env`,
-subjektbezogene Attribute in `subjects/<uid>.env` und dateibezogene Ressourcenattribute in
-`resources/<pfad>.env`. Für Ressourcen wird der absolute Pfad ohne führenden `/` verwendet, zum
-Beispiel `resources/home/hntr/test.txt.env` für `/home/hntr/test.txt`. Gültige Änderungen werden
+das Verzeichnis [`attributes/`](../attributes/). Globale Attribute stehen in `system.attributes`,
+subjektbezogene Attribute in `subjects/<uid>.attributes` und dateibezogene Ressourcenattribute in
+`resources/<pfad>.attributes`. Für Ressourcen wird der absolute Pfad ohne führenden `/` verwendet, zum
+Beispiel `resources/home/hntr/test.txt.attributes` für `/home/hntr/test.txt`. Gültige Änderungen werden
 in die gepinnte Map `ATTRIBUTES` geschrieben und über `ATTRIBUTE_GENERATION` atomar aktiviert. Bei
 ungültigen Dateien bleibt die zuletzt gültige Attributgeneration aktiv.
 
@@ -114,19 +114,19 @@ und Inode adressiert. Dadurch nutzt der Kernel beim `file_open` dieselbe Objekti
 Userspace beim Laden der Attributdateien.
 
 DEFCON wird ebenfalls als strukturiertes Systemattribut geführt. Der Wert steht als `defcon = <wert>`
-in `environment/system.env`, wird als `system.defcon` in Policies verwendet und muss im Bereich
+in `attributes/system.attributes`, wird als `system.defcon` in Policies verwendet und muss im Bereich
 `1..=5` liegen.
 
 Beispiel:
 
 ```ini
-# environment/system.env
+# attributes/system.attributes
 defcon = 3
 
-# environment/subjects/1000.env
+# attributes/subjects/1000.attributes
 position = "engineer"
 
-# environment/resources/home/hntr/test.txt.env
+# attributes/resources/home/hntr/test.txt.attributes
 classification = "internal"
 clearanceLevel = 3
 ```
