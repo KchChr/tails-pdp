@@ -55,71 +55,74 @@
 \citation{kernelBpfDesignQA}
 \citation{ayaBook}
 \citation{ayaBook}
-\citation{gouglidis2018usecon}
+\citation{ayaBook}
+\citation{libbpf,bcc}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.10}Aya als Rust-Framework für eBPF}{10}{subsection.2.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.11}Dynamische Attribute und Policy-Generationen}{10}{subsection.2.11}\protected@file@percent }
+\citation{gouglidis2018usecon}
 \citation{kernelBpfMaps}
 \citation{manOpen}
-\citation{manProcPidFd}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.11}Dynamische Attribute und Policy-Generationen}{11}{subsection.2.11}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.12}Überwachung bestehender Zugriffe und File Descriptors}{11}{subsection.2.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Anforderungsanalyse}{12}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Funktionale Anforderungen}{12}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Operative Anforderungen}{14}{subsection.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Entwicklungsbezogene Anforderungen}{14}{subsection.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Konzeption}{15}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}praktische Einschränkungen von eBPF}{15}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Architektur}{15}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Datenfluss}{15}{subsection.4.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Konzeptionelle Architektur des Prototyps}}{16}{figure.1}\protected@file@percent }
-\newlabel{fig:konzeption-architektur}{{1}{16}{Konzeptionelle Architektur des Prototyps}{figure.1}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Policy-Datenfluss}{16}{subsubsection.4.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}Datenfluss dynamischer Attribute}{16}{subsubsection.4.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{17}{subsubsection.4.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.4}Monitoring bestehender Zugriffe}{17}{subsubsection.4.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Komponenten}{17}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}Userspace-Komponenten}{17}{subsubsection.4.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Policies}{18}{section*.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Policyverwaltung}{18}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Attributloader}{18}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Monitor}{18}{section*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}Kernelspace-Komponenten}{19}{subsubsection.4.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{LSM}{19}{section*.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.3}Administrationskomponente}{19}{subsubsection.4.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Administrationstool}{19}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Datenobjekte}{19}{subsection.4.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Datenobjekte im Userspace}{19}{subsubsection.4.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Datenobjekte im Kernelspace}{19}{subsubsection.4.5.2}\protected@file@percent }
+\citation{manProcPidFd}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Anforderungsanalyse}{13}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Funktionale Anforderungen}{13}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Operative Anforderungen}{15}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Entwicklungsbezogene Anforderungen}{15}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Konzeption}{16}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}praktische Einschränkungen von eBPF}{16}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Architektur}{16}{subsection.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Konzeptionelle Architektur des Prototyps}}{17}{figure.1}\protected@file@percent }
+\newlabel{fig:konzeption-architektur}{{1}{17}{Konzeptionelle Architektur des Prototyps}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Datenfluss}{17}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Policy-Datenfluss}{17}{subsubsection.4.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}Datenfluss dynamischer Attribute}{18}{subsubsection.4.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{18}{subsubsection.4.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.4}Monitoring bestehender Zugriffe}{18}{subsubsection.4.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Komponenten}{19}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}Userspace-Komponenten}{19}{subsubsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Policies}{19}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Policyverwaltung}{19}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Attributloader}{19}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Monitor}{20}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}Kernelspace-Komponenten}{20}{subsubsection.4.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{LSM}{20}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.3}Administrationskomponente}{20}{subsubsection.4.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Administrationstool}{20}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Datenobjekte}{20}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Datenobjekte im Userspace}{20}{subsubsection.4.5.1}\protected@file@percent }
 \citation{anderson1972computer}
 \citation{wright2002linux}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Datenobjekte im Kernelspace}{21}{subsubsection.4.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Entwurfsentscheidungen}{21}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.1}Trennung von Userspace und Kernelspace}{21}{subsubsection.4.6.1}\protected@file@percent }
 \citation{kernelBpfLsm}
 \citation{kernelBpfVerifier}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Entwurfsentscheidungen}{20}{subsection.4.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.1}Trennung von Userspace und Kernelspace}{20}{subsubsection.4.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{20}{subsubsection.4.6.2}\protected@file@percent }
 \citation{ayaBook}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.3}Auswahl der LSM-Hooks}{21}{subsubsection.4.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.4}Policy-Verarbeitung im Userspace}{21}{subsubsection.4.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.5}Reduzierte Policy-Repräsentation im Kernelspace}{21}{subsubsection.4.6.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.6}Kommunikation über eBPF-Maps}{21}{subsubsection.4.6.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.7}Generationenmodell für Policy-Aktualisierungen}{21}{subsubsection.4.6.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.8}Trennung statischer Policies und Streampolicies}{21}{subsubsection.4.6.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{21}{subsubsection.4.6.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{21}{subsubsection.4.6.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.11}Combining-Strategie für Policy-Entscheidungen}{21}{subsubsection.4.6.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.12}Identifikation von Dateien über Device und Inode}{21}{subsubsection.4.6.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.13}Nachträgliche Überwachung durch den Monitor}{21}{subsubsection.4.6.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.14}Enforcement durch Schließen von File Descriptors}{21}{subsubsection.4.6.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.15}Administration und Diagnose über ein separates Tool}{21}{subsubsection.4.6.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Entwurf und Umsetzung}{22}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Komponente 1}{22}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Komponente 2}{22}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Komponente 3}{22}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Implementierungsdetails}{22}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Evaluation}{23}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Testumgebung}{23}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Testszenarien}{23}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Ergebnisse}{23}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{24}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{22}{subsubsection.4.6.2}\protected@file@percent }
+\citation{manProcPidFd}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.3}Auswahl des LSM-Hooks}{23}{subsubsection.4.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.4}Policy-Verarbeitung im Userspace}{23}{subsubsection.4.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.5}Reduzierte Policy-Repräsentation im Kernelspace}{24}{subsubsection.4.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.6}Kommunikation über eBPF-Maps}{25}{subsubsection.4.6.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.7}Generationenmodell für Policy-Aktualisierungen}{26}{subsubsection.4.6.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.8}Trennung statischer Policies und Streampolicies}{26}{subsubsection.4.6.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{27}{subsubsection.4.6.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.10}Tail-Call-basierte Aufteilung der eBPF-Programme}{28}{subsubsection.4.6.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.11}Combining-Strategie für Policy-Entscheidungen}{29}{subsubsection.4.6.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.12}Identifikation von Dateien über Device und Inode}{29}{subsubsection.4.6.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.13}Nachträgliche Überwachung durch den Monitor}{30}{subsubsection.4.6.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.14}Enforcement durch Schließen von File Descriptors}{31}{subsubsection.4.6.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.15}Administration und Diagnose über ein separates Tool}{31}{subsubsection.4.6.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Entwurf und Umsetzung}{33}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Komponente 1}{33}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Komponente 2}{33}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Komponente 3}{33}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Implementierungsdetails}{33}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Evaluation}{34}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Testumgebung}{34}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Testszenarien}{34}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Ergebnisse}{34}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{35}{section.7}\protected@file@percent }
 \bibstyle{plainnat}
 \bibdata{literatur}
 \bibcite{anderson1972computer}{{1}{1972}{{Anderson}}{{}}}
@@ -139,4 +142,4 @@
 \bibcite{kernelBpfVerifier}{{15}{2026{}}{{The Kernel Development Community}}{{}}}
 \bibcite{kernelorgLSM}{{16}{2026{}}{{The Kernel Development Community}}{{}}}
 \bibcite{wright2002linux}{{17}{2002}{{Wright et~al.}}{{Wright, Cowan, Smalley, Morris, and Kroah-Hartman}}}
-\gdef \@abspage@last{26}
+\gdef \@abspage@last{37}

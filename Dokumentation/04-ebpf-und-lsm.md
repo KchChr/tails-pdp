@@ -21,9 +21,8 @@ Die Einstiegshooks stehen in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/s
 | Funktion | Hook | Aufgabe |
 | --- | --- | --- |
 | `file_open` | `file_open` | Einstieg für Dateiöffnungen. |
-| `socket_bind` | `socket_bind` | Einstieg für lokale Socket-Binds. |
 
-Beide Funktionen tun nur wenig:
+Die Funktion tut nur wenig:
 
 1. UID lesen.
 2. Optional debuggen.
@@ -43,15 +42,6 @@ Beide Funktionen tun nur wenig:
 | 3 | `file_open_stream_policies.rs::evaluate_file_open_stream_policies` |
 | 4 | `combine.rs::combine_file_open` |
 
-### `socket_bind`
-
-| Schritt | Funktion |
-| --- | --- |
-| 1 | `hooks.rs::socket_bind` |
-| 2 | `socket_bind_static_policies.rs::evaluate_socket_bind_static_policies` |
-| 3 | `socket_bind_stream_policies.rs::evaluate_socket_bind_stream_policies` |
-| 4 | `combine.rs::combine_socket_bind` |
-
 Warum so? Der eBPF-Verifier akzeptiert kleinere, klarere Programme eher als ein großes Programm mit
 viel Logik [Q7], [Q8].
 
@@ -62,14 +52,11 @@ Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 | Map | Typ | Zweck |
 | --- | --- | --- |
 | `FILE_OPEN_JUMP_TABLE` | `ProgramArray` | Tail Calls für `file_open`. |
-| `SOCKET_BIND_JUMP_TABLE` | `ProgramArray` | Tail Calls für `socket_bind`. |
 | `DECISIONS` | `PerCpuArray<u32>` | Zwischenentscheidung pro CPU. |
 | `DEBUG_LOGGING` | `Array<u32>` | Schaltet `bpf_printk!` zur Laufzeit an/aus. |
 | `POLICY_GENERATION` | gepinnte `Array<u32>` | Aktive Policy-Generation. |
 | `FILE_OPEN_STATIC_POLICIES` | gepinnte `Array<FileOpenStaticPolicy>` | Datei-Static-Policies. |
 | `FILE_OPEN_STREAM_POLICIES` | gepinnte `Array<FileOpenStreamPolicy>` | Datei-Stream-Policies. |
-| `SOCKET_BIND_STATIC_POLICIES` | gepinnte `Array<SocketBindStaticPolicy>` | Socket-Static-Policies. |
-| `SOCKET_BIND_STREAM_POLICIES` | gepinnte `Array<SocketBindStreamPolicy>` | Socket-Stream-Policies. |
 | `CURRENT_TIME` | gepinnte `Array<u64>` | Aktuelle Unix-Zeit. |
 | `CURRENT_TIME_ISO8601` | gepinnte `Array<Iso8601TimeParts>` | Aktuelle UTC-Zeitfelder. |
 | `ATTRIBUTE_GENERATION` | gepinnte `Array<u32>` | Aktive Generation strukturierter Attribute. |
@@ -77,6 +64,9 @@ Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 
 `DECISIONS` ist eine Per-CPU-Map. Das reduziert Race Conditions, wenn mehrere CPUs gleichzeitig
 LSM-Hooks ausführen [P12], [Q6].
+
+Eine vollständige Übersicht mit Key- und Value-Typen, Pin-Pfaden, Einträgen und Einsatzorten steht
+in [eBPF-Maps: vollständige Übersicht](13-ebpf-maps-uebersicht.md).
 
 ## Gelesene Kernel-Daten
 
@@ -103,17 +93,6 @@ FileOpenResource {
 
 Der vollständige Pfad wird im Kernel nicht gematcht. Stattdessen löst der Userspace-Loader den Pfad
 beim Laden der Policy in `device + inode` auf.
-
-### Socketressource
-
-`read_socket_bind_resource` liest:
-
-- Socket-Familie: IPv4 oder IPv6
-- Transporttyp: TCP oder UDP
-- lokalen Port
-- lokale IP-Adresse
-
-Für IPv4 wird `sockaddr_in` gelesen, für IPv6 `sockaddr_in6`.
 
 ## `unsafe`
 

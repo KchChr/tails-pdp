@@ -5,10 +5,10 @@ Diese Dokumentation nutzt zwei Arten von Quellen:
 - **Projektquellen** `[P...]`: Dateien aus diesem Repository. Sie belegen, wie `tails-pdp`
   konkret implementiert ist.
 - **Externe Quellen** `[Q...]`: Offizielle Dokumentation oder technische Referenzen. Sie belegen
-  allgemeine Aussagen zu Rust, Aya, eBPF, Linux Security Modules, Linux-Interfaces und SAPL.
+  allgemeine Aussagen zu Rust, Aya, eBPF, Linux Security Modules und Linux-Interfaces.
 
 Die externen Quellen sind bevorzugt Primärquellen: Linux-Kernel-Dokumentation, Linux-Man-Pages,
-Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
+Rust-Dokumentation und Aya-Dokumentation.
 
 ## Projektquellen
 
@@ -17,14 +17,14 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 | [P1] | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Hauptprogramm, eBPF-Loader, LSM-Load/Attach, Tail-Call-Setup, Logging, Policy-Sync, Zeit-Update und Monitor-Start. |
 | [P2] | [`tails-pdp/src/lib.rs`](../tails-pdp/src/lib.rs) | Userspace-Bibliothek und Modulstruktur. |
 | [P3] | [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.sapl`-Policy-Dateien. |
-| [P4] | [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Schreiben kompilierter Policies in die eBPF-Maps. |
+| [P4] | [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Schreiben kernelgeeigneter Policy-Map-Einträge in die eBPF-Maps. |
 | [P5] | [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Aktualisierung der Zeit-Maps `CURRENT_TIME` und `CURRENT_TIME_ISO8601`. |
-| [P6] | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Userspace-Monitoring von Prozessen, Sockets und File Descriptors. |
+| [P6] | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Userspace-Monitoring von Prozessen und File Descriptors. |
 | [P7] | [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließen fremder File Descriptors per `ptrace` auf x86_64 Linux. |
 | [P8] | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Typen, Policy-Strukturen, Entscheidungslogik und Konstanten für Userspace und eBPF. |
 | [P9] | [`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) | eBPF-Crate-Einstieg. |
-| [P10] | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | LSM-Hook-Einstiege `file_open` und `socket_bind`. |
-| [P11] | [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Kernel-Hilfsfunktionen, z. B. Datei- und Socket-Attributermittlung. |
+| [P10] | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | LSM-Hook-Einstieg `file_open`. |
+| [P11] | [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Kernel-Hilfsfunktionen, z. B. Datei-Attributermittlung. |
 | [P12] | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | eBPF-Map-Definitionen, Policy-Maps, Zeit-Maps, Decision-Maps und Tail-Call-Tabelle. |
 | [P13] | [`tails-pdp-ebpf/src/logging.rs`](../tails-pdp-ebpf/src/logging.rs) | eBPF-Debug-Logging. |
 | [P14] | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | eBPF-Policy-Auswertung, Tail-Call-Ziele und Kombinieren der Entscheidungen. |
@@ -32,7 +32,7 @@ Rust-Dokumentation, Aya-Dokumentation und SAPL-Dokumentation.
 | [P16] | [`tails-pdp-ebpf/src/vmlinux.rs`](../tails-pdp-ebpf/src/vmlinux.rs) | Kernel-Typen, die aus BTF/vmlinux abgeleitet wurden. |
 | [P17] | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | Admin-Tool, CLI, Map-Zugriffe und Ausgabeformatierung. |
 | [P18] | [`scripts/load-test-policies.sh`](../scripts/load-test-policies.sh) | Testskript zum Laden vieler Policies. |
-| [P19] | [`examples/`](../examples/) | Beispiel-Policies im SAPL-inspirierten Format. |
+| [P19] | [`examples/`](../examples/) | Beispiel-Policies und Beispiel-Attributdateien. |
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
@@ -81,4 +81,4 @@ beide Quellenarten genannt.
 
 ---
 
-**Previous:** [Glossar](11-glossar.md) | **Next:** -
+**Previous:** [Glossar](11-glossar.md) | **Next:** [eBPF-Maps: vollständige Übersicht](13-ebpf-maps-uebersicht.md)

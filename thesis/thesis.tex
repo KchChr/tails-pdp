@@ -222,14 +222,24 @@ Diese Prüfung hat direkte Auswirkungen auf die Gestaltung von eBPF-Programmen.
 Zugriffe auf Map-Werte, Stackbereiche oder Kontextdaten müssen für den Verifier nachvollziehbar sein. 
 Der Verifier verfolgt unter anderem, ob Register initialisiert sind, welche Zeigerarten verwendet werden und ob Speicherzugriffe innerhalb bekannter Grenzen liegen. 
 Unklare oder zu komplexe Zugriffsmuster können dazu führen, dass ein Programm abgelehnt wird, auch wenn die fachliche Logik korrekt erscheint.
+Darüber hinaus muss der Kontrollfluss eines eBPF-Programms für den Verifier analysierbar bleiben.
+Schleifen dürfen nicht unbeschränkt sein, Rekursion ist nicht als allgemeines Programmiermittel verfügbar, und Speicherzugriffe müssen durch bekannte Grenzen abgesichert sein.
+Auch der Zugriff auf Kernelinformationen erfolgt nicht beliebig, sondern über den Hook-Kontext, Maps oder für den jeweiligen Programmtyp zugelassene Hilfsfunktionen.
 
 Zusätzlich bestehen praktische Begrenzungen bei Stack und Programmkomplexität. 
 Die BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}. 
-Die offizielle Aya-Dokumentation weist ebenfalls darauf hin, dass eBPF-Programme ohne Heap auskommen und Daten stattdessen über Maps ablegen müssen \citep{ayaBook}. 
+Die offizielle Aya-Dokumentation beschreibt eBPF als eingeschränkte Laufzeitumgebung und weist darauf hin, dass eBPF-Programme nur 512 Byte Stack besitzen; bei Programmen, die Tail Calls verwenden, kann der verfügbare Stack auf 256 Byte begrenzt sein \citep{ayaBook}. 
 Der Stack eignet sich damit nur für kleine lokale Hilfsdaten, etwa Schlüsselstrukturen für Map-Zugriffe oder wenige temporäre Werte. 
 Größere lokale Puffer, dynamisch wachsende Listen oder Zeichenketten können dort nicht sinnvoll abgelegt werden. 
 Ein allgemeiner Heap, wie er in Userspace-Programmen für dynamische Datenstrukturen wie Listen, Strings oder Objekte genutzt wird, steht eBPF-Programmen nicht zur Verfügung. 
 Veränderliche oder größere Zustände müssen daher typischerweise in eBPF-Maps ausgelagert werden.
+Für Rust-basierte eBPF-Programme ergeben sich daraus weitere Einschränkungen.
+Die Standardbibliothek kann im eBPF-Programm nicht verwendet werden; stattdessen steht nur \texttt{core} zur Verfügung.
+Funktionen und Traits, die auf \texttt{core::fmt} beruhen, etwa \texttt{Display} oder \texttt{Debug}, sind nicht nutzbar.
+Da kein Heap verfügbar ist, können auch \texttt{alloc} und darauf aufbauende Collections nicht eingesetzt werden.
+Außerdem darf ein eBPF-Programm nicht auf Panics angewiesen sein, weil die eBPF-Laufzeit weder Stack-Unwinding noch eine Abort-Instruktion unterstützt.
+Ein eBPF-Programm besitzt zudem keine gewöhnliche \texttt{main}-Funktion, sondern wird über einen programmspezifischen Einstiegspunkt an einen Hook gebunden.
+Da eBPF-Programme häufig direkt Kernel-Speicher oder Hook-Kontextdaten lesen, ist außerdem ein relevanter Teil des Codes als \texttt{unsafe} zu behandeln \citep{ayaBook}.
 Für die Arbeit bedeutet dies, dass komplexe Policy-Logik möglichst im Userspace vorbereitet werden sollte, während das eBPF-Programm nur eine kompakte, vorher strukturierte Repräsentation auswertet.
 
 \subsection{Aya als Rust-Framework für eBPF}
@@ -410,8 +420,37 @@ Sie sind für Nutzer nicht immer unmittelbar sichtbar, beeinflussen aber, wie ve
 
 \section{Konzeption}
 \subsection{praktische Einschränkungen von eBPF}
-Ableitung daraus, was Policies genau können und was nicht.
-% Inhalt einfügen.
+Aus den beschriebenen eBPF-Einschränkungen folgt, dass der Kernelanteil des Prototyps keine frei
+strukturierte Policy-Sprache auswerten kann.
+Textuelles Parsen, dynamische Datenstrukturen und komplexe Auswertungslogik würden sowohl den
+begrenzten Stack als auch die Anforderungen des Verifiers unnötig belasten.
+Die Policy-Dateien werden deshalb im Userspace gelesen, validiert und in feste, kernelgeeignete
+Map-Einträge übersetzt.
+
+Für die Policy-Sprache bedeutet dies, dass Bedingungen nur in einer begrenzten, vorher festgelegten
+Struktur unterstützt werden.
+Der Kernel verarbeitet keine Zeichenketten dynamisch, sondern vergleicht feste Felder, numerische
+Werte oder vorberechnete Hashwerte.
+Attribute werden ebenfalls nicht als frei wachsende Listen im eBPF-Programm gehalten, sondern über
+geordnete Schlüssel-Wert-Einträge in eBPF-Maps bereitgestellt.
+Dadurch kann das eBPF-Programm zur Laufzeit kompakte Lookups ausführen, ohne selbst Speicher
+dynamisch anzufordern.
+Auch die Rust-spezifischen Einschränkungen wirken sich auf den Entwurf aus.
+Der Kernelanteil darf keine Standardbibliothek, keine heapbasierten Collections und keine
+formatierenden Ausgaben über \texttt{Display} oder \texttt{Debug} voraussetzen.
+Fehlerfälle müssen daher über explizite Rückgabewerte oder einfache Kontrollpfade behandelt werden,
+anstatt sich auf Panics zu stützen.
+Debug-Ausgaben im eBPF-Code müssen auf dafür geeignete, einfache Hilfsmechanismen beschränkt
+bleiben.
+
+Die Programmlogik muss außerdem so aufgeteilt werden, dass einzelne eBPF-Programme klein genug für
+Verifier und Stack bleiben.
+Dies betrifft insbesondere die Auswertung mehrerer Policy-Gruppen.
+Komplexere Prüfungen werden daher über vorbereitete Map-Strukturen und, soweit erforderlich, über
+Tail Calls verteilt.
+Diese Aufteilung reduziert die Programmkomplexität pro eBPF-Programm, führt aber gleichzeitig dazu,
+dass die Schnittstellen zwischen den Programmteilen und die Stack-Nutzung besonders sorgfältig
+begrenzt werden müssen.
 
 \subsection{Architektur}
 
@@ -591,7 +630,7 @@ Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformatione
 Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
 
 Für den Monitor sind außerdem Prozess- und Ressourceninformationen relevant. 
-Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene File Descriptors, geöffnete Dateien und aktive Sockets. 
+Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene File Descriptors und geöffnete Dateien. 
 Diese Informationen stammen aus Betriebssystemquellen wie \texttt{/proc/<PID>/fd} und werden verwendet, um bestehende Zugriffssituationen gegen die aktiven Policies zu prüfen.
 
 \subsubsection{Datenobjekte im Kernelspace}
@@ -605,7 +644,7 @@ Dazu zählen insbesondere die aktuelle Zeit und externe Zustandswerte, die vom A
 Diese Attribute dienen der Auswertung von Streampolicies.
 
 Bei einem Zugriff erzeugt der Kernelspace außerdem Zugriffsdaten. 
-Diese beschreiben die konkrete Anfrage, beispielsweise das Subjekt, den Prozessnamen, die betroffene Ressource oder Socket-Informationen. 
+Diese beschreiben die konkrete Anfrage, beispielsweise das Subjekt, den Prozessnamen und die betroffene Dateiressource. 
 Auf Grundlage dieser Zugriffsdaten werden die geladenen Policies ausgewertet.
 
 Schließlich existieren im Kernelspace Zwischenergebnisse der Entscheidungsfindung. 
@@ -615,13 +654,6 @@ Diese Zwischenergebnisse werden im Combining zusammengeführt und bestimmen die 
 \subsection{Entwurfsentscheidungen}
 
 \subsubsection{Trennung von Userspace und Kernelspace}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 Das Reference-Monitor-Konzept bildet eine grundlegende theoretische 
 Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
 muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
@@ -645,14 +677,6 @@ Damit wird die Komplexität im Kernel reduziert, während die Zugriffskontrolle 
 
 
 \subsubsection{Einsatz von eBPF-LSM statt klassischem Kernelmodul}
-
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
 Ein klassisches LSM ist Teil des Kernelcodes oder wird als Kernelmodul entwickelt.
 Änderungen an einem solchen Modul erfordern einen erneuten Build- und Ladeprozess.
 Für einen experimentellen Prototyp führt dies zu vergleichsweise langen Entwicklungsiterationen.
@@ -676,122 +700,346 @@ Konsequenzen dieser Entscheidung sind, dass die Implementierung die Einschränku
 Diese Einschränkungen beeinflussen unter anderem die Aufteilung der eBPF-Programme in verschiedene Tail-Calls und die reduzierte Policy-Repräsentation im Kernelspace.
 
 
-\subsubsection{Auswahl der LSM-Hooks}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+\subsubsection{Auswahl des LSM-Hooks}
+Für den Prototyp musste ein LSM-Hook ausgewählt werden, an dem sich die unmittelbare Zugriffskontrolle und die spätere Überwachung bestehender Zugriffssituationen nachvollziehbar untersuchen lassen.
+Die Wahl fiel auf den Hook \texttt{file\_open}.
+Dieser Hook wird beim Öffnen einer Datei ausgelöst und passt damit unmittelbar zu der Anforderung, Dateiöffnungen zu kontrollieren.
+Gleichzeitig entsteht nach einer erfolgreichen Dateiöffnung ein File Descriptor, über den der Zugriff weiterbestehen kann.
+Damit eignet sich \texttt{file\_open} besonders für den Prototyp, weil sowohl die ursprüngliche Entscheidung im Kernel als auch die spätere Überwachung bestehender Dateizugriffe untersucht werden können.
+
+Ein weiterer Grund für diese Auswahl ist die einfache Testbarkeit mit Linux-eigenen Bordmitteln.
+Dateiöffnungen lassen sich ohne zusätzliche Spezialsoftware mit Werkzeugen wie \texttt{cat}, \texttt{tail}, Shell-Umleitungen oder kleinen Testdateien auslösen.
+Andauernde Zugriffssituationen können über geöffnete File Descriptors beobachtet werden.
+Dafür stellt Linux mit \texttt{/proc/<PID>/fd} eine Schnittstelle bereit, über die geöffnete File Descriptors eines Prozesses nachvollzogen werden können~\citep{manProcPidFd}.
+Damit genügt der Hook den Anforderungen des Prototyps, ohne dass eine zusätzliche Testinfrastruktur notwendig wird.
+
+Als Alternative wäre beispielsweise ein Hook wie \texttt{socket\_bind} möglich gewesen.
+Ein solcher Hook hätte Netzwerkoperationen betrachtet, etwa das Binden eines Sockets an eine lokale Adresse und einen Port.
+Für die Zielsetzung dieser Arbeit bringt dies jedoch keinen wesentlichen Vorteil, weil die zentralen Fragestellungen auch anhand von Dateizugriffen untersucht werden können.
+Zugleich wäre die Test- und Monitoringumgebung aufwendiger, da Netzwerkzustände, Socket-Parameter und laufende Dienste berücksichtigt werden müssten.
+Aus diesem Grund wird \texttt{socket\_bind} im Prototyp nicht weiter verfolgt.
+
+Die Konsequenz dieser Entscheidung ist eine bewusste Begrenzung des Prototyps auf Dateiöffnungen.
+Der Prototyp trifft damit keine allgemeine Aussage über alle möglichen LSM-Hooks, sondern untersucht ASBAC exemplarisch anhand eines gut beobachtbaren und reproduzierbar testbaren Zugriffstyps.
 
 \subsubsection{Policy-Verarbeitung im Userspace}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Policies müssen im Prototyp an einer Stelle verwaltet werden, die für Nutzer nachvollziehbar und für Tests leicht veränderbar ist.
+Dazu sollen Policies nicht direkt als binäre Map-Einträge geschrieben werden, sondern als textuelle Dateien vorliegen.
+Diese Dateien können gelesen, ausgetauscht, versioniert und für Tests gezielt verändert werden.
+Gleichzeitig reicht es nicht aus, die Dateien lediglich unverändert in den Kernel zu übertragen.
+Sie müssen interpretiert, syntaktisch geprüft, semantisch validiert und in eine kernelgeeignete Repräsentation überführt werden.
+
+Die Entscheidung lautet daher, die Policy-Verarbeitung im Userspace umzusetzen.
+Eine Userspace-Komponente überwacht das Policy-Verzeichnis, liest die dort abgelegten Policy-Dateien ein, parst sie und validiert sie.
+Erst wenn diese Verarbeitung erfolgreich abgeschlossen ist, werden daraus strukturierte Einträge für die gepinnten eBPF-Maps erzeugt.
+Dadurch bleibt die vom Nutzer bearbeitete Policy-Beschreibung von der kompakten Kernelrepräsentation getrennt.
+Der Nutzer arbeitet mit verständlichen Policy-Dateien, während das eBPF-Programm nur vorbereitete, feste Datenstrukturen auswertet.
+
+Diese Aufteilung ist vor allem durch die technischen Einschränkungen von eBPF begründet.
+Das Parsen textueller Policies benötigt typischerweise Zeichenkettenverarbeitung, Fehlerbehandlung, Zwischendatenstrukturen und Validierungslogik.
+Solche Aufgaben sind im eBPF-Programm nur schwer sinnvoll umzusetzen, weil dort kein allgemeiner Heap, keine Standardbibliothek und nur ein stark begrenzter Stack zur Verfügung stehen.
+Auch Rust-Code im eBPF-Teil kann nicht auf \texttt{std}, \texttt{alloc} oder normale Collections zurückgreifen.
+Die komplexe Policy-Verarbeitung im Kernel umzusetzen würde deshalb den eBPF-Code vergrößern, die Verifier-Prüfung erschweren und die Fehlersuche komplizierter machen.
+Im Userspace können diese Aufgaben dagegen mit normalen Rust-Mitteln umgesetzt und mit aussagekräftigen Fehlermeldungen versehen werden.
+
+Eine Alternative wäre, Policy-Einträge ohne eigene Policyverwaltung direkt in die gepinnten Maps zu schreiben, beispielsweise mit \texttt{bpftool}.
+Diese Variante wäre jedoch fehleranfällig und für Nutzer wenig komfortabel.
+Die binären Map-Strukturen müssten manuell korrekt erzeugt werden, Validierungsfehler wären schwerer nachvollziehbar, und das Austauschen ganzer Policy-Stände für Tests wäre unübersichtlich.
+Außerdem bestünde ein höheres Risiko, dass unvollständige oder widersprüchliche Map-Zustände entstehen.
+
+Die Konsequenz dieser Entscheidung ist, dass der Kernelspace keine vollständige Policy-Sprache verarbeitet.
+Er erhält ausschließlich vorbereitete Map-Einträge und wertet diese im Zugriffspfad aus.
+Der Userspace übernimmt dagegen die Verwaltung, das Parsen, die Validierung und die Aktualisierung der Policy-Generationen.
+Damit wird die sicherheitskritische Durchsetzung im Kernel gehalten, während die komplexe und nutzernahe Policyverwaltung außerhalb des Kernels erfolgt.
 
 \subsubsection{Reduzierte Policy-Repräsentation im Kernelspace}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Nachdem die Policy-Dateien im Userspace verarbeitet wurden, muss der Kernel die resultierenden Regeln im Zugriffspfad möglichst einfach auswerten können.
+Der LSM-Hook wird bei einer sicherheitsrelevanten Operation ausgeführt und liegt damit an einer Stelle, an der unnötig komplexe Programmlogik vermieden werden sollte.
+Aus Sicht des Reference-Monitor-Konzepts ist außerdem wichtig, dass die durchsetzende Komponente hinreichend klein und nachvollziehbar bleibt.
+Sie soll jeden relevanten Zugriff prüfen, darf aber selbst nicht zu einer schwer überprüfbaren Policy-Engine im Kernel anwachsen.
+
+Die Entscheidung lautet daher, im Kernel keine vollständige Policy-Sprache abzubilden.
+Stattdessen werden Policies im Userspace in eine reduzierte, feste Repräsentation übersetzt.
+Diese Repräsentation besteht aus strukturierten Map-Einträgen mit festen Feldern, etwa Subjekt, Prozessname, Dateiidentität, Entscheidung, Stream-Bedingung und einer begrenzten Anzahl dynamischer Attributbedingungen.
+Das eBPF-Programm muss dadurch nur noch die aktuelle Anfrage mit diesen vorbereiteten Feldern vergleichen und bei zutreffenden Bedingungen eine \textit{Permit}- oder \textit{Deny}-Aussage ableiten.
+
+Diese Reduktion ist durch die Einschränkungen von eBPF notwendig.
+Komplexe Kontrollflüsse, dynamische Datenstrukturen, umfangreiche Zeichenkettenverarbeitung oder eine frei interpretierbare Policy-Sprache würden den Kernelteil deutlich vergrößern und die Prüfung durch den eBPF-Verifier erschweren.
+Zusätzlich stehen im eBPF-Programm weder ein allgemeiner Heap noch die Rust-Standardbibliothek zur Verfügung.
+Die reduzierte Repräsentation begrenzt deshalb den eBPF-Code auf einfache Vergleiche, Map-Zugriffe und klar begrenzte Schleifen.
+Damit unterstützt sie zugleich die Nachvollziehbarkeit der Durchsetzungskomponente, wie sie aus dem Reference-Monitor-Konzept abgeleitet wird.
+
+Eine Alternative wäre gewesen, die Policy-Funktionalität noch stärker zu reduzieren, beispielsweise nur statische Datei-Policies ohne dynamische Attribute oder nur einzelne fest eingebaute Bedingungen zu unterstützen.
+Diese Variante hätte den Kernelteil weiter vereinfacht, würde aber den fachlichen Anspruch der Arbeit verfehlen.
+Gerade die Einbeziehung dynamischer Attribute und die nachträgliche Veränderbarkeit der Entscheidungslage sind für ASBAC wesentlich.
+Eine andere Alternative wäre eine mächtigere Policy-Auswertung direkt im Kernel.
+Diese würde zwar mehr Ausdrucksstärke bieten, wäre aber mit den eBPF-Beschränkungen und dem Ziel einer kleinen, überprüfbaren Durchsetzungskomponente schlechter vereinbar.
+
+Die Konsequenz ist ein bewusst begrenztes Policy-Modell im Kernel.
+Nicht jede denkbare Policy-Form kann direkt abgebildet werden.
+Dafür bleibt die Auswertung im LSM-Hook kompakt, vorhersehbar und auf die Anforderungen des Prototyps zugeschnitten.
+Erweiterungen müssen daher jeweils prüfen, ob sie in diese feste Kernelrepräsentation passen oder ob zusätzliche Vorverarbeitung im Userspace erforderlich ist.
 
 \subsubsection{Kommunikation über eBPF-Maps}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Der Prototyp benötigt eine gemeinsame Datenbasis zwischen Userspace und Kernelspace.
+Der Userspace muss Policies, Attribute, Zeitinformationen und Generationenstände bereitstellen können.
+Das eBPF-Programm muss diese Daten im LSM-Hook lesen können, ohne direkt auf Userspace-Speicher oder komplexe Userspace-Datenstrukturen zuzugreifen.
+Zusätzlich müssen weitere Userspace-Komponenten, insbesondere Monitor und Administrationswerkzeug, den aktuellen Zustand lesen können.
+
+Die Entscheidung lautet daher, die Kommunikation über eBPF-Maps umzusetzen.
+Policy-Einträge werden in Array-Maps abgelegt, dynamische Attribute in einer Hash-Map, und Generationen- sowie Zeitinformationen in eigenen Array-Maps.
+Für Zustände, die über mehrere Komponenten hinweg zugreifbar sein müssen, werden gepinnte Maps verwendet.
+Dadurch erhalten Loader, Monitor und Administrationswerkzeug einen stabilen Zugriffspfad auf dieselben Kernelobjekte, während das eBPF-Programm die Werte direkt im Kernel auswerten kann.
+
+Diese Entscheidung folgt aus dem eBPF-Ausführungsmodell.
+eBPF-Programme können nicht beliebige Speicherbereiche des Userspace lesen und sollen im Zugriffspfad mit festen, vom Verifier nachvollziehbaren Datenstrukturen arbeiten.
+eBPF-Maps sind der dafür vorgesehene Mechanismus, um Daten zwischen Userspace und eBPF-Programmen auszutauschen.
+Sie ermöglichen es, Policy- und Attributzustände im Kernel bereitzustellen und dennoch aus dem Userspace heraus zu aktualisieren.
+Zugleich passen Maps zu der reduzierten Policy-Repräsentation, weil sie feste Schlüssel- und Werttypen erzwingen.
+
+Eine gleichwertige Alternative gibt es im Rahmen dieses Prototyps nicht.
+Direkte Übergaben über Funktionsparameter sind für dauerhafte Policy- und Attributzustände nicht geeignet, weil der LSM-Hook bei jedem Zugriff unabhängig ausgeführt wird.
+Ein erneutes Laden des eBPF-Programms bei jeder Policy- oder Attributänderung wäre unpraktisch und würde den laufenden Betrieb unnötig stören.
+Userspace-Dateien können vom eBPF-Programm ebenfalls nicht als normale Dateien gelesen und interpretiert werden.
+Damit bleiben eBPF-Maps die naheliegende und technisch vorgesehene Schnittstelle.
+
+Die Konsequenz ist, dass alle zwischen Userspace und Kernel geteilten Zustände in feste Map-Layouts übersetzt werden müssen.
+Änderungen an diesen Layouts betreffen beide Seiten und müssen deshalb kontrolliert erfolgen.
+Gleichzeitig entsteht dadurch eine klare Schnittstelle: Der Userspace schreibt validierte Zustände in Maps, der Kernel liest diese Zustände bei der Zugriffskontrolle, und externe Komponenten können über gepinnte Maps lesend auf denselben Zustand zugreifen.
 
 \subsubsection{Generationenmodell für Policy-Aktualisierungen}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Policies können während des Betriebs geändert, hinzugefügt oder entfernt werden.
+Dabei darf der Kernel während einer Zugriffentscheidung nicht auf einen teilweise aktualisierten Policy-Zustand zugreifen.
+Problematisch wäre beispielsweise, wenn einzelne Map-Einträge bereits überschrieben wurden, andere Einträge derselben Policy-Menge aber noch zum vorherigen Stand gehören.
+In diesem Fall könnte eine Zugriffentscheidung auf einer widersprüchlichen Mischung aus alter und neuer Policy-Lage beruhen.
+
+Die Entscheidung lautet daher, Policy-Aktualisierungen über ein Generationenmodell umzusetzen.
+Die Policy-Maps werden in zwei Bänke aufgeteilt.
+Eine Bank enthält die aktuell aktive Policy-Generation, während die andere Bank als inaktive Bank für die nächste Generation vorbereitet wird.
+Bei einer Änderung schreibt der Userspace zunächst alle vorbereiteten Policy-Einträge in die inaktive Bank.
+Erst wenn dieser Schreibvorgang erfolgreich abgeschlossen ist, wird der Generationenzähler aktualisiert.
+Das eBPF-Programm liest den aktiven Generationenwert und bestimmt daraus, welche Bank bei der Auswertung verwendet wird.
+
+Dieses Vorgehen reduziert das Risiko inkonsistenter Zustände.
+Solange die neue Bank noch nicht vollständig geschrieben ist, bleibt die bisherige Generation aktiv.
+Schlägt das Parsen, Validieren oder Schreiben der neuen Policies fehl, wird der Generationenzähler nicht umgeschaltet und die letzte gültige Generation bleibt weiter wirksam.
+Damit passt das Modell zu der Anforderung, nur erfolgreich verarbeitete Policy-Stände als Entscheidungsgrundlage zu verwenden.
+Dasselbe Grundprinzip wird auch für dynamische Attribute verwendet: Attribute werden bankweise geschrieben und anschließend über eine eigene Attributgeneration aktiviert.
+
+Eine Alternative wäre, Policy-Einträge direkt an ihrer aktiven Position zu überschreiben.
+Diese Variante wäre einfacher, könnte aber während der Aktualisierung zu Zwischenzuständen führen, die weder der alten noch der neuen Policy-Menge vollständig entsprechen.
+Eine weitere Alternative wäre, die Zugriffskontrolle während einer Aktualisierung anzuhalten oder das eBPF-Programm vollständig neu zu laden.
+Beides wäre für einen laufenden Prototyp unnötig invasiv und würde den Betrieb stärker beeinflussen.
+
+Die Konsequenz des Generationenmodells ist ein zusätzlicher Verwaltungsaufwand.
+Die Maps müssen Platz für mehrere Bänke bereitstellen, und Userspace sowie Kernelspace müssen denselben Mechanismus zur Berechnung der aktiven Bank verwenden.
+Dafür erhält der Prototyp eine einfache Umschaltlogik, bei der der Kernel entweder die alte oder die neue Generation auswertet, aber keine bewusst gemischte Policy-Menge.
 
 \subsubsection{Trennung statischer Policies und Streampolicies}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Im Prototyp existieren Policies, deren Entscheidung allein von den Eigenschaften der aktuellen Anfrage abhängt, und Policies, die zusätzlich dynamische Zustände berücksichtigen.
+Zu den statischen Kriterien gehören beispielsweise das Subjekt, der Prozessname und die Dateiidentität.
+Streampolicies verwenden darüber hinaus Werte, die sich zur Laufzeit ändern können, etwa Zeitinformationen oder dynamische Attribute aus dem Attributstrom.
+Diese beiden Fälle unterscheiden sich in der Auswertung deutlich: Statische Policies benötigen keine zusätzlichen Attribut- oder Zeit-Maps, während Streampolicies solche Zustände lesen und auswerten müssen.
+
+Die Entscheidung lautet daher, statische Policies und Streampolicies getrennt zu repräsentieren und getrennt auszuwerten.
+Policies ohne Stream-Bedingungen werden in die statische Policy-Map geschrieben.
+Policies mit Zeit- oder Attributbedingungen werden in die Stream-Policy-Map geschrieben.
+Im eBPF-Programm werden zuerst die statischen Policies ausgewertet und anschließend die Streampolicies.
+Die Ergebnisse beider Auswertungsschritte werden danach zusammengeführt.
+
+Diese Trennung reduziert die Komplexität der einzelnen Auswertungspfade.
+Der statische Pfad bleibt auf einfache Vergleiche der aktuellen Anfrage gegen vorbereitete Policy-Felder beschränkt.
+Der Stream-Pfad enthält dagegen die zusätzliche Logik für aktuelle Zeitwerte, Attributgenerationen und Attribut-Map-Lookups.
+Damit muss nicht jede Policy-Auswertung die vollständige dynamische Logik enthalten.
+Das unterstützt die Begrenzung der Programmkomplexität und erleichtert die Nachvollziehbarkeit der jeweiligen Entscheidung.
+
+Eine Alternative wäre eine gemeinsame Policy-Map mit einem Feld gewesen, das statische und dynamische Policies unterscheidet.
+Dann müsste ein einzelner Auswertungspfad jedoch beide Fälle behandeln und bei jeder Policy entscheiden, welche Zusatzlogik relevant ist.
+Dies würde den eBPF-Code größer machen und die Trennung der Verantwortlichkeiten verwischen.
+Eine weitere Alternative wäre, ausschließlich Streampolicies zu verwenden und statische Policies als Spezialfall ohne dynamische Bedingung abzubilden.
+Auch dies würde einfache statische Regeln unnötig durch den komplexeren Stream-Pfad führen.
+
+Die Konsequenz ist ein zusätzlicher Verwaltungsaufwand, weil mehrere Policy-Maps gepflegt werden müssen.
+Dafür bleibt die statische Auswertung einfach, während dynamische Bedingungen in einem eigenen Pfad behandelt werden.
+Für den Prototyp ist diese Aufteilung angemessen, weil sie die fachliche Unterscheidung zwischen statischen Regeln und streamabhängigen Regeln auch technisch sichtbar macht.
 
 \subsubsection{Aufteilung der Policy-Maps nach Hook und Policy-Typ}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Die Policy-Repräsentation hängt nicht nur davon ab, ob eine Policy statisch oder streamabhängig ist.
+Sie hängt auch vom kontrollierten Hook ab, weil unterschiedliche LSM-Hooks unterschiedliche Zugriffsdaten bereitstellen.
+Bei \texttt{file\_open} stehen beispielsweise Dateiinformationen wie Device und Inode im Mittelpunkt.
+Andere Hooks würden andere Ressourcen- und Kontextdaten benötigen.
+Eine gemeinsame Map für alle denkbaren Hook-Typen müsste daher entweder sehr große Einträge enthalten oder viele Felder besitzen, die für den jeweiligen Hook nicht verwendet werden.
+
+Die Entscheidung lautet daher, Policy-Maps nach Hook und Policy-Typ aufzuteilen.
+Im aktuellen Prototyp ist nur \texttt{file\_open} aktiv umgesetzt.
+Dementsprechend existieren getrennte Maps für statische \texttt{file\_open}-Policies und \texttt{file\_open}-Streampolicies.
+Die Struktur ist dennoch so gewählt, dass weitere Hook-Typen grundsätzlich eigene Map-Strukturen erhalten könnten, ohne die bestehende \texttt{file\_open}-Auswertung aufzublähen.
+
+Diese Aufteilung hält die Map-Einträge klein und an den jeweiligen Zugriffstyp angepasst.
+Das eBPF-Programm muss im \texttt{file\_open}-Pfad nur die Daten lesen, die für Dateiöffnungen relevant sind.
+Dadurch sinkt die Menge an ungenutzten Feldern und die Auswertungslogik bleibt auf den konkreten Hook zugeschnitten.
+Gleichzeitig passt die Aufteilung zu der Entscheidung, statische Policies und Streampolicies getrennt zu behandeln.
+
+Eine Alternative wäre eine universelle Policy-Map für alle Hooks und Policy-Typen.
+Diese Variante hätte eine zentrale Datenstruktur, würde aber größere Einträge und zusätzliche Fallunterscheidungen im Kernel erfordern.
+Eine andere Alternative wäre, alle Policies pro Hook in einer Map zu speichern und nur den Policy-Typ innerhalb des Eintrags zu unterscheiden.
+Auch dies würde den Auswertungspfad stärker verzweigen.
+
+Die Konsequenz ist, dass neue Hooks nicht nur neue Auswertungslogik, sondern auch eigene Map-Layouts benötigen können.
+Dieser zusätzliche Aufwand ist bewusst akzeptiert, weil er die aktuell aktive \texttt{file\_open}-Auswertung einfach hält und Erweiterungen klar von bestehenden Pfaden trennt.
 
 \subsubsection{Tail-Call-basierte Aufteilung der eBPF-Programme}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Die Policy-Auswertung besteht aus mehreren Teilschritten.
+Zunächst muss der Hook-Einstieg die Anfrage erfassen.
+Danach werden statische Policies ausgewertet, anschließend Streampolicies, und zum Schluss werden die Zwischenergebnisse zu einer finalen Entscheidung kombiniert.
+Würden alle Schritte in einem einzigen eBPF-Programm umgesetzt, würde dieses Programm größer und für den Verifier schwerer analysierbar.
+Gerade bei eBPF sind Programmgröße, Kontrollfluss und Stacknutzung praktische Grenzen, die den Entwurf unmittelbar beeinflussen.
+
+Die Entscheidung lautet daher, die Auswertung über Tail Calls in mehrere eBPF-Programme aufzuteilen.
+Der Einstieg am LSM-Hook springt über eine Program-Array-Map in den statischen Auswertungsschritt.
+Dieser springt anschließend in den Stream-Auswertungsschritt, und dieser wiederum in das Combining-Programm.
+Jeder Schritt übernimmt damit eine klar begrenzte Aufgabe.
+
+Diese Aufteilung reduziert die Komplexität der einzelnen eBPF-Programme.
+Der statische Pfad muss keine dynamischen Attribute auswerten, der Stream-Pfad muss nicht die gesamte Hook-Initialisierung enthalten, und das Combining kann auf bereits gespeicherte Zwischenergebnisse zugreifen.
+Gleichzeitig entspricht die Aufteilung der fachlichen Struktur der Entscheidung: Anfrage erfassen, Policy-Gruppen auswerten, Ergebnisse zusammenführen.
+Sie erleichtert außerdem die spätere Anpassung einzelner Schritte, ohne die gesamte Auswertung in einem großen Programm ändern zu müssen.
+
+Eine Alternative wäre ein monolithisches eBPF-Programm.
+Diese Variante hätte weniger Tail-Call-Verwaltung benötigt, würde aber die Verifier-Komplexität erhöhen und frühere Probleme mit zu großen Programmen begünstigen.
+Eine weitere Alternative wäre, weniger Policy-Funktionalität im Kernel abzubilden, um ein einzelnes Programm klein genug zu halten.
+Das würde jedoch den Anspruch des Prototyps einschränken, statische und dynamische Bedingungen gemeinsam untersuchen zu können.
+
+Die Konsequenz ist, dass eine zusätzliche Tail-Call-Tabelle gepflegt werden muss.
+Außerdem muss beachtet werden, dass Tail Calls eigene eBPF-Einschränkungen mit sich bringen, insbesondere hinsichtlich Stacknutzung.
+Dafür bleibt jeder Auswertungsschritt kleiner und besser kontrollierbar.
 
 \subsubsection{Combining-Strategie für Policy-Entscheidungen}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Mehrere Policies können auf dieselbe Zugriffssituation anwendbar sein.
+Dabei können einzelne Policies zu unterschiedlichen Aussagen kommen, etwa \textit{Permit} oder \textit{Deny}.
+Der Prototyp benötigt daher eine Strategie, mit der die Zwischenergebnisse der Policy-Auswertung zu einer finalen Hook-Entscheidung zusammengeführt werden.
+
+Die Entscheidung lautet, Zwischenergebnisse zunächst in einem kleinen Entscheidungszustand abzulegen und die finale Entscheidung in einem separaten Combining-Schritt zu treffen.
+Die statische und die streambasierte Auswertung halten fest, ob während ihres jeweiligen Auswertungspfades eine passende Permit- oder Deny-Policy gefunden wurde.
+Das Combining-Programm liest diesen Zustand und entscheidet daraus, ob der Hook den Zugriff erlaubt oder verweigert.
+Im aktuellen Prototyp wird eine Deny-overrides-Strategie verwendet: Sobald eine Deny-Entscheidung vorliegt, wird der Zugriff verweigert.
+
+Diese Aufteilung trennt Policy-Matching und finale Konfliktauflösung.
+Die einzelnen Auswertungspfade müssen nicht selbst die vollständige globale Entscheidung treffen, sondern liefern nur ihre Zwischenergebnisse.
+Das macht die Struktur des eBPF-Programms nachvollziehbarer und erlaubt es, die Combining-Logik an einer klar abgegrenzten Stelle zu betrachten.
+
+Eine Alternative wäre ein sofortiger Abbruch beim ersten passenden Ergebnis, beispielsweise als Priority-Deny- oder Priority-Permit-Strategie.
+Dabei würde ein Auswertungspfad unmittelbar mit einem erlaubenden oder verweigernden Rückgabewert terminieren.
+Diese Variante wäre für eine feste Strategie einfacher, würde aber die spätere Untersuchung anderer Combining-Algorithmen erschweren.
+Außerdem würde die Reihenfolge der Policy-Auswertung stärker in die Semantik eingehen.
+
+Die Konsequenz ist, dass ein zusätzlicher Entscheidungszustand zwischen den Tail-Call-Schritten benötigt wird.
+Dafür bleibt die Konfliktauflösung zentralisiert.
+Der Prototyp verwendet aktuell Deny-overrides, ohne die Policy-Auswertung selbst fest auf einen frühen Abbruch nach der ersten passenden Policy zu beschränken.
 
 \subsubsection{Identifikation von Dateien über Device und Inode}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Policies werden für Nutzer über Dateipfade formuliert.
+Für die Auswertung im Kernel ist ein Pfadvergleich jedoch ungünstig.
+Pfade sind Zeichenketten, können unterschiedlich geschrieben werden und sind nicht zwingend eine eindeutige Beschreibung des zugrunde liegenden Dateiobjekts.
+Beispiele sind symbolische Links, relative Pfade oder mehrere Pfade, die auf dasselbe Dateiobjekt verweisen können.
+Ein Zeichenkettenvergleich im eBPF-Programm wäre zudem unnötig aufwendig und würde die Policy-Auswertung vergrößern.
+
+Die Entscheidung lautet daher, Dateipfade im Userspace in die Dateiidentität aus Device und Inode zu übersetzen.
+Beim Verarbeiten der Policy wird der angegebene Pfad über Dateimetadaten aufgelöst.
+In der Policy-Map werden anschließend Device und Inode gespeichert.
+Beim \texttt{file\_open}-Hook liest das eBPF-Programm die entsprechenden Werte aus dem Kernelkontext der geöffneten Datei und vergleicht diese mit den vorbereiteten Policy-Werten.
+
+Diese Repräsentation passt besser zum Kernelkontext.
+Der Kernel arbeitet beim geöffneten Dateiobjekt ohnehin mit Inode- und Superblock-Informationen.
+Dadurch muss das eBPF-Programm keinen vollständigen Pfad rekonstruieren und keine langen Zeichenketten vergleichen.
+Außerdem werden unterschiedliche Pfadschreibweisen reduziert, weil die Entscheidung auf der identifizierten Datei und nicht auf der Schreibweise des Pfades basiert.
+
+Eine Alternative wäre ein Pfadvergleich im Kernel.
+Dafür müssten Pfade oder Pfadbestandteile in Maps gespeichert und im eBPF-Programm verglichen werden.
+Diese Variante wäre komplexer, anfälliger für Uneindeutigkeiten und stärker von Pfadnormalisierung abhängig.
+Eine weitere Alternative wäre ein Hash des Pfades.
+Auch dieser würde jedoch weiterhin an der Pfadschreibweise hängen und nicht am tatsächlich geöffneten Dateiobjekt.
+
+Die Konsequenz ist, dass Policies beim Laden an den zu diesem Zeitpunkt vorhandenen Dateiinhalt beziehungsweise dessen Device-Inode-Identität gebunden werden.
+Wird eine Datei später ersetzt, kann sich die Inode ändern und die Policy muss entsprechend neu verarbeitet werden.
+Dafür wird die Auswertung im Kernel deutlich einfacher und näher an der tatsächlichen Dateiidentität durchgeführt.
 
 \subsubsection{Nachträgliche Überwachung durch den Monitor}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Der LSM-Hook \texttt{file\_open} bewertet eine Dateiöffnung zu dem Zeitpunkt, an dem die Datei geöffnet wird.
+Wenn der Zugriff erlaubt wurde, kann der Prozess die Datei anschließend über den erhaltenen File Descriptor weiter verwenden.
+Ändern sich danach dynamische Attribute oder Policies, wird dieser bereits bestehende Zugriff nicht automatisch erneut durch denselben Hook geprüft.
+Für ASBAC ist genau dieser Fall relevant, weil eine zunächst zulässige Zugriffssituation durch spätere Attributänderungen unzulässig werden kann.
+
+Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Userspace-Monitor zu ergänzen.
+Der Monitor liest regelmäßig Informationen über laufende Prozesse und offene File Descriptors aus dem System.
+Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
+Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
+Wird eine Verletzung erkannt, kann der Monitor ein Enforcement auslösen.
+
+Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
+Der Kernel bleibt für neue Dateiöffnungen der unmittelbare Durchsetzungspunkt.
+Der Monitor behandelt dagegen bestehende Zugriffssituationen, die nach der ursprünglichen Entscheidung weiterlaufen.
+Damit wird der dynamische Charakter von ASBAC im Prototyp sichtbar, ohne dass jede spätere Dateioperation erneut über denselben LSM-Hook modelliert werden muss.
+
+Eine Alternative wäre, bei einer nachträglichen Policy-Verletzung den gesamten Prozess zu beenden.
+Diese Variante wäre einfacher, aber grobgranular.
+Ein Prozess kann mehrere Dateien geöffnet haben, von denen nur eine gegen die aktuelle Policy-Lage verstößt.
+Das Beenden des gesamten Prozesses würde auch legitime Zugriffe desselben Prozesses abbrechen.
+Eine andere Alternative wäre, bestehende Zugriffe nicht nachträglich zu behandeln.
+Dann würde der Prototyp jedoch einen wesentlichen Teil der ASBAC-Fragestellung nicht abdecken.
+
+Die Konsequenz ist, dass neben der kernelbasierten Zugriffskontrolle eine zusätzliche Userspace-Komponente erforderlich ist.
+Diese Komponente arbeitet beobachtend und periodisch, nicht als Ersatz für den LSM-Hook.
+Sie erweitert den Prototyp um die Fähigkeit, bestehende Dateizugriffe nach Änderungen der Entscheidungsgrundlage erneut zu bewerten.
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Wenn der Monitor eine bestehende Policy-Verletzung erkennt, muss der Prototyp den unzulässig gewordenen Zugriff beenden können.
+Bei Dateizugriffen wird der fortdauernde Zugriff über einen File Descriptor repräsentiert.
+Dieser File Descriptor ist daher der konkrete Ansatzpunkt, um genau den betroffenen Zugriff zu entziehen.
+
+Die Entscheidung lautet, Enforcement durch das Schließen des betroffenen File Descriptors umzusetzen.
+Der Monitor ermittelt Prozess-ID und File-Descriptor-Nummer der verletzenden Zugriffssituation.
+Anschließend versucht die Enforcement-Komponente, genau diesen File Descriptor im betroffenen Prozess zu schließen.
+Im aktuellen Prototyp geschieht dies auf x86\_64-Linux über \texttt{ptrace}, indem im Zielprozess ein \texttt{close}-Systemaufruf für den ausgewählten File Descriptor ausgeführt wird.
+
+Diese Entscheidung ist feingranularer als ein Prozessabbruch.
+Wenn ein Prozess mehrere Dateien geöffnet hat, kann nur der File Descriptor geschlossen werden, der zu dem unzulässig gewordenen Zugriff gehört.
+Andere File Descriptors desselben Prozesses bleiben bestehen, sofern sie nicht selbst gegen eine Policy verstoßen.
+Damit passt die Maßnahme zu der Anforderung, nur den betroffenen Zugriff zu beenden.
+
+Eine Alternative wäre, den gesamten Prozess zu terminieren.
+Dies wäre einfacher umzusetzen, aber deutlich invasiver.
+Eine weitere Alternative wäre, lediglich eine Verletzung zu protokollieren und kein Enforcement vorzunehmen.
+Dann könnte der Prototyp zwar Verstöße erkennen, aber nicht aktiv auf bestehende unzulässige Zugriffe reagieren.
+
+Die Konsequenz ist, dass das Enforcement betriebssystem- und architekturabhängig wird.
+Der aktuelle Ansatz ist auf x86\_64-Linux ausgelegt und benötigt ausreichende Berechtigungen für den Eingriff in fremde Prozesse.
+Zudem ist das Schließen fremder File Descriptors ein invasiver Eingriff, der sorgfältig auf den tatsächlich betroffenen FD begrenzt werden muss.
+Für den Prototyp ist diese Einschränkung akzeptabel, weil sie eine gezielte Behandlung bestehender Dateizugriffe ermöglicht.
 
 \subsubsection{Administration und Diagnose über ein separates Tool}
-% Muster Entwurfsentscheidung:
-% 1. Kontext: Welches Problem oder welche Anforderung betrifft die Entscheidung?
-% 2. Entscheidung: Welche Lösung wurde gewählt?
-% 3. Begründung: Warum wurde diese Lösung gewählt?
-% 4. Alternativen: Welche anderen Möglichkeiten gab es?
-% 5. Abwägung: Welche Vor- und Nachteile hat die gewählte Lösung?
-% 6. Konsequenz: Was bedeutet diese Entscheidung für das System?
+Für Betrieb und Evaluation des Prototyps muss sichtbar sein, welche Policies, Generationen und Attribute aktuell im Kernelzustand vorliegen.
+Diese Informationen liegen nicht nur in den ursprünglichen Textdateien, sondern auch in der übersetzten Map-Repräsentation.
+Gerade bei dynamischen Attributen und gehashten Attributnamen ist eine Diagnosemöglichkeit wichtig, um nachvollziehen zu können, welche Werte tatsächlich geladen wurden.
+
+Die Entscheidung lautet, Administration und Diagnose über ein separates, lesendes Werkzeug umzusetzen.
+Das Administrationswerkzeug öffnet die gepinnten Maps und gibt aktive Policy-Bänke, statische Policies, Streampolicies und Attribute aus.
+Für gehashte Attributnamen und Zeichenkettenwerte baut es zusätzlich ein Wörterbuch aus den Policy- und Environment-Dateien auf.
+Dadurch können viele Hashwerte wieder einer lesbaren Bezeichnung zugeordnet werden, ohne dass die Kernel-Maps selbst Klartextnamen speichern müssen.
+
+Diese Trennung verhindert, dass Diagnosefunktionen mit der eigentlichen Policyverwaltung vermischt werden.
+Der Loader bleibt für das Verarbeiten und Schreiben gültiger Zustände zuständig.
+Das Administrationswerkzeug dient dagegen der Sichtbarkeit des aktuellen Zustands.
+Es arbeitet bewusst lesend, damit es den Kernelzustand nicht unbeabsichtigt verändert und nicht in Konkurrenz zum Policy-Sync tritt.
+
+Eine Alternative wäre die direkte Nutzung allgemeiner Werkzeuge wie \texttt{bpftool}.
+Damit lassen sich Maps zwar grundsätzlich inspizieren, die Ausgabe ist jedoch stärker an der binären Map-Struktur orientiert und für die fachliche Bewertung weniger komfortabel.
+Eine weitere Alternative wäre, Diagnose direkt in das Hauptprogramm oder den Monitor einzubauen.
+Dies würde jedoch Zuständigkeiten vermischen und die Beobachtung des Zustands stärker an einen laufenden Prozess binden.
+
+Die Konsequenz ist ein zusätzliches Werkzeug im Prototyp.
+Dafür können geladene Policies und Attribute unabhängig von der Policyverwaltung eingesehen werden.
+Die Diagnose bleibt allerdings teilweise best-effort: Wenn ein Hashwert nicht aus den vorhandenen Policy- oder Environment-Dateien rekonstruiert werden kann, kann das Tool ihn nur als Hash beziehungsweise unbekannten Wert anzeigen.
 
 \newpage
 

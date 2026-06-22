@@ -24,6 +24,7 @@ Grundlagen zu eBPF, BPF-Maps und BPF-LSM stammen aus der Linux-Kernel-Dokumentat
 10. [Offene Punkte und Einschränkungen](10-offene-punkte.md)
 11. [Glossar](11-glossar.md)
 12. [Quellen und Zitierweise](12-quellen.md)
+13. [eBPF-Maps: vollständige Übersicht](13-ebpf-maps-uebersicht.md)
 
 ## Zitierweise
 
@@ -41,26 +42,26 @@ stehen direkt im Text, damit die Herkunft der jeweiligen Aussage beim Lesen sich
 | Pfad | Aufgabe |
 | --- | --- |
 | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Lädt eBPF, richtet Maps und Tail Calls ein, startet Policy-Sync, Zeit-Update und Monitor. |
-| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest `.sapl`-Policies aus [`policies/`](../policies/), kompiliert sie und schreibt sie in Maps. |
+| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest `.sapl`-Policies aus [`policies/`](../policies/), parst sie und schreibt kernelgeeignete Einträge in Maps. |
 | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest strukturierte Attribute aus [`environment/`](../environment/) und schreibt `ATTRIBUTES`. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse, FDs und Sockets im Userspace. |
+| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse und File Descriptors im Userspace. |
 | [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt fremde File Descriptors per `ptrace` auf x86_64 Linux. |
 | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Policy-Datenstrukturen und Auswertungslogik für Kernel und Userspace. |
-| [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstiegspunkte der eBPF-LSM-Hooks `file_open` und `socket_bind`. |
+| [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstiegspunkt des eBPF-LSM-Hooks `file_open`. |
 | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | Definition der eBPF-Maps. |
 | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | eBPF-Policy-Auswertung und Kombinieren der Entscheidungen. |
-| [`tails-pdp-admintool/`](../tails-pdp-admintool/) | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
+| [`tails-pdp-admintool/`](../tails-pdp-admintool/) | Read-only-CLI zum Anzeigen gepinnter Maps. |
 | [`examples/`](../examples/) | Beispiel-Policies, die nicht automatisch geladen werden. |
 | [`policies/`](../policies/) | Aktiver Policy-Ordner, den der Loader überwacht. |
 | [`environment/`](../environment/) | Aktive strukturierte Attribute, darunter `system.defcon`. |
 
 ## Kurzzusammenfassung
 
-Der Kernel-Teil entscheidet bei den Hooks `file_open` und `socket_bind`, ob eine Aktion verboten
-werden soll. Die Policies liegen in eBPF-Maps. Diese Maps werden durch den Userspace-Loader aus
-SAPL-inspirierten Textdateien befüllt. Der Monitor prüft zusätzlich nachträglich laufende Prozesse,
-weil eine Policy auch erst aktiv werden kann, nachdem ein Prozess bereits einen Socket oder eine
-Datei geöffnet hat [P1], [P3], [P6], [P8], [P14].
+Der Kernel-Teil entscheidet beim Hook `file_open`, ob eine Dateiöffnung verboten werden soll. Die
+Policies liegen in eBPF-Maps. Diese Maps werden durch den Userspace-Loader aus textuellen
+Policy-Dateien befüllt. Der Monitor prüft zusätzlich nachträglich laufende Prozesse, weil eine Policy
+auch erst aktiv werden kann, nachdem ein Prozess bereits eine Datei geöffnet hat [P1], [P3], [P6],
+[P8], [P14].
 
 ---
 
