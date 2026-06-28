@@ -2,22 +2,30 @@
 
 ## Aktueller Stand
 
-Aktuell gibt es nur wenige Unit-Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs). Diese prüfen vor allem
-Stream-Policy-Semantik:
+Unit-Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) prüfen vor allem
+Stream-Policy-Semantik. Ergänzend besitzen Policyloader, Attributloader und Userspace-PEP eigene
+komponentennahe Tests:
 
 - Zeitbedingung wahr ergibt Entitlement.
 - Zeitbedingung falsch ergibt `None`.
 - Modulo `0` ergibt `None`.
 - DEFCON-Bedingung wahr ergibt Entitlement.
 - DEFCON-Bedingung falsch ergibt `None`.
+- Freie Subjektattribute werden in Stream-Policy-Einträge übersetzt.
+- Ungültige Attributnamen werden abgelehnt.
+- Zahlen-, Bool- und Stringattribute werden korrekt geparst.
+- Prozess- und FD-Namen aus `/proc` werden nur als Zahlen akzeptiert.
 
-Diese Tests betreffen die gemeinsame Logik, die eBPF und Monitor verwenden [P6], [P8].
+Diese Tests betreffen die gemeinsame Logik, die eBPF und Userspace-PEP verwenden [P6], [P8].
 
 Ausführung ohne den globalen Cargo-Runner:
 
 ```shell
-cargo test -p tails-pdp-common --no-run
-./target/debug/deps/tails_pdp_common-<hash>
+cargo test -p tails-pdp-common --config 'target."cfg(all())".runner="env"'
+cargo test --target x86_64-unknown-linux-musl --no-run \
+  -p tails-pdp-policy-loader \
+  -p tails-pdp-attribute-loader \
+  -p tails-pdp-userspace-pep
 ```
 
 Der direkte `cargo test` kann durch `.cargo/config.toml` über `sudo -E` laufen. Für normale
@@ -34,8 +42,6 @@ Sinnvolle Fälle:
 - `file_open` Static Deny bei passender UID, Command und Datei.
 - `file_open` Static gibt `None`, wenn UID nicht passt.
 - `file_open` Static gibt `None`, wenn Inode nicht passt.
-- `socket_bind` Static Deny bei passender IP, Port, Transport und UID.
-- `0.0.0.0` matcht IPv4-Wildcard.
 - `ANY_SUBJECT` matcht jede UID.
 - Stream `hour < 8` trifft vor 8 Uhr.
 - Stream `hour >= 16` trifft ab 16 Uhr.
@@ -50,28 +56,25 @@ Implementierung:
 
 ### 2. Parser-Tests für `.sapl`
 
-Ziel: Prüfen, ob Policy-Dateien korrekt geparst und kompiliert werden.
+Ziel: Prüfen, ob Policy-Dateien korrekt geparst, validiert und in kernelgeeignete Einträge übersetzt werden.
 
 Sinnvolle Fälle:
 
 - gültige `file_open` Static Policy
 - gültige `file_open` Stream Policy
-- gültige `socket_bind` Static Policy
-- gültige `socket_bind` Stream Policy
 - gültige `system.defcon <= 2`
 - ungültige DEFCON-Werte `0` und `6`
 - doppelte Policy-Namen werden abgelehnt
 - fehlendes Semikolon wird abgelehnt
 - unbekannte Action wird abgelehnt
-- mehrere Stream-Bedingungen in einer Policy werden abgelehnt
-- `command` in `file_open` Stream Policy wird abgelehnt
-- mehr als 16 Policies pro Map wird abgelehnt
+- mehr Bedingungen als das Map-Layout zulässt werden abgelehnt
+- mehr Policies als `POLICY_BANK_SIZE` erlaubt werden abgelehnt
 
 Implementierung:
 
 - Parser-Funktionen testbar machen, ohne die öffentlichen APIs unnötig zu vergrößern.
 - Temporäre Verzeichnisse nutzen, z. B. mit `tempfile`.
-- `compile_policy_documents` und `parse_policy_document` testen.
+- `translate_policy_documents` und `parse_policy_document` testen.
 
 ### 3. Generationen- und Rollback-Tests
 
@@ -91,16 +94,13 @@ Implementierung:
 - Produktiv nutzt das Trait Aya-Maps.
 - Tests nutzen eine In-Memory-Fake-Map.
 
-### 4. Monitor-Tests
+### 4. Userspace-PEP-Tests
 
-Der Monitor ist aktuell stark an `/proc` gekoppelt. Für Tests sollte man Parsing und Auswertung
+Der Userspace-PEP ist aktuell stark an `/proc` gekoppelt. Für Tests sollte man Parsing und Auswertung
 trennen.
 
 Sinnvolle Fälle:
 
-- `/proc/net/tcp`-Zeile wird korrekt geparst.
-- IPv4 und IPv6 werden korrekt dekodiert.
-- Socket-Inode wird PID/FD zugeordnet.
 - Datei-FD wird zu `device + inode`.
 - Verbotene Datei erzeugt Violation.
 - Erlaubte Datei erzeugt keine Violation.
@@ -109,7 +109,7 @@ Sinnvolle Fälle:
 
 Implementierung:
 
-- `read_active_sockets`, `read_process_fds` und FD-Schließen abstrahieren.
+- `read_process_fds` und FD-Schließen abstrahieren.
 - Fake-`/proc`-Daten in Tests verwenden.
 - FD-Schließen über ein Trait wie `FdCloser` simulieren.
 
@@ -182,11 +182,11 @@ cat /home/hntr/test.txt
 
 Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [P19], [P23].
 
-#### Monitor nachträglich
+#### Userspace-PEP nachträglich
 
 1. Prozess öffnet Datei oder bindet Socket.
 2. Policy wird danach in [`policies/`](../policies/) kopiert.
-3. Monitor erkennt Violation.
+3. Userspace-PEP erkennt Violation.
 4. Falls Enforcement aktiv ist, wird der FD geschlossen.
 
 ## Empfehlung
@@ -195,7 +195,7 @@ Priorität:
 
 1. `tails-pdp-common` stark testen.
 2. Policy-Parser und Generationenlogik testen.
-3. Monitor testbar machen.
+3. Userspace-PEP testbar machen.
 4. Privilegierte Linux-Smoke-Tests automatisieren.
 
 ---

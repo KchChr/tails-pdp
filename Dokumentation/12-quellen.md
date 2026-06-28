@@ -14,13 +14,13 @@ Rust-Dokumentation und Aya-Dokumentation.
 
 | ID | Quelle | Verwendet für |
 | --- | --- | --- |
-| [P1] | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Hauptprogramm, eBPF-Loader, LSM-Load/Attach, Tail-Call-Setup, Logging, Policy-Sync, Zeit-Update und Monitor-Start. |
-| [P2] | [`tails-pdp/src/lib.rs`](../tails-pdp/src/lib.rs) | Userspace-Bibliothek und Modulstruktur. |
-| [P3] | [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.sapl`-Policy-Dateien. |
-| [P4] | [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Schreiben kernelgeeigneter Policy-Map-Einträge in die eBPF-Maps. |
-| [P5] | [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Aktualisierung der Zeit-Maps `CURRENT_TIME` und `CURRENT_TIME_ISO8601`. |
-| [P6] | [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Userspace-Monitoring von Prozessen und File Descriptors. |
-| [P7] | [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließen fremder File Descriptors per `ptrace` auf x86_64 Linux. |
+| [P1] | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Hauptprogramm, eBPF-Loader, LSM-Load/Attach, Tail-Call-Setup, Logging, Policy-Sync, Zeit-Update und Userspace-PEP-Start. |
+| [P2] | [`tails-pdp/src/lib.rs`](../tails-pdp/src/lib.rs) | LSM-Programm- und Tail-Call-Spezifikationen des Hauptprogramms. |
+| [P3] | [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.sapl`-Policy-Dateien. |
+| [P4] | [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüfung der Layouts bereits gepinnter Maps. |
+| [P5] | [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Aktualisierung der Zeit-Maps `CURRENT_TIME` und `CURRENT_TIME_ISO8601`. |
+| [P6] | [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Nachbewertung bestehender Dateizugriffe und Auslösen des FD-Enforcements. |
+| [P7] | [`tails-pdp-userspace-pep/src/fd_revoker.rs`](../tails-pdp-userspace-pep/src/fd_revoker.rs) | Schließen fremder File Descriptors per `ptrace` auf x86_64 Linux. |
 | [P8] | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Typen, Policy-Strukturen, Entscheidungslogik und Konstanten für Userspace und eBPF. |
 | [P9] | [`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) | eBPF-Crate-Einstieg. |
 | [P10] | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | LSM-Hook-Einstieg `file_open`. |
@@ -36,8 +36,10 @@ Rust-Dokumentation und Aya-Dokumentation.
 | [P20] | [`run.sh`](../run.sh) | Typischer Startbefehl für Entwicklung und Test. |
 | [P21] | [`remove_maps.sh`](../remove_maps.sh) | Entfernen gepinnter Maps bei Layout-Änderungen. |
 | [P22] | [`README.md`](../README.md) | Kurzanleitung, Bedienbeispiele und Debugging-Hinweise. |
-| [P23] | [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Lesen strukturierter Attribute aus [`attributes/`](../attributes/) und Schreiben der Map `ATTRIBUTES`. |
+| [P23] | [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs) | Lesen strukturierter Attribute aus [`attributes/`](../attributes/) und Schreiben der Map `ATTRIBUTES`. |
 | [P24] | [`attributes/`](../attributes/) | Beispielhafter Ablageort für strukturierte System-, Subjekt- und Ressourcenattribute. |
+| [P25] | [`tails-pdp-userspace-common/src/lib.rs`](../tails-pdp-userspace-common/src/lib.rs) | Gemeinsamer Pin-Pfad und Öffnen gepinnter Maps für die Userspace-Crates. |
+| [P26] | [`tails-pdp-userspace-common/src/fs_watch.rs`](../tails-pdp-userspace-common/src/fs_watch.rs) | Rekursives Überwachen von Policy- und Attributverzeichnissen. |
 
 ## Externe Quellen
 

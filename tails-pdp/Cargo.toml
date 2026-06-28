@@ -6,7 +6,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+tails-pdp-attribute-loader = { path = "../tails-pdp-attribute-loader" }
 tails-pdp-common = { path = "../tails-pdp-common", features = ["user"] }
+tails-pdp-policy-loader = { path = "../tails-pdp-policy-loader" }
+tails-pdp-userspace-common = { path = "../tails-pdp-userspace-common" }
+tails-pdp-userspace-pep = { path = "../tails-pdp-userspace-pep" }
 
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }

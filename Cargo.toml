@@ -3,10 +3,22 @@ resolver = "2"
 members = [
     "tails-pdp",
     "tails-pdp-admintool",
+    "tails-pdp-attribute-loader",
     "tails-pdp-common",
     "tails-pdp-ebpf",
+    "tails-pdp-policy-loader",
+    "tails-pdp-userspace-common",
+    "tails-pdp-userspace-pep",
 ]
-default-members = ["tails-pdp", "tails-pdp-admintool", "tails-pdp-common"]
+default-members = [
+    "tails-pdp",
+    "tails-pdp-admintool",
+    "tails-pdp-attribute-loader",
+    "tails-pdp-common",
+    "tails-pdp-policy-loader",
+    "tails-pdp-userspace-common",
+    "tails-pdp-userspace-pep",
+]
 
 [workspace.package]
 license = "MIT OR Apache-2.0"

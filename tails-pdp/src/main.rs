@@ -7,14 +7,14 @@ use aya::{
     programs::Lsm,
 };
 use log::{debug, info};
-use tails_pdp::{
-    BPF_PIN_DIRECTORY, FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS,
-    monitor::run_policy_monitor,
-    policy_loader::verify_pinned_map_layouts,
-    policy_source::PolicyDirectorySync,
-    stream_attributes::{open_attribute_maps, run_attribute_updater, write_current_attributes},
-    time::{open_current_time_maps, run_current_time_updater, write_current_time},
+use tails_pdp::{FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS};
+use tails_pdp_attribute_loader::{
+    open_attribute_maps, open_current_time_maps, run_attribute_updater, run_current_time_updater,
+    write_current_attributes, write_current_time,
 };
+use tails_pdp_policy_loader::{PolicyDirectorySync, verify_pinned_map_layouts};
+use tails_pdp_userspace_common::BPF_PIN_DIRECTORY;
+use tails_pdp_userspace_pep::run_userspace_pep;
 use tokio::signal;
 
 #[tokio::main]
@@ -69,8 +69,8 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open FILE_OPEN_JUMP_TABLE")?;
 
-    let (mut current_time, mut current_time_iso8601) = open_current_time_maps(&mut ebpf)?;
-    let mut attribute_maps = open_attribute_maps(&mut ebpf)?;
+    let (mut current_time, mut current_time_iso8601) = open_current_time_maps()?;
+    let mut attribute_maps = open_attribute_maps()?;
     let mut policy_sync = PolicyDirectorySync::new()?;
 
     for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
@@ -113,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
         result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
         result = run_attribute_updater(&mut attribute_maps) => result?,
         result = policy_sync.run() => result?,
-        result = run_policy_monitor() => result?,
+        result = run_userspace_pep() => result?,
         result = signal::ctrl_c() => result?,
     }
     info!("Exiting...");

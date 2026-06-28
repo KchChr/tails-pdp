@@ -185,11 +185,11 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest aktuelle Generation, schreibt nach erfolgreichem Policy-Commit die nächste Generation. |
+| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Liest aktuelle Generation, schreibt nach erfolgreichem Policy-Commit die nächste Generation. |
 | [`tails-pdp-ebpf/src/policies/decision.rs`](../tails-pdp-ebpf/src/policies/decision.rs) | Liest die aktive Generation für die Kernel-Auswertung. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest die aktive Generation für die Userspace-Nachbewertung. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest die aktive Generation für die Userspace-Nachbewertung. |
 | [`tails-pdp-admintool/src/lib.rs`](../tails-pdp-admintool/src/lib.rs) | Zeigt Generation und aktive Policy-Bank an. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -234,11 +234,11 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Schreibt statische `file_open`-Policies in die inaktive Bank. |
+| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Schreibt statische `file_open`-Policies in die inaktive Bank. |
 | [`tails-pdp-ebpf/src/policies/file_open_static_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_static_policies.rs) | Liest aktive Bank und wertet statische Policies im LSM-Hook aus. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest aktive Bank und bewertet bestehende File Descriptors nachträglich. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest aktive Bank und bewertet bestehende File Descriptors nachträglich. |
 | [`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) | Gibt geladene statische Policies aus. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -298,11 +298,11 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Schreibt streambasierte `file_open`-Policies in die inaktive Bank. |
+| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Schreibt streambasierte `file_open`-Policies in die inaktive Bank. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest aktive Bank, Zeit-Maps und Attribut-Map für die Stream-Auswertung. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest aktive Bank und bewertet bestehende File Descriptors nachträglich gegen Stream-Policies. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest aktive Bank und bewertet bestehende File Descriptors nachträglich gegen Stream-Policies. |
 | [`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) | Gibt geladene Stream-Policies und Attributbedingungen aus. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -338,9 +338,9 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Schreibt regelmäßig die aktuelle Unix-Zeit in Sekunden. |
+| [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Schreibt regelmäßig die aktuelle Unix-Zeit in Sekunden. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest die Zeit für `environment.time % ...`-Bedingungen. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -383,9 +383,9 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Schreibt regelmäßig aktuelle UTC-Zeitfelder. |
+| [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Schreibt regelmäßig aktuelle UTC-Zeitfelder. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest Stunde, Minute oder Sekunde für `environment.utc.*`-Bedingungen. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -413,11 +413,11 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Erhöht die Generation nach erfolgreichem Schreiben einer Attribut-Bank. |
+| [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs) | Erhöht die Generation nach erfolgreichem Schreiben einer Attribut-Bank. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest die aktive Attribut-Bank. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest die aktive Attribut-Bank für die Nachbewertung bestehender FDs. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest die aktive Attribut-Bank für die Nachbewertung bestehender FDs. |
 | [`tails-pdp-admintool/src/lib.rs`](../tails-pdp-admintool/src/lib.rs) | Zeigt aktive Attributgeneration und aktive Bank an. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -488,11 +488,11 @@ Einsatz:
 
 | Komponente | Verwendung |
 | --- | --- |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Liest `attributes/` und schreibt Attributwerte in die inaktive Bank. |
+| [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs) | Liest `attributes/` und schreibt Attributwerte in die inaktive Bank. |
 | [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest Attributwerte für dynamische Stream-Policy-Bedingungen. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Liest Attributwerte für die Userspace-Nachbewertung bestehender FDs. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest Attributwerte für die Userspace-Nachbewertung bestehender FDs. |
 | [`tails-pdp-admintool/src/output.rs`](../tails-pdp-admintool/src/output.rs) | Gibt Attribute aus und versucht Hashwerte über Policy- und Attributdateien lesbar zu machen. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
@@ -514,12 +514,12 @@ Beispiele:
 Gepinnte Maps bleiben unter `/sys/fs/bpf/tails-pdp/` sichtbar und können von mehreren
 Userspace-Komponenten geöffnet werden. Das ist notwendig für:
 
-- Policy-Sync in [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs)
-- Attribut-Sync in [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
-- Monitor in [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs)
+- Policy-Sync in [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs)
+- Attribut-Sync in [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs)
+- Userspace-PEP in [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs)
 - Admin-Tool in [`tails-pdp-admintool/`](../tails-pdp-admintool/)
 
-Vor dem Laden prüft [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs), ob bereits
+Vor dem Laden prüft [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs), ob bereits
 gepinnte Maps mit kompatiblem Layout existieren. Geprüft werden:
 
 - Key-Größe

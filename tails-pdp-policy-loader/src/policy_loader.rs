@@ -1,14 +1,13 @@
 use std::{mem::size_of, path::Path};
 
 use anyhow::{Context, bail};
-use aya::maps::{Array, MapInfo};
+use aya::maps::MapInfo;
 use tails_pdp_common::{
     ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
     FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
 };
-
-use crate::BPF_PIN_DIRECTORY;
+use tails_pdp_userspace_common::BPF_PIN_DIRECTORY;
 
 const ARRAY_KEY_SIZE: u32 = size_of::<u32>() as u32;
 const CURRENT_TIME_MAX_ENTRIES: u32 = 1;
@@ -95,73 +94,5 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         size_of::<AttributeValue>() as u32,
         ATTRIBUTE_MAP_MAX_ENTRIES,
     )?;
-    Ok(())
-}
-
-pub fn load_file_open_static_policies(
-    ebpf: &mut aya::Ebpf,
-    policies: &[FileOpenStaticPolicy],
-) -> anyhow::Result<()> {
-    let mut map: Array<_, FileOpenStaticPolicy> = Array::try_from(
-        ebpf.take_map("FILE_OPEN_STATIC_POLICIES")
-            .context("map 'FILE_OPEN_STATIC_POLICIES' not found")?,
-    )
-    .context("failed to open FILE_OPEN_STATIC_POLICIES")?;
-
-    for index in 0..map.len() {
-        map.set(index, FileOpenStaticPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear FILE_OPEN_STATIC_POLICIES[{index}]"))?;
-    }
-
-    if policies.len() > map.len() as usize {
-        bail!(
-            "too many file_open static policies: {} > {}",
-            policies.len(),
-            map.len()
-        );
-    }
-
-    for (index, policy) in policies.iter().copied().enumerate() {
-        let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve FILE_OPEN_STATIC_POLICIES[{index}] resource identity")
-        })?;
-        map.set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write FILE_OPEN_STATIC_POLICIES[{index}]"))?;
-    }
-
-    Ok(())
-}
-
-pub fn load_file_open_stream_policies(
-    ebpf: &mut aya::Ebpf,
-    policies: &[FileOpenStreamPolicy],
-) -> anyhow::Result<()> {
-    let mut map: Array<_, FileOpenStreamPolicy> = Array::try_from(
-        ebpf.take_map("FILE_OPEN_STREAM_POLICIES")
-            .context("map 'FILE_OPEN_STREAM_POLICIES' not found")?,
-    )
-    .context("failed to open FILE_OPEN_STREAM_POLICIES")?;
-
-    for index in 0..map.len() {
-        map.set(index, FileOpenStreamPolicy::disabled(), 0)
-            .with_context(|| format!("failed to clear FILE_OPEN_STREAM_POLICIES[{index}]"))?;
-    }
-
-    if policies.len() > map.len() as usize {
-        bail!(
-            "too many file_open stream policies: {} > {}",
-            policies.len(),
-            map.len()
-        );
-    }
-
-    for (index, policy) in policies.iter().copied().enumerate() {
-        let policy = policy.resolve_resource_identity().with_context(|| {
-            format!("failed to resolve FILE_OPEN_STREAM_POLICIES[{index}] resource identity")
-        })?;
-        map.set(index as u32, policy, 0)
-            .with_context(|| format!("failed to write FILE_OPEN_STREAM_POLICIES[{index}]"))?;
-    }
-
     Ok(())
 }

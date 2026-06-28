@@ -42,8 +42,6 @@ If pinned map layouts changed, remove the stale maps once before restarting:
 ```shell
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
@@ -59,10 +57,10 @@ The active source of truth is the repository-local `policies/` directory. The us
 
 - loads all `.sapl` files from `./policies` on startup
 - rescans the directory every second
-- recompiles the full directory contents on change
-- fully reconciles the four pinned policy maps on successful compilation
+- translates the full directory contents into kernel-compatible map entries on change
+- fully reconciles the two pinned `file_open` policy maps after successful validation
 - keeps the last successfully applied policy generation if a changed file cannot be parsed or
-  compiled
+  translated
 - removes policies from the maps again when the corresponding `.sapl` file disappears from
   `./policies`
 
@@ -70,7 +68,7 @@ Only files ending in `.sapl` are loaded. The `examples/` directory is not loaded
 
 ## Policy Files
 
-Each file contains exactly one SAPL-inspired policy document:
+Each file contains exactly one ASBAC policy document:
 
 ```sapl
 policy "deny cat on /home/hntr/test.txt for uid 1000"
@@ -85,13 +83,10 @@ Supported concepts:
 
 - `policy "name"`
 - entitlement `permit` or `deny`
-- one `action == "file_open"` or `action == "socket_bind"` condition
+- one `action == "file_open"` condition
 - simple conjunction by writing multiple semicolon-terminated statements
 - optional `subject.uid`
-- `file_open` fields:
-  `command`, `resource.path`
-- `socket_bind` fields:
-  `command`, `resource.family`, `resource.transport`, `resource.ip`, `resource.port`
+- optional `file_open` fields: `command`, `resource.path`
 - stream conditions per policy:
   `environment.time % N <op> VALUE`
   `environment.utc.hour <op> VALUE`
@@ -148,18 +143,6 @@ Not supported:
 Complex disjunctions are intentionally expressed by multiple files. Example: “deny before 08:00 and
 from 16:00 onwards” is represented by two policies.
 
-Example `socket_bind` stream policy:
-
-```sapl
-policy "deny socket_bind on 0.0.0.0:8443 before 08 UTC"
-deny
-    action == "socket_bind";
-    resource.family == "inet";
-    resource.ip == "0.0.0.0";
-    resource.port == 8443;
-    environment.utc.hour < 8;
-```
-
 Example modulo-based stream policy:
 
 ```sapl
@@ -215,11 +198,6 @@ Current examples cover:
 - `file_open` deny before 08:00 UTC
 - `file_open` deny from 16:00 UTC onwards
 - `file_open` deny at DEFCON 2 or lower
-- `socket_bind` static deny on `0.0.0.0:8080/tcp`
-- `socket_bind` modulo-based stream permit
-- `socket_bind` deny before 08:00 UTC
-- `socket_bind` deny from 16:00 UTC onwards
-- `socket_bind` deny at DEFCON 2 or lower
 
 ## Admin Tool
 
@@ -247,34 +225,27 @@ Show only active policies:
 Notes:
 
 - `show` and `show-active` do not require `sudo`
-- mutating admin-tool commands still operate on the pinned maps directly, but they are no longer
-  the source of truth and will be overwritten by the next successful sync from `./policies`
-- there are separate pinned maps per hook:
-  `FILE_OPEN_STATIC_POLICIES`, `FILE_OPEN_STREAM_POLICIES`,
-  `SOCKET_BIND_STATIC_POLICIES`, and `SOCKET_BIND_STREAM_POLICIES`
+- the admin tool opens the pinned maps read-only
+- static and stream policies use `FILE_OPEN_STATIC_POLICIES` and
+  `FILE_OPEN_STREAM_POLICIES`
 - for file policies, `--resource` is given as a path in userspace; when the policy is loaded, the
   loader resolves that path to `device + inode`, and the kernel matches on those values
-- for `socket-bind`, `--resource` is the local bind address, `--family` is `inet` or `inet6`,
-  `--transport` is `tcp` or `udp`, and `--port` is the local port
-- `0.0.0.0` matches any IPv4 address for the selected port and transport
-- `::` matches any IPv6 address for the selected port and transport
 - stream attributes accepted by the admin tool are `time`, `hour`, `minute`, and `second`; DEFCON is
   represented as the structured system attribute `system.defcon`
 
-## Monitoring
+## Userspace PEP
 
-The userspace monitor observes active file descriptors and `socket_bind` states.
+The eBPF LSM hook is the kernelspace PEP for new `file_open` operations. The userspace PEP
+re-evaluates file descriptors that were already open when policies or attributes changed.
 
 It:
 
-- scans `/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, and `/proc/net/udp6`
-- maps socket inodes back to processes via `/proc/<pid>/fd`
 - maps file descriptors back to file `device + inode` identities
 - evaluates the same policy logic as the eBPF side
 - logs violations on the command line
 
-For file violations, the monitor currently tries to close only the offending file descriptors in the
-affected process.
+For violations, the userspace PEP tries to close only the offending file descriptors in the affected
+process.
 
 ## FD schließen
 
@@ -337,12 +308,6 @@ Only active policies:
 sudo ./target/release/tails-pdp-admintool show-active
 ```
 
-Test a `socket_bind` policy with Python:
-
-```shell
-python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.bind(('0.0.0.0', 8080)); print('bind ok')"
-```
-
 Notes:
 
 - `ls -li` is a quick way to see the inode.
@@ -350,8 +315,6 @@ Notes:
   the shell.
 - `stat -c 'major=%t minor=%T ...'` shows the device split into major/minor numbers, which is
   useful when comparing filesystem identities manually.
-- the Python one-liner is a quick way to test whether a `socket_bind` policy allows or denies a
-  local bind on a specific address and port.
 - For policy matching, the important values are the resolved `device + inode` pair stored in the
   policy map and the same pair read by the eBPF hook.
 

@@ -11,9 +11,8 @@ use tails_pdp_common::{
     AttributeKey, AttributeNamespace, AttributeValue, AttributeValueKind, DEFAULT_DEFCON_LEVEL,
     DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, attribute_bank, attribute_hash, encode_kernel_dev_t,
 };
+use tails_pdp_userspace_common::{fs_watch, open_pinned_array, open_pinned_hash_map};
 use tokio::time::{Duration, sleep};
-
-use crate::fs_watch;
 
 const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "attributes";
 const ATTRIBUTE_FILE_EXTENSION: &str = "attributes";
@@ -45,18 +44,9 @@ pub fn default_stream_attributes_directory() -> anyhow::Result<PathBuf> {
         .join(STREAM_ATTRIBUTES_DIRECTORY_NAME))
 }
 
-pub fn open_attribute_maps(ebpf: &mut aya::Ebpf) -> anyhow::Result<AttributeMaps> {
-    let attributes = AyaHashMap::try_from(
-        ebpf.take_map("ATTRIBUTES")
-            .context("map 'ATTRIBUTES' not found")?,
-    )
-    .context("failed to open ATTRIBUTES")?;
-    let generation = Array::try_from(
-        ebpf.take_map("ATTRIBUTE_GENERATION")
-            .context("map 'ATTRIBUTE_GENERATION' not found")?,
-    )
-    .context("failed to open ATTRIBUTE_GENERATION")?;
-
+pub fn open_attribute_maps() -> anyhow::Result<AttributeMaps> {
+    let attributes = open_pinned_hash_map("ATTRIBUTES")?;
+    let generation = open_pinned_array("ATTRIBUTE_GENERATION")?;
     Ok(AttributeMaps {
         attributes,
         generation,
@@ -446,4 +436,47 @@ fn clear_attribute_bank(attributes: &mut AttributeMap, bank: u32) -> anyhow::Res
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_supported_attribute_values() {
+        assert_eq!(
+            parse_attribute_value("42").expect("number"),
+            AttributeValue::number(42)
+        );
+        assert_eq!(
+            parse_attribute_value("true").expect("bool"),
+            AttributeValue::bool(true)
+        );
+        assert_eq!(
+            parse_attribute_value("\"engineer\"").expect("string"),
+            AttributeValue::string(attribute_hash("engineer"))
+        );
+    }
+
+    #[test]
+    fn validates_attribute_names_and_defcon_range() {
+        assert!(validate_attribute_name("clearance-level_2").is_ok());
+        assert!(validate_attribute_name("clearance.level").is_err());
+        assert!(
+            validate_system_defcon_attribute(
+                AttributeNamespace::System,
+                "defcon",
+                &AttributeValue::number(3),
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_system_defcon_attribute(
+                AttributeNamespace::System,
+                "defcon",
+                &AttributeValue::number(6),
+            )
+            .is_err()
+        );
+    }
 }

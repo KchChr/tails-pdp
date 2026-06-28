@@ -3,16 +3,13 @@
 ## Gemeinsame Logik
 
 Die zentrale Policy-Logik liegt in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs). Dieses Crate wird von Userspace
-und eBPF genutzt. Dadurch sollen beide Seiten dieselbe Entscheidung treffen [P8]. Die Policies
-orientieren sich syntaktisch an einfachen SAPL-Policy-Dateien, werden aber in projektspezifische
-Rust-Structs übersetzt [P3], [Q11].
+und eBPF genutzt. Dadurch sollen beide Seiten dieselbe Entscheidung treffen [P8]. Die textuellen
+ASBAC-Policies werden in projektspezifische Rust-Structs übersetzt [P3].
 
-Stream Policies bestehen weiterhin aus genau einer dynamischen Bedingung. Sie dürfen jetzt aber
-zusätzlich die statischen Filter des jeweiligen Hooks mitbenutzen. Eine `file_open`-Stream-Policy
+Stream Policies enthalten dynamische Bedingungen und dürfen zusätzlich die statischen Filter des
+Hooks mitbenutzen. Eine `file_open`-Stream-Policy
 kann also `subject`, `command` und `resource.path` mit `system.defcon` oder `environment.utc.hour`
-kombinieren. Eine `socket_bind`-Stream-Policy kann entsprechend `subject`,
-`command`, `resource.family`, `resource.transport`, `resource.ip` und `resource.port` mit einer
-dynamischen Bedingung kombinieren [P3], [P8].
+kombinieren [P3], [P8].
 
 Wichtige Funktionen:
 
@@ -20,8 +17,6 @@ Wichtige Funktionen:
 | --- | --- |
 | `evaluate_file_open_static_policy` | Prüft eine Static Policy für Dateiöffnungen. |
 | `evaluate_file_open_stream_policy` | Prüft eine Stream Policy für Dateiöffnungen. |
-| `evaluate_socket_bind_static_policy` | Prüft eine Static Policy für Socket-Binds. |
-| `evaluate_socket_bind_stream_policy` | Prüft eine Stream Policy für Socket-Binds. |
 | `matches_stream_operator` | Vergleicht Werte mit `<`, `<=`, `==`, `>=`, `>`. |
 
 ## Entscheidungen

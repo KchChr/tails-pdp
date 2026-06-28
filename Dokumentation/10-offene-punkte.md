@@ -3,52 +3,13 @@
 Diese Punkte sind beim Lesen des Codes aufgefallen. Sie sind keine direkten Änderungen, sondern
 Hinweise für spätere Arbeit.
 
-## Monitor: Dokumentation und Verhalten klar trennen
-
-Der aktuelle Monitor ruft `enforce_violation` für alle Violations auf. Das betrifft nicht nur
-Datei-FDs, sondern auch Socket-FDs. In der README steht teilweise eine enger formulierte Aussage zu
-Datei-FDs [P6], [P7], [P22].
-
-Vorschlag:
-
-- Entscheiden, ob der Monitor nur melden, nur Datei-FDs schließen oder auch Socket-FDs schließen
-  soll.
-- Diese Entscheidung im Code und in der README konsistent dokumentieren.
-
-## Admin-Tool kann Policies noch direkt setzen
-
-Die eigentliche Quelle der Wahrheit ist inzwischen [`policies/`](../policies/). Das Admin-Tool kann aber weiterhin
-Maps direkt verändern [P3], [P17].
-
-Risiko:
-
-Direkte Änderungen werden beim nächsten erfolgreichen Policy-Sync überschrieben. Das kann für
-Nutzer verwirrend sein.
-
-Vorschlag:
-
-- Mutierende Admin-Kommandos als Debug-/Legacy-Funktionen markieren.
-- Oder nur noch read-only lassen.
-
-## `policy_loader.rs` enthält ältere Ladefunktionen
-
-[`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) wird aktuell vor allem für `verify_pinned_map_layouts` genutzt. Die
-Funktionen `load_file_open_static_policies`, `load_file_open_stream_policies`,
-`load_socket_bind_static_policies` und `load_socket_bind_stream_policies` wirken wie ältere
-Loader-Funktionen.
-
-Vorschlag:
-
-- Prüfen, ob diese Funktionen noch gebraucht werden.
-- Falls nicht, entfernen oder klar als Legacy markieren.
-
 ## Tests fehlen weitgehend
 
-Es gibt nur wenige Unit-Tests. Besonders wichtig wären Tests für:
+Es gibt erste Unit-Tests in `tails-pdp-common`, `tails-pdp-policy-loader`,
+`tails-pdp-attribute-loader` und `tails-pdp-userspace-pep`. Weiterhin wichtig sind Tests für:
 
-- Parser
 - Generationen-Rollback
-- Monitor
+- vollständige Userspace-PEP-Auswertung mit simuliertem `/proc`
 - Admin-Tool
 - Integration mit echtem eBPF auf Linux
 
@@ -63,7 +24,7 @@ Das ist technisch klar, sollte aber fachlich dokumentiert oder konfigurierbar ge
 
 ## Prozessname ist begrenzt
 
-Der eBPF-Code nutzt `ctx.command()`, der Monitor liest `Name:` aus `/proc/<pid>/status`. Beide Werte
+Der eBPF-Code nutzt `ctx.command()`, der Userspace-PEP liest `Name:` aus `/proc/<pid>/status`. Beide Werte
 sind Prozessnamen, keine vollständigen Pfade zur ausführbaren Datei.
 
 Risiko:
@@ -107,7 +68,7 @@ Vorschlag:
 ## Keine Ring-Buffer-Events
 
 Es gibt keine Eventübertragung vom Kernel zum Userspace. Das ist bewusst oder zumindest aktuell so.
-Der Monitor arbeitet stattdessen pollend über `/proc` [P6], [Q12], [Q13], [Q14].
+Der Userspace-PEP arbeitet stattdessen pollend über `/proc` [P6], [Q12], [Q13], [Q14].
 
 Grenze:
 

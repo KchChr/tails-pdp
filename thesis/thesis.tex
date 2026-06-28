@@ -146,7 +146,8 @@ Für die Auswertung im Kernel muss diese Beschreibung später in eine kernelgeei
 
 Etablierte Zugriffskontrollarchitekturen unterscheiden häufig zwischen Komponenten zur Entscheidung und Komponenten zur Durchsetzung. 
 XACML beschreibt beispielsweise eine Architektur mit Policy Decision Point und Policy Enforcement Point sowie eine Policy-Sprache zur Beschreibung attributbasierter Entscheidungen \citep{oasisXacml30}. 
-Diese Arbeit übernimmt nicht XACML als Sprache, nutzt aber dieselbe grundsätzliche Trennung: Policies werden außerhalb des Durchsetzungspunktes verwaltet und in eine Form überführt, die zur technischen Zugriffskontrolle verwendet werden kann.
+Der Policy Decision Point (PDP) wertet eine Zugriffsanfrage anhand der geltenden Policies aus und liefert eine Entscheidung. Der Policy Enforcement Point (PEP) fängt die zu kontrollierende Operation ab und setzt die Entscheidung technisch durch.
+Diese Arbeit übernimmt nicht XACML als Sprache oder vollständiges Architekturmodell, verwendet die Begriffe aber zur Einordnung der Durchsetzungspunkte. Im Prototyp sind Entscheidung und Durchsetzung teilweise eng gekoppelt: Das eBPF-LSM bildet den Kernelspace-PEP für neue Dateiöffnungen, während ein zusätzlicher Userspace-PEP bereits bestehende Dateizugriffe nach Änderungen von Policies oder Attributen erneut bewertet und gegebenenfalls beendet.
 
 \subsection{Userspace und Kernelspace in Linux}
 Linux trennt zwischen Userspace und Kernelspace. 
@@ -210,7 +211,7 @@ Der Kernel kann diese Werte während einer Zugriffskontrolle auslesen, während 
 
 Gepinnte Maps erweitern diese Idee um einen stabilen Zugriffspfad im BPF-Dateisystem. 
 Pinning erlaubt es, eBPF-Objekte wie Maps über einen Pfad zugänglich zu machen, sodass andere Prozesse sie später wieder öffnen können \citep{ebpfPinning}. 
-Dies ist für den Prototyp wichtig, weil nicht nur der Loader, sondern auch ein Monitor oder Administrationswerkzeug den aktuellen Zustand lesen können muss. 
+Dies ist für den Prototyp wichtig, weil nicht nur der Loader, sondern auch ein Userspace-PEP oder Administrationswerkzeug den aktuellen Zustand lesen können muss.
 Gepinnte Maps bilden damit eine zentrale Schnittstelle zwischen den getrennten Userspace-Komponenten und dem Kernelzustand.
 
 \subsection{eBPF-Verifier, Stack und Programmkomplexität}
@@ -285,8 +286,8 @@ Eine ASBAC-orientierte Zugriffskontrolle muss deshalb zusätzlich betrachten, wi
 
 Linux stellt über \texttt{/proc/<pid>/fd} Informationen über die geöffneten File Descriptors eines Prozesses bereit. 
 Die man-pages beschreiben die Einträge in diesem Verzeichnis als symbolische Links auf die geöffneten Dateien oder andere referenzierte Objekte; der Zugriff darauf unterliegt eigenen Berechtigungsprüfungen \citep{manProcPidFd}. 
-Für den Prototyp kann ein Userspace-Monitor diese Informationen nutzen, um zu erkennen, welcher Prozess über welchen File Descriptor auf welche Datei zugreift. 
-Wird eine bestehende Zugriffssituation durch neue Attribute oder Policies unzulässig, kann der Monitor gezielt den betroffenen Zugriff behandeln, ohne notwendigerweise alle Zugriffe desselben Prozesses zu beenden.
+Für den Prototyp kann ein Userspace-PEP diese Informationen nutzen, um zu erkennen, welcher Prozess über welchen File Descriptor auf welche Datei zugreift.
+Wird eine bestehende Zugriffssituation durch neue Attribute oder Policies unzulässig, kann der Userspace-PEP gezielt den betroffenen Zugriff behandeln, ohne notwendigerweise alle Zugriffe desselben Prozesses zu beenden.
 
 \newpage
 
@@ -335,9 +336,9 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \item[FA-07 Überwachung bestehender Dateizugriffe:]
     Der Prototyp muss bereits bestehende Dateizugriffe überwachen können, wenn sich entscheidungsrelevante Policies oder Attribute zur Laufzeit ändern.
     Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter File Descriptor eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
-    Der Monitor muss erkennen können, welcher Prozess über welchen File Descriptor auf welche Datei zugreift und ob dieser Zugriff nach der aktuellen Policy- und Attributlage weiterhin zulässig ist.
+    Der Userspace-PEP muss erkennen können, welcher Prozess über welchen File Descriptor auf welche Datei zugreift und ob dieser Zugriff nach der aktuellen Policy- und Attributlage weiterhin zulässig ist.
 
-    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird der Zugriff anschließend durch eine Änderung eines entscheidungsrelevanten Attributs unzulässig, erkennt der Monitor diese Verletzung und kann Prozess-ID, File Descriptor und betroffenen Dateipfad ausgeben.
+    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird der Zugriff anschließend durch eine Änderung eines entscheidungsrelevanten Attributs unzulässig, erkennt der Userspace-PEP diese Verletzung und kann Prozess-ID, File Descriptor und betroffenen Dateipfad ausgeben.
 
     \item[FA-08 Enforcement bei unzulässig gewordenen Dateizugriffen:]
     Der Prototyp muss einen bestehenden Dateizugriff beenden können, wenn dieser aufgrund einer Policy- oder Attributänderung nicht mehr zulässig ist.
@@ -459,14 +460,14 @@ Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-System
 
 \begin{itemize}
     \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung von Policies.
-    Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Monitor und der Policyverwaltung.
+    Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Userspace-PEP sowie die Policyverwaltung.
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
     Die Policyverwaltung liest die textuellen Policy-Dateien, parst diese und übersetzt sie in kernelgeeignete Map-Einträge.
-    Der Monitor überwacht Dateizugriffe im Userspace und prüft mögliche Policy-Verletzungen.
-    Durch eine nachträgliche Durchsetzungsmaßnahme kann der Prozess bei einer Policy-Verletzung beendet oder der Dateizugriff durch das Schließen des File Descriptors beendet werden.
+    Der Userspace-PEP überwacht bestehende Dateizugriffe und prüft mögliche Policy-Verletzungen.
+    Durch eine nachträgliche Durchsetzungsmaßnahme kann der unzulässig gewordene Dateizugriff durch das Schließen des betroffenen File Descriptors beendet werden.
     
-    \item \textbf{Kernelspace:} Im Kernelspace wird ein Linux Security Module integriert. 
-    Dieses greift über LSM-Hooks in sicherheitsrelevante Operationen ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies. 
+    \item \textbf{Kernelspace:} Im Kernelspace wird ein eBPF-Programm an einen LSM-Hook angebunden.
+    Dieser Kernelspace-PEP greift bei neuen Dateiöffnungen in die sicherheitsrelevante Operation ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies.
     Hierbei wertet das LSM auch Streamingattribute, welche vom Userspace aus in den Kernel gestreamt werden aus.
 \end{itemize}
 Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
@@ -474,7 +475,7 @@ Sie dient dazu, Policies, Entscheidungen oder Attribute zwischen beiden Bereiche
 Dadurch kann die Policy-Logik im Userspace verbleiben, 
 während der Kernel die unmittelbare Durchsetzung der Zugriffskontrolle bei Dateizugriffen übernimmt.
 Für Zugriffe, die bereits durch einen LSM-Hook erlaubt wurden, erfolgt keine automatische erneute Bewertung durch denselben Hook.
-Diese nachträgliche Überwachung wird durch den Monitor übernommen.
+Diese nachträgliche Überwachung wird durch den Userspace-PEP übernommen.
 
 \begin{figure}[ht]
     \centering
@@ -529,20 +530,21 @@ Das Combining entscheidet, ob der Zugriff insgesamt erlaubt oder verweigert wird
 Führt das Ergebnis zu einer Verweigerung, gibt das eBPF-LSM-Programm einen Fehlerwert an den Kernel zurück. 
 Der Kernel unterbindet daraufhin den Zugriff.
 
-\subsubsection{Monitoring bestehender Zugriffe}
+\subsubsection{Nachträgliche Kontrolle bestehender Zugriffe}
 
 LSM-Hooks prüfen einen Zugriff zu dem Zeitpunkt, an dem das jeweilige Kernelereignis auftritt. 
 Bei streambasierten Policies kann sich die Entscheidungslage jedoch nachträglich ändern, beispielsweise wenn sich die Uhrzeit oder andere Attribute ändern.
 Ein bereits geöffneter Zugriff wird dadurch nicht automatisch erneut durch denselben LSM-Hook geprüft.
 
-Aus diesem Grund enthält der Prototyp zusätzlich einen Monitor im Userspace. 
-Der Monitor betrachtet regelmäßig aktive Prozesse und deren aktuell verwendete Ressourcen. 
+Aus diesem Grund enthält der Prototyp zusätzlich einen Userspace-PEP.
+Der Userspace-PEP betrachtet regelmäßig aktive Prozesse und deren aktuell verwendete Ressourcen.
 Dabei prüft er, ob eine bestehende Zugriffssituation mit den derzeit aktiven Policies vereinbar ist. 
-Wird eine Verletzung erkannt, kann der Monitor ein nachträgliches Enforcement auslösen. 
+Wird eine Verletzung erkannt, kann der Userspace-PEP ein nachträgliches Enforcement auslösen.
 Im Fall von Dateizugriffen kann dies beispielsweise bedeuten, dass betroffene File Descriptors eines Prozesses geschlossen werden.
 
-Der Monitor ergänzt damit die kernelbasierte Zugriffskontrolle. 
-Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Monitor das Problem bereits bestehender Zugriffe bei nachträglich geänderten Bedingungen.
+Der Userspace-PEP ergänzt damit die kernelbasierte Zugriffskontrolle.
+Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Userspace-PEP das Problem bereits bestehender Zugriffe bei nachträglich geänderten Bedingungen.
+Da er die gepinnten Policies und Attribute selbst auswertet und die ermittelte Entscheidung anschließend durchsetzt, enthält diese Komponente neben der PEP-Funktion auch einen Teil der Entscheidungslogik. Eine vollständig getrennte Kommunikation mit einem eigenständigen PDP wird im Prototyp nicht umgesetzt.
 
 \subsection{Komponenten}
 Die Architektur des Prototyps setzt sich aus mehreren Komponenten zusammen, die jeweils eine abgegrenzte Aufgabe innerhalb der Zugriffskontrolle übernehmen. 
@@ -582,23 +584,23 @@ Der Attributloader schreibt diese Werte in den Kernelspace, damit sie dort bei d
 Der Attributloader trifft selbst keine Zugriffsentscheidung. 
 Seine Aufgabe besteht darin, die Entscheidungsgrundlage aktuell zu halten.
 
-\paragraph{Monitor}
-Der Monitor ergänzt die kernelbasierte Zugriffskontrolle um die nachträgliche Überwachung bereits bestehender Zugriffssituationen. 
+\paragraph{Userspace-PEP}
+Der Userspace-PEP ergänzt die kernelbasierte Zugriffskontrolle um die nachträgliche Überwachung bereits bestehender Zugriffssituationen.
 Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweiligen Kernelereignisses prüft. 
 Ändern sich danach dynamische Attribute, wird ein bereits bestehender Zugriff nicht automatisch erneut durch denselben Hook geprüft.
 
-Der Monitor betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen. 
+Der Userspace-PEP betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen.
 Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
 Wird eine Verletzung erkannt, kann ein nachträgliches Enforcement ausgelöst werden. 
 Bei Dateizugriffen kann dies beispielsweise bedeuten, dass ein betroffener File Descriptor geschlossen und damit der Zugriff auf eine bereits geöffnete Ressource beendet wird.
 
-Der Monitor ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
+Der Userspace-PEP ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
 
 \subsubsection{Kernelspace-Komponenten}
 
-\paragraph{LSM}
-Die LSM-Komponente bildet den kernelbasierten Durchsetzungspunkt des Prototyps. 
+\paragraph{Kernelspace-PEP mit eBPF-LSM}
+Die eBPF-LSM-Komponente bildet den kernelbasierten Durchsetzungspunkt des Prototyps.
 Sie greift über LSM-Hooks in sicherheitsrelevante Operationen ein und erhält dadurch Zugriff auf die für die Entscheidung relevanten Zugriffsdaten. 
 Auf dieser Grundlage werden die im Kernelspace vorliegenden Policies ausgewertet. 
 Das Ergebnis dieser Auswertung entscheidet, ob der jeweilige Zugriff erlaubt oder verweigert wird.
@@ -629,7 +631,7 @@ Eine Policy-Generation beschreibt eine zusammengehörige Menge von Policies, die
 Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformationen oder externe Zustandswerte aus dem Verzeichnis \texttt{attributes/}. 
 Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
 
-Für den Monitor sind außerdem Prozess- und Ressourceninformationen relevant. 
+Für den Userspace-PEP sind außerdem Prozess- und Ressourceninformationen relevant.
 Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene File Descriptors und geöffnete Dateien. 
 Diese Informationen stammen aus Betriebssystemquellen wie \texttt{/proc/<PID>/fd} und werden verwendet, um bestehende Zugriffssituationen gegen die aktiven Policies zu prüfen.
 
@@ -784,12 +786,12 @@ Erweiterungen müssen daher jeweils prüfen, ob sie in diese feste Kernelrepräs
 Der Prototyp benötigt eine gemeinsame Datenbasis zwischen Userspace und Kernelspace.
 Der Userspace muss Policies, Attribute, Zeitinformationen und Generationenstände bereitstellen können.
 Das eBPF-Programm muss diese Daten im LSM-Hook lesen können, ohne direkt auf Userspace-Speicher oder komplexe Userspace-Datenstrukturen zuzugreifen.
-Zusätzlich müssen weitere Userspace-Komponenten, insbesondere Monitor und Administrationswerkzeug, den aktuellen Zustand lesen können.
+Zusätzlich müssen weitere Userspace-Komponenten, insbesondere Userspace-PEP und Administrationswerkzeug, den aktuellen Zustand lesen können.
 
 Die Entscheidung lautet daher, die Kommunikation über eBPF-Maps umzusetzen.
 Policy-Einträge werden in Array-Maps abgelegt, dynamische Attribute in einer Hash-Map, und Generationen- sowie Zeitinformationen in eigenen Array-Maps.
 Für Zustände, die über mehrere Komponenten hinweg zugreifbar sein müssen, werden gepinnte Maps verwendet.
-Dadurch erhalten Loader, Monitor und Administrationswerkzeug einen stabilen Zugriffspfad auf dieselben Kernelobjekte, während das eBPF-Programm die Werte direkt im Kernel auswerten kann.
+Dadurch erhalten Loader, Userspace-PEP und Administrationswerkzeug einen stabilen Zugriffspfad auf dieselben Kernelobjekte, während das eBPF-Programm die Werte direkt im Kernel auswerten kann.
 
 Diese Entscheidung folgt aus dem eBPF-Ausführungsmodell.
 eBPF-Programme können nicht beliebige Speicherbereiche des Userspace lesen und sollen im Zugriffspfad mit festen, vom Verifier nachvollziehbaren Datenstrukturen arbeiten.
@@ -964,21 +966,22 @@ Die Konsequenz ist, dass Policies beim Laden an den zu diesem Zeitpunkt vorhande
 Wird eine Datei später ersetzt, kann sich die Inode ändern und die Policy muss entsprechend neu verarbeitet werden.
 Dafür wird die Auswertung im Kernel deutlich einfacher und näher an der tatsächlichen Dateiidentität durchgeführt.
 
-\subsubsection{Nachträgliche Überwachung durch den Monitor}
+\subsubsection{Nachträgliche Überwachung durch den Userspace-PEP}
 Der LSM-Hook \texttt{file\_open} bewertet eine Dateiöffnung zu dem Zeitpunkt, an dem die Datei geöffnet wird.
 Wenn der Zugriff erlaubt wurde, kann der Prozess die Datei anschließend über den erhaltenen File Descriptor weiter verwenden.
 Ändern sich danach dynamische Attribute oder Policies, wird dieser bereits bestehende Zugriff nicht automatisch erneut durch denselben Hook geprüft.
 Für ASBAC ist genau dieser Fall relevant, weil eine zunächst zulässige Zugriffssituation durch spätere Attributänderungen unzulässig werden kann.
 
-Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Userspace-Monitor zu ergänzen.
-Der Monitor liest regelmäßig Informationen über laufende Prozesse und offene File Descriptors aus dem System.
+Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Userspace-PEP zu ergänzen.
+Der Userspace-PEP liest regelmäßig Informationen über laufende Prozesse und offene File Descriptors aus dem System.
 Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
 Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
-Wird eine Verletzung erkannt, kann der Monitor ein Enforcement auslösen.
+Wird eine Verletzung erkannt, kann der Userspace-PEP ein Enforcement auslösen.
+Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion. Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung lokal aus.
 
 Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
 Der Kernel bleibt für neue Dateiöffnungen der unmittelbare Durchsetzungspunkt.
-Der Monitor behandelt dagegen bestehende Zugriffssituationen, die nach der ursprünglichen Entscheidung weiterlaufen.
+Der Userspace-PEP behandelt dagegen bestehende Zugriffssituationen, die nach der ursprünglichen Entscheidung weiterlaufen.
 Damit wird der dynamische Charakter von ASBAC im Prototyp sichtbar, ohne dass jede spätere Dateioperation erneut über denselben LSM-Hook modelliert werden muss.
 
 Eine Alternative wäre, bei einer nachträglichen Policy-Verletzung den gesamten Prozess zu beenden.
@@ -993,12 +996,12 @@ Diese Komponente arbeitet beobachtend und periodisch, nicht als Ersatz für den 
 Sie erweitert den Prototyp um die Fähigkeit, bestehende Dateizugriffe nach Änderungen der Entscheidungsgrundlage erneut zu bewerten.
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}
-Wenn der Monitor eine bestehende Policy-Verletzung erkennt, muss der Prototyp den unzulässig gewordenen Zugriff beenden können.
+Wenn der Userspace-PEP eine bestehende Policy-Verletzung erkennt, muss der Prototyp den unzulässig gewordenen Zugriff beenden können.
 Bei Dateizugriffen wird der fortdauernde Zugriff über einen File Descriptor repräsentiert.
 Dieser File Descriptor ist daher der konkrete Ansatzpunkt, um genau den betroffenen Zugriff zu entziehen.
 
 Die Entscheidung lautet, Enforcement durch das Schließen des betroffenen File Descriptors umzusetzen.
-Der Monitor ermittelt Prozess-ID und File-Descriptor-Nummer der verletzenden Zugriffssituation.
+Der Userspace-PEP ermittelt Prozess-ID und File-Descriptor-Nummer der verletzenden Zugriffssituation.
 Anschließend versucht die Enforcement-Komponente, genau diesen File Descriptor im betroffenen Prozess zu schließen.
 Im aktuellen Prototyp geschieht dies auf x86\_64-Linux über \texttt{ptrace}, indem im Zielprozess ein \texttt{close}-Systemaufruf für den ausgewählten File Descriptor ausgeführt wird.
 
@@ -1034,7 +1037,7 @@ Es arbeitet bewusst lesend, damit es den Kernelzustand nicht unbeabsichtigt ver�
 
 Eine Alternative wäre die direkte Nutzung allgemeiner Werkzeuge wie \texttt{bpftool}.
 Damit lassen sich Maps zwar grundsätzlich inspizieren, die Ausgabe ist jedoch stärker an der binären Map-Struktur orientiert und für die fachliche Bewertung weniger komfortabel.
-Eine weitere Alternative wäre, Diagnose direkt in das Hauptprogramm oder den Monitor einzubauen.
+Eine weitere Alternative wäre, Diagnose direkt in das Hauptprogramm oder den Userspace-PEP einzubauen.
 Dies würde jedoch Zuständigkeiten vermischen und die Beobachtung des Zustands stärker an einen laufenden Prozess binden.
 
 Die Konsequenz ist ein zusätzliches Werkzeug im Prototyp.

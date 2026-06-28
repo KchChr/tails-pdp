@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Context;
 use aya::maps::{Array, MapData};
 use tails_pdp_common::Iso8601TimeParts;
+use tails_pdp_userspace_common::open_pinned_array;
 use tokio::time::{self, Duration};
 
 fn current_unix_timestamp() -> anyhow::Result<u64> {
@@ -49,22 +50,12 @@ fn current_iso8601_time_parts() -> anyhow::Result<Iso8601TimeParts> {
     ))
 }
 
-pub fn open_current_time_maps(
-    ebpf: &mut aya::Ebpf,
-) -> anyhow::Result<(Array<MapData, u64>, Array<MapData, Iso8601TimeParts>)> {
-    let current_time = Array::try_from(
-        ebpf.take_map("CURRENT_TIME")
-            .context("map 'CURRENT_TIME' not found")?,
-    )
-    .context("failed to open CURRENT_TIME")?;
-
-    let current_time_iso8601 = Array::try_from(
-        ebpf.take_map("CURRENT_TIME_ISO8601")
-            .context("map 'CURRENT_TIME_ISO8601' not found")?,
-    )
-    .context("failed to open CURRENT_TIME_ISO8601")?;
-
-    Ok((current_time, current_time_iso8601))
+pub fn open_current_time_maps()
+-> anyhow::Result<(Array<MapData, u64>, Array<MapData, Iso8601TimeParts>)> {
+    Ok((
+        open_pinned_array("CURRENT_TIME")?,
+        open_pinned_array("CURRENT_TIME_ISO8601")?,
+    ))
 }
 
 pub fn write_current_time(

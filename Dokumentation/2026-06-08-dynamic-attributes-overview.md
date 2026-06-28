@@ -18,7 +18,7 @@ system.maintenance_mode == false;
 ```
 
 Die Attributwerte werden in Userspace-Dateien gepflegt und bei Änderungen in gepinnte eBPF Maps
-geschrieben, damit Kernel-Programme und der Userspace-Monitor denselben Zustand auswerten können.
+geschrieben, damit Kernel-Programme und der Userspace-PEP denselben Zustand auswerten können.
 
 ## Datenmodell und ABI
 
@@ -38,7 +38,7 @@ Code:
 
 Sinn:
 
-Die neuen Attribute werden in einem gemeinsamen ABI-Crate definiert, damit Userspace, Monitor und
+Die neuen Attribute werden in einem gemeinsamen ABI-Crate definiert, damit Userspace, Userspace-PEP und
 eBPF exakt dieselben C-kompatiblen Strukturen verwenden. Das ist wichtig, weil eBPF Map-Key und
 Map-Value binäre Layouts sind. Unterschiedliche Struct-Layouts zwischen Kernel- und Userspace-Seite
 würden zu falschen Lookups oder Load-Fehlern führen.
@@ -91,8 +91,6 @@ Code:
 - `tails-pdp-common/src/lib.rs:927`: `attribute_object_id`
 - `tails-pdp-common/src/lib.rs:958`: `file_open_stream_policy_applies_to_request`
 - `tails-pdp-common/src/lib.rs:982`: `file_open_stream_legacy_entitlement`
-- `tails-pdp-common/src/lib.rs:1045`: `socket_bind_stream_policy_applies_to_request`
-- `tails-pdp-common/src/lib.rs:1070`: `socket_bind_stream_legacy_entitlement`
 
 Sinn:
 
@@ -104,7 +102,7 @@ Gemeinsame Hilfsfunktionen trennen drei Prüfschritte:
 
 Gedanke dahinter:
 
-Die statische Filterlogik soll nicht in eBPF, Monitor und Tests auseinanderlaufen. Deshalb liegt sie
+Die statische Filterlogik soll nicht in eBPF, Userspace-PEP und Tests auseinanderlaufen. Deshalb liegt sie
 in `tails-pdp-common`. Die vollständige dynamische Auswertung kann aber nicht in den alten
 `evaluate_*_stream_policy`-Funktionen passieren, weil diese keinen Zugriff auf die `ATTRIBUTES` Map
 haben. Darum geben diese Funktionen bei dynamischen Conditions bewusst `None` zurück.
@@ -115,13 +113,13 @@ Code:
 
 - `tails-pdp-ebpf/src/maps.rs:63`: `ATTRIBUTE_GENERATION`
 - `tails-pdp-ebpf/src/maps.rs:67`: `ATTRIBUTES`
-- `tails-pdp/src/policy_loader.rs:57`: `verify_pinned_map_layouts`
-- `tails-pdp/src/policy_loader.rs:106`: Layoutprüfung für `ATTRIBUTE_GENERATION`
-- `tails-pdp/src/policy_loader.rs:112`: Layoutprüfung für `ATTRIBUTES`
+- `tails-pdp-policy-loader/src/policy_loader.rs:57`: `verify_pinned_map_layouts`
+- `tails-pdp-policy-loader/src/policy_loader.rs:106`: Layoutprüfung für `ATTRIBUTE_GENERATION`
+- `tails-pdp-policy-loader/src/policy_loader.rs:112`: Layoutprüfung für `ATTRIBUTES`
 
 Sinn:
 
-Die Attribute liegen in gepinnten Maps, damit der Monitor die Policies und Attribute aus Userspace
+Die Attribute liegen in gepinnten Maps, damit der Userspace-PEP die Policies und Attribute aus Userspace
 überwachen kann. Neue Maps:
 
 - `ATTRIBUTE_GENERATION`: aktiver Attribut-Generation-Zähler
@@ -129,7 +127,7 @@ Die Attribute liegen in gepinnten Maps, damit der Monitor die Policies und Attri
 
 Gedanke dahinter:
 
-Die Policy Maps waren bereits gepinnt. Für den Monitor muss dasselbe für die Attribut Maps gelten,
+Die Policy Maps waren bereits gepinnt. Für den Userspace-PEP muss dasselbe für die Attribut Maps gelten,
 sonst könnte nur das geladene eBPF-Programm die Attribute sehen. Die Layoutprüfung verhindert, dass
 alte gepinnte Maps mit inkompatiblen Key-/Value-Größen still weiterverwendet werden.
 
@@ -146,19 +144,19 @@ sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
 
 Code:
 
-- `tails-pdp/src/stream_attributes.rs:17`: Runtime-Verzeichnis `attributes`
-- `tails-pdp/src/stream_attributes.rs:19`: `system.attributes`
-- `tails-pdp/src/stream_attributes.rs:20`: `subjects`
-- `tails-pdp/src/stream_attributes.rs:53`: Öffnen der `ATTRIBUTES` und `ATTRIBUTE_GENERATION` Maps
-- `tails-pdp/src/stream_attributes.rs:77`: initiales Schreiben der Attribute
-- `tails-pdp/src/stream_attributes.rs:100`: Watcher für Attributänderungen
-- `tails-pdp/src/stream_attributes.rs:140`: Default-Struktur anlegen
-- `tails-pdp/src/stream_attributes.rs:224`: Attributverzeichnis einlesen
-- `tails-pdp/src/stream_attributes.rs:264`: `.attributes` Datei parsen
-- `tails-pdp/src/stream_attributes.rs:308`: Attributnamen validieren
-- `tails-pdp/src/stream_attributes.rs:321`: Attributwerte parsen
-- `tails-pdp/src/stream_attributes.rs:366`: Commit in die Maps
-- `tails-pdp/src/stream_attributes.rs:407`: inaktive Bank bereinigen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:17`: Runtime-Verzeichnis `attributes`
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:19`: `system.attributes`
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:20`: `subjects`
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:53`: Öffnen der `ATTRIBUTES` und `ATTRIBUTE_GENERATION` Maps
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:77`: initiales Schreiben der Attribute
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:100`: Watcher für Attributänderungen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:140`: Default-Struktur anlegen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:224`: Attributverzeichnis einlesen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:264`: `.attributes` Datei parsen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:308`: Attributnamen validieren
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:321`: Attributwerte parsen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:366`: Commit in die Maps
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:407`: inaktive Bank bereinigen
 
 Sinn:
 
@@ -194,12 +192,12 @@ denselben Hash, dadurch treffen sich Policy-Bedingung und Attributwert in der Ma
 Code:
 
 - `tails-pdp-common/src/lib.rs:34`: `attribute_bank`
-- `tails-pdp/src/stream_attributes.rs:370`: aktuelle Generation lesen
-- `tails-pdp/src/stream_attributes.rs:371`: nächste Generation bestimmen
-- `tails-pdp/src/stream_attributes.rs:372`: inaktive Bank berechnen
-- `tails-pdp/src/stream_attributes.rs:374`: inaktive Bank löschen
-- `tails-pdp/src/stream_attributes.rs:376`: Attribute in inaktive Bank schreiben
-- `tails-pdp/src/stream_attributes.rs:394`: `ATTRIBUTE_GENERATION[0]` committen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:370`: aktuelle Generation lesen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:371`: nächste Generation bestimmen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:372`: inaktive Bank berechnen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:374`: inaktive Bank löschen
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:376`: Attribute in inaktive Bank schreiben
+- `tails-pdp-attribute-loader/src/stream_attributes.rs:394`: `ATTRIBUTE_GENERATION[0]` committen
 
 Sinn:
 
@@ -215,17 +213,17 @@ bereits vorhandenen Policy-Banking und ist für eBPF deutlich robuster als ein d
 
 Code:
 
-- `tails-pdp/src/policy_source.rs:45`: `ParsedStreamCondition`
-- `tails-pdp/src/policy_source.rs:68`: dynamische Condition-Variante
-- `tails-pdp/src/policy_source.rs:83`: mehrere Stream-Conditions pro Policy
-- `tails-pdp/src/policy_source.rs:847`: dynamische Attribute in Stream-Parser einhängen
-- `tails-pdp/src/policy_source.rs:854`: `parse_dynamic_attribute_condition`
-- `tails-pdp/src/policy_source.rs:889`: Vergleichsoperatoren parsen
-- `tails-pdp/src/policy_source.rs:907`: Attributnamen validieren
-- `tails-pdp/src/policy_source.rs:920`: dynamische Attributwerte parsen
-- `tails-pdp/src/policy_source.rs:1076`: eingebaute und dynamische Conditions trennen
-- `tails-pdp/src/policy_source.rs:1100`: Limit für dynamische Conditions
-- `tails-pdp/src/policy_source.rs:1141`: Attribute in File-Open-Policy schreiben
+- `tails-pdp-policy-loader/src/policy_source.rs:45`: `ParsedStreamCondition`
+- `tails-pdp-policy-loader/src/policy_source.rs:68`: dynamische Condition-Variante
+- `tails-pdp-policy-loader/src/policy_source.rs:83`: mehrere Stream-Conditions pro Policy
+- `tails-pdp-policy-loader/src/policy_source.rs:847`: dynamische Attribute in Stream-Parser einhängen
+- `tails-pdp-policy-loader/src/policy_source.rs:854`: `parse_dynamic_attribute_condition`
+- `tails-pdp-policy-loader/src/policy_source.rs:889`: Vergleichsoperatoren parsen
+- `tails-pdp-policy-loader/src/policy_source.rs:907`: Attributnamen validieren
+- `tails-pdp-policy-loader/src/policy_source.rs:920`: dynamische Attributwerte parsen
+- `tails-pdp-policy-loader/src/policy_source.rs:1076`: eingebaute und dynamische Conditions trennen
+- `tails-pdp-policy-loader/src/policy_source.rs:1100`: Limit für dynamische Conditions
+- `tails-pdp-policy-loader/src/policy_source.rs:1141`: Attribute in File-Open-Policy schreiben
 
 Sinn:
 
@@ -248,12 +246,6 @@ Code:
 - `tails-pdp-ebpf/src/policies/file_open_stream_policies.rs:50`: eingebaute Stream-Condition prüfen
 - `tails-pdp-ebpf/src/policies/file_open_stream_policies.rs:95`: Attribut-Lookup für File-Open
 - `tails-pdp-ebpf/src/policies/file_open_stream_policies.rs:140`: aktive Attributbank lesen
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:42`: Stream-Policy-Iteration
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:45`: statischer Match
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:46`: dynamische Attribute prüfen
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:52`: eingebaute Stream-Condition prüfen
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:98`: Attribut-Lookup für Socket-Bind
-- `tails-pdp-ebpf/src/policies/socket_bind_stream_policies.rs:143`: aktive Attributbank lesen
 
 Sinn:
 
@@ -266,26 +258,26 @@ Die eBPF-Seite macht nur bounded Loops bis `MAX_ATTRIBUTE_CONDITIONS`, baut eine
 `AttributeKey` und macht Map-Lookups. Es gibt keinen Heap, keine dynamische Stringverarbeitung und
 keine unbounded Iteration. Das reduziert Verifier-Risiken bei Stack und Program Complexity.
 
-## Monitor
+## Userspace-PEP
 
 Code:
 
-- `tails-pdp/src/monitor.rs:162`: gepinnte Policy- und Attributmaps öffnen
-- `tails-pdp/src/monitor.rs:188`: `ATTRIBUTE_GENERATION` öffnen
-- `tails-pdp/src/monitor.rs:192`: `ATTRIBUTES` öffnen
-- `tails-pdp/src/monitor.rs:233`: aktive Attributbank bestimmen
-- `tails-pdp/src/monitor.rs:326`: File-Open-Stream-Policies mit Attributen prüfen
-- `tails-pdp/src/monitor.rs:434`: Socket-Bind-Stream-Policies mit Attributen prüfen
-- `tails-pdp/src/monitor.rs:461`: Monitor-seitiger Attributvergleich
+- `tails-pdp-userspace-pep/src/pep.rs:162`: gepinnte Policy- und Attributmaps öffnen
+- `tails-pdp-userspace-pep/src/pep.rs:188`: `ATTRIBUTE_GENERATION` öffnen
+- `tails-pdp-userspace-pep/src/pep.rs:192`: `ATTRIBUTES` öffnen
+- `tails-pdp-userspace-pep/src/pep.rs:233`: aktive Attributbank bestimmen
+- `tails-pdp-userspace-pep/src/pep.rs:326`: File-Open-Stream-Policies mit Attributen prüfen
+- `tails-pdp-userspace-pep/src/pep.rs:434`: Socket-Bind-Stream-Policies mit Attributen prüfen
+- `tails-pdp-userspace-pep/src/pep.rs:461`: Userspace-PEP-seitiger Attributvergleich
 
 Sinn:
 
-Der Monitor sieht dieselben dynamischen Attribute wie das eBPF-Programm und kann daher auch
+Der Userspace-PEP sieht dieselben dynamischen Attribute wie das eBPF-Programm und kann daher auch
 Userspace-seitig Policy-Verletzungen für bereits offene Ressourcen erkennen.
 
 Gedanke dahinter:
 
-Der Monitor liest die gepinnten Maps aus `/sys/fs/bpf/tails-pdp`. Dadurch muss kein separater
+Der Userspace-PEP liest die gepinnten Maps aus `/sys/fs/bpf/tails-pdp`. Dadurch muss kein separater
 Userspace-Zustand dupliziert werden. Policy-Auswertung und Attributzustand bleiben auf demselben
 Map-Stand.
 

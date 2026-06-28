@@ -19,7 +19,7 @@
         <mxCell id="attributes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;div&gt;Attributloader&lt;/div&gt;Stream-Attribute&lt;div&gt;&lt;span style=&quot;font-family: &amp;quot;Courier New&amp;quot;;&quot;&gt;attributes/&lt;/span&gt;&lt;br&gt;Zeit, DEFCON&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="240" x="140" y="350" as="geometry" />
         </mxCell>
-        <mxCell id="monitor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Monitor&lt;br&gt;bestehende Zugriffe" vertex="1">
+        <mxCell id="monitor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Userspace-PEP&lt;br&gt;bestehende Zugriffe" vertex="1">
           <mxGeometry height="70" width="240" x="140" y="460" as="geometry" />
         </mxCell>
         <mxCell id="procfs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Prozess- und Ressourcenstatus&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;/proc/*/fd&lt;/font&gt;, &lt;font face=&quot;Courier New&quot;&gt;/proc/net/*&lt;/font&gt;" vertex="1">
@@ -73,7 +73,7 @@
         <mxCell id="edge-attributes-monitor" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="aktuelle Attribute">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="geöffnete Dateien und Sockets">
+        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="geöffnete Dateien">
           <mxGeometry relative="1" y="90" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>

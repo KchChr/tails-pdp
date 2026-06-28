@@ -582,8 +582,12 @@ dependencies = [
  "env_logger",
  "libc",
  "log",
+ "tails-pdp-attribute-loader",
  "tails-pdp-common",
  "tails-pdp-ebpf",
+ "tails-pdp-policy-loader",
+ "tails-pdp-userspace-common",
+ "tails-pdp-userspace-pep",
  "tokio",
 ]
 
@@ -596,6 +600,19 @@ dependencies = [
  "clap",
  "libc",
  "tails-pdp-common",
+]
+
+[[package]]
+name = "tails-pdp-attribute-loader"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aya",
+ "libc",
+ "log",
+ "tails-pdp-common",
+ "tails-pdp-userspace-common",
+ "tokio",
 ]
 
 [[package]]
@@ -614,6 +631,41 @@ dependencies = [
  "aya-log-ebpf",
  "tails-pdp-common",
  "which 6.0.3",
+]
+
+[[package]]
+name = "tails-pdp-policy-loader"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aya",
+ "log",
+ "tails-pdp-common",
+ "tails-pdp-userspace-common",
+ "tokio",
+]
+
+[[package]]
+name = "tails-pdp-userspace-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aya",
+ "libc",
+ "tokio",
+]
+
+[[package]]
+name = "tails-pdp-userspace-pep"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aya",
+ "libc",
+ "log",
+ "tails-pdp-common",
+ "tails-pdp-userspace-common",
+ "tokio",
 ]
 
 [[package]]

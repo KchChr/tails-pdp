@@ -46,7 +46,7 @@ Linux Security Modules. Sicherheits-Framework im Linux-Kernel.
 
 ## LSM-Hook
 
-Konkreter Sicherheitsprüfpunkt im Kernel, z. B. `file_open` oder `socket_bind`.
+Konkreter Sicherheitsprüfpunkt im Kernel. Der Prototyp verwendet `file_open`.
 
 ## Map Pinning
 
@@ -56,6 +56,12 @@ von mehreren Prozessen geöffnet werden.
 ## PDP
 
 Policy Decision Point. Komponente, die eine Policy auswertet und eine Entscheidung trifft.
+
+## PEP
+
+Policy Enforcement Point. Komponente, die einen kontrollierten Zugriff abfängt beziehungsweise
+überwacht und eine Zugriffsentscheidung technisch durchsetzt. Der Prototyp besitzt einen
+Kernelspace-PEP für neue Dateiöffnungen und einen Userspace-PEP für bestehende Dateizugriffe.
 
 ## Permit
 
@@ -82,16 +88,6 @@ Ring Buffer.
 ## Rust
 
 Programmiersprache mit Fokus auf Speichersicherheit und Performance.
-
-## SAPL
-
-Policy-Sprache, an deren Struktur sich die `.sapl`-Dateien in diesem Projekt anlehnen. Das Projekt
-implementiert aber nur eine kleine, eigene Teilmenge.
-
-## Socket
-
-Kernel-Objekt für Netzwerkkommunikation. Bei `socket_bind` wird ein Socket an eine lokale IP und
-einen Port gebunden.
 
 ## Stack
 

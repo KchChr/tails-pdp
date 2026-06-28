@@ -2,14 +2,18 @@
 
 ## Komponenten
 
-Das Projekt ist ein Rust-Workspace mit vier Crates:
+Das Projekt ist ein Rust-Workspace mit acht Crates:
 
 | Crate | Aufgabe |
 | --- | --- |
-| `tails-pdp` | Userspace-Hauptprogramm. Lädt eBPF, startet Loader, Monitor und Zeit-Updater. |
+| `tails-pdp` | Hauptprogramm. Lädt eBPF und orchestriert die Userspace-Komponenten. |
+| `tails-pdp-policy-loader` | Liest und validiert Policies und schreibt kernelgeeignete Map-Einträge. |
+| `tails-pdp-attribute-loader` | Lädt strukturierte Attribute und aktualisiert die Zeit-Maps. |
+| `tails-pdp-userspace-pep` | Prüft bestehende Dateizugriffe nachträglich und entzieht unzulässige File Descriptors. |
+| `tails-pdp-userspace-common` | Gemeinsame Pin- und Dateisystem-Watcher-Infrastruktur für die Userspace-Crates. |
 | `tails-pdp-common` | Gemeinsame Typen und Policy-Auswertung für Userspace und eBPF. |
 | `tails-pdp-ebpf` | eBPF-Programme für LSM-Hooks. |
-| `tails-pdp-admintool` | CLI zum Anzeigen und direkten Bearbeiten gepinnter Maps. |
+| `tails-pdp-admintool` | Read-only-CLI zum Anzeigen gepinnter Maps. |
 
 Die Trennung ist wichtig, weil eBPF-Code andere Einschränkungen hat als normaler Userspace-Code.
 Die Policy-Logik liegt deshalb so weit wie möglich in `tails-pdp-common`, damit Kernel und
@@ -21,15 +25,17 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 | Pfad | Bedeutung |
 | --- | --- |
 | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Startpunkt des Hauptprogramms. |
-| [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) | Liest Policy-Dateien und schreibt Maps. |
-| [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs) | Überwacht laufende Prozesse und FDs. |
-| [`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) | Schließt FDs in fremden Prozessen per `ptrace`. |
-| [`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) | Aktualisiert Zeit-Maps. |
-| [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs) | Aktualisiert strukturierte Attribute wie `system.defcon`. |
-| [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs) | Prüft gepinnte Map-Layouts; enthält auch ältere Ladefunktionen. |
+| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Liest Policy-Dateien und schreibt Maps. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Überwacht laufende Prozesse und FDs. |
+| [`tails-pdp-userspace-pep/src/fd_revoker.rs`](../tails-pdp-userspace-pep/src/fd_revoker.rs) | Schließt FDs in fremden Prozessen per `ptrace`. |
+| [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Aktualisiert Zeit-Maps. |
+| [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs) | Aktualisiert strukturierte Attribute wie `system.defcon`. |
+| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft vor dem Laden die Layouts bereits gepinnter Maps. |
+| [`tails-pdp-userspace-common/src/lib.rs`](../tails-pdp-userspace-common/src/lib.rs) | Definiert Pin-Pfad und gemeinsame Funktionen zum Öffnen gepinnter Maps. |
+| [`tails-pdp-userspace-common/src/fs_watch.rs`](../tails-pdp-userspace-common/src/fs_watch.rs) | Rekursiver Linux-Verzeichnis-Watcher für Policy- und Attributänderungen. |
 | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Structs, Enums, Konstanten und Auswertungsfunktionen. |
 | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | Einstieg in die LSM-Hooks. |
-| [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Liest Kernel-Daten wie Inode, Device, IP und Port. |
+| [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Liest Kernel-Daten wie Inode und Device. |
 | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | Definiert alle eBPF-Maps. |
 | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | Static-/Stream-Auswertung und Kombinieren. |
 | [`tails-pdp-admintool/src/`](../tails-pdp-admintool/src/) | CLI-Parsing, Map-Zugriff und Ausgabe. |
@@ -43,16 +49,16 @@ Userspace mit Aya [P1], [Q3], [Q18], [Q20].
 Policy-Dateien in ./policies
         |
         v
-Policy-Compiler im Userspace
+Policyloader im Userspace
         |
-        | kompiliert Policies
+        | übersetzt Policies in kernelgeeignete Einträge
         v
 gepinnte eBPF-Maps unter /sys/fs/bpf/tails-pdp/
         |
         v
 eBPF-LSM-Hook im Kernel
         |
-        | liest aktuelle UID, Kommando, Datei oder Socket
+        | liest aktuelle UID, Kommando und Dateiidentität
         v
 Policy-Auswertung in tails-pdp-common
         |
@@ -60,8 +66,8 @@ Policy-Auswertung in tails-pdp-common
 Entscheidung: permit oder deny
 ```
 
-Der Policy-Compiler in diesem Ablauf steht in
-[`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs).
+Der Policyloader in diesem Ablauf steht in
+[`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs).
 
 ## Datenfluss bei `file_open`
 
@@ -102,39 +108,6 @@ Die konkrete Auswertung liegt in:
 Der Kernel-Teil liest die Ressource als `device + inode`, nicht als Pfad. Das ist robuster, weil im
 LSM-Hook ein vollständiger Pfad schwer und verifier-unfreundlich zu ermitteln ist.
 
-## Datenfluss bei `socket_bind`
-
-```text
-Prozess ruft bind() auf
-        |
-        v
-LSM-Hook socket_bind
-        |
-        v
-Hook-Einstieg
-        |
-        | Tail Call
-        v
-evaluate_socket_bind_static_policies
-        |
-        | Tail Call
-        v
-evaluate_socket_bind_stream_policies
-        |
-        | Tail Call
-        v
-combine_socket_bind
-        |
-        v
-0 = erlauben, -1 = verweigern
-```
-
-Der Hook-Einstieg liegt in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) in der
-Funktion `socket_bind`.
-
-Der Hook liest lokale IP, Port, IP-Familie und Transportprotokoll. Das passiert in
-[`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs), besonders in `read_socket_bind_resource`.
-
 ## Warum Tail Calls?
 
 Ein Tail Call ist ein Sprung von einem eBPF-Programm in ein anderes eBPF-Programm über eine
@@ -148,10 +121,7 @@ kann. Statt alle Logik in einem Programm zu bündeln, wird die Auswertung aufget
 - Stream Policies
 - Combine-Schritt
 
-Die ProgramArray-Maps heißen:
-
-- `FILE_OPEN_JUMP_TABLE`
-- `SOCKET_BIND_JUMP_TABLE`
+Die ProgramArray-Map heißt `FILE_OPEN_JUMP_TABLE`.
 
 Sie werden im Userspace in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) befüllt.
 
@@ -175,10 +145,8 @@ Beispiel Stream Policy:
 
 ```sapl
 deny
-    action == "socket_bind";
-    resource.family == "inet";
-    resource.ip == "0.0.0.0";
-    resource.port == 8443;
+    action == "file_open";
+    resource.path == "/home/hntr/test.txt";
     environment.utc.hour < 8;
 ```
 

@@ -9,19 +9,21 @@ Es ist verantwortlich für:
 - eBPF-Objekt laden
 - LSM-Programme laden und anhängen
 - Tail-Call-Maps befüllen
-- gepinnte Maps prüfen und öffnen
-- Policy-Verzeichnis überwachen
-- Zeit-Maps aktualisieren
-- strukturierte Attribute wie `system.defcon` aktualisieren
-- Userspace-Monitor starten
+- Layouts bereits gepinnter Maps prüfen
+- initiale Policy- und Attributsynchronisation koordinieren
+- Policyloader, Attributloader und Userspace-PEP parallel ausführen
 - Logging konfigurieren
 
 Der zentrale Loader ist `EbpfLoader::new()`. Das eBPF-Objekt wird mit
 `aya::include_bytes_aligned!` eingebettet [P1], [Q3], [Q20].
 
+Die fachlichen Userspace-Komponenten sind als eigene Library-Crates umgesetzt, laufen aber
+weiterhin gemeinsam im Prozess `tails-pdp`. Dadurch bleiben Startreihenfolge und Lebenszyklus der
+LSM-Links zentral kontrolliert. Die gepinnten Maps bilden die gemeinsame Schnittstelle der Crates.
+
 ## Policy-Loader aus Dateien
 
-Die Datei [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs) lädt Policies aus dem Ordner [`policies/`](../policies/).
+Die Datei [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) lädt Policies aus dem Ordner [`policies/`](../policies/).
 
 Wichtige Typen:
 
@@ -30,7 +32,7 @@ Wichtige Typen:
 | `PolicyDirectorySync` | Verwaltet den laufenden Sync des Policy-Ordners. |
 | `PolicyDocument` | Eine gelesene `.sapl`-Datei. |
 | `ParsedPolicy` | Zwischendarstellung nach dem Parsen. |
-| `CompiledPolicies` | Fertige Policy-Structs für die Maps. |
+| `TranslatedPolicies` | Fertige kernelgeeignete Policy-Structs für die Maps. |
 | `PinnedPolicyMaps` | Geöffnete gepinnte Policy-Maps. |
 
 ## Policy-Sync-Ablauf
@@ -42,7 +44,7 @@ Wichtige Typen:
 parse_policy_document
         |
         v
-compile_policy
+translate_policy
         |
         v
 inactive Policy-Bank schreiben
@@ -77,7 +79,7 @@ unnötige Map-Schreibzugriffe.
 
 ## Zeit-Updater
 
-[`tails-pdp/src/time.rs`](../tails-pdp/src/time.rs) aktualisiert zwei Maps:
+[`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) aktualisiert zwei Maps:
 
 - `CURRENT_TIME`
 - `CURRENT_TIME_ISO8601`
@@ -101,7 +103,7 @@ environment.utc.hour < 8;
 
 ## Strukturierte Attribute
 
-Zusätzlich überwacht [`tails-pdp/src/stream_attributes.rs`](../tails-pdp/src/stream_attributes.rs)
+Zusätzlich überwacht [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs)
 das Verzeichnis [`attributes/`](../attributes/). Globale Attribute stehen in `system.attributes`,
 subjektbezogene Attribute in `subjects/<uid>.attributes` und dateibezogene Ressourcenattribute in
 `resources/<pfad>.attributes`. Für Ressourcen wird der absolute Pfad ohne führenden `/` verwendet, zum
@@ -131,17 +133,17 @@ classification = "internal"
 clearanceLevel = 3
 ```
 
-## Monitor
+## Userspace-PEP
 
-Der Monitor steht in [`tails-pdp/src/monitor.rs`](../tails-pdp/src/monitor.rs).
+Der Userspace-PEP steht in [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs).
 
-Er löst ein anderes Problem als der LSM-Hook. Der LSM-Hook sieht nur den Moment, in dem etwas
+Der eBPF-LSM-Hook bildet den Kernelspace-PEP für neue Dateiöffnungen. Der zusätzliche
+Userspace-PEP löst ein anderes Problem: Der LSM-Hook sieht nur den Moment, in dem etwas
 passiert. Wenn eine Policy später aktiv wird, ist der Hook für bereits geöffnete Ressourcen schon
 vorbei.
 
-Der Monitor prüft deshalb regelmäßig laufende Prozesse:
+Der Userspace-PEP prüft deshalb regelmäßig laufende Prozesse:
 
-- aktive Sockets aus `/proc/net/tcp`, `/proc/net/tcp6`, `/proc/net/udp`, `/proc/net/udp6`
 - offene File Descriptors aus `/proc/<pid>/fd`
 - Prozessinformationen aus `/proc/<pid>/status`
 
@@ -149,16 +151,16 @@ Danach verwendet er dieselben Funktionen aus `tails-pdp-common` wie der Kernel-T
 
 - `evaluate_file_open_static_policy`
 - `evaluate_file_open_stream_policy`
-- `evaluate_socket_bind_static_policy`
-- `evaluate_socket_bind_stream_policy`
 
-Wenn eine Deny-Policy zutrifft, erzeugt der Monitor eine Violation. Die `/proc`-Schnittstellen und
+Wenn eine Deny-Policy zutrifft, erzeugt der Userspace-PEP eine Violation und setzt die Entscheidung
+durch Schließen des konkreten File Descriptors durch. Er enthält damit neben der Enforcement-Funktion
+auch die für die Nachbewertung erforderliche Entscheidungslogik. Die `/proc`-Schnittstellen und
 `ptrace` sind Linux-Interfaces und werden durch die Man-Pages beziehungsweise Kernel-Dokumentation
 beschrieben [Q12], [Q13], [Q14], [Q15].
 
 ## FD-Revocation
 
-[`tails-pdp/src/fd_revoker.rs`](../tails-pdp/src/fd_revoker.rs) versucht, einen File Descriptor in einem fremden Prozess zu schließen.
+[`tails-pdp-userspace-pep/src/fd_revoker.rs`](../tails-pdp-userspace-pep/src/fd_revoker.rs) versucht, einen File Descriptor in einem fremden Prozess zu schließen.
 
 Das geschieht auf x86_64 Linux per `ptrace`:
 
@@ -186,9 +188,9 @@ Wichtige Dateien:
 | `lib.rs` | Führt Kommandos aus. |
 | `main.rs` | Kleiner Einstieg, ruft `tails_pdp_admintool::run()`. |
 
-Heute ist das Admin-Tool primär ein Inspektionswerkzeug. Es kann Maps zwar direkt verändern, aber
-der Policy-Ordner [`policies/`](../policies/) ist die eigentliche Quelle der Wahrheit. Direkte Map-Änderungen werden
-beim nächsten erfolgreichen Policy-Sync überschrieben.
+Das Admin-Tool ist ein reines Inspektionswerkzeug. Es öffnet die gepinnten Maps lesend und zeigt
+geladene Policies, Attribute und Generationen an. Änderungen erfolgen ausschließlich über die
+Policy- und Attributdateien.
 
 ## Logging
 

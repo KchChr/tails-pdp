@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::Context;
-use aya::maps::{Array, HashMap as AyaHashMap, Map, MapData};
+use aya::maps::{Array, HashMap as AyaHashMap, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeValue, Entitlement, FileOpenRequest, FileOpenStaticPolicy,
@@ -18,9 +18,10 @@ use tails_pdp_common::{
     file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
     matches_attribute_condition, policy_bank_offset,
 };
+use tails_pdp_userspace_common::{open_pinned_array, open_pinned_hash_map};
 use tokio::time;
 
-use crate::{BPF_PIN_DIRECTORY, fd_revoker::close_remote_fd};
+use crate::fd_revoker::close_remote_fd;
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
@@ -93,7 +94,7 @@ struct PolicyMaps {
     attributes: AttributeMap,
 }
 
-pub async fn run_policy_monitor() -> anyhow::Result<()> {
+pub async fn run_userspace_pep() -> anyhow::Result<()> {
     let mut policies = open_policy_maps()?;
     let mut previous_violations = HashSet::new();
     let mut interval = time::interval(Duration::from_secs(1));
@@ -122,7 +123,7 @@ pub async fn run_policy_monitor() -> anyhow::Result<()> {
                 previous_violations = current_keys;
             }
             Err(error) => {
-                warn!("MONITOR scan failed: {error:#}");
+                warn!("USERSPACE_PEP scan failed: {error:#}");
             }
         }
     }
@@ -130,44 +131,12 @@ pub async fn run_policy_monitor() -> anyhow::Result<()> {
 
 fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
     Ok(PolicyMaps {
-        policy_generation: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("POLICY_GENERATION"),
-            "POLICY_GENERATION",
-        )?,
-        file_open_static: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STATIC_POLICIES"),
-            "FILE_OPEN_STATIC_POLICIES",
-        )?,
-        file_open_stream: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("FILE_OPEN_STREAM_POLICIES"),
-            "FILE_OPEN_STREAM_POLICIES",
-        )?,
-        attribute_generation: open_array_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("ATTRIBUTE_GENERATION"),
-            "ATTRIBUTE_GENERATION",
-        )?,
-        attributes: open_hash_map(
-            &Path::new(BPF_PIN_DIRECTORY).join("ATTRIBUTES"),
-            "ATTRIBUTES",
-        )?,
+        policy_generation: open_pinned_array("POLICY_GENERATION")?,
+        file_open_static: open_pinned_array("FILE_OPEN_STATIC_POLICIES")?,
+        file_open_stream: open_pinned_array("FILE_OPEN_STREAM_POLICIES")?,
+        attribute_generation: open_pinned_array("ATTRIBUTE_GENERATION")?,
+        attributes: open_pinned_hash_map("ATTRIBUTES")?,
     })
-}
-
-fn open_array_map<T: aya::Pod>(path: &Path, label: &str) -> anyhow::Result<Array<MapData, T>> {
-    let map_data = MapData::from_pin(path)
-        .with_context(|| format!("failed to open pinned map '{}'", path.display()))?;
-    let map = Map::Array(map_data);
-    Array::try_from(map).with_context(|| format!("failed to open {label} as array map"))
-}
-
-fn open_hash_map<K: aya::Pod, V: aya::Pod>(
-    path: &Path,
-    label: &str,
-) -> anyhow::Result<AyaHashMap<MapData, K, V>> {
-    let map_data = MapData::from_pin(path)
-        .with_context(|| format!("failed to open pinned map '{}'", path.display()))?;
-    let map = Map::HashMap(map_data);
-    AyaHashMap::try_from(map).with_context(|| format!("failed to open {label} as hash map"))
 }
 
 fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Violation>> {
@@ -409,7 +378,7 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
     match close_remote_fd(violation.key.pid, violation.key.fd) {
         Ok(()) => {
             info!(
-                "MONITOR closed pid={} fd={} for {:?} policy {:?}[{}]",
+                "USERSPACE_PEP closed pid={} fd={} for {:?} policy {:?}[{}]",
                 violation.key.pid,
                 violation.key.fd,
                 violation.key.resource_kind,
@@ -419,7 +388,7 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
         }
         Err(error) => {
             warn!(
-                "MONITOR failed to close pid={} fd={} for {:?} policy {:?}[{}]: {error:#}",
+                "USERSPACE_PEP failed to close pid={} fd={} for {:?} policy {:?}[{}]: {error:#}",
                 violation.key.pid,
                 violation.key.fd,
                 violation.key.resource_kind,
@@ -584,7 +553,7 @@ fn print_violation(violation: &Violation) {
     match &violation.resource {
         ViolationResource::File { device, inode } => {
             warn!(
-                "MONITOR file_open violation policy={:?}[{}] uid={} pid={} fd={} comm={} dev={} ino={}",
+                "USERSPACE_PEP file_open violation policy={:?}[{}] uid={} pid={} fd={} comm={} dev={} ino={}",
                 violation.key.policy_kind,
                 violation.key.policy_index,
                 violation.subject,
@@ -595,5 +564,18 @@ fn print_violation(violation: &Violation) {
                 inode,
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_only_numeric_process_and_fd_names() {
+        assert_eq!(parse_pid(OsString::from("1234")), Some(1234));
+        assert_eq!(parse_pid(OsString::from("self")), None);
+        assert_eq!(parse_fd(OsString::from("17")), Some(17));
+        assert_eq!(parse_fd(OsString::from("cwd")), None);
     }
 }

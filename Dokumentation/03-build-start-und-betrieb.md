@@ -94,10 +94,10 @@ TAILS_PDP_EBPF_DEBUG=1 RUST_LOG=info sudo -E ./target/release/tails-pdp
 6. LSM-Programme mit BTF laden.
 7. Debug-Logging-Map setzen.
 8. Tail-Call-Maps befüllen.
-9. Zeit-Maps öffnen.
-10. Policy-Sync initial ausführen.
-11. Einstiegshooks `file_open` und `socket_bind` anhängen.
-12. Zeit-Updater, Policy-Sync, Monitor und Ctrl-C-Wait parallel ausführen.
+9. Gepinnte Zeit- und Attribut-Maps über die Loader-Crates öffnen.
+10. Policy-, Zeit- und Attributzustand initial synchronisieren.
+11. Einstiegshook `file_open` anhängen.
+12. Zeit-Updater, Attributloader, Policyloader, Userspace-PEP und Ctrl-C-Wait parallel ausführen.
 
 ## Rechte
 
@@ -129,8 +129,6 @@ Lösung:
 ```shell
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STATIC_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/SOCKET_BIND_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601

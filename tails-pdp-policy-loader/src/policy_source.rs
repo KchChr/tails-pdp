@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, anyhow, bail};
-use aya::maps::{Array, Map, MapData};
+use aya::maps::{Array, MapData};
 use log::{error, info};
 use tails_pdp_common::{
     ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_LEN,
@@ -13,9 +13,8 @@ use tails_pdp_common::{
     POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily, SocketTransport, StreamAttribute,
     StreamOperator, attribute_hash, policy_bank_offset,
 };
+use tails_pdp_userspace_common::{fs_watch, open_pinned_array};
 use tokio::time::{Duration, sleep};
-
-use crate::{BPF_PIN_DIRECTORY, fs_watch};
 
 const POLICY_DIRECTORY_NAME: &str = "policies";
 const POLICY_FILE_EXTENSION: &str = "sapl";
@@ -32,7 +31,7 @@ struct PolicyDocument {
 }
 
 #[derive(Default)]
-struct CompiledPolicies {
+struct TranslatedPolicies {
     file_open_static: Vec<FileOpenStaticPolicy>,
     file_open_stream: Vec<FileOpenStreamPolicy>,
 }
@@ -111,14 +110,14 @@ impl PolicyDirectorySync {
 
     pub fn sync_initial(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
-        match compile_policy_documents(&documents).and_then(|compiled| {
-            let generation = self.maps.commit(&compiled)?;
-            Ok((compiled, generation))
+        match translate_policy_documents(&documents).and_then(|translated| {
+            let generation = self.maps.commit(&translated)?;
+            Ok((translated, generation))
         }) {
-            Ok((compiled, generation)) => {
+            Ok((translated, generation)) => {
                 self.last_applied_documents = Some(documents);
                 self.last_failed_documents = None;
-                print_policy_summary(&self.policy_dir, generation, &compiled);
+                print_policy_summary(&self.policy_dir, generation, &translated);
             }
             Err(error) => {
                 error!(
@@ -149,14 +148,14 @@ impl PolicyDirectorySync {
             return Ok(());
         }
 
-        match compile_policy_documents(&documents).and_then(|compiled| {
-            let generation = self.maps.commit(&compiled)?;
-            Ok((compiled, generation))
+        match translate_policy_documents(&documents).and_then(|translated| {
+            let generation = self.maps.commit(&translated)?;
+            Ok((translated, generation))
         }) {
-            Ok((compiled, generation)) => {
+            Ok((translated, generation)) => {
                 self.last_applied_documents = Some(documents);
                 self.last_failed_documents = None;
-                print_policy_summary(&self.policy_dir, generation, &compiled);
+                print_policy_summary(&self.policy_dir, generation, &translated);
             }
             Err(error) => {
                 error!(
@@ -173,9 +172,9 @@ impl PolicyDirectorySync {
 impl PinnedPolicyMaps {
     fn open() -> anyhow::Result<Self> {
         Ok(Self {
-            policy_generation: open_array_map("POLICY_GENERATION")?,
-            file_open_static: open_array_map("FILE_OPEN_STATIC_POLICIES")?,
-            file_open_stream: open_array_map("FILE_OPEN_STREAM_POLICIES")?,
+            policy_generation: open_pinned_array("POLICY_GENERATION")?,
+            file_open_static: open_pinned_array("FILE_OPEN_STATIC_POLICIES")?,
+            file_open_stream: open_pinned_array("FILE_OPEN_STREAM_POLICIES")?,
         })
     }
 
@@ -185,14 +184,14 @@ impl PinnedPolicyMaps {
             .context("failed to read POLICY_GENERATION[0]")
     }
 
-    fn commit(&mut self, compiled: &CompiledPolicies) -> anyhow::Result<u32> {
+    fn commit(&mut self, translated: &TranslatedPolicies) -> anyhow::Result<u32> {
         let current_generation = self.active_generation()?;
         let next_generation = current_generation.wrapping_add(1);
         let bank_offset = policy_bank_offset(next_generation);
 
         // Write the inactive bank first. The old generation remains active unless this final
         // POLICY_GENERATION write succeeds.
-        self.write_bank(compiled, bank_offset)?;
+        self.write_bank(translated, bank_offset)?;
         self.policy_generation
             .set(0, next_generation, 0)
             .context("failed to commit POLICY_GENERATION[0]")?;
@@ -200,17 +199,21 @@ impl PinnedPolicyMaps {
         Ok(next_generation)
     }
 
-    fn write_bank(&mut self, compiled: &CompiledPolicies, bank_offset: u32) -> anyhow::Result<()> {
+    fn write_bank(
+        &mut self,
+        translated: &TranslatedPolicies,
+        bank_offset: u32,
+    ) -> anyhow::Result<()> {
         write_array_bank(
             &mut self.file_open_static,
-            &compiled.file_open_static,
+            &translated.file_open_static,
             FileOpenStaticPolicy::disabled(),
             "FILE_OPEN_STATIC_POLICIES",
             bank_offset,
         )?;
         write_array_bank(
             &mut self.file_open_stream,
-            &compiled.file_open_stream,
+            &translated.file_open_stream,
             FileOpenStreamPolicy::disabled(),
             "FILE_OPEN_STREAM_POLICIES",
             bank_offset,
@@ -223,14 +226,6 @@ pub fn default_policy_directory() -> anyhow::Result<PathBuf> {
     Ok(env::current_dir()
         .context("failed to determine current working directory")?
         .join(POLICY_DIRECTORY_NAME))
-}
-
-fn open_array_map<T: aya::Pod>(map_name: &str) -> anyhow::Result<Array<MapData, T>> {
-    let pin_path = Path::new(BPF_PIN_DIRECTORY).join(map_name);
-    let map_data = MapData::from_pin(&pin_path)
-        .with_context(|| format!("failed to open pinned map '{}'", pin_path.display()))?;
-    let map = Map::Array(map_data);
-    Array::try_from(map).with_context(|| format!("failed to open {map_name} as array map"))
 }
 
 fn write_array_bank<T: aya::Pod + Copy>(
@@ -318,9 +313,9 @@ fn read_policy_documents_recursive(
     Ok(())
 }
 
-fn compile_policy_documents(documents: &[PolicyDocument]) -> anyhow::Result<CompiledPolicies> {
+fn translate_policy_documents(documents: &[PolicyDocument]) -> anyhow::Result<TranslatedPolicies> {
     let mut names = HashSet::new();
-    let mut compiled = CompiledPolicies::default();
+    let mut translated = TranslatedPolicies::default();
 
     for document in documents {
         let parsed = parse_policy_document(document)?;
@@ -331,10 +326,10 @@ fn compile_policy_documents(documents: &[PolicyDocument]) -> anyhow::Result<Comp
                 document.relative_path.display()
             );
         }
-        compile_policy(&mut compiled, parsed)?;
+        translate_policy(&mut translated, parsed)?;
     }
 
-    Ok(compiled)
+    Ok(translated)
 }
 
 fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPolicy> {
@@ -523,7 +518,10 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     })
 }
 
-fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyhow::Result<()> {
+fn translate_policy(
+    translated: &mut TranslatedPolicies,
+    parsed: ParsedPolicy,
+) -> anyhow::Result<()> {
     if parsed.stream_conditions.is_empty() {
         match parsed.action {
             PolicyAction::FileOpen => {
@@ -545,7 +543,7 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                         parsed.source_path.display()
                     )
                 })?;
-                compiled.file_open_static.push(policy);
+                translated.file_open_static.push(policy);
             }
             PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
         }
@@ -573,15 +571,15 @@ fn compile_policy(compiled: &mut CompiledPolicies, parsed: ParsedPolicy) -> anyh
                 })?;
                 apply_legacy_stream_condition_file_open(&mut policy, legacy_condition);
                 apply_attribute_conditions_file_open(&mut policy, &attribute_conditions);
-                compiled.file_open_stream.push(policy);
+                translated.file_open_stream.push(policy);
             }
             PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
         }
     }
 
     ensure_policy_capacity(
-        compiled.file_open_static.len(),
-        compiled.file_open_stream.len(),
+        translated.file_open_static.len(),
+        translated.file_open_stream.len(),
     )?;
 
     Ok(())
@@ -1031,12 +1029,64 @@ fn apply_attribute_conditions_file_open(
     }
 }
 
-fn print_policy_summary(policy_dir: &Path, generation: u32, compiled: &CompiledPolicies) {
+fn print_policy_summary(policy_dir: &Path, generation: u32, translated: &TranslatedPolicies) {
     info!(
         "POLICY sync ok dir={} generation={} file_open_static={} file_open_stream={}",
         policy_dir.display(),
         generation,
-        compiled.file_open_static.len(),
-        compiled.file_open_stream.len(),
+        translated.file_open_static.len(),
+        translated.file_open_stream.len(),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn document(source: &str) -> PolicyDocument {
+        PolicyDocument {
+            relative_path: PathBuf::from("test.sapl"),
+            source: source.to_owned(),
+        }
+    }
+
+    #[test]
+    fn translates_dynamic_subject_attribute() {
+        let translated = translate_policy_documents(&[document(
+            r#"
+            policy "engineers only"
+            permit
+                action == "file_open";
+                subject.position == "engineer";
+            "#,
+        )])
+        .expect("policy should be translated");
+
+        assert!(translated.file_open_static.is_empty());
+        assert_eq!(translated.file_open_stream.len(), 1);
+        let policy = translated.file_open_stream[0];
+        assert_eq!(policy.attribute_condition_count, 1);
+        assert_eq!(
+            policy.attribute_conditions[0].name_hash,
+            attribute_hash("position")
+        );
+    }
+
+    #[test]
+    fn rejects_unsupported_attribute_name() {
+        let result = translate_policy_documents(&[document(
+            r#"
+            policy "invalid attribute"
+            permit
+                action == "file_open";
+                subject.clearance.level == 3;
+            "#,
+        )]);
+        let error = match result {
+            Ok(_) => panic!("attribute name should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(error.to_string().contains("unsupported characters"));
+    }
 }

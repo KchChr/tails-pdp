@@ -8,8 +8,8 @@ Der Userspace-Code nutzt überwiegend `anyhow::Result` und ergänzt Fehler mit K
 Beispiele:
 
 - [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs): fehlende Programme oder Maps werden mit Namen gemeldet.
-- [`tails-pdp/src/policy_source.rs`](../tails-pdp/src/policy_source.rs): Parserfehler enthalten Dateiname und Zeile.
-- [`tails-pdp/src/policy_loader.rs`](../tails-pdp/src/policy_loader.rs): inkompatible gepinnte Maps nennen erwartete und gefundene Größe.
+- [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs): Parserfehler enthalten Dateiname und Zeile.
+- [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs): inkompatible gepinnte Maps nennen erwartete und gefundene Größe.
 - [`tails-pdp-admintool/src/lib.rs`](../tails-pdp-admintool/src/lib.rs): ungültige CLI-Werte werden abgelehnt.
 
 Das ist für Debugging wichtig, weil viele eBPF-Fehler sonst schwer verständlich sind.
@@ -25,7 +25,7 @@ Warum kritisch?
 
 Userspace und Kernel würden sonst dieselben Bytes unterschiedlich interpretieren.
 
-### Fehlgeschlagene Policy-Kompilierung
+### Fehlgeschlagene Policy-Verarbeitung
 
 Wenn eine `.sapl`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
 werden. `PolicyDirectorySync` hält deshalb die letzte funktionierende Generation aktiv [P3].
@@ -101,7 +101,7 @@ Siehe auch [Offene Punkte](10-offene-punkte.md).
 
 Besonders wichtig wären:
 
-1. Mehr automatisierte Tests für Parser, Generationen und Monitor.
+1. Mehr automatisierte Tests für Parser, Generationen und Userspace-PEP.
 2. Klarere Trennung zwischen reinem Monitoring und Enforcement.
 3. Abstraktion der Map-Zugriffe für bessere Testbarkeit.
 4. Dokumentierte Policy-Konfliktstrategie: Deny-overrides oder Permit-overrides.

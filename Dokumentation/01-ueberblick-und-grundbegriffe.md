@@ -19,17 +19,16 @@ Diese Regel bedeutet vereinfacht:
 Ein Prozess mit UID `1000`, dessen Kommando `cat` heißt, darf die Datei
 `/home/hntr/test.txt` nicht öffnen.
 
-Aktuell werden zwei Aktionen unterstützt:
+Aktuell wird eine Aktion unterstützt:
 
 | Aktion | Linux-Kontext | Beispiel |
 | --- | --- | --- |
 | `file_open` | Öffnen einer Datei | `cat /home/hntr/test.txt` |
-| `socket_bind` | Binden eines lokalen Ports | Programm bindet `0.0.0.0:8080` |
 
 ## Welches Problem löst das Projekt?
 
-Normale Dateirechte oder Firewall-Regeln sind oft grob. Sie sagen zum Beispiel, ob ein Benutzer eine
-Datei lesen darf oder ob ein Port erreichbar ist. `tails-pdp` versucht, feiner zu entscheiden:
+Normale Dateirechte sind oft grob. Sie sagen zum Beispiel, ob ein Benutzer eine Datei lesen darf.
+`tails-pdp` versucht, feiner zu entscheiden:
 
 - Welcher Benutzer handelt?
 - Welches Programm handelt?
@@ -43,6 +42,10 @@ und eine Entscheidung trifft. Die konkrete Auswertung liegt in `tails-pdp-common
 in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs), und die aktiven Policies werden über eBPF-Maps bereitgestellt
 [P8], [P10], [P12]. Die Begriffe eBPF, Map und LSM orientieren sich an der Linux-Kernel-
 Dokumentation [Q4], [Q5], [Q9], [Q10].
+
+PEP steht für Policy Enforcement Point. Der eBPF-LSM-Hook ist der Kernelspace-PEP für neue
+Dateiöffnungen. Der Userspace-PEP kontrolliert bereits bestehende Dateizugriffe nach Änderungen von
+Policies oder Attributen erneut.
 
 ## Rust
 
@@ -96,12 +99,10 @@ Konkrete Beispiele:
 Linux Security Modules, kurz LSM, sind Schnittstellen im Linux-Kernel, an denen Sicherheitsprüfungen
 eingehängt werden können. Bekannte Systeme wie SELinux oder AppArmor nutzen ebenfalls LSM-Konzepte.
 
-Ein LSM-Hook ist ein konkreter Prüfpunkte im Kernel. Beispiel:
+Ein LSM-Hook ist ein konkreter Prüfpunkt im Kernel. Im Prototyp wird verwendet:
 
 - `file_open`: wird aufgerufen, wenn eine Datei geöffnet werden soll.
-- `socket_bind`: wird aufgerufen, wenn ein Prozess einen lokalen Socket bindet.
-
-In diesem Projekt hängen eBPF-Programme an genau diesen Hooks.
+Das eBPF-Programm ist an diesen Hook angebunden.
 
 ## Maps
 
@@ -114,8 +115,6 @@ Beispiele aus [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs):
 | --- | --- |
 | `FILE_OPEN_STATIC_POLICIES` | Static Policies für `file_open`. |
 | `FILE_OPEN_STREAM_POLICIES` | Stream Policies für `file_open`. |
-| `SOCKET_BIND_STATIC_POLICIES` | Static Policies für `socket_bind`. |
-| `SOCKET_BIND_STREAM_POLICIES` | Stream Policies für `socket_bind`. |
 | `POLICY_GENERATION` | Aktive Policy-Generation. |
 | `DECISIONS` | Zwischenentscheidung innerhalb einer Tail-Call-Kette. |
 | `CURRENT_TIME` | Aktuelle Unix-Zeit für Stream-Policies. |
@@ -133,7 +132,7 @@ wichtig: Kernel-Events werden nicht als Eventstrom in den Userspace geschickt.
 Stattdessen gibt es zwei andere Mechanismen:
 
 - Debug-Ausgaben im Kernel über `bpf_printk!`, sichtbar über `trace_pipe`.
-- Userspace-Monitoring über `/proc`, zum Beispiel `/proc/net/tcp` und `/proc/<pid>/fd`.
+- Nachträgliche Kontrolle durch den Userspace-PEP über `/proc/<pid>/fd`.
 
 ## Verifier
 

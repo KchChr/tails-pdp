@@ -1,16 +1,6 @@
-pub mod fd_revoker;
-mod fs_watch;
-pub mod monitor;
-pub mod policy_loader;
-pub mod policy_source;
-pub mod stream_attributes;
-pub mod time;
-
 pub const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;
 pub const TAIL_IDX_FILE_OPEN_STREAM: u32 = 1;
 pub const TAIL_IDX_FILE_OPEN_COMBINE: u32 = 2;
-pub const BPF_PIN_DIRECTORY: &str = "/sys/fs/bpf/tails-pdp";
-
 pub struct LsmProgramSpec {
     pub name: &'static str,
     pub hook: &'static str,
