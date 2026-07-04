@@ -8,6 +8,10 @@
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp-admin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp-maps/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tails-pdp-admintool/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-attribute-loader/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-policy-loader/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-userspace-common/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tails-pdp-userspace-pep/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
