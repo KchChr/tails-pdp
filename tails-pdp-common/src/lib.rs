@@ -21,6 +21,11 @@ pub const DEFCON_MIN_LEVEL: u32 = 1;
 pub const DEFCON_MAX_LEVEL: u32 = 5;
 pub const DEFAULT_DEFCON_LEVEL: u32 = DEFCON_MAX_LEVEL;
 
+/// Linux LSM return value used when this policy engine permits an operation.
+pub const LSM_ALLOW: i32 = 0;
+/// Linux LSM return value used when this policy engine denies an operation (`-EPERM`).
+pub const LSM_DENY: i32 = -1;
+
 pub const FILE_OPEN_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 pub const FILE_OPEN_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 pub const SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
@@ -682,6 +687,10 @@ impl SocketBindStreamPolicy {
         }
     }
 
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "preserve the public constructor and keep its arguments aligned with the fixed map record"
+    )]
     pub fn time(
         entitlement: Entitlement,
         subject: u32,
@@ -766,6 +775,11 @@ impl DecisionState {
         if other.permit != 0 {
             self.permit = 1;
         }
+    }
+
+    /// Applies the project's deny-overrides combining rule to an LSM return value.
+    pub const fn lsm_return_value(self) -> i32 {
+        if self.deny != 0 { LSM_DENY } else { LSM_ALLOW }
     }
 }
 
@@ -1165,6 +1179,18 @@ mod tests {
             value_number,
             value_hash,
         }
+    }
+
+    #[test]
+    fn decision_state_uses_deny_overrides() {
+        assert_eq!(DecisionState::empty().lsm_return_value(), LSM_ALLOW);
+
+        let mut permit_only = DecisionState::empty();
+        permit_only.record(Entitlement::Permit);
+        assert_eq!(permit_only.lsm_return_value(), LSM_ALLOW);
+
+        permit_only.record(Entitlement::Deny);
+        assert_eq!(permit_only.lsm_return_value(), LSM_DENY);
     }
 
     #[test]

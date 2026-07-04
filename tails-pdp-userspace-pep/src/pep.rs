@@ -94,6 +94,15 @@ struct PolicyMaps {
     attributes: AttributeMap,
 }
 
+/// Immutable inputs shared by every file-descriptor evaluation in one `/proc` scan.
+struct ScanContext<'a> {
+    current_time: u64,
+    current_iso8601_time: Iso8601TimeParts,
+    current_attribute_bank: u32,
+    policy_bank_offset: u32,
+    inotify_fds: &'a HashMap<u32, Vec<i32>>,
+}
+
 pub async fn run_userspace_pep() -> anyhow::Result<()> {
     let mut policies = open_policy_maps()?;
     let mut previous_violations = HashSet::new();
@@ -148,8 +157,18 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let process_fds = read_process_fds();
     let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let (current_time, current_iso8601_time) = current_utc_time()?;
-    let current_attribute_bank =
-        attribute_bank(policies.attribute_generation.get(&0, 0).unwrap_or(0));
+    let attribute_generation = policies
+        .attribute_generation
+        .get(&0, 0)
+        .context("failed to read ATTRIBUTE_GENERATION[0] for monitor")?;
+    let current_attribute_bank = attribute_bank(attribute_generation);
+    let scan = ScanContext {
+        current_time,
+        current_iso8601_time,
+        current_attribute_bank,
+        policy_bank_offset: bank_offset,
+        inotify_fds: &inotify_fds,
+    };
     let mut violations = Vec::new();
 
     for process_fd in process_fds {
@@ -159,11 +178,7 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
                 *device,
                 *inode,
                 policies,
-                current_time,
-                current_iso8601_time,
-                current_attribute_bank,
-                bank_offset,
-                &inotify_fds,
+                &scan,
                 &mut violations,
             )?,
             FdTarget::Inotify => {}
@@ -178,11 +193,7 @@ fn collect_file_open_violations(
     device: u64,
     inode: u64,
     policies: &mut PolicyMaps,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
-    current_attribute_bank: u32,
-    bank_offset: u32,
-    inotify_fds: &HashMap<u32, Vec<i32>>,
+    scan: &ScanContext<'_>,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
     let request = FileOpenRequest {
@@ -193,7 +204,7 @@ fn collect_file_open_violations(
     };
 
     for index in 0..POLICY_BANK_SIZE {
-        let map_index = bank_offset + index;
+        let map_index = scan.policy_bank_offset + index;
         let policy = policies
             .file_open_static
             .get(&map_index, 0)
@@ -214,14 +225,14 @@ fn collect_file_open_violations(
                 index,
                 device,
                 inode,
-                inotify_fds,
+                scan.inotify_fds,
                 violations,
             );
         }
     }
 
     for index in 0..POLICY_BANK_SIZE {
-        let map_index = bank_offset + index;
+        let map_index = scan.policy_bank_offset + index;
         let policy = policies
             .file_open_stream
             .get(&map_index, 0)
@@ -235,11 +246,14 @@ fn collect_file_open_violations(
                 request.subject,
                 request.resource_device,
                 request.resource_inode,
-                current_attribute_bank,
+                scan.current_attribute_bank,
                 &policies.attributes,
             )
-            && file_open_stream_legacy_entitlement(current_time, current_iso8601_time, &policy)
-                == Some(Entitlement::Deny)
+            && file_open_stream_legacy_entitlement(
+                scan.current_time,
+                scan.current_iso8601_time,
+                &policy,
+            ) == Some(Entitlement::Deny)
         {
             violations.push(file_violation(
                 process_fd,
@@ -254,7 +268,7 @@ fn collect_file_open_violations(
                 index,
                 device,
                 inode,
-                inotify_fds,
+                scan.inotify_fds,
                 violations,
             );
         }

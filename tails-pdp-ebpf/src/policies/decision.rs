@@ -4,39 +4,42 @@ use crate::maps::{
     DECISION_DENY_IDX, DECISION_GENERATION_IDX, DECISION_PERMIT_IDX, DECISIONS, POLICY_GENERATION,
 };
 
-pub(crate) trait DecisionMapExt {
-    fn from_map() -> Self;
-    fn write_to_map(self);
+pub(crate) trait DecisionMapExt: Sized {
+    fn from_map() -> Option<Self>;
+    fn write_to_map(self) -> bool;
 }
 
 impl DecisionMapExt for DecisionState {
-    fn from_map() -> Self {
-        Self {
-            deny: DECISIONS.get(DECISION_DENY_IDX).copied().unwrap_or(0),
-            permit: DECISIONS.get(DECISION_PERMIT_IDX).copied().unwrap_or(0),
-            generation: DECISIONS.get(DECISION_GENERATION_IDX).copied().unwrap_or(0),
-        }
+    fn from_map() -> Option<Self> {
+        Some(Self {
+            deny: DECISIONS.get(DECISION_DENY_IDX).copied()?,
+            permit: DECISIONS.get(DECISION_PERMIT_IDX).copied()?,
+            generation: DECISIONS.get(DECISION_GENERATION_IDX).copied()?,
+        })
     }
 
-    fn write_to_map(self) {
-        if let Some(deny) = DECISIONS.get_ptr_mut(DECISION_DENY_IDX) {
-            unsafe {
-                *deny = self.deny;
-            }
+    fn write_to_map(self) -> bool {
+        let Some(deny) = DECISIONS.get_ptr_mut(DECISION_DENY_IDX) else {
+            return false;
+        };
+        let Some(permit) = DECISIONS.get_ptr_mut(DECISION_PERMIT_IDX) else {
+            return false;
+        };
+        let Some(generation) = DECISIONS.get_ptr_mut(DECISION_GENERATION_IDX) else {
+            return false;
+        };
+
+        // SAFETY: each pointer comes from a distinct, fixed index in this CPU's PerCpuArray value.
+        // The pointers are checked for absence above and do not escape this function.
+        unsafe {
+            *deny = self.deny;
+            *permit = self.permit;
+            *generation = self.generation;
         }
-        if let Some(permit) = DECISIONS.get_ptr_mut(DECISION_PERMIT_IDX) {
-            unsafe {
-                *permit = self.permit;
-            }
-        }
-        if let Some(generation) = DECISIONS.get_ptr_mut(DECISION_GENERATION_IDX) {
-            unsafe {
-                *generation = self.generation;
-            }
-        }
+        true
     }
 }
 
-pub(crate) fn active_policy_generation() -> u32 {
-    POLICY_GENERATION.get(0).copied().unwrap_or(0)
+pub(crate) fn active_policy_generation() -> Option<u32> {
+    POLICY_GENERATION.get(0).copied()
 }

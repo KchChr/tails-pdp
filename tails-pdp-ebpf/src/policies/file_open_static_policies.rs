@@ -1,7 +1,7 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    COMMAND_LEN, Entitlement, FileOpenRequest, POLICY_BANK_SIZE, evaluate_file_open_static_policy,
-    policy_bank_offset,
+    COMMAND_LEN, Entitlement, FileOpenRequest, LSM_DENY, POLICY_BANK_SIZE,
+    evaluate_file_open_static_policy, policy_bank_offset,
 };
 
 use crate::{
@@ -71,15 +71,25 @@ pub(crate) fn evaluate_policies(
 #[lsm(hook = "file_open")]
 pub fn evaluate_file_open_static_policies(ctx: LsmContext) -> i32 {
     let subject = ctx.uid();
-    let command = ctx.command().unwrap_or([0; COMMAND_LEN]);
-    let resource = read_file_open_resource(&ctx);
-    let generation = active_policy_generation();
+    let Ok(command) = ctx.command() else {
+        return LSM_DENY;
+    };
+    let Some(resource) = read_file_open_resource(&ctx) else {
+        return LSM_DENY;
+    };
+    let Some(generation) = active_policy_generation() else {
+        return LSM_DENY;
+    };
     let decision_state = evaluate_policies(subject, &command, &resource, generation);
-    decision_state.write_to_map();
+    if !decision_state.write_to_map() {
+        return LSM_DENY;
+    }
 
+    // SAFETY: the userspace loader installs the next LSM stage in this fixed slot. Reaching the
+    // return below means the chain is incomplete, so access is denied.
     unsafe {
         let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STREAM);
     }
-
-    0
+    crate::debug_printk!(b"file_open tail_call=failed stage=stream");
+    LSM_DENY
 }

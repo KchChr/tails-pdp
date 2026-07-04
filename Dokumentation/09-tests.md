@@ -9,6 +9,7 @@ komponentennahe Tests:
 - Zeitbedingung wahr ergibt Entitlement.
 - Zeitbedingung falsch ergibt `None`.
 - Modulo `0` ergibt `None`.
+- Deny-overrides erlaubt ohne Deny-Treffer und lehnt bei mindestens einem Deny-Treffer ab.
 - DEFCON-Bedingung wahr ergibt Entitlement.
 - DEFCON-Bedingung falsch ergibt `None`.
 - Freie Subjektattribute werden in Stream-Policy-Einträge übersetzt.

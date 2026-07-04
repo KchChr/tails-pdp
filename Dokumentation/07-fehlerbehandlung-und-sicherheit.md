@@ -28,7 +28,19 @@ Userspace und Kernel würden sonst dieselben Bytes unterschiedlich interpretiere
 ### Fehlgeschlagene Policy-Verarbeitung
 
 Wenn eine `.sapl`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
-werden. `PolicyDirectorySync` hält deshalb die letzte funktionierende Generation aktiv [P3].
+werden. Beim initialen Start bricht die Validierung mit einem Fehler ab, bevor der LSM-Hook
+angehängt wird. Bei späteren Laufzeitänderungen hält `PolicyDirectorySync` dagegen bewusst die
+letzte funktionierende Generation aktiv [P3].
+
+### Fehler in der eBPF-Enforcement-Kette
+
+Fehlende Tail-Call-Ziele, Decision-Map-Einträge, Generationswerte, Zeitwerte sowie nicht lesbare
+Kernel-Pointer oder Prozessnamen werden fail-closed behandelt. Eine bestehende Ablehnung eines
+vorherigen BPF-LSM-Programms wird unverändert weitergegeben. Das verhindert, dass ein technischer
+Fehler oder eine unvollständige Programmkette still zu einer Erlaubnis wird.
+
+Davon getrennt bleibt die fachliche Standardentscheidung unverändert: Wenn die Infrastruktur
+funktioniert und keine Policy auf eine Anfrage passt, wird die Anfrage erlaubt.
 
 ### eBPF-Verifier-Fehler
 

@@ -24,12 +24,16 @@ Die Einstiegshooks stehen in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/s
 
 Die Funktion tut nur wenig:
 
-1. UID lesen.
-2. Optional debuggen.
-3. Per Tail Call in die eigentliche Policy-Auswertung springen.
-4. Falls der Tail Call fehlschlägt, `0` zurückgeben.
+1. Den Rückgabewert eines vorherigen BPF-LSM-Programms prüfen und eine bestehende Ablehnung
+   unverändert weitergeben.
+2. UID lesen.
+3. Optional debuggen.
+4. Per Tail Call in die eigentliche Policy-Auswertung springen.
+5. Falls der Tail Call fehlschlägt, mit `-EPERM` sicher ablehnen.
 
-`0` bedeutet: Kernel-Aktion erlauben.
+Der erfolgreiche Tail Call kehrt nicht zum aufrufenden eBPF-Programm zurück. Wird der Code danach
+erreicht, ist die Enforcement-Kette unvollständig. Das Projekt behandelt diesen Infrastrukturfehler
+deshalb bewusst fail-closed.
 
 ## Tail-Call-Ketten
 
@@ -110,8 +114,10 @@ Defensive Muster im Code:
 
 - Null-Pointer prüfen
 - `bpf_probe_read_kernel`-Fehler abfangen
-- bei Fehlern leere Ressourcen zurückgeben
+- fehlgeschlagene Kernel-Lesezugriffe nicht mit der gültigen Wildcard-Ressource `(0, 0)` vermischen
 - Map-Zugriffe mit `Option` behandeln
+- bei fehlenden Decision-, Generations- oder Zeit-Map-Einträgen sicher ablehnen
+- fehlgeschlagene Tail Calls sicher ablehnen
 - begrenzte Schleifen über `POLICY_BANK_SIZE`
 
 ## Verifier-freundliche Muster

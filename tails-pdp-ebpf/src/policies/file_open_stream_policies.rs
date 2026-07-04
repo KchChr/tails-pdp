@@ -1,6 +1,6 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
-    AttributeKey, COMMAND_LEN, Entitlement, FileOpenRequest, MAX_ATTRIBUTE_CONDITIONS,
+    AttributeKey, COMMAND_LEN, Entitlement, FileOpenRequest, LSM_DENY, MAX_ATTRIBUTE_CONDITIONS,
     POLICY_BANK_SIZE, attribute_bank, attribute_object_ids, file_open_stream_legacy_entitlement,
     file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
 };
@@ -127,17 +127,27 @@ fn attribute_conditions_match(
 
 #[lsm(hook = "file_open")]
 pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
-    let mut current_state = DecisionState::from_map();
+    let Some(mut current_state) = DecisionState::from_map() else {
+        return LSM_DENY;
+    };
     let generation = current_state.generation;
     let current_subject = ctx.uid();
-    let current_command = ctx.command().unwrap_or([0; COMMAND_LEN]);
-    let resource = read_file_open_resource(&ctx);
-    let current_time = CURRENT_TIME.get(0).copied().unwrap_or(0);
-    let current_iso8601_time = CURRENT_TIME_ISO8601
-        .get(0)
-        .copied()
-        .unwrap_or(tails_pdp_common::Iso8601TimeParts::new(1970, 1, 1, 0, 0, 0));
-    let current_attribute_bank = attribute_bank(ATTRIBUTE_GENERATION.get(0).copied().unwrap_or(0));
+    let Ok(current_command) = ctx.command() else {
+        return LSM_DENY;
+    };
+    let Some(resource) = read_file_open_resource(&ctx) else {
+        return LSM_DENY;
+    };
+    let Some(current_time) = CURRENT_TIME.get(0).copied() else {
+        return LSM_DENY;
+    };
+    let Some(current_iso8601_time) = CURRENT_TIME_ISO8601.get(0).copied() else {
+        return LSM_DENY;
+    };
+    let Some(attribute_generation) = ATTRIBUTE_GENERATION.get(0).copied() else {
+        return LSM_DENY;
+    };
+    let current_attribute_bank = attribute_bank(attribute_generation);
     let stream_state = evaluate_policies(
         current_subject,
         &current_command,
@@ -148,10 +158,15 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         current_attribute_bank,
     );
     current_state.merge(stream_state);
-    current_state.write_to_map();
+    if !current_state.write_to_map() {
+        return LSM_DENY;
+    }
 
+    // SAFETY: the userspace loader installs the final LSM stage in this fixed slot. Reaching the
+    // return below means the chain is incomplete, so access is denied.
     unsafe {
         let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);
     }
-    0
+    crate::debug_printk!(b"file_open tail_call=failed stage=combine");
+    LSM_DENY
 }

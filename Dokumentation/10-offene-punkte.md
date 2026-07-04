@@ -74,6 +74,18 @@ Grenze:
 
 Kurzlebige Zustände können übersehen werden.
 
+## Map-Werte enthalten Rust-Enums
+
+Mehrere `#[repr(C)]`-Map-Strukturen enthalten derzeit `#[repr(u8)]`-Enums und implementieren im
+Userspace `aya::Pod`. Die Loader schreiben ausschließlich validierte Werte, und die gepinnten Maps
+sind als privilegierte Systemressource vorausgesetzt. Gegen manuell oder durch fremde privilegierte
+Programme eingebrachte ungültige Enum-Diskriminanten ist die Darstellung jedoch nicht robust.
+
+Ein späterer ABI-Schritt sollte die Map-Felder auf rohe Integer oder transparente, für jedes
+Bitmuster gültige Newtypes umstellen und die Konvertierung an der Auswertungsgrenze validieren. Das
+ändert öffentliche gemeinsame Datentypen und das Map-ABI und wurde deshalb nicht als beiläufiges
+Refactoring vorgenommen.
+
 ## Zeitbasis ist UTC
 
 Zeitbedingungen wie `environment.utc.hour < 8` nutzen UTC, nicht lokale Zeit.

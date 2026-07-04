@@ -6,7 +6,7 @@ use aya::{
     maps::{Array, ProgramArray},
     programs::Lsm,
 };
-use log::{debug, info};
+use log::{info, warn};
 use tails_pdp::{FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS};
 use tails_pdp_attribute_loader::{
     open_attribute_maps, open_current_time_maps, run_attribute_updater, run_current_time_updater,
@@ -27,7 +27,10 @@ async fn main() -> anyhow::Result<()> {
     };
     let ret = unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlim) };
     if ret != 0 {
-        debug!("remove limit on locked memory failed, ret is: {ret}");
+        warn!(
+            "failed to raise RLIMIT_MEMLOCK (return code {ret}): {}. eBPF loading may fail on kernels that account BPF maps against this limit",
+            std::io::Error::last_os_error()
+        );
     }
 
     fs::create_dir_all(BPF_PIN_DIRECTORY)

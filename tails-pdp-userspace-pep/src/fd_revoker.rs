@@ -220,7 +220,7 @@ fn syscall_trap_word(original_word: libc::c_long) -> libc::c_long {
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn close_result(rax: u64) -> anyhow::Result<()> {
     let value = rax as i64;
-    if value < 0 && value >= -4095 {
+    if (-4095..0).contains(&value) {
         let errno = -value as i32;
         if errno == libc::EBADF {
             return Ok(());

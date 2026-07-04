@@ -110,23 +110,21 @@ impl PolicyDirectorySync {
 
     pub fn sync_initial(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
-        match translate_policy_documents(&documents).and_then(|translated| {
-            let generation = self.maps.commit(&translated)?;
-            Ok((translated, generation))
-        }) {
-            Ok((translated, generation)) => {
-                self.last_applied_documents = Some(documents);
-                self.last_failed_documents = None;
-                print_policy_summary(&self.policy_dir, generation, &translated);
-            }
-            Err(error) => {
-                error!(
-                    "POLICY initial sync failed for '{}'; keeping existing pinned generation active: {error:#}",
-                    self.policy_dir.display()
-                );
-                self.last_failed_documents = Some(documents);
-            }
-        }
+        let translated = translate_policy_documents(&documents).with_context(|| {
+            format!(
+                "initial policy validation failed for '{}'",
+                self.policy_dir.display()
+            )
+        })?;
+        let generation = self.maps.commit(&translated).with_context(|| {
+            format!(
+                "initial policy commit failed for '{}'",
+                self.policy_dir.display()
+            )
+        })?;
+        self.last_applied_documents = Some(documents);
+        self.last_failed_documents = None;
+        print_policy_summary(&self.policy_dir, generation, &translated);
         Ok(())
     }
 

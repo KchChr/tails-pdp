@@ -1,15 +1,13 @@
 use aya_ebpf::{macros::lsm, programs::LsmContext};
+use tails_pdp_common::LSM_DENY;
 
 use crate::policies::decision::{DecisionMapExt, DecisionState};
 
 fn combine_decision() -> i32 {
-    let state = DecisionState::from_map();
-
-    if state.deny != 0 {
-        return -1;
-    }
-
-    0
+    let Some(state) = DecisionState::from_map() else {
+        return LSM_DENY;
+    };
+    state.lsm_return_value()
 }
 
 macro_rules! define_combine_program {
