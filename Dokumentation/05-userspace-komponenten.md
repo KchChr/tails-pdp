@@ -15,7 +15,7 @@ Es ist verantwortlich für:
 - Logging konfigurieren
 
 Der zentrale Loader ist `EbpfLoader::new()`. Das eBPF-Objekt wird mit
-`aya::include_bytes_aligned!` eingebettet [P1], [Q3], [Q20].
+`aya::include_bytes_aligned!` eingebettet [[P1]](../tails-pdp/src/main.rs), [Q3], [Q20].
 
 Die fachlichen Userspace-Komponenten sind als eigene Library-Crates umgesetzt, laufen aber
 weiterhin gemeinsam im Prozess `tails-pdp`. Dadurch bleiben Startreihenfolge und Lebenszyklus der

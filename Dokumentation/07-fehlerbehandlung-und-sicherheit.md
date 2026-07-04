@@ -3,7 +3,7 @@
 ## Fehlerbehandlung im Userspace
 
 Der Userspace-Code nutzt überwiegend `anyhow::Result` und ergänzt Fehler mit Kontext über
-`.context(...)` oder `.with_context(...)` [P1], [P3], [P4], [P17].
+`.context(...)` oder `.with_context(...)` [[P1]](../tails-pdp/src/main.rs), [[P3]](../tails-pdp-policy-loader/src/policy_source.rs), [[P4]](../tails-pdp-policy-loader/src/policy_loader.rs), [[P17]](../tails-pdp-admintool/src/).
 
 Beispiele:
 
@@ -30,7 +30,7 @@ Userspace und Kernel würden sonst dieselben Bytes unterschiedlich interpretiere
 Wenn eine `.sapl`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
 werden. Beim initialen Start bricht die Validierung mit einem Fehler ab, bevor der LSM-Hook
 angehängt wird. Bei späteren Laufzeitänderungen hält `PolicyDirectorySync` dagegen bewusst die
-letzte funktionierende Generation aktiv [P3].
+letzte funktionierende Generation aktiv [[P3]](../tails-pdp-policy-loader/src/policy_source.rs).
 
 ### Fehler in der eBPF-Enforcement-Kette
 
@@ -50,7 +50,7 @@ kritisch und sollten immer ernst genommen werden.
 ### FD-Revocation per `ptrace`
 
 `fd_revoker.rs` verändert kurz die Ausführung eines fremden Prozesses. Das ist mächtig, aber
-riskant. Fehler können den Zielprozess stören [P7], [Q15].
+riskant. Fehler können den Zielprozess stören [[P7]](../tails-pdp-userspace-pep/src/fd_revoker.rs), [Q15].
 
 Schutzmechanismen im Code:
 

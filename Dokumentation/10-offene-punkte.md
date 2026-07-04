@@ -38,7 +38,7 @@ Vorschlag:
 ## Pfadmatching im Kernel
 
 Das Projekt matcht Dateien im Kernel über `device + inode`, nicht über Pfade. Das ist verifier-
-freundlich und robust gegen Pfadprobleme, bedeutet aber [P8], [P11], [Q7], [Q22]:
+freundlich und robust gegen Pfadprobleme, bedeutet aber [[P8]](../tails-pdp-common/src/lib.rs), [[P11]](../tails-pdp-ebpf/src/helpers.rs), [Q7], [Q22]:
 
 - Hardlinks mit gleichem Inode werden gleich behandelt.
 - Wenn eine Datei gelöscht und neu erstellt wird, ändert sich der Inode und alte Policies matchen
@@ -57,7 +57,7 @@ Vorschlag:
 ## Ungültige strukturierte Attribute bleiben ein Bedienrisiko
 
 Der Attribut-Updater ignoriert ungültige Werte in [`attributes/system.attributes`](../attributes/system.attributes)
-und behält die letzte gültige Attributgeneration bei [P23]. Das ist robust, kann aber verwirrend
+und behält die letzte gültige Attributgeneration bei [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs). Das ist robust, kann aber verwirrend
 sein, wenn ein Tippfehler nicht sofort als Policy-Verhalten sichtbar wird.
 
 Vorschlag:
@@ -68,7 +68,7 @@ Vorschlag:
 ## Keine Ring-Buffer-Events
 
 Es gibt keine Eventübertragung vom Kernel zum Userspace. Das ist bewusst oder zumindest aktuell so.
-Der Userspace-PEP arbeitet stattdessen pollend über `/proc` [P6], [Q12], [Q13], [Q14].
+Der Userspace-PEP arbeitet stattdessen pollend über `/proc` [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [Q12], [Q13], [Q14].
 
 Grenze:
 

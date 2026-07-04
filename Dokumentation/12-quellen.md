@@ -2,7 +2,8 @@
 
 Diese Dokumentation nutzt zwei Arten von Quellen:
 
-- **Projektquellen** `[P...]`: Dateien aus diesem Repository. Sie belegen, wie `tails-pdp`
+- **Projektquellen** `[P...]`: Dateien aus diesem Repository. Im Fließtext ist jedes Kürzel direkt
+  mit der zugehörigen Datei oder dem zugehörigen Ordner verlinkt. Sie belegen, wie `tails-pdp`
   konkret implementiert ist.
 - **Externe Quellen** `[Q...]`: Offizielle Dokumentation oder technische Referenzen. Sie belegen
   allgemeine Aussagen zu Rust, Aya, eBPF, Linux Security Modules und Linux-Interfaces.
@@ -71,10 +72,11 @@ Rust-Dokumentation und Aya-Dokumentation.
 
 ## Zitierweise in den Kapiteln
 
-Quellenhinweise stehen direkt im Fließtext der Kapitel. Beispiele:
+Quellenhinweise stehen direkt im Fließtext der Kapitel. Projektquellen sind dort klickbar;
+die Tabelle oben bleibt die zentrale Übersicht. Beispiele:
 
-- `[P10]` bedeutet: Die Aussage bezieht sich auf den konkreten Projektcode in
-  [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs).
+- [[P10]](../tails-pdp-ebpf/src/hooks.rs) bedeutet: Die Aussage bezieht sich auf den konkreten
+  Projektcode in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs).
 - `[Q9]` bedeutet: Die allgemeine Aussage zu BPF-LSM stützt sich auf die offizielle
   Linux-Kernel-Dokumentation zu BPF-LSM.
 

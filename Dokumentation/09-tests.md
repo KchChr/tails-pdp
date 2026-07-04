@@ -30,7 +30,7 @@ komponentennahe Tests:
 - Zahlen-, Bool- und Stringattribute werden korrekt geparst.
 - Prozess- und FD-Namen aus `/proc` werden nur als Zahlen akzeptiert.
 
-Diese Tests betreffen die gemeinsame Logik, die eBPF und Userspace-PEP verwenden [P6], [P8].
+Diese Tests betreffen die gemeinsame Logik, die eBPF und Userspace-PEP verwenden [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [[P8]](../tails-pdp-common/src/lib.rs).
 
 Ausführung ohne den globalen Cargo-Runner:
 
@@ -194,7 +194,7 @@ printf 'defcon = 2\n' > attributes/system.attributes
 cat /home/hntr/test.txt
 ```
 
-Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [P19], [P23].
+Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [[P19]](../examples/), [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs).
 
 #### Userspace-PEP nachträglich
 

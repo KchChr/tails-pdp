@@ -4,7 +4,7 @@
 
 Das Projekt benötigt eine Linux-Zielumgebung mit eBPF- und LSM-Unterstützung. Für Entwicklung und
 Build werden außerdem Rust-Tools benötigt. Die eBPF- und LSM-Anforderungen folgen aus dem
-Kernel-Teil und dem BPF-LSM-Modell [P10], [P12], [Q9], [Q10].
+Kernel-Teil und dem BPF-LSM-Modell [[P10]](../tails-pdp-ebpf/src/hooks.rs), [[P12]](../tails-pdp-ebpf/src/maps.rs), [Q9], [Q10].
 
 Wichtige Werkzeuge:
 

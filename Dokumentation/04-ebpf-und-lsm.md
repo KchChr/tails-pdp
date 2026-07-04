@@ -3,7 +3,7 @@
 ## Einstieg
 
 Der eBPF-Code liegt im Crate `tails-pdp-ebpf`. Der eigentliche eBPF-Binary-Einstieg ist
-[`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) [P9]. Die allgemeinen Einschränkungen durch eBPF, BPF-Maps und den
+[`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) [[P9]](../tails-pdp-ebpf/src/main.rs). Die allgemeinen Einschränkungen durch eBPF, BPF-Maps und den
 Verifier sind in der Linux-Kernel-Dokumentation beschrieben [Q4], [Q5], [Q7], [Q8].
 
 Wichtige Eigenschaften:
@@ -67,7 +67,7 @@ Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 | `ATTRIBUTES` | gepinnte `HashMap<AttributeKey, AttributeValue>` | Strukturierte Attribute aus `attributes/system.attributes`, `attributes/subjects/<uid>.attributes` und `attributes/resources/<pfad>.attributes`. |
 
 `DECISIONS` ist eine Per-CPU-Map. Das reduziert Race Conditions, wenn mehrere CPUs gleichzeitig
-LSM-Hooks ausführen [P12], [Q6].
+LSM-Hooks ausführen [[P12]](../tails-pdp-ebpf/src/maps.rs), [Q6].
 
 Eine vollständige Übersicht mit Key- und Value-Typen, Pin-Pfaden, Einträgen und Einsatzorten steht
 in [eBPF-Maps: vollständige Übersicht](13-ebpf-maps-uebersicht.md).

@@ -6,7 +6,7 @@ Diese Dokumentation beschreibt das Projekt `tails-pdp`.
 in den Kernel, hängt sie an Linux-Security-Module-Hooks an und entscheidet dort, ob bestimmte
 Aktionen erlaubt oder verboten werden. Zusätzlich gibt es Userspace-Komponenten, die Policies aus
 Textdateien laden, eBPF-Maps befüllen, Stream-Attribute wie DEFCON aktualisieren, laufende Prozesse
-beobachten und Debug-Informationen anzeigen [P1], [P3], [P6], [P10], [P12], [P23]. Die allgemeinen
+beobachten und Debug-Informationen anzeigen [[P1]](../tails-pdp/src/main.rs), [[P3]](../tails-pdp-policy-loader/src/policy_source.rs), [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [[P10]](../tails-pdp-ebpf/src/hooks.rs), [[P12]](../tails-pdp-ebpf/src/maps.rs), [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs). Die allgemeinen
 Grundlagen zu eBPF, BPF-Maps und BPF-LSM stammen aus der Linux-Kernel-Dokumentation [Q4], [Q5],
 [Q9].
 
@@ -66,8 +66,8 @@ Der eBPF-LSM-Hook ist der Kernelspace-PEP für neue `file_open`-Zugriffe und ent
 Dateiöffnung verboten werden soll. Die
 Policies liegen in eBPF-Maps. Diese Maps werden durch den Userspace-Loader aus textuellen
 Policy-Dateien befüllt. Der Userspace-PEP prüft zusätzlich bestehende Dateizugriffe, weil eine Policy
-auch erst aktiv werden kann, nachdem ein Prozess bereits eine Datei geöffnet hat [P1], [P3], [P6],
-[P8], [P14].
+auch erst aktiv werden kann, nachdem ein Prozess bereits eine Datei geöffnet hat [[P1]](../tails-pdp/src/main.rs), [[P3]](../tails-pdp-policy-loader/src/policy_source.rs), [[P6]](../tails-pdp-userspace-pep/src/pep.rs),
+[[P8]](../tails-pdp-common/src/lib.rs), [[P14]](../tails-pdp-ebpf/src/policies/).
 
 ---
 

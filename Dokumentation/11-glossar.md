@@ -14,7 +14,7 @@ laden [Q17].
 
 Hier ein Test-Systemattribut mit Werten von `1` bis `5`. Der Userspace liest den Wert als
 `defcon = <wert>` aus [`attributes/system.attributes`](../attributes/system.attributes) und schreibt ihn als
-`system.defcon` in `ATTRIBUTES` [P23], [P24].
+`system.defcon` in `ATTRIBUTES` [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs), [[P24]](../attributes/).
 
 ## eBPF
 

@@ -28,8 +28,8 @@ In einem zweiten Terminal:
 sudo cat /sys/kernel/debug/tracing/trace_pipe
 ```
 
-Die Debug-Ausgaben kommen aus dem eBPF-Teil und werden über `DEBUG_LOGGING` gesteuert [P1], [P12],
-[P13].
+Die Debug-Ausgaben kommen aus dem eBPF-Teil und werden über `DEBUG_LOGGING` gesteuert [[P1]](../tails-pdp/src/main.rs), [[P12]](../tails-pdp-ebpf/src/maps.rs),
+[[P13]](../tails-pdp-ebpf/src/logging.rs).
 
 ## Prüfen, ob Programme geladen sind
 
@@ -113,7 +113,7 @@ sudo bpftool map dump pinned /sys/fs/bpf/tails-pdp/ATTRIBUTES
 ```
 
 Der Userspace-Updater schreibt nur gültige DEFCON-Werte in `ATTRIBUTES`; ungültige Werte werden
-ignoriert und geloggt [P23].
+ignoriert und geloggt [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs).
 
 ## Socket-Bind testen
 
@@ -156,13 +156,13 @@ Prozessinformationen:
 cat /proc/<PID>/status
 ```
 
-Diese Dateien sind Linux-Procfs-Schnittstellen und werden vom Userspace-PEP ausgewertet [P6], [Q12],
+Diese Dateien sind Linux-Procfs-Schnittstellen und werden vom Userspace-PEP ausgewertet [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [Q12],
 [Q13], [Q14].
 
 ## Verifier-Fehler untersuchen
 
 Das Hauptprogramm setzt `VerifierLogLevel::VERBOSE | VerifierLogLevel::STATS` in
-[`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs). Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher [P1], [Q7].
+[`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs). Dadurch sind Verifier-Logs bei Ladefehlern ausführlicher [[P1]](../tails-pdp/src/main.rs), [Q7].
 
 Typische Hinweise:
 

@@ -17,8 +17,8 @@ Das Projekt ist ein Rust-Workspace mit acht Crates:
 
 Die Trennung ist wichtig, weil eBPF-Code andere Einschränkungen hat als normaler Userspace-Code.
 Die Policy-Logik liegt deshalb so weit wie möglich in `tails-pdp-common`, damit Kernel und
-Userspace dieselben Regeln verwenden [P8]. Das Laden von eBPF-Programmen und Maps erfolgt im
-Userspace mit Aya [P1], [Q3], [Q18], [Q20].
+Userspace dieselben Regeln verwenden [[P8]](../tails-pdp-common/src/lib.rs). Das Laden von eBPF-Programmen und Maps erfolgt im
+Userspace mit Aya [[P1]](../tails-pdp/src/main.rs), [Q3], [Q18], [Q20].
 
 ## Ordnerstruktur
 
@@ -128,8 +128,8 @@ Sie werden im Userspace in [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) b
 ## Static Policies und Stream Policies
 
 Static Policies sind normale Regeln ohne Stream-Bedingung. Stream Policies enthalten eine Bedingung
-gegen einen dynamischen Wert, aktuell Zeit oder strukturierte Attribute wie `system.defcon` [P3],
-[P8], [P23].
+gegen einen dynamischen Wert, aktuell Zeit oder strukturierte Attribute wie `system.defcon` [[P3]](../tails-pdp-policy-loader/src/policy_source.rs),
+[[P8]](../tails-pdp-common/src/lib.rs), [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs).
 
 Beispiel Static Policy:
 
@@ -151,7 +151,7 @@ deny
 ```
 
 Eine Stream Policy trifft nur eine Entscheidung, wenn ihre Stream-Bedingung wahr ist. Wenn die
-Bedingung falsch ist, ist die Policy nicht anwendbar [P8].
+Bedingung falsch ist, ist die Policy nicht anwendbar [[P8]](../tails-pdp-common/src/lib.rs).
 
 Beispiel DEFCON-Policy über strukturierte Attribute:
 
@@ -164,7 +164,7 @@ deny
 ```
 
 Der Wert dafür kommt aus [`attributes/system.attributes`](../attributes/system.attributes) und wird in
-`ATTRIBUTES` geschrieben [P12], [P23], [P24].
+`ATTRIBUTES` geschrieben [[P12]](../tails-pdp-ebpf/src/maps.rs), [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs), [[P24]](../attributes/).
 
 ---
 

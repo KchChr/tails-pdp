@@ -40,7 +40,7 @@ Normale Dateirechte sind oft grob. Sie sagen zum Beispiel, ob ein Benutzer eine 
 Der Begriff PDP steht für Policy Decision Point. Das ist die Komponente, die eine Policy auswertet
 und eine Entscheidung trifft. Die konkrete Auswertung liegt in `tails-pdp-common`, die Kernel-Hooks
 in [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs), und die aktiven Policies werden über eBPF-Maps bereitgestellt
-[P8], [P10], [P12]. Die Begriffe eBPF, Map und LSM orientieren sich an der Linux-Kernel-
+[[P8]](../tails-pdp-common/src/lib.rs), [[P10]](../tails-pdp-ebpf/src/hooks.rs), [[P12]](../tails-pdp-ebpf/src/maps.rs). Die Begriffe eBPF, Map und LSM orientieren sich an der Linux-Kernel-
 Dokumentation [Q4], [Q5], [Q9], [Q10].
 
 PEP steht für Policy Enforcement Point. Der eBPF-LSM-Hook ist der Kernelspace-PEP für neue
@@ -122,7 +122,7 @@ Beispiele aus [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs):
 | `ATTRIBUTES` | Strukturierte System-, Subjekt- und Ressourcenattribute, darunter `system.defcon`. |
 
 Viele Maps sind gepinnt. Gepinnt bedeutet: Sie liegen unter `/sys/fs/bpf/tails-pdp/...` und können
-auch von anderen Prozessen geöffnet werden [P12], [Q5], [Q23].
+auch von anderen Prozessen geöffnet werden [[P12]](../tails-pdp-ebpf/src/maps.rs), [Q5], [Q23].
 
 ## Perf Events oder Ring Buffer
 
