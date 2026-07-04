@@ -1,5 +1,18 @@
 # Tests und Teststrategie
 
+## Automatisierte Tests auf dem Linux-Zielsystem
+
+Das Skript [`test.sh`](../test.sh) führt die vollständige automatisierte Prüfkette aus:
+
+```shell
+./test.sh
+```
+
+Enthalten sind Formatprüfung, alle vorhandenen Unit- und Komponententests, Clippy mit
+`-D warnings` sowie der Release-Build des Userspace-Programms und des eingebetteten eBPF-Objekts.
+Verifier-, Attach- und Enforcement-Tests bleiben privilegierte manuelle Integrationstests, weil sie
+den aktiven Zielkernel und dessen LSM-Hooks verändern.
+
 ## Aktueller Stand
 
 Unit-Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) prüfen vor allem
