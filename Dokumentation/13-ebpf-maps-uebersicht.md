@@ -23,8 +23,7 @@ BPF-Dateisystem für andere Prozesse geöffnet.
 | `POLICY_GENERATION` | `Array` | `u32` | `u32` | 1 | Ja | Aktive Policy-Generation. |
 | `FILE_OPEN_STATIC_POLICIES` | `Array` | `u32` | `FileOpenStaticPolicy` | 32 | Ja | Statische `file_open`-Policies in zwei Bänken. |
 | `FILE_OPEN_STREAM_POLICIES` | `Array` | `u32` | `FileOpenStreamPolicy` | 32 | Ja | Streambasierte `file_open`-Policies in zwei Bänken. |
-| `CURRENT_TIME` | `Array` | `u32` | `u64` | 1 | Ja | Aktuelle Unix-Zeit in Sekunden. |
-| `CURRENT_TIME_ISO8601` | `Array` | `u32` | `Iso8601TimeParts` | 1 | Ja | Aktuelle UTC-Zeit als Jahr, Monat, Tag, Stunde, Minute, Sekunde. |
+| `CURRENT_TIME` | `Array` | `u32` | `u64` | 1 | Ja | Gemeinsame Unix-Zeitbasis für Kernel- und Userspace-PEP. |
 | `ATTRIBUTE_GENERATION` | `Array` | `u32` | `u32` | 1 | Ja | Aktive Attributgeneration. |
 | `ATTRIBUTES` | `HashMap` | `AttributeKey` | `AttributeValue` | 1024 | Ja | System-, Subjekt- und Ressourcenattribute. |
 
@@ -339,58 +338,16 @@ Einsatz:
 | Komponente | Verwendung |
 | --- | --- |
 | [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Schreibt regelmäßig die aktuelle Unix-Zeit in Sekunden. |
-| [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest die Zeit für `environment.time % ...`-Bedingungen. |
+| [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest die Zeit für modulo- und UTC-komponentenbasierte Bedingungen. |
+| [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Liest dieselbe Zeitbasis für die Userspace-Auswertung. |
+| [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Leitet mit `PolicyTime::from_unix_seconds` UTC-Stunde, -Minute und -Sekunde ab. |
 | [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
 
 Funktion:
 
-Die Map stellt dem eBPF-Programm eine aktuelle Zeitbasis bereit, ohne dass das eBPF-Programm selbst
-komplexe Zeitberechnung durchführen muss.
-
-## `CURRENT_TIME_ISO8601`
-
-Definition:
-
-```rust
-Array::<Iso8601TimeParts>::pinned(1, 0)
-```
-
-| Eigenschaft | Wert |
-| --- | --- |
-| Map-Typ | `Array` |
-| Key-Typ | `u32` |
-| Value-Typ | `Iso8601TimeParts` |
-| Einträge | 1 |
-| Gepinnt | Ja |
-| Pin-Pfad | `/sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601` |
-
-Value-Struktur:
-
-```rust
-#[repr(C)]
-pub struct Iso8601TimeParts {
-    pub year: u16,
-    pub month: u8,
-    pub day: u8,
-    pub hour: u8,
-    pub minute: u8,
-    pub second: u8,
-    pub _pad: u8,
-}
-```
-
-Einsatz:
-
-| Komponente | Verwendung |
-| --- | --- |
-| [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Schreibt regelmäßig aktuelle UTC-Zeitfelder. |
-| [`tails-pdp-ebpf/src/policies/file_open_stream_policies.rs`](../tails-pdp-ebpf/src/policies/file_open_stream_policies.rs) | Liest Stunde, Minute oder Sekunde für `environment.utc.*`-Bedingungen. |
-| [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüft beim Start das gepinnte Map-Layout. |
-
-Funktion:
-
-Die Map stellt einzelne UTC-Zeitkomponenten bereit. Dadurch kann der Kernel einfache Vergleiche wie
-`environment.utc.hour < 8` auswerten.
+Die Map stellt beiden PEPs dieselbe aktuelle Zeitbasis bereit. Die Konvertierung in UTC-Stunde,
+-Minute und -Sekunde liegt in `tails-pdp-common`; Kernel und Userspace verwenden daher nicht zwei
+unabhängige Implementierungen oder unterschiedlich aktualisierte Maps.
 
 ## `ATTRIBUTE_GENERATION`
 

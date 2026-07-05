@@ -1,11 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
     ffi::OsString,
-    fs, io,
-    mem::MaybeUninit,
+    fs,
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 use anyhow::Context;
@@ -13,8 +12,8 @@ use aya::maps::{Array, HashMap as AyaHashMap, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeValue, Entitlement, FileOpenRequest, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, Iso8601TimeParts, MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE,
-    attribute_bank, attribute_object_ids, command_name, evaluate_file_open_static_policy,
+    FileOpenStreamPolicy, MAX_ATTRIBUTE_CONDITIONS, POLICY_BANK_SIZE, PolicyTime, attribute_bank,
+    attribute_object_ids, command_name, evaluate_file_open_static_policy,
     file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
     matches_attribute_condition, policy_bank_offset,
 };
@@ -26,6 +25,7 @@ use crate::fd_revoker::close_remote_fd;
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
 type PolicyGenerationMap = Array<MapData, u32>;
+type CurrentTimeMap = Array<MapData, u64>;
 type AttributeGenerationMap = Array<MapData, u32>;
 type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
 
@@ -92,12 +92,12 @@ struct PolicyMaps {
     file_open_stream: FileOpenStreamPolicyMap,
     attribute_generation: AttributeGenerationMap,
     attributes: AttributeMap,
+    current_time: CurrentTimeMap,
 }
 
 /// Immutable inputs shared by every file-descriptor evaluation in one `/proc` scan.
 struct ScanContext<'a> {
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
     current_attribute_bank: u32,
     policy_bank_offset: u32,
     inotify_fds: &'a HashMap<u32, Vec<i32>>,
@@ -145,6 +145,7 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
         file_open_stream: open_pinned_array("FILE_OPEN_STREAM_POLICIES")?,
         attribute_generation: open_pinned_array("ATTRIBUTE_GENERATION")?,
         attributes: open_pinned_hash_map("ATTRIBUTES")?,
+        current_time: open_pinned_array("CURRENT_TIME")?,
     })
 }
 
@@ -156,7 +157,11 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let bank_offset = policy_bank_offset(generation);
     let process_fds = read_process_fds();
     let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
-    let (current_time, current_iso8601_time) = current_utc_time()?;
+    let current_unix_time = policies
+        .current_time
+        .get(&0, 0)
+        .context("failed to read CURRENT_TIME[0] for monitor")?;
+    let current_time = PolicyTime::from_unix_seconds(current_unix_time);
     let attribute_generation = policies
         .attribute_generation
         .get(&0, 0)
@@ -164,7 +169,6 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let current_attribute_bank = attribute_bank(attribute_generation);
     let scan = ScanContext {
         current_time,
-        current_iso8601_time,
         current_attribute_bank,
         policy_bank_offset: bank_offset,
         inotify_fds: &inotify_fds,
@@ -249,11 +253,8 @@ fn collect_file_open_violations(
                 scan.current_attribute_bank,
                 &policies.attributes,
             )
-            && file_open_stream_legacy_entitlement(
-                scan.current_time,
-                scan.current_iso8601_time,
-                &policy,
-            ) == Some(Entitlement::Deny)
+            && file_open_stream_legacy_entitlement(scan.current_time, &policy)
+                == Some(Entitlement::Deny)
         {
             violations.push(file_violation(
                 process_fd,
@@ -535,32 +536,6 @@ fn encode_kernel_dev_t(device: u64) -> u64 {
     let major = libc::major(device) as u64;
     let minor = libc::minor(device) as u64;
     (major << 20) | minor
-}
-
-fn current_utc_time() -> anyhow::Result<(u64, Iso8601TimeParts)> {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .context("system time is before UNIX_EPOCH")?
-        .as_secs();
-    let time_t = timestamp as libc::c_long;
-    let mut tm = MaybeUninit::<libc::tm>::uninit();
-    let tm_ptr = unsafe { libc::gmtime_r(&time_t, tm.as_mut_ptr()) };
-    if tm_ptr.is_null() {
-        return Err(io::Error::last_os_error()).context("gmtime_r failed");
-    }
-    let tm = unsafe { tm.assume_init() };
-
-    Ok((
-        timestamp,
-        Iso8601TimeParts::new(
-            (tm.tm_year + 1900) as u16,
-            (tm.tm_mon + 1) as u8,
-            tm.tm_mday as u8,
-            tm.tm_hour as u8,
-            tm.tm_min as u8,
-            tm.tm_sec as u8,
-        ),
-    ))
 }
 
 fn print_violation(violation: &Violation) {

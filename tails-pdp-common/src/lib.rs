@@ -240,28 +240,25 @@ pub fn attribute_hash_bytes(bytes: &[u8]) -> AttributeHash {
     AttributeHash { low, high }
 }
 
-#[repr(C)]
+/// Time representation used by stream-policy evaluation in both eBPF and userspace.
+///
+/// The only external input is a Unix timestamp. UTC components are derived here so both
+/// enforcement paths use identical conversion logic.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Iso8601TimeParts {
-    pub year: u16,
-    pub month: u8,
-    pub day: u8,
+pub struct PolicyTime {
+    pub unix_seconds: u64,
     pub hour: u8,
     pub minute: u8,
     pub second: u8,
-    pub _pad: u8,
 }
 
-impl Iso8601TimeParts {
-    pub const fn new(year: u16, month: u8, day: u8, hour: u8, minute: u8, second: u8) -> Self {
+impl PolicyTime {
+    pub const fn from_unix_seconds(unix_seconds: u64) -> Self {
         Self {
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second,
-            _pad: 0,
+            unix_seconds,
+            hour: ((unix_seconds / 3_600) % 24) as u8,
+            minute: ((unix_seconds / 60) % 60) as u8,
+            second: (unix_seconds % 60) as u8,
         }
     }
 }
@@ -869,8 +866,7 @@ struct StreamEvaluation {
     operator: StreamOperator,
     modulo: u64,
     value: u64,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
 }
 
 fn evaluate_stream_condition(evaluation: &StreamEvaluation) -> Option<bool> {
@@ -881,23 +877,23 @@ fn evaluate_stream_condition(evaluation: &StreamEvaluation) -> Option<bool> {
             }
             Some(matches_stream_operator(
                 evaluation.operator,
-                evaluation.current_time % evaluation.modulo,
+                evaluation.current_time.unix_seconds % evaluation.modulo,
                 evaluation.value,
             ))
         }
         StreamAttribute::Hour => Some(matches_stream_operator(
             evaluation.operator,
-            evaluation.current_iso8601_time.hour as u64,
+            evaluation.current_time.hour as u64,
             evaluation.value,
         )),
         StreamAttribute::Minute => Some(matches_stream_operator(
             evaluation.operator,
-            evaluation.current_iso8601_time.minute as u64,
+            evaluation.current_time.minute as u64,
             evaluation.value,
         )),
         StreamAttribute::Second => Some(matches_stream_operator(
             evaluation.operator,
-            evaluation.current_iso8601_time.second as u64,
+            evaluation.current_time.second as u64,
             evaluation.value,
         )),
     }
@@ -994,8 +990,7 @@ pub fn file_open_stream_policy_applies_to_request(
 }
 
 pub fn file_open_stream_legacy_entitlement(
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
     policy: &FileOpenStreamPolicy,
 ) -> Option<Entitlement> {
     if policy.stream_condition_enabled == 0 {
@@ -1008,15 +1003,13 @@ pub fn file_open_stream_legacy_entitlement(
         modulo: policy.modulo,
         value: policy.value,
         current_time,
-        current_iso8601_time,
     };
     stream_entitlement(policy.entitlement, &evaluation)
 }
 
 pub fn evaluate_file_open_stream_policy(
     request: &FileOpenRequest,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
     policy: &FileOpenStreamPolicy,
 ) -> Option<Entitlement> {
     if !file_open_stream_policy_applies_to_request(request, policy) {
@@ -1025,7 +1018,7 @@ pub fn evaluate_file_open_stream_policy(
     if policy.attribute_condition_count != 0 {
         return None;
     }
-    file_open_stream_legacy_entitlement(current_time, current_iso8601_time, policy)
+    file_open_stream_legacy_entitlement(current_time, policy)
 }
 
 pub fn evaluate_socket_bind_static_policy(
@@ -1079,8 +1072,7 @@ pub fn socket_bind_stream_policy_applies_to_request(
 }
 
 pub fn socket_bind_stream_legacy_entitlement(
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
     policy: &SocketBindStreamPolicy,
 ) -> Option<Entitlement> {
     if policy.stream_condition_enabled == 0 {
@@ -1093,15 +1085,13 @@ pub fn socket_bind_stream_legacy_entitlement(
         modulo: policy.modulo,
         value: policy.value,
         current_time,
-        current_iso8601_time,
     };
     stream_entitlement(policy.entitlement, &evaluation)
 }
 
 pub fn evaluate_socket_bind_stream_policy(
     request: &SocketBindRequest,
-    current_time: u64,
-    current_iso8601_time: Iso8601TimeParts,
+    current_time: PolicyTime,
     policy: &SocketBindStreamPolicy,
 ) -> Option<Entitlement> {
     if !socket_bind_stream_policy_applies_to_request(request, policy) {
@@ -1110,7 +1100,7 @@ pub fn evaluate_socket_bind_stream_policy(
     if policy.attribute_condition_count != 0 {
         return None;
     }
-    socket_bind_stream_legacy_entitlement(current_time, current_iso8601_time, policy)
+    socket_bind_stream_legacy_entitlement(current_time, policy)
 }
 
 #[cfg(feature = "user")]
@@ -1136,9 +1126,6 @@ unsafe impl aya::Pod for SocketBindStaticPolicy {}
 
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for SocketBindStreamPolicy {}
-
-#[cfg(feature = "user")]
-unsafe impl aya::Pod for Iso8601TimeParts {}
 
 #[cfg(test)]
 mod tests {
@@ -1179,6 +1166,20 @@ mod tests {
             value_number,
             value_hash,
         }
+    }
+
+    #[test]
+    fn policy_time_derives_utc_components_from_unix_seconds() {
+        assert_eq!(
+            PolicyTime::from_unix_seconds(12 * 3_600 + 34 * 60 + 56),
+            PolicyTime {
+                unix_seconds: 45_296,
+                hour: 12,
+                minute: 34,
+                second: 56,
+            }
+        );
+        assert_eq!(PolicyTime::from_unix_seconds(86_400).hour, 0);
     }
 
     #[test]
@@ -1299,8 +1300,7 @@ mod tests {
 
         let result = evaluate_file_open_stream_policy(
             &file_open_request(),
-            0,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(0),
             &policy,
         );
 
@@ -1321,12 +1321,29 @@ mod tests {
 
         let result = evaluate_file_open_stream_policy(
             &file_open_request(),
-            3,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(3),
             &policy,
         );
 
         assert_eq!(result, Some(Entitlement::Deny));
+    }
+
+    #[test]
+    fn stream_policy_uses_utc_hour_from_shared_policy_time() {
+        let mut policy = FileOpenStreamPolicy::stream(Entitlement::Deny, 1000, "", "");
+        policy.stream_condition_enabled = 1;
+        policy.attribute = StreamAttribute::Hour;
+        policy.operator = StreamOperator::Equal;
+        policy.value = 12;
+
+        assert_eq!(
+            evaluate_file_open_stream_policy(
+                &file_open_request(),
+                PolicyTime::from_unix_seconds(12 * 3_600),
+                &policy,
+            ),
+            Some(Entitlement::Deny)
+        );
     }
 
     #[test]
@@ -1343,8 +1360,7 @@ mod tests {
 
         let result = evaluate_file_open_stream_policy(
             &file_open_request(),
-            8,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(8),
             &policy,
         );
 
@@ -1365,8 +1381,7 @@ mod tests {
 
         let result = evaluate_file_open_stream_policy(
             &file_open_request(),
-            3,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(3),
             &policy,
         );
 
@@ -1387,8 +1402,7 @@ mod tests {
 
         let denied = evaluate_file_open_stream_policy(
             &file_open_request(),
-            1,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(1),
             &policy,
         );
 
@@ -1398,8 +1412,7 @@ mod tests {
         };
         let not_applicable = evaluate_file_open_stream_policy(
             &allowed_request,
-            1,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(1),
             &policy,
         );
 
@@ -1424,8 +1437,7 @@ mod tests {
 
         let denied = evaluate_socket_bind_stream_policy(
             &socket_bind_request(),
-            1,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(1),
             &policy,
         );
 
@@ -1435,8 +1447,7 @@ mod tests {
         };
         let not_applicable = evaluate_socket_bind_stream_policy(
             &different_command_request,
-            1,
-            Iso8601TimeParts::new(2026, 5, 9, 12, 0, 0),
+            PolicyTime::from_unix_seconds(1),
             &policy,
         );
 

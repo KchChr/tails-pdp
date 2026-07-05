@@ -5,7 +5,7 @@ use aya::maps::MapInfo;
 use tails_pdp_common::{
     ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
+    FileOpenStreamPolicy, POLICY_GENERATION_MAX_ENTRIES,
 };
 use tails_pdp_userspace_common::BPF_PIN_DIRECTORY;
 
@@ -74,12 +74,6 @@ pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
         "CURRENT_TIME",
         ARRAY_KEY_SIZE,
         size_of::<u64>() as u32,
-        CURRENT_TIME_MAX_ENTRIES,
-    )?;
-    verify_pinned_map_layout(
-        "CURRENT_TIME_ISO8601",
-        ARRAY_KEY_SIZE,
-        size_of::<Iso8601TimeParts>() as u32,
         CURRENT_TIME_MAX_ENTRIES,
     )?;
     verify_pinned_map_layout(

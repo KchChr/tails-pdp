@@ -61,8 +61,7 @@ Die Maps stehen in [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs)
 | `POLICY_GENERATION` | gepinnte `Array<u32>` | Aktive Policy-Generation. |
 | `FILE_OPEN_STATIC_POLICIES` | gepinnte `Array<FileOpenStaticPolicy>` | Datei-Static-Policies. |
 | `FILE_OPEN_STREAM_POLICIES` | gepinnte `Array<FileOpenStreamPolicy>` | Datei-Stream-Policies. |
-| `CURRENT_TIME` | gepinnte `Array<u64>` | Aktuelle Unix-Zeit. |
-| `CURRENT_TIME_ISO8601` | gepinnte `Array<Iso8601TimeParts>` | Aktuelle UTC-Zeitfelder. |
+| `CURRENT_TIME` | gepinnte `Array<u64>` | Aktuelle Unix-Zeit; UTC-Stunde, -Minute und -Sekunde werden daraus mit gemeinsamem Code abgeleitet. |
 | `ATTRIBUTE_GENERATION` | gepinnte `Array<u32>` | Aktive Generation strukturierter Attribute. |
 | `ATTRIBUTES` | gepinnte `HashMap<AttributeKey, AttributeValue>` | Strukturierte Attribute aus `attributes/system.attributes`, `attributes/subjects/<uid>.attributes` und `attributes/resources/<pfad>.attributes`. |
 

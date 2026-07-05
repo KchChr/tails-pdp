@@ -608,7 +608,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "aya",
- "libc",
  "log",
  "tails-pdp-common",
  "tails-pdp-userspace-common",

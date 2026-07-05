@@ -9,7 +9,7 @@ use aya::{
 use log::{info, warn};
 use tails_pdp::{FILE_OPEN_TAIL_PROGRAMS, LSM_PROGRAMS};
 use tails_pdp_attribute_loader::{
-    open_attribute_maps, open_current_time_maps, run_attribute_updater, run_current_time_updater,
+    open_attribute_maps, open_current_time_map, run_attribute_updater, run_current_time_updater,
     write_current_attributes, write_current_time,
 };
 use tails_pdp_policy_loader::{PolicyDirectorySync, verify_pinned_map_layouts};
@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open FILE_OPEN_JUMP_TABLE")?;
 
-    let (mut current_time, mut current_time_iso8601) = open_current_time_maps()?;
+    let mut current_time = open_current_time_map()?;
     let mut attribute_maps = open_attribute_maps()?;
     let mut policy_sync = PolicyDirectorySync::new()?;
 
@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     policy_sync.sync_initial()?;
-    write_current_time(&mut current_time, &mut current_time_iso8601)?;
+    write_current_time(&mut current_time)?;
     write_current_attributes(&mut attribute_maps)?;
     info!(
         "Watching policy directory '{}'",
@@ -113,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     tokio::select! {
-        result = run_current_time_updater(&mut current_time, &mut current_time_iso8601) => result?,
+        result = run_current_time_updater(&mut current_time) => result?,
         result = run_attribute_updater(&mut attribute_maps) => result?,
         result = policy_sync.run() => result?,
         result = run_userspace_pep() => result?,

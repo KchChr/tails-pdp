@@ -11,7 +11,6 @@ tails-pdp-userspace-common = { path = "../tails-pdp-userspace-common" }
 
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
-libc = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 

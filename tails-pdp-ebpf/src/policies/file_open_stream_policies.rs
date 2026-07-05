@@ -1,14 +1,15 @@
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     AttributeKey, COMMAND_LEN, Entitlement, FileOpenRequest, LSM_DENY, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, attribute_bank, attribute_object_ids, file_open_stream_legacy_entitlement,
-    file_open_stream_policy_applies_to_request, matches_attribute_condition, policy_bank_offset,
+    POLICY_BANK_SIZE, PolicyTime, attribute_bank, attribute_object_ids,
+    file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
+    matches_attribute_condition, policy_bank_offset,
 };
 
 use crate::{
     helpers::{FileOpenResource, read_file_open_resource},
     maps::{
-        ATTRIBUTE_GENERATION, ATTRIBUTES, CURRENT_TIME, CURRENT_TIME_ISO8601, FILE_OPEN_JUMP_TABLE,
+        ATTRIBUTE_GENERATION, ATTRIBUTES, CURRENT_TIME, FILE_OPEN_JUMP_TABLE,
         FILE_OPEN_STREAM_POLICIES, TAIL_IDX_FILE_OPEN_COMBINE,
     },
     policies::decision::{DecisionMapExt, DecisionState},
@@ -18,8 +19,7 @@ pub(crate) fn evaluate_policies(
     current_subject: u32,
     current_command: &[u8; COMMAND_LEN],
     resource: &FileOpenResource,
-    current_time: u64,
-    current_iso8601_time: tails_pdp_common::Iso8601TimeParts,
+    current_time: PolicyTime,
     generation: u32,
     attribute_bank: u32,
 ) -> DecisionState {
@@ -47,8 +47,7 @@ pub(crate) fn evaluate_policies(
                     resource.inode,
                     attribute_bank,
                 )
-                && let Some(entitlement) =
-                    file_open_stream_legacy_entitlement(current_time, current_iso8601_time, policy)
+                && let Some(entitlement) = file_open_stream_legacy_entitlement(current_time, policy)
             {
                 match entitlement {
                     Entitlement::Deny => {
@@ -78,7 +77,7 @@ pub(crate) fn evaluate_policies(
         matched_deny_index,
         matched_permit_index,
         current_subject,
-        current_time,
+        current_time.unix_seconds,
         resource.device,
         resource.inode,
         current_command.as_ptr(),
@@ -138,12 +137,10 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     let Some(resource) = read_file_open_resource(&ctx) else {
         return LSM_DENY;
     };
-    let Some(current_time) = CURRENT_TIME.get(0).copied() else {
+    let Some(current_unix_time) = CURRENT_TIME.get(0).copied() else {
         return LSM_DENY;
     };
-    let Some(current_iso8601_time) = CURRENT_TIME_ISO8601.get(0).copied() else {
-        return LSM_DENY;
-    };
+    let current_time = PolicyTime::from_unix_seconds(current_unix_time);
     let Some(attribute_generation) = ATTRIBUTE_GENERATION.get(0).copied() else {
         return LSM_DENY;
     };
@@ -153,7 +150,6 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
         &current_command,
         &resource,
         current_time,
-        current_iso8601_time,
         generation,
         current_attribute_bank,
     );

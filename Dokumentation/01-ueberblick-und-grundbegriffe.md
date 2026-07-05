@@ -117,8 +117,7 @@ Beispiele aus [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs):
 | `FILE_OPEN_STREAM_POLICIES` | Stream Policies für `file_open`. |
 | `POLICY_GENERATION` | Aktive Policy-Generation. |
 | `DECISIONS` | Zwischenentscheidung innerhalb einer Tail-Call-Kette. |
-| `CURRENT_TIME` | Aktuelle Unix-Zeit für Stream-Policies. |
-| `CURRENT_TIME_ISO8601` | Aktuelle UTC-Zeit in Feldern wie Stunde, Minute, Sekunde. |
+| `CURRENT_TIME` | Aktuelle Unix-Zeit; daraus leitet gemeinsamer Code die UTC-Zeitfelder für Stream-Policies ab. |
 | `ATTRIBUTES` | Strukturierte System-, Subjekt- und Ressourcenattribute, darunter `system.defcon`. |
 
 Viele Maps sind gepinnt. Gepinnt bedeutet: Sie liegen unter `/sys/fs/bpf/tails-pdp/...` und können

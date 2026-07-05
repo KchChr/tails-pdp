@@ -79,21 +79,12 @@ unnötige Map-Schreibzugriffe.
 
 ## Zeit-Updater
 
-[`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) aktualisiert zwei Maps:
-
-- `CURRENT_TIME`
-- `CURRENT_TIME_ISO8601`
-
-`CURRENT_TIME` enthält die Unix-Zeit in Sekunden. `CURRENT_TIME_ISO8601` enthält einzelne Felder:
-
-- Jahr
-- Monat
-- Tag
-- Stunde
-- Minute
-- Sekunde
-
-Stream Policies können dadurch entweder modulo-basiert oder komponentenbasiert arbeiten.
+[`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) aktualisiert die
+Map `CURRENT_TIME` mit der Unix-Zeit in Sekunden. Kernel- und Userspace-PEP lesen denselben Wert.
+Beide erzeugen daraus über
+[`PolicyTime::from_unix_seconds`](../tails-pdp-common/src/lib.rs) die UTC-Komponenten Stunde,
+Minute und Sekunde. Damit verwenden beide Ausführungspfade dieselbe Konvertierungslogik und
+Stream Policies können weiterhin modulo- oder komponentenbasierte Zeitbedingungen auswerten.
 
 Beispiel:
 

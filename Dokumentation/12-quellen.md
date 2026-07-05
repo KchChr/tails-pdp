@@ -19,14 +19,14 @@ Rust-Dokumentation und Aya-Dokumentation.
 | [P2] | [`tails-pdp/src/lib.rs`](../tails-pdp/src/lib.rs) | LSM-Programm- und Tail-Call-Spezifikationen des Hauptprogramms. |
 | [P3] | [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.sapl`-Policy-Dateien. |
 | [P4] | [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüfung der Layouts bereits gepinnter Maps. |
-| [P5] | [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Aktualisierung der Zeit-Maps `CURRENT_TIME` und `CURRENT_TIME_ISO8601`. |
+| [P5] | [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Aktualisierung der gemeinsamen Zeit-Map `CURRENT_TIME`. |
 | [P6] | [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Nachbewertung bestehender Dateizugriffe und Auslösen des FD-Enforcements. |
 | [P7] | [`tails-pdp-userspace-pep/src/fd_revoker.rs`](../tails-pdp-userspace-pep/src/fd_revoker.rs) | Schließen fremder File Descriptors per `ptrace` auf x86_64 Linux. |
 | [P8] | [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) | Gemeinsame Typen, Policy-Strukturen, Entscheidungslogik und Konstanten für Userspace und eBPF. |
 | [P9] | [`tails-pdp-ebpf/src/main.rs`](../tails-pdp-ebpf/src/main.rs) | eBPF-Crate-Einstieg. |
 | [P10] | [`tails-pdp-ebpf/src/hooks.rs`](../tails-pdp-ebpf/src/hooks.rs) | LSM-Hook-Einstieg `file_open`. |
 | [P11] | [`tails-pdp-ebpf/src/helpers.rs`](../tails-pdp-ebpf/src/helpers.rs) | Kernel-Hilfsfunktionen, z. B. Datei-Attributermittlung. |
-| [P12] | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | eBPF-Map-Definitionen, Policy-Maps, Zeit-Maps, Decision-Maps und Tail-Call-Tabelle. |
+| [P12] | [`tails-pdp-ebpf/src/maps.rs`](../tails-pdp-ebpf/src/maps.rs) | eBPF-Map-Definitionen, Policy-Maps, Zeit-Map, Decision-Maps und Tail-Call-Tabelle. |
 | [P13] | [`tails-pdp-ebpf/src/logging.rs`](../tails-pdp-ebpf/src/logging.rs) | eBPF-Debug-Logging. |
 | [P14] | [`tails-pdp-ebpf/src/policies/`](../tails-pdp-ebpf/src/policies/) | eBPF-Policy-Auswertung, Tail-Call-Ziele und Kombinieren der Entscheidungen. |
 | [P15] | [`tails-pdp-ebpf/build.rs`](../tails-pdp-ebpf/build.rs) | Build-Schritte für den eBPF-Teil. |

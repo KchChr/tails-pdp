@@ -131,6 +131,7 @@ sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
+# Nur bei einer Aktualisierung von Versionen vor der Ein-Map-Umstellung nötig:
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION

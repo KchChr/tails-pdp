@@ -43,6 +43,7 @@ If pinned map layouts changed, remove the stale maps once before restarting:
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
+# Legacy pin from versions before the single-time-map migration:
 sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
 sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION

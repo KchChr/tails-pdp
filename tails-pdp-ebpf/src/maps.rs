@@ -5,7 +5,7 @@ use aya_ebpf::{
 use tails_pdp_common::{
     ATTRIBUTE_GENERATION_MAX_ENTRIES, ATTRIBUTE_MAP_MAX_ENTRIES, AttributeKey, AttributeValue,
     FILE_OPEN_STATIC_POLICY_MAX_ENTRIES, FILE_OPEN_STREAM_POLICY_MAX_ENTRIES, FileOpenStaticPolicy,
-    FileOpenStreamPolicy, Iso8601TimeParts, POLICY_GENERATION_MAX_ENTRIES,
+    FileOpenStreamPolicy, POLICY_GENERATION_MAX_ENTRIES,
 };
 
 pub(crate) const TAIL_IDX_FILE_OPEN_STATIC: u32 = 0;
@@ -37,9 +37,6 @@ pub(crate) static FILE_OPEN_STREAM_POLICIES: Array<FileOpenStreamPolicy> =
 
 #[map]
 pub(crate) static CURRENT_TIME: Array<u64> = Array::pinned(1, 0);
-
-#[map]
-pub(crate) static CURRENT_TIME_ISO8601: Array<Iso8601TimeParts> = Array::pinned(1, 0);
 
 #[map]
 pub(crate) static ATTRIBUTE_GENERATION: Array<u32> =
