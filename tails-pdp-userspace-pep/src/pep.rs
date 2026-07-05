@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     ffi::OsString,
     fs,
     os::unix::fs::MetadataExt,
@@ -40,13 +40,8 @@ struct ProcessInfo {
 struct ProcessFd {
     process: ProcessInfo,
     fd: i32,
-    target: FdTarget,
-}
-
-#[derive(Clone, Debug)]
-enum FdTarget {
-    File { device: u64, inode: u64 },
-    Inotify,
+    device: u64,
+    inode: u64,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -77,13 +72,18 @@ struct FdKey {
 
 struct Violation {
     key: ViolationKey,
-    subject: u32,
-    command: String,
-    resource: ViolationResource,
 }
 
-enum ViolationResource {
-    File { device: u64, inode: u64 },
+trait FdCloser {
+    fn close(&mut self, pid: u32, fd: i32) -> anyhow::Result<()>;
+}
+
+struct PtraceFdCloser;
+
+impl FdCloser for PtraceFdCloser {
+    fn close(&mut self, pid: u32, fd: i32) -> anyhow::Result<()> {
+        close_remote_fd(pid, fd)
+    }
 }
 
 struct PolicyMaps {
@@ -96,16 +96,15 @@ struct PolicyMaps {
 }
 
 /// Immutable inputs shared by every file-descriptor evaluation in one `/proc` scan.
-struct ScanContext<'a> {
+struct ScanContext {
     current_time: PolicyTime,
     current_attribute_bank: u32,
     policy_bank_offset: u32,
-    inotify_fds: &'a HashMap<u32, Vec<i32>>,
 }
 
 pub async fn run_userspace_pep() -> anyhow::Result<()> {
     let mut policies = open_policy_maps()?;
-    let mut previous_violations = HashSet::new();
+    let mut fd_closer = PtraceFdCloser;
     let mut interval = time::interval(Duration::from_secs(1));
 
     loop {
@@ -122,14 +121,8 @@ pub async fn run_userspace_pep() -> anyhow::Result<()> {
                         continue;
                     }
 
-                    if !previous_violations.contains(&violation.key) {
-                        print_violation(&violation);
-                    }
-
-                    enforce_violation(&violation, &mut revoked_in_scan);
+                    enforce_violation(&violation, &mut revoked_in_scan, &mut fd_closer);
                 }
-
-                previous_violations = current_keys;
             }
             Err(error) => {
                 warn!("USERSPACE_PEP scan failed: {error:#}");
@@ -153,40 +146,35 @@ fn collect_policy_violations(policies: &mut PolicyMaps) -> anyhow::Result<Vec<Vi
     let generation = policies
         .policy_generation
         .get(&0, 0)
-        .context("failed to read POLICY_GENERATION[0] for monitor")?;
+        .context("failed to read POLICY_GENERATION[0] for userspace PEP")?;
     let bank_offset = policy_bank_offset(generation);
     let process_fds = read_process_fds();
-    let inotify_fds = collect_inotify_fds_by_pid(&process_fds);
     let current_unix_time = policies
         .current_time
         .get(&0, 0)
-        .context("failed to read CURRENT_TIME[0] for monitor")?;
+        .context("failed to read CURRENT_TIME[0] for userspace PEP")?;
     let current_time = PolicyTime::from_unix_seconds(current_unix_time);
     let attribute_generation = policies
         .attribute_generation
         .get(&0, 0)
-        .context("failed to read ATTRIBUTE_GENERATION[0] for monitor")?;
+        .context("failed to read ATTRIBUTE_GENERATION[0] for userspace PEP")?;
     let current_attribute_bank = attribute_bank(attribute_generation);
     let scan = ScanContext {
         current_time,
         current_attribute_bank,
         policy_bank_offset: bank_offset,
-        inotify_fds: &inotify_fds,
     };
     let mut violations = Vec::new();
 
     for process_fd in process_fds {
-        match &process_fd.target {
-            FdTarget::File { device, inode } => collect_file_open_violations(
-                &process_fd,
-                *device,
-                *inode,
-                policies,
-                &scan,
-                &mut violations,
-            )?,
-            FdTarget::Inotify => {}
-        }
+        collect_file_open_violations(
+            &process_fd,
+            process_fd.device,
+            process_fd.inode,
+            policies,
+            &scan,
+            &mut violations,
+        )?;
     }
 
     Ok(violations)
@@ -197,7 +185,7 @@ fn collect_file_open_violations(
     device: u64,
     inode: u64,
     policies: &mut PolicyMaps,
-    scan: &ScanContext<'_>,
+    scan: &ScanContext,
     violations: &mut Vec<Violation>,
 ) -> anyhow::Result<()> {
     let request = FileOpenRequest {
@@ -213,25 +201,10 @@ fn collect_file_open_violations(
             .file_open_static
             .get(&map_index, 0)
             .with_context(|| {
-                format!("failed to read FILE_OPEN_STATIC_POLICIES[{map_index}] for monitor")
+                format!("failed to read FILE_OPEN_STATIC_POLICIES[{map_index}] for userspace PEP")
             })?;
         if evaluate_file_open_static_policy(&request, &policy) == Some(Entitlement::Deny) {
-            violations.push(file_violation(
-                process_fd,
-                PolicyKind::Static,
-                index,
-                device,
-                inode,
-            ));
-            append_file_open_sidecar_violations(
-                process_fd,
-                PolicyKind::Static,
-                index,
-                device,
-                inode,
-                scan.inotify_fds,
-                violations,
-            );
+            violations.push(file_violation(process_fd, PolicyKind::Static, index));
         }
     }
 
@@ -241,7 +214,7 @@ fn collect_file_open_violations(
             .file_open_stream
             .get(&map_index, 0)
             .with_context(|| {
-                format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}] for monitor")
+                format!("failed to read FILE_OPEN_STREAM_POLICIES[{map_index}] for userspace PEP")
             })?;
         if file_open_stream_policy_applies_to_request(&request, &policy)
             && attribute_conditions_match(
@@ -256,51 +229,11 @@ fn collect_file_open_violations(
             && file_open_stream_legacy_entitlement(scan.current_time, &policy)
                 == Some(Entitlement::Deny)
         {
-            violations.push(file_violation(
-                process_fd,
-                PolicyKind::Stream,
-                index,
-                device,
-                inode,
-            ));
-            append_file_open_sidecar_violations(
-                process_fd,
-                PolicyKind::Stream,
-                index,
-                device,
-                inode,
-                scan.inotify_fds,
-                violations,
-            );
+            violations.push(file_violation(process_fd, PolicyKind::Stream, index));
         }
     }
 
     Ok(())
-}
-
-fn append_file_open_sidecar_violations(
-    process_fd: &ProcessFd,
-    policy_kind: PolicyKind,
-    policy_index: u32,
-    device: u64,
-    inode: u64,
-    inotify_fds: &HashMap<u32, Vec<i32>>,
-    violations: &mut Vec<Violation>,
-) {
-    let Some(fds) = inotify_fds.get(&process_fd.process.pid) else {
-        return;
-    };
-
-    for fd in fds {
-        violations.push(file_violation_for_fd(
-            process_fd,
-            *fd,
-            policy_kind,
-            policy_index,
-            device,
-            inode,
-        ));
-    }
 }
 
 fn attribute_conditions_match(
@@ -339,46 +272,23 @@ fn attribute_conditions_match(
     true
 }
 
-fn file_violation(
-    process_fd: &ProcessFd,
-    policy_kind: PolicyKind,
-    policy_index: u32,
-    device: u64,
-    inode: u64,
-) -> Violation {
-    file_violation_for_fd(
-        process_fd,
-        process_fd.fd,
-        policy_kind,
-        policy_index,
-        device,
-        inode,
-    )
-}
-
-fn file_violation_for_fd(
-    process_fd: &ProcessFd,
-    fd: i32,
-    policy_kind: PolicyKind,
-    policy_index: u32,
-    device: u64,
-    inode: u64,
-) -> Violation {
+fn file_violation(process_fd: &ProcessFd, policy_kind: PolicyKind, policy_index: u32) -> Violation {
     Violation {
         key: ViolationKey {
             policy_kind,
             policy_index,
             resource_kind: ResourceKind::File,
             pid: process_fd.process.pid,
-            fd,
+            fd: process_fd.fd,
         },
-        subject: process_fd.process.uid,
-        command: process_fd.process.command.clone(),
-        resource: ViolationResource::File { device, inode },
     }
 }
 
-fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>) {
+fn enforce_violation<C: FdCloser>(
+    violation: &Violation,
+    revoked_in_scan: &mut HashSet<FdKey>,
+    fd_closer: &mut C,
+) {
     let key = FdKey {
         pid: violation.key.pid,
         fd: violation.key.fd,
@@ -386,11 +296,7 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
     if !revoked_in_scan.insert(key) {
         return;
     }
-    if should_skip_enforcement(violation.key.pid) {
-        return;
-    }
-
-    match close_remote_fd(violation.key.pid, violation.key.fd) {
+    match fd_closer.close(violation.key.pid, violation.key.fd) {
         Ok(()) => {
             info!(
                 "USERSPACE_PEP closed pid={} fd={} for {:?} policy {:?}[{}]",
@@ -412,26 +318,6 @@ fn enforce_violation(violation: &Violation, revoked_in_scan: &mut HashSet<FdKey>
             );
         }
     }
-}
-
-fn collect_inotify_fds_by_pid(process_fds: &[ProcessFd]) -> HashMap<u32, Vec<i32>> {
-    let mut fds_by_pid = HashMap::new();
-
-    for process_fd in process_fds {
-        if !matches!(process_fd.target, FdTarget::Inotify) {
-            continue;
-        }
-        fds_by_pid
-            .entry(process_fd.process.pid)
-            .or_insert_with(Vec::new)
-            .push(process_fd.fd);
-    }
-
-    fds_by_pid
-}
-
-fn should_skip_enforcement(pid: u32) -> bool {
-    pid == 0 || pid == 1 || pid == std::process::id()
 }
 
 fn read_process_fds() -> Vec<ProcessFd> {
@@ -463,39 +349,25 @@ fn append_process_fds(process: ProcessInfo, process_fds: &mut Vec<ProcessFd>) {
         let Some(fd) = parse_fd(entry.file_name()) else {
             continue;
         };
-        let Some(target) = read_fd_target(&entry.path()) else {
+        let Some((device, inode)) = read_file_identity(&entry.path()) else {
             continue;
         };
         process_fds.push(ProcessFd {
             process: process.clone(),
             fd,
-            target,
+            device,
+            inode,
         });
     }
 }
 
-fn read_fd_target(path: &Path) -> Option<FdTarget> {
-    let target = fs::read_link(path).ok()?;
-    if parse_socket_symlink(&target).is_some() {
-        return None;
-    }
-    if is_inotify_symlink(&target) {
-        return Some(FdTarget::Inotify);
-    }
-
+fn read_file_identity(path: &Path) -> Option<(u64, u64)> {
     let metadata = fs::metadata(path).ok()?;
     if !metadata.file_type().is_file() {
         return None;
     }
 
-    Some(FdTarget::File {
-        device: encode_kernel_dev_t(metadata.dev()),
-        inode: metadata.ino(),
-    })
-}
-
-fn is_inotify_symlink(target: &Path) -> bool {
-    target.to_string_lossy() == "anon_inode:inotify"
+    Some((encode_kernel_dev_t(metadata.dev()), metadata.ino()))
 }
 
 fn parse_pid(name: OsString) -> Option<u32> {
@@ -526,39 +398,46 @@ fn read_process_info(pid: u32) -> Option<ProcessInfo> {
     })
 }
 
-fn parse_socket_symlink(target: &Path) -> Option<u64> {
-    let value = target.to_string_lossy();
-    let inode = value.strip_prefix("socket:[")?.strip_suffix(']')?;
-    inode.parse().ok()
-}
-
 fn encode_kernel_dev_t(device: u64) -> u64 {
     let major = libc::major(device) as u64;
     let minor = libc::minor(device) as u64;
     (major << 20) | minor
 }
 
-fn print_violation(violation: &Violation) {
-    match &violation.resource {
-        ViolationResource::File { device, inode } => {
-            warn!(
-                "USERSPACE_PEP file_open violation policy={:?}[{}] uid={} pid={} fd={} comm={} dev={} ino={}",
-                violation.key.policy_kind,
-                violation.key.policy_index,
-                violation.subject,
-                violation.key.pid,
-                violation.key.fd,
-                violation.command,
-                device,
-                inode,
-            );
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
+
+    #[derive(Default)]
+    struct FakeFdCloser {
+        calls: Vec<(u32, i32)>,
+        fail: bool,
+    }
+
+    impl FdCloser for FakeFdCloser {
+        fn close(&mut self, pid: u32, fd: i32) -> anyhow::Result<()> {
+            self.calls.push((pid, fd));
+            if self.fail {
+                anyhow::bail!("injected close failure");
+            }
+            Ok(())
+        }
+    }
+
+    fn process_fd(pid: u32, fd: i32) -> ProcessFd {
+        ProcessFd {
+            process: ProcessInfo {
+                pid,
+                uid: 1000,
+                command: String::from("test-process"),
+            },
+            fd,
+            device: 42,
+            inode: 99,
+        }
+    }
 
     #[test]
     fn parses_only_numeric_process_and_fd_names() {
@@ -566,5 +445,76 @@ mod tests {
         assert_eq!(parse_pid(OsString::from("self")), None);
         assert_eq!(parse_fd(OsString::from("17")), Some(17));
         assert_eq!(parse_fd(OsString::from("cwd")), None);
+    }
+
+    #[test]
+    fn regular_files_are_identified_but_directories_are_ignored() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "tails-pdp-userspace-pep-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).expect("create test directory");
+        let file = directory.join("resource");
+        fs::write(&file, b"test").expect("create test file");
+
+        assert!(read_file_identity(&file).is_some());
+        assert_eq!(read_file_identity(&directory), None);
+
+        fs::remove_dir_all(directory).expect("remove test directory");
+    }
+
+    #[test]
+    fn violation_targets_exactly_the_matching_file_descriptor() {
+        let process_fd = process_fd(4242, 17);
+        let violation = file_violation(&process_fd, PolicyKind::Stream, 3);
+
+        assert_eq!(violation.key.pid, 4242);
+        assert_eq!(violation.key.fd, 17);
+    }
+
+    #[test]
+    fn same_file_descriptor_is_closed_only_once_per_scan() {
+        let process_fd = process_fd(4242, 17);
+        let static_violation = file_violation(&process_fd, PolicyKind::Static, 0);
+        let stream_violation = file_violation(&process_fd, PolicyKind::Stream, 1);
+        let mut revoked = HashSet::new();
+        let mut closer = FakeFdCloser::default();
+
+        enforce_violation(&static_violation, &mut revoked, &mut closer);
+        enforce_violation(&stream_violation, &mut revoked, &mut closer);
+
+        assert_eq!(closer.calls, [(4242, 17)]);
+    }
+
+    #[test]
+    fn other_file_descriptors_remain_independently_enforceable() {
+        let first = file_violation(&process_fd(4242, 17), PolicyKind::Static, 0);
+        let second = file_violation(&process_fd(4242, 18), PolicyKind::Static, 0);
+        let mut revoked = HashSet::new();
+        let mut closer = FakeFdCloser::default();
+
+        enforce_violation(&first, &mut revoked, &mut closer);
+        enforce_violation(&second, &mut revoked, &mut closer);
+
+        assert_eq!(closer.calls, [(4242, 17), (4242, 18)]);
+    }
+
+    #[test]
+    fn failed_close_is_attempted_once_without_aborting_scan() {
+        let violation = file_violation(&process_fd(4242, 17), PolicyKind::Static, 0);
+        let mut revoked = HashSet::new();
+        let mut closer = FakeFdCloser {
+            fail: true,
+            ..FakeFdCloser::default()
+        };
+
+        enforce_violation(&violation, &mut revoked, &mut closer);
+        enforce_violation(&violation, &mut revoked, &mut closer);
+
+        assert_eq!(closer.calls, [(4242, 17)]);
     }
 }

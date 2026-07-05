@@ -27,7 +27,7 @@ sondern ausschließlich validierte Strukturen mit fester Größe. Der zentrale C
 [[P3]](../tails-pdp-policy-loader/src/policy_source.rs).
 
 ```text
-policies/**/*.sapl
+policies/**/*.policy
         |
         v
 Dateien rekursiv lesen und sortieren
@@ -72,7 +72,7 @@ wird keine unvollständig initialisierte Policy-Engine aktiviert.
 ### 2. Policy-Dateien einlesen
 
 `read_policy_documents` durchsucht `policies/` rekursiv. Berücksichtigt werden ausschließlich
-Dateien mit der Endung `.sapl`. Für jede Datei entsteht eine interne Darstellung:
+Dateien mit der Endung `.policy`. Für jede Datei entsteht eine interne Darstellung:
 
 ```rust
 PolicyDocument {

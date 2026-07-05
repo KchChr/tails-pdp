@@ -1,216 +1,120 @@
 # Tests und Teststrategie
 
-## Automatisierte Tests auf dem Linux-Zielsystem
+Das Projekt trennt schnelle, unprivilegierte Prüfungen von privilegierten End-to-End-Tests. Dadurch
+kann die Logik auf dem Entwicklungsrechner geprüft werden, während nur der reale Kerneltest das
+Laden, Anhängen und Durchsetzen der eBPF-LSM-Programme verifiziert.
 
-Das Skript [`test.sh`](../test.sh) führt die vollständige automatisierte Prüfkette aus:
+## Unprivilegierte Prüfkette
+
+[`test.sh`](../test.sh) führt die normale Prüfkette aus:
 
 ```shell
 ./test.sh
 ```
 
-Enthalten sind Formatprüfung, alle vorhandenen Unit- und Komponententests, Clippy mit
-`-D warnings` sowie der Release-Build des Userspace-Programms und des eingebetteten eBPF-Objekts.
-Verifier-, Attach- und Enforcement-Tests bleiben privilegierte manuelle Integrationstests, weil sie
-den aktiven Zielkernel und dessen LSM-Hooks verändern.
+Das Skript prüft:
 
-## Aktueller Stand
+1. Formatierung mit `cargo fmt`.
+2. Native Unit-Tests der gemeinsam genutzten Policylogik.
+3. Kompilierung der Linux-Testprogramme für Policyloader, Attributloader und Userspace-PEP.
+4. Clippy mit `-D warnings`.
+5. Den vollständigen Linux-Release-Build einschließlich des eingebetteten eBPF-Objekts.
 
-Unit-Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) prüfen vor allem
-Stream-Policy-Semantik. Ergänzend besitzen Policyloader, Attributloader und Userspace-PEP eigene
-komponentennahe Tests:
+Die Prüfkette benötigt keine Root-Rechte und verändert keine gepinnten Maps. `test.sh` ist für das
+Linux-Zielsystem vorgesehen, weil es die Linux-Testprogramme tatsächlich ausführt. Auf macOS können
+dieselben Crates zwar gegen `x86_64-unknown-linux-musl` gebaut werden; die vollständige Ausführung
+erfolgt aber erst auf Linux.
 
-- Zeitbedingung wahr ergibt Entitlement.
-- Zeitbedingung falsch ergibt `None`.
-- Modulo `0` ergibt `None`.
-- Deny-overrides erlaubt ohne Deny-Treffer und lehnt bei mindestens einem Deny-Treffer ab.
-- DEFCON-Bedingung wahr ergibt Entitlement.
-- DEFCON-Bedingung falsch ergibt `None`.
-- Freie Subjektattribute werden in Stream-Policy-Einträge übersetzt.
-- Ungültige Attributnamen werden abgelehnt.
-- Zahlen-, Bool- und Stringattribute werden korrekt geparst.
-- Prozess- und FD-Namen aus `/proc` werden nur als Zahlen akzeptiert.
+## Implementierte Komponententests
 
-Diese Tests betreffen die gemeinsame Logik, die eBPF und Userspace-PEP verwenden [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [[P8]](../tails-pdp-common/src/lib.rs).
+### 1. Gemeinsame Policy-Auswertung
 
-Ausführung ohne den globalen Cargo-Runner:
+Die Tests in [`tails-pdp-common/src/lib.rs`](../tails-pdp-common/src/lib.rs) prüfen die Logik, die
+Kernelspace- und Userspace-PEP gemeinsam verwenden:
 
-```shell
-cargo test -p tails-pdp-common --config 'target."cfg(all())".runner="env"'
-cargo test --target x86_64-unknown-linux-musl --no-run \
-  -p tails-pdp-policy-loader \
-  -p tails-pdp-attribute-loader \
-  -p tails-pdp-userspace-pep
-```
+- vollständiges Matching einer statischen `file_open`-Policy,
+- abweichende UID, Command-, Device- oder Inode-Werte,
+- `ANY_SUBJECT` für beliebige UIDs,
+- Grenzen der UTC-Operatoren,
+- Zeit- und DEFCON-Bedingungen,
+- den sicheren Umgang mit Modulo `0`,
+- Deny-overrides bei mehreren Entscheidungen.
 
-Der direkte `cargo test` kann durch `.cargo/config.toml` über `sudo -E` laufen. Für normale
-Unit-Tests ist das unpraktisch.
+### 2. Parsen und Validieren von Policydateien
 
-## Sinnvolle Testebenen
+Die Tests in
+[`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs)
+decken unter anderem folgende Fälle ab:
 
-### 1. Unit-Tests für `tails-pdp-common`
+- gültige statische und zeitabhängige `file_open`-Policies,
+- rekursives Laden ausschließlich von Dateien mit der Endung `.policy`,
+- doppelte Policynamen,
+- fehlende Semikolons und unbekannte Actions,
+- nicht unterstützte deaktivierte `socket_bind`-Policies,
+- zu viele Policies oder dynamische Attributbedingungen,
+- ungültige UTC-Komponenten und Modulo `0`.
 
-Diese Tests sind am wichtigsten, weil eBPF und Userspace dieselbe Logik nutzen.
+### 3. Generationen und Rollback
 
-Sinnvolle Fälle:
+Die Schreiboperationen der Policy-Maps sind über den internen Trait `PolicyGenerationStore`
+testbar. Eine In-Memory-Implementierung prüft, dass:
 
-- `file_open` Static Deny bei passender UID, Command und Datei.
-- `file_open` Static gibt `None`, wenn UID nicht passt.
-- `file_open` Static gibt `None`, wenn Inode nicht passt.
-- `ANY_SUBJECT` matcht jede UID.
-- Stream `hour < 8` trifft vor 8 Uhr.
-- Stream `hour >= 16` trifft ab 16 Uhr.
-- Stream `defcon <= 2` trifft bei DEFCON 1 oder 2.
-- Stream `defcon <= 2` trifft nicht bei DEFCON 3, 4 oder 5.
-- Stream-Bedingung falsch erzeugt keine Gegenentscheidung.
+- zuerst die inaktive Bank vollständig geschrieben und erst danach ihre Generation aktiviert wird,
+- Schreib- und Aktivierungsfehler die bisher aktive Generation nicht verändern,
+- unveränderte sowie bereits fehlgeschlagene Dokumentstände übersprungen werden,
+- ungenutzte Einträge einer neuen Bank explizit deaktiviert werden.
 
-Implementierung:
+Damit wird die zentrale Rollback-Eigenschaft ohne Root-Rechte und ohne echte BPF-Maps getestet.
 
-- Entweder im bestehenden `#[cfg(test)] mod tests`.
-- Oder besser später in `tails-pdp-common/tests/policy_eval.rs`.
+### 4. Userspace-PEP
 
-### 2. Parser-Tests für `.sapl`
+Die Tests in [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) verwenden
+einen Fake-`FdCloser`. Sie prüfen:
 
-Ziel: Prüfen, ob Policy-Dateien korrekt geparst, validiert und in kernelgeeignete Einträge übersetzt werden.
+- striktes Parsen numerischer Prozess- und FD-Verzeichnisnamen,
+- Erkennung regulärer Datei-FDs und Ignorieren von Verzeichnissen,
+- Entzug genau des verletzenden FDs,
+- höchstens einen Schließversuch pro FD und Scan,
+- unabhängige Behandlung verschiedener FDs,
+- Fortsetzung des Scans, wenn ein Schließversuch fehlschlägt.
 
-Sinnvolle Fälle:
+## Privilegierte End-to-End-Tests
 
-- gültige `file_open` Static Policy
-- gültige `file_open` Stream Policy
-- gültige `system.defcon <= 2`
-- ungültige DEFCON-Werte `0` und `6`
-- doppelte Policy-Namen werden abgelehnt
-- fehlendes Semikolon wird abgelehnt
-- unbekannte Action wird abgelehnt
-- mehr Bedingungen als das Map-Layout zulässt werden abgelehnt
-- mehr Policies als `POLICY_BANK_SIZE` erlaubt werden abgelehnt
-
-Implementierung:
-
-- Parser-Funktionen testbar machen, ohne die öffentlichen APIs unnötig zu vergrößern.
-- Temporäre Verzeichnisse nutzen, z. B. mit `tempfile`.
-- `translate_policy_documents` und `parse_policy_document` testen.
-
-### 3. Generationen- und Rollback-Tests
-
-Ziel: Sicherstellen, dass kaputte Updates nicht aktiv werden.
-
-Sinnvolle Fälle:
-
-- Neue Generation wird erst nach erfolgreichem Schreiben aktiviert.
-- Fehler beim Schreiben einer Map lässt alte Generation aktiv.
-- Unveränderte Policies werden nicht erneut geschrieben.
-- Ein bereits fehlgeschlagener Stand wird nicht jede Sekunde neu geschrieben.
-- Entfernte Policy-Dateien werden in der nächsten Generation deaktiviert.
-
-Implementierung:
-
-- Map-Zugriffe hinter ein Trait legen, z. B. `PolicyMapWriter`.
-- Produktiv nutzt das Trait Aya-Maps.
-- Tests nutzen eine In-Memory-Fake-Map.
-
-### 4. Userspace-PEP-Tests
-
-Der Userspace-PEP ist aktuell stark an `/proc` gekoppelt. Für Tests sollte man Parsing und Auswertung
-trennen.
-
-Sinnvolle Fälle:
-
-- Datei-FD wird zu `device + inode`.
-- Verbotene Datei erzeugt Violation.
-- Erlaubte Datei erzeugt keine Violation.
-- Bei `tail` werden Datei-FD und Inotify-FD erkannt.
-- Nicht verbotene FDs bleiben unberührt.
-
-Implementierung:
-
-- `read_process_fds` und FD-Schließen abstrahieren.
-- Fake-`/proc`-Daten in Tests verwenden.
-- FD-Schließen über ein Trait wie `FdCloser` simulieren.
-
-### 5. Admin-Tool-Tests
-
-Sinnvolle Fälle:
-
-- `--help` und keine Argumente zeigen Hilfe.
-- ungültige Eingabe zeigt Fehler und Usage.
-- `show` formatiert Static- und Stream-Policies korrekt.
-- `show-active` blendet deaktivierte Policies aus.
-- `clear-all --action file-open` betrifft nur File-Open-Maps.
-- `set-stream --attribute time --modulo 0` wird abgelehnt.
-- `hour > 23` wird abgelehnt.
-- `defcon` außerhalb `1..=5` wird abgelehnt.
-
-Implementierung:
-
-- CLI-Parsing isoliert testen.
-- Output-Funktionen mit Beispiel-Policies testen.
-- Map-Zugriff über Fake-Maps abstrahieren.
-
-### 6. Privilegierte Integrationstests
-
-Diese Tests laufen nur auf Linux mit Root.
-
-Szenarien:
-
-#### Datei öffnen verboten
+[`test-e2e.sh`](../test-e2e.sh) läuft ausschließlich als Root auf einem dafür vorgesehenen
+Linux-/NixOS-Zielsystem:
 
 ```shell
-echo test >/home/hntr/test.txt
-cat > policies/99-file-open-static-deny-cat-test.sapl <<'EOF'
-policy "deny cat on /home/hntr/test.txt for uid 1000"
-deny
-    action == "file_open";
-    subject.uid == 1000;
-    command == "cat";
-    resource.path == "/home/hntr/test.txt";
-EOF
-sudo -E ./target/release/tails-pdp
-cat /home/hntr/test.txt
+./test.sh
+sudo ./test-e2e.sh
 ```
 
-Erwartung: `cat` bekommt `Operation not permitted`.
+Das E2E-Skript startet die echte Release-Runtime in einem isolierten temporären Arbeitsverzeichnis.
+Es prüft anschließend:
 
-#### Socket-Bind verboten
+1. Laden durch den Kernel-Verifier, Anhängen des LSM-Hooks und Vorhandensein der gepinnten Maps.
+2. Erlaubten Zugriff ohne Policy.
+3. Kernel-Enforcement einer statischen Deny-Policy.
+4. Auswertung der aktuellen UTC-Stunde über `CURRENT_TIME`.
+5. Ereignisgesteuerte Änderung von `system.defcon`.
+6. Rollback auf die letzte gültige Generation nach einem Parserfehler.
+7. Nachträgliches Userspace-Enforcement: Nur der verletzende bereits offene FD wird entzogen; ein
+   zweiter erlaubter FD desselben Prozesses bleibt offen.
 
-```shell
-cp examples/20-socket-bind-static-deny-8080-tcp.sapl policies/
-python3 -c "import socket; s=socket.socket(); s.bind(('0.0.0.0', 8080))"
-```
+Policydateien werden im Test zunächst vollständig mit einer temporären Endung geschrieben und dann
+atomar auf `.policy` umbenannt. So verarbeitet der Dateiwächter keine halbfertigen Dokumente.
 
-Erwartung: Bind schlägt fehl.
+### Sicherheitsgrenzen des E2E-Skripts
 
-#### Stream-Policy
+Der Lauf verändert den globalen BPF-Zustand unter `/sys/fs/bpf/tails-pdp`. Deshalb:
 
-Eine Policy mit `environment.utc.hour < 8` oder `>= 16` aktivieren und mit aktueller UTC-Zeit
-vergleichen.
+- bricht das Skript ab, wenn bereits eine `tails-pdp`-Runtime läuft,
+- beendet es nur selbst gestartete Prozesse,
+- entfernt es seine gepinnten Maps beim Aufräumen,
+- bewahrt es bei einem Fehler Arbeitsverzeichnis und Runtime-Log zur Diagnose auf.
 
-#### DEFCON-Policy über system.attributes
-
-```shell
-cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
-printf 'defcon = 5\n' > attributes/system.attributes
-cat /home/hntr/test.txt
-printf 'defcon = 2\n' > attributes/system.attributes
-cat /home/hntr/test.txt
-```
-
-Erwartung: Bei DEFCON `5` greift die Policy nicht. Bei DEFCON `2` greift sie [[P19]](../examples/), [[P23]](../tails-pdp-attribute-loader/src/stream_attributes.rs).
-
-#### Userspace-PEP nachträglich
-
-1. Prozess öffnet Datei oder bindet Socket.
-2. Policy wird danach in [`policies/`](../policies/) kopiert.
-3. Userspace-PEP erkennt Violation.
-4. Falls Enforcement aktiv ist, wird der FD geschlossen.
-
-## Empfehlung
-
-Priorität:
-
-1. `tails-pdp-common` stark testen.
-2. Policy-Parser und Generationenlogik testen.
-3. Userspace-PEP testbar machen.
-4. Privilegierte Linux-Smoke-Tests automatisieren.
+Das Skript darf nicht auf einem produktiv genutzten Host ausgeführt werden. Auf macOS kann nur die
+unprivilegierte Cross-Build-Prüfkette laufen; Verifier, LSM-Attach und reales Enforcement benötigen
+den Linux-Zielkernel.
 
 ---
 

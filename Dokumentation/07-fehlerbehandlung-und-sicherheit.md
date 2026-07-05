@@ -27,7 +27,7 @@ Userspace und Kernel würden sonst dieselben Bytes unterschiedlich interpretiere
 
 ### Fehlgeschlagene Policy-Verarbeitung
 
-Wenn eine `.sapl`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
+Wenn eine `.policy`-Datei nicht geparst werden kann, darf keine halb kaputte Policy-Generation aktiv
 werden. Beim initialen Start bricht die Validierung mit einem Fehler ab, bevor der LSM-Hook
 angehängt wird. Bei späteren Laufzeitänderungen hält `PolicyDirectorySync` dagegen bewusst die
 letzte funktionierende Generation aktiv [[P3]](../tails-pdp-policy-loader/src/policy_source.rs).

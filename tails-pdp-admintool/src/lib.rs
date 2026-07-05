@@ -145,7 +145,7 @@ fn collect_policy_dictionary_recursive(
         let path = entry.path();
         if path.is_dir() {
             collect_policy_dictionary_recursive(&path, dictionary)?;
-        } else if path.extension().and_then(|extension| extension.to_str()) == Some("sapl") {
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("policy") {
             collect_policy_file_dictionary(&path, dictionary)?;
         }
     }

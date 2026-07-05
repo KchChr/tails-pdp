@@ -47,7 +47,7 @@ stehen direkt im Text, damit die Herkunft der jeweiligen Aussage beim Lesen sich
 | --- | --- |
 | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Lädt eBPF, richtet Maps und Tail Calls ein, startet Policy-Sync, Zeit-Update und Userspace-PEP. |
 | [`tails-pdp-userspace-common/`](../tails-pdp-userspace-common/) | Gemeinsamer Zugriff auf gepinnte Maps und rekursiver Verzeichnis-Watcher. |
-| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Liest `.sapl`-Policies aus [`policies/`](../policies/), parst sie und schreibt kernelgeeignete Einträge in Maps. |
+| [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Liest `.policy`-Policies aus [`policies/`](../policies/), parst sie und schreibt kernelgeeignete Einträge in Maps. |
 | [`tails-pdp-attribute-loader/src/stream_attributes.rs`](../tails-pdp-attribute-loader/src/stream_attributes.rs) | Liest strukturierte Attribute aus [`attributes/`](../attributes/) und schreibt `ATTRIBUTES`. |
 | [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Überwacht laufende Prozesse und File Descriptors im Userspace. |
 | [`tails-pdp-userspace-pep/src/fd_revoker.rs`](../tails-pdp-userspace-pep/src/fd_revoker.rs) | Schließt fremde File Descriptors per `ptrace` auf x86_64 Linux. |

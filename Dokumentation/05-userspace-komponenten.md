@@ -30,7 +30,7 @@ Wichtige Typen:
 | Typ | Bedeutung |
 | --- | --- |
 | `PolicyDirectorySync` | Verwaltet den laufenden Sync des Policy-Ordners. |
-| `PolicyDocument` | Eine gelesene `.sapl`-Datei. |
+| `PolicyDocument` | Eine gelesene `.policy`-Datei. |
 | `ParsedPolicy` | Zwischendarstellung nach dem Parsen. |
 | `TranslatedPolicies` | Fertige kernelgeeignete Policy-Structs für die Maps. |
 | `PinnedPolicyMaps` | Geöffnete gepinnte Policy-Maps. |
@@ -38,7 +38,7 @@ Wichtige Typen:
 ## Policy-Sync-Ablauf
 
 ```text
-./policies/*.sapl lesen
+./policies/*.policy lesen
         |
         v
 parse_policy_document

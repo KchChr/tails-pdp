@@ -17,7 +17,7 @@ use tails_pdp_userspace_common::{fs_watch, open_pinned_array};
 use tokio::time::{Duration, sleep};
 
 const POLICY_DIRECTORY_NAME: &str = "policies";
-const POLICY_FILE_EXTENSION: &str = "sapl";
+const POLICY_FILE_EXTENSION: &str = "policy";
 const POLICY_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
@@ -77,6 +77,16 @@ struct PinnedPolicyMaps {
     policy_generation: PolicyGenerationMap,
     file_open_static: FileOpenStaticPolicyMap,
     file_open_stream: FileOpenStreamPolicyMap,
+}
+
+trait PolicyGenerationStore {
+    fn active_generation(&self) -> anyhow::Result<u32>;
+    fn write_inactive_bank(
+        &mut self,
+        translated: &TranslatedPolicies,
+        bank_offset: u32,
+    ) -> anyhow::Result<()>;
+    fn activate_generation(&mut self, generation: u32) -> anyhow::Result<()>;
 }
 
 pub struct PolicyDirectorySync {
@@ -140,9 +150,11 @@ impl PolicyDirectorySync {
 
     fn sync_if_changed(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
-        if self.last_applied_documents.as_ref() == Some(&documents)
-            || self.last_failed_documents.as_ref() == Some(&documents)
-        {
+        if !documents_need_sync(
+            self.last_applied_documents.as_deref(),
+            self.last_failed_documents.as_deref(),
+            &documents,
+        ) {
             return Ok(());
         }
 
@@ -176,27 +188,58 @@ impl PinnedPolicyMaps {
         })
     }
 
+    fn commit(&mut self, translated: &TranslatedPolicies) -> anyhow::Result<u32> {
+        commit_policy_generation(self, translated)
+    }
+}
+
+impl PolicyGenerationStore for PinnedPolicyMaps {
     fn active_generation(&self) -> anyhow::Result<u32> {
         self.policy_generation
             .get(&0, 0)
             .context("failed to read POLICY_GENERATION[0]")
     }
 
-    fn commit(&mut self, translated: &TranslatedPolicies) -> anyhow::Result<u32> {
-        let current_generation = self.active_generation()?;
-        let next_generation = current_generation.wrapping_add(1);
-        let bank_offset = policy_bank_offset(next_generation);
-
-        // Write the inactive bank first. The old generation remains active unless this final
-        // POLICY_GENERATION write succeeds.
-        self.write_bank(translated, bank_offset)?;
-        self.policy_generation
-            .set(0, next_generation, 0)
-            .context("failed to commit POLICY_GENERATION[0]")?;
-
-        Ok(next_generation)
+    fn write_inactive_bank(
+        &mut self,
+        translated: &TranslatedPolicies,
+        bank_offset: u32,
+    ) -> anyhow::Result<()> {
+        self.write_bank(translated, bank_offset)
     }
 
+    fn activate_generation(&mut self, generation: u32) -> anyhow::Result<()> {
+        self.policy_generation
+            .set(0, generation, 0)
+            .context("failed to commit POLICY_GENERATION[0]")
+    }
+}
+
+fn commit_policy_generation<S: PolicyGenerationStore>(
+    store: &mut S,
+    translated: &TranslatedPolicies,
+) -> anyhow::Result<u32> {
+    let current_generation = store.active_generation()?;
+    let next_generation = current_generation.wrapping_add(1);
+    let bank_offset = policy_bank_offset(next_generation);
+
+    // The inactive bank is always written first. A failed write therefore cannot expose a
+    // partially updated policy set through POLICY_GENERATION.
+    store.write_inactive_bank(translated, bank_offset)?;
+    store.activate_generation(next_generation)?;
+
+    Ok(next_generation)
+}
+
+fn documents_need_sync(
+    last_applied: Option<&[PolicyDocument]>,
+    last_failed: Option<&[PolicyDocument]>,
+    current: &[PolicyDocument],
+) -> bool {
+    last_applied != Some(current) && last_failed != Some(current)
+}
+
+impl PinnedPolicyMaps {
     fn write_bank(
         &mut self,
         translated: &TranslatedPolicies,
@@ -233,14 +276,7 @@ fn write_array_bank<T: aya::Pod + Copy>(
     map_name: &str,
     bank_offset: u32,
 ) -> anyhow::Result<()> {
-    if values.len() > POLICY_BANK_SIZE as usize {
-        bail!(
-            "too many policies for {}: {} > {}",
-            map_name,
-            values.len(),
-            POLICY_BANK_SIZE
-        );
-    }
+    let prepared = prepare_array_bank(values, disabled, map_name)?;
 
     if bank_offset + POLICY_BANK_SIZE > map.len() {
         bail!(
@@ -252,14 +288,32 @@ fn write_array_bank<T: aya::Pod + Copy>(
         );
     }
 
-    for index in 0..POLICY_BANK_SIZE {
-        let value = values.get(index as usize).copied().unwrap_or(disabled);
-        let map_index = bank_offset + index;
+    for (index, value) in prepared.into_iter().enumerate() {
+        let map_index = bank_offset + index as u32;
         map.set(map_index, value, 0)
             .with_context(|| format!("failed to write {map_name}[{map_index}]"))?;
     }
 
     Ok(())
+}
+
+fn prepare_array_bank<T: Copy>(
+    values: &[T],
+    disabled: T,
+    map_name: &str,
+) -> anyhow::Result<Vec<T>> {
+    if values.len() > POLICY_BANK_SIZE as usize {
+        bail!(
+            "too many policies for {}: {} > {}",
+            map_name,
+            values.len(),
+            POLICY_BANK_SIZE
+        );
+    }
+
+    let mut prepared = vec![disabled; POLICY_BANK_SIZE as usize];
+    prepared[..values.len()].copy_from_slice(values);
+    Ok(prepared)
 }
 
 fn read_policy_documents(policy_dir: &Path) -> anyhow::Result<Vec<PolicyDocument>> {
@@ -720,10 +774,14 @@ fn parse_stream_condition(statement: &str) -> anyhow::Result<Option<ParsedStream
         if tokens.len() != 3 {
             bail!("invalid environment.time modulo condition '{statement}'");
         }
+        let modulo = tokens[0]
+            .parse()
+            .map_err(|error| anyhow!("invalid modulo '{}': {error}", tokens[0]))?;
+        if modulo == 0 {
+            bail!("environment.time modulo must be greater than zero");
+        }
         return Ok(Some(ParsedStreamCondition::TimeModulo {
-            modulo: tokens[0]
-                .parse()
-                .map_err(|error| anyhow!("invalid modulo '{}': {error}", tokens[0]))?,
+            modulo,
             operator: parse_stream_operator(tokens[1])?,
             value: tokens[2]
                 .parse()
@@ -871,11 +929,25 @@ fn parse_component_stream_condition(
         .parse()
         .map_err(|error| anyhow!("invalid stream attribute value '{}': {error}", tokens[1]))?;
 
+    let maximum = match attribute {
+        StreamAttribute::Hour => 23,
+        StreamAttribute::Minute | StreamAttribute::Second => 59,
+        StreamAttribute::Time => bail!("unexpected StreamAttribute::Time"),
+    };
+    if value > maximum {
+        bail!(
+            "stream attribute value {} is outside 0..={} for {:?}",
+            value,
+            maximum,
+            attribute
+        );
+    }
+
     match attribute {
         StreamAttribute::Hour => Ok(ParsedStreamCondition::Hour { operator, value }),
         StreamAttribute::Minute => Ok(ParsedStreamCondition::Minute { operator, value }),
         StreamAttribute::Second => Ok(ParsedStreamCondition::Second { operator, value }),
-        StreamAttribute::Time => bail!("unexpected StreamAttribute::Time"),
+        StreamAttribute::Time => unreachable!(),
     }
 }
 
@@ -1039,12 +1111,72 @@ fn print_policy_summary(policy_dir: &Path, generation: u32, translated: &Transla
 
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use super::*;
 
     fn document(source: &str) -> PolicyDocument {
         PolicyDocument {
-            relative_path: PathBuf::from("test.sapl"),
+            relative_path: PathBuf::from("test.policy"),
             source: source.to_owned(),
+        }
+    }
+
+    fn translation_error(documents: &[PolicyDocument]) -> String {
+        match translate_policy_documents(documents) {
+            Ok(_) => panic!("policy translation should fail"),
+            Err(error) => format!("{error:#}"),
+        }
+    }
+
+    fn static_policy(name: &str) -> PolicyDocument {
+        document(&format!(
+            "policy \"{name}\"\ndeny\n    action == \"file_open\";\n"
+        ))
+    }
+
+    struct FakePolicyStore {
+        generation: u32,
+        events: Vec<String>,
+        fail_write: bool,
+        fail_activation: bool,
+    }
+
+    impl FakePolicyStore {
+        fn new(generation: u32) -> Self {
+            Self {
+                generation,
+                events: Vec::new(),
+                fail_write: false,
+                fail_activation: false,
+            }
+        }
+    }
+
+    impl PolicyGenerationStore for FakePolicyStore {
+        fn active_generation(&self) -> anyhow::Result<u32> {
+            Ok(self.generation)
+        }
+
+        fn write_inactive_bank(
+            &mut self,
+            _translated: &TranslatedPolicies,
+            bank_offset: u32,
+        ) -> anyhow::Result<()> {
+            self.events.push(format!("write-bank:{bank_offset}"));
+            if self.fail_write {
+                bail!("injected bank write failure");
+            }
+            Ok(())
+        }
+
+        fn activate_generation(&mut self, generation: u32) -> anyhow::Result<()> {
+            self.events.push(format!("activate:{generation}"));
+            if self.fail_activation {
+                bail!("injected generation activation failure");
+            }
+            self.generation = generation;
+            Ok(())
         }
     }
 
@@ -1086,5 +1218,175 @@ mod tests {
         };
 
         assert!(error.to_string().contains("unsupported characters"));
+    }
+
+    #[test]
+    fn translates_static_and_time_policies() {
+        let translated = translate_policy_documents(&[
+            static_policy("static deny"),
+            document(
+                r#"
+                policy "time deny"
+                deny
+                    action == "file_open";
+                    environment.utc.hour < 8;
+                "#,
+            ),
+        ])
+        .expect("valid policies should translate");
+
+        assert_eq!(translated.file_open_static.len(), 1);
+        assert_eq!(translated.file_open_stream.len(), 1);
+        assert_eq!(
+            translated.file_open_stream[0].attribute,
+            StreamAttribute::Hour
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_policy_names() {
+        let error = translation_error(&[static_policy("duplicate"), static_policy("duplicate")]);
+        assert!(error.contains("duplicate policy name"));
+    }
+
+    #[test]
+    fn rejects_missing_semicolon_and_unknown_action() {
+        let missing_semicolon = translation_error(&[document(
+            "policy \"missing semicolon\"\ndeny\n    action == \"file_open\"\n",
+        )]);
+        assert!(missing_semicolon.contains("must end with ';'"));
+
+        let unknown_action = translation_error(&[document(
+            "policy \"unknown action\"\ndeny\n    action == \"process_exec\";\n",
+        )]);
+        assert!(unknown_action.contains("unsupported action"));
+    }
+
+    #[test]
+    fn rejects_disabled_socket_bind_action() {
+        let error = translation_error(&[document(
+            "policy \"socket\"\ndeny\n    action == \"socket_bind\";\n",
+        )]);
+        assert!(error.contains("socket_bind support is currently disabled"));
+    }
+
+    #[test]
+    fn rejects_too_many_dynamic_conditions_and_policies() {
+        let too_many_conditions = translation_error(&[document(
+            r#"
+            policy "too many conditions"
+            deny
+                action == "file_open";
+                subject.attr1 == 1;
+                subject.attr2 == 2;
+                subject.attr3 == 3;
+                subject.attr4 == 4;
+                subject.attr5 == 5;
+            "#,
+        )]);
+        assert!(too_many_conditions.contains("too many dynamic attribute conditions"));
+
+        let documents: Vec<_> = (0..=POLICY_BANK_SIZE)
+            .map(|index| static_policy(&format!("policy {index}")))
+            .collect();
+        let too_many_policies = translation_error(&documents);
+        assert!(too_many_policies.contains("too many file_open static policies"));
+    }
+
+    #[test]
+    fn rejects_invalid_time_ranges_and_zero_modulo() {
+        for condition in [
+            "environment.utc.hour == 24;",
+            "environment.utc.minute == 60;",
+            "environment.utc.second == 60;",
+            "environment.time % 0 == 0;",
+        ] {
+            let error = translation_error(&[document(&format!(
+                "policy \"invalid time\"\ndeny\n    action == \"file_open\";\n    {condition}\n"
+            ))]);
+            assert!(
+                error.contains("outside") || error.contains("greater than zero"),
+                "unexpected error for {condition}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn reads_only_policy_files_recursively() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "tails-pdp-policy-loader-test-{}-{unique}",
+            std::process::id()
+        ));
+        let nested = root.join("nested");
+        fs::create_dir_all(&nested).expect("create temporary policy directory");
+        fs::write(root.join("ignored.txt"), "not a policy").expect("write ignored file");
+        fs::write(
+            nested.join("accepted.policy"),
+            "policy \"accepted\"\npermit\n",
+        )
+        .expect("write policy file");
+
+        let documents = read_policy_documents(&root).expect("read policy directory");
+        fs::remove_dir_all(&root).expect("remove temporary policy directory");
+
+        assert_eq!(documents.len(), 1);
+        assert_eq!(
+            documents[0].relative_path,
+            PathBuf::from("nested/accepted.policy")
+        );
+    }
+
+    #[test]
+    fn generation_is_activated_only_after_bank_write() {
+        let mut store = FakePolicyStore::new(0);
+        let generation = commit_policy_generation(&mut store, &TranslatedPolicies::default())
+            .expect("commit should succeed");
+
+        assert_eq!(generation, 1);
+        assert_eq!(store.generation, 1);
+        assert_eq!(store.events, ["write-bank:16", "activate:1"]);
+    }
+
+    #[test]
+    fn failed_bank_write_keeps_previous_generation_active() {
+        let mut store = FakePolicyStore::new(4);
+        store.fail_write = true;
+
+        assert!(commit_policy_generation(&mut store, &TranslatedPolicies::default()).is_err());
+        assert_eq!(store.generation, 4);
+        assert_eq!(store.events, ["write-bank:16"]);
+    }
+
+    #[test]
+    fn failed_activation_does_not_report_new_generation() {
+        let mut store = FakePolicyStore::new(8);
+        store.fail_activation = true;
+
+        assert!(commit_policy_generation(&mut store, &TranslatedPolicies::default()).is_err());
+        assert_eq!(store.generation, 8);
+        assert_eq!(store.events, ["write-bank:16", "activate:9"]);
+    }
+
+    #[test]
+    fn unchanged_and_repeatedly_failed_documents_are_not_retried() {
+        let current = vec![static_policy("current")];
+        let different = vec![static_policy("different")];
+
+        assert!(!documents_need_sync(Some(&current), None, &current));
+        assert!(!documents_need_sync(None, Some(&current), &current));
+        assert!(documents_need_sync(Some(&different), None, &current));
+    }
+
+    #[test]
+    fn preparing_bank_disables_entries_after_last_policy() {
+        let prepared = prepare_array_bank(&[11_u32, 22], 0, "TEST").expect("prepare bank");
+
+        assert_eq!(prepared.len(), POLICY_BANK_SIZE as usize);
+        assert_eq!(&prepared[..3], &[11, 22, 0]);
+        assert!(prepared[2..].iter().all(|entry| *entry == 0));
     }
 }

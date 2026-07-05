@@ -17,7 +17,7 @@ Rust-Dokumentation und Aya-Dokumentation.
 | --- | --- | --- |
 | [P1] | [`tails-pdp/src/main.rs`](../tails-pdp/src/main.rs) | Hauptprogramm, eBPF-Loader, LSM-Load/Attach, Tail-Call-Setup, Logging, Policy-Sync, Zeit-Update und Userspace-PEP-Start. |
 | [P2] | [`tails-pdp/src/lib.rs`](../tails-pdp/src/lib.rs) | LSM-Programm- und Tail-Call-Spezifikationen des Hauptprogramms. |
-| [P3] | [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.sapl`-Policy-Dateien. |
+| [P3] | [`tails-pdp-policy-loader/src/policy_source.rs`](../tails-pdp-policy-loader/src/policy_source.rs) | Lesen, Parsen und Synchronisieren der `.policy`-Policy-Dateien. |
 | [P4] | [`tails-pdp-policy-loader/src/policy_loader.rs`](../tails-pdp-policy-loader/src/policy_loader.rs) | Prüfung der Layouts bereits gepinnter Maps. |
 | [P5] | [`tails-pdp-attribute-loader/src/time.rs`](../tails-pdp-attribute-loader/src/time.rs) | Aktualisierung der gemeinsamen Zeit-Map `CURRENT_TIME`. |
 | [P6] | [`tails-pdp-userspace-pep/src/pep.rs`](../tails-pdp-userspace-pep/src/pep.rs) | Nachbewertung bestehender Dateizugriffe und Auslösen des FD-Enforcements. |

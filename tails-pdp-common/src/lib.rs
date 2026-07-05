@@ -1195,6 +1195,85 @@ mod tests {
     }
 
     #[test]
+    fn file_open_static_policy_matches_all_request_fields() {
+        let mut policy = FileOpenStaticPolicy::new(Entitlement::Deny, 1000, "cat", "");
+        policy.resource_device = 42;
+        policy.resource_inode = 99;
+        let matching = FileOpenRequest {
+            resource_device: 42,
+            resource_inode: 99,
+            ..file_open_request()
+        };
+
+        assert_eq!(
+            evaluate_file_open_static_policy(&matching, &policy),
+            Some(Entitlement::Deny)
+        );
+
+        for non_matching in [
+            FileOpenRequest {
+                subject: 1001,
+                ..matching
+            },
+            FileOpenRequest {
+                command: command_name("tail"),
+                ..matching
+            },
+            FileOpenRequest {
+                resource_inode: 100,
+                ..matching
+            },
+        ] {
+            assert_eq!(
+                evaluate_file_open_static_policy(&non_matching, &policy),
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn any_subject_static_policy_matches_every_uid() {
+        let policy = FileOpenStaticPolicy::new(Entitlement::Permit, ANY_SUBJECT, "", "");
+
+        for subject in [0, 1000, u32::MAX - 1] {
+            let request = FileOpenRequest {
+                subject,
+                ..file_open_request()
+            };
+            assert_eq!(
+                evaluate_file_open_static_policy(&request, &policy),
+                Some(Entitlement::Permit)
+            );
+        }
+    }
+
+    #[test]
+    fn utc_component_policies_respect_operator_boundaries() {
+        let mut policy = FileOpenStreamPolicy::stream(Entitlement::Deny, 1000, "", "");
+        policy.stream_condition_enabled = 1;
+        policy.attribute = StreamAttribute::Hour;
+        policy.value = 8;
+
+        for (operator, hour, expected) in [
+            (StreamOperator::LessThan, 7, true),
+            (StreamOperator::LessThan, 8, false),
+            (StreamOperator::LessThanOrEqual, 8, true),
+            (StreamOperator::Equal, 8, true),
+            (StreamOperator::GreaterThanOrEqual, 8, true),
+            (StreamOperator::GreaterThan, 8, false),
+            (StreamOperator::GreaterThan, 9, true),
+        ] {
+            policy.operator = operator;
+            let result = evaluate_file_open_stream_policy(
+                &file_open_request(),
+                PolicyTime::from_unix_seconds(hour * 3_600),
+                &policy,
+            );
+            assert_eq!(result == Some(Entitlement::Deny), expected);
+        }
+    }
+
+    #[test]
     fn attribute_conditions_match_numbers_and_booleans() {
         let number_condition = attribute_condition(
             AttributeValueKind::Number,

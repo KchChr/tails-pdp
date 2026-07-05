@@ -312,7 +312,7 @@ Code/Dokumentation:
 - `README.md:96`: unterstützte Stream Conditions
 - `README.md:109`: Beschreibung von `system.<attribute>` und `subject.<attribute>`
 - `attributes/README.md:8`: Runtime-Dateien für strukturierte Attribute
-- `examples/25-file-open-stream-deny-engineer-defcon-le-3.sapl:1`: Beispielpolicy
+- `examples/25-file-open-stream-deny-engineer-defcon-le-3.policy:1`: Beispielpolicy
 - `examples/attributes/system.attributes:1`: Beispiel für Systemattribute
 - `examples/attributes/subjects/1000.attributes:1`: Beispiel für Subject UID 1000
 - `examples/attributes/subjects/1001.attributes:1`: Beispiel für Subject UID 1001

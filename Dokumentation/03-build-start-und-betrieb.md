@@ -46,6 +46,26 @@ cargo build --bin tails-pdp-admintool --release
 cargo run --bin tails-pdp --release
 ```
 
+## Tests
+
+Die unprivilegierte Prüfkette umfasst Formatierung, Unit-Tests, Clippy und den vollständigen
+Linux-Build:
+
+```shell
+./test.sh
+```
+
+Auf einem dedizierten Linux-Zielsystem prüft das privilegierte E2E-Skript zusätzlich den
+Kernel-Verifier, LSM-Attach, Policyupdates, Rollback und reales Enforcement:
+
+```shell
+sudo ./test-e2e.sh
+```
+
+[`test-e2e.sh`](../test-e2e.sh) verwendet vorübergehend `/sys/fs/bpf/tails-pdp` und darf deshalb
+nicht parallel zu einer anderen Runtime oder auf einem Produktivsystem laufen. Die einzelnen
+Testfälle sind in [Tests und Teststrategie](09-tests.md) beschrieben.
+
 ## Warum gibt es Build-Skripte?
 
 `tails-pdp/build.rs` baut das eBPF-Crate `tails-pdp-ebpf` als Teil des Userspace-Builds und bindet
@@ -109,7 +129,8 @@ Warum Root nötig ist:
 - `/proc/<pid>/fd` anderer Prozesse lesen
 - per `ptrace` in fremden Prozessen FDs schließen
 
-Das Admin-Tool braucht für reine Anzeige oft kein `sudo`, für schreibende Befehle aber schon.
+Das aktuelle Admin-Tool öffnet die Maps ausschließlich lesend und benötigt dafür normalerweise
+kein `sudo`.
 
 ## Typische Startfehler
 

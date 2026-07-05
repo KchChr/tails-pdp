@@ -37,6 +37,24 @@ cargo build --bin tails-pdp-admintool --release
 cargo run --bin tails-pdp --release
 ```
 
+## Tests
+
+Run the unprivileged formatting, unit-test, lint, and Linux build checks with:
+
+```shell
+./test.sh
+```
+
+On a dedicated Linux target, run the real verifier, LSM attach, policy rollback, and enforcement
+tests with root privileges:
+
+```shell
+sudo ./test-e2e.sh
+```
+
+The end-to-end test temporarily owns `/sys/fs/bpf/tails-pdp` and therefore refuses to run while
+another `tails-pdp` process is active. It must not be used on a production host.
+
 If pinned map layouts changed, remove the stale maps once before restarting:
 
 ```shell
@@ -56,16 +74,16 @@ Policies are no longer loaded through `tails-pdp-admintool`.
 
 The active source of truth is the repository-local `policies/` directory. The userspace loader:
 
-- loads all `.sapl` files from `./policies` on startup
+- loads all `.policy` files from `./policies` on startup
 - rescans the directory every second
 - translates the full directory contents into kernel-compatible map entries on change
 - fully reconciles the two pinned `file_open` policy maps after successful validation
 - keeps the last successfully applied policy generation if a changed file cannot be parsed or
   translated
-- removes policies from the maps again when the corresponding `.sapl` file disappears from
+- removes policies from the maps again when the corresponding `.policy` file disappears from
   `./policies`
 
-Only files ending in `.sapl` are loaded. The `examples/` directory is not loaded automatically.
+Only files ending in `.policy` are loaded. The `examples/` directory is not loaded automatically.
 
 ## Policy Files
 
@@ -158,9 +176,9 @@ permit
 Example workflow:
 
 ```shell
-cp examples/10-file-open-static-deny-cat-test.sapl policies/
-cp examples/13-file-open-stream-deny-before-08.sapl policies/
-cp examples/14-file-open-stream-deny-after-16.sapl policies/
+cp examples/10-file-open-static-deny-cat-test.policy policies/
+cp examples/13-file-open-stream-deny-before-08.policy policies/
+cp examples/14-file-open-stream-deny-after-16.policy policies/
 ```
 
 After at most one second, the loader detects the change and rewrites the pinned maps.
@@ -168,7 +186,7 @@ After at most one second, the loader detects the change and rewrites the pinned 
 Example DEFCON workflow:
 
 ```shell
-cp examples/15-file-open-stream-deny-defcon-le-2.sapl policies/
+cp examples/15-file-open-stream-deny-defcon-le-2.policy policies/
 printf 'defcon = 5\n' > attributes/system.attributes
 cat /home/hntr/test.txt
 printf 'defcon = 2\n' > attributes/system.attributes
@@ -181,7 +199,7 @@ The policy also contains `command == "cat"`, so another program name would not m
 Example structured attribute workflow:
 
 ```shell
-cp examples/25-file-open-stream-deny-engineer-defcon-le-3.sapl policies/
+cp examples/25-file-open-stream-deny-engineer-defcon-le-3.policy policies/
 mkdir -p attributes/subjects
 printf 'defcon = 3\n' > attributes/system.attributes
 printf 'position = "engineer"\n' > attributes/subjects/1000.attributes

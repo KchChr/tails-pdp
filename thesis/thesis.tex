@@ -333,19 +333,13 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     
     \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
 
-    \item[FA-07 Überwachung bestehender Dateizugriffe:]
-    Der Prototyp muss bereits bestehende Dateizugriffe überwachen können, wenn sich entscheidungsrelevante Policies oder Attribute zur Laufzeit ändern.
+    \item[FA-07 Überwachung und Enforcement bestehender Dateizugriffe:]
+    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und unmittelbar beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
     Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter File Descriptor eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
-    Der Userspace-PEP muss erkennen können, welcher Prozess über welchen File Descriptor auf welche Datei zugreift und ob dieser Zugriff nach der aktuellen Policy- und Attributlage weiterhin zulässig ist.
+    Der Userspace-PEP ermittelt den zugehörigen Prozess und File Descriptor, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und schließt den File Descriptor bei einer Verletzung direkt.
+    Eine reine Ausgabe der Verletzung ohne Enforcement ist nicht vorgesehen.
 
-    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird der Zugriff anschließend durch eine Änderung eines entscheidungsrelevanten Attributs unzulässig, erkennt der Userspace-PEP diese Verletzung und kann Prozess-ID, File Descriptor und betroffenen Dateipfad ausgeben.
-
-    \item[FA-08 Enforcement bei unzulässig gewordenen Dateizugriffen:]
-    Der Prototyp muss einen bestehenden Dateizugriff beenden können, wenn dieser aufgrund einer Policy- oder Attributänderung nicht mehr zulässig ist.
-    Im Rahmen des Prototyps erfolgt das Enforcement für Dateizugriffe durch das Schließen des betroffenen File Descriptors des jeweiligen Prozesses.
-    Dabei darf nur der File Descriptor geschlossen werden, der den unzulässig gewordenen Zugriff repräsentiert.
-
-    \textit{Akzeptanzkriterium:} Besitzt ein Prozess mehrere geöffnete File Descriptors und wird nur einer dieser Zugriffe durch eine Attribut- oder Policyänderung unzulässig, schließt der Prototyp nur diesen betroffenen File Descriptor. Andere zulässige File Descriptors desselben Prozesses bleiben geöffnet.
+    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, schließt der Userspace-PEP den betroffenen File Descriptor. Andere File Descriptors desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen.
 
     \item[FA-09 Administrationsschnittstelle:]
     Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die zentrale Informationen zum Zustand des Prototyps lesend eingesehen werden können.
@@ -463,15 +457,15 @@ Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-System
     Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Userspace-PEP sowie die Policyverwaltung.
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
     Die Policyverwaltung liest die textuellen Policy-Dateien, parst diese und übersetzt sie in kernelgeeignete Map-Einträge.
-    Der Userspace-PEP überwacht bestehende Dateizugriffe und prüft mögliche Policy-Verletzungen.
-    Durch eine nachträgliche Durchsetzungsmaßnahme kann der unzulässig gewordene Dateizugriff durch das Schließen des betroffenen File Descriptors beendet werden.
+    Der Userspace-PEP überwacht bestehende Dateizugriffe und setzt erkannte Policy-Verletzungen unmittelbar durch das Schließen des betroffenen File Descriptors durch.
     
     \item \textbf{Kernelspace:} Im Kernelspace wird ein eBPF-Programm an einen LSM-Hook angebunden.
     Dieser Kernelspace-PEP greift bei neuen Dateiöffnungen in die sicherheitsrelevante Operation ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies.
     Hierbei wertet das LSM auch Streamingattribute, welche vom Userspace aus in den Kernel gestreamt werden aus.
 \end{itemize}
 Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
-Sie dient dazu, Policies, Entscheidungen oder Attribute zwischen beiden Bereichen auszutauschen. 
+Sie dient dazu, Policies, Attribute, Zeitinformationen und Generationenstände aus dem Userspace für die Kernel-Auswertung bereitzustellen.
+Zugriffsentscheidungen werden nicht an den Userspace übertragen. Sie verbleiben im jeweiligen Durchsetzungspfad und werden lediglich über dessen Logging sichtbar gemacht.
 Dadurch kann die Policy-Logik im Userspace verbleiben, 
 während der Kernel die unmittelbare Durchsetzung der Zugriffskontrolle bei Dateizugriffen übernimmt.
 Für Zugriffe, die bereits durch einen LSM-Hook erlaubt wurden, erfolgt keine automatische erneute Bewertung durch denselben Hook.
@@ -504,13 +498,20 @@ Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Po
 
 \subsubsection{Datenfluss dynamischer Attribute}
 
-Neben den Policies werden dynamische Attribute aus dem Userspace in den Kernelspace übertragen. 
-Dynamische Attribute sind Werte, die sich zur Laufzeit ändern und deshalb regelmäßig aktualisiert werden müssen. 
-Im Prototyp betrifft dies insbesondere Zeitinformationen sowie vom Nutzer frei wählbare Attribute (vgl. FA-12).
+Neben den Policies werden dynamische Attribute aus dem Userspace in den Kernelspace übertragen.
+Im Prototyp betrifft dies die aktuelle Zeit sowie vom Nutzer frei wählbare Attribute (vgl. FA-12).
 
-Die Userspace-Komponente ermittelt diese Werte beziehungsweise liest sie aus einer definierten Quelle ein. 
-Anschließend werden die aktuellen Werte in dafür vorgesehene eBPF-Maps geschrieben. 
-Der Kernel kann diese Werte bei der Auswertung von Policies lesen und in die Zugriffsentscheidung einbeziehen.
+Der Attributloader schreibt die Unix-Zeit einmal pro Sekunde in die einzige gepinnte Zeit-Map
+\texttt{CURRENT\_TIME}. Kernelspace-PEP und Userspace-PEP lesen denselben Wert und leiten daraus
+über die gemeinsame Funktion \texttt{PolicyTime::from\_unix\_seconds} die UTC-Komponenten Stunde,
+Minute und Sekunde ab. Dadurch verwenden beide Ausführungspfade dieselbe Zeitbasis und
+Konvertierungslogik.
+
+Externe Attribute werden dagegen ereignisgesteuert aktualisiert. Der Attributloader überwacht das
+Verzeichnis \texttt{attributes/} rekursiv. Nach einer erkannten Dateisystemänderung wartet er eine
+kurze Debounce-Zeit von 100 Millisekunden ab, validiert den neuen Gesamtstand und aktiviert ihn über
+die Attributgeneration. Ohne Dateisystemereignis findet keine periodische Neuladung dieser Dateien
+statt.
 
 
 \subsubsection{Zugriffsentscheidungen im Kernel}
@@ -539,8 +540,7 @@ Ein bereits geöffneter Zugriff wird dadurch nicht automatisch erneut durch dens
 Aus diesem Grund enthält der Prototyp zusätzlich einen Userspace-PEP.
 Der Userspace-PEP betrachtet regelmäßig aktive Prozesse und deren aktuell verwendete Ressourcen.
 Dabei prüft er, ob eine bestehende Zugriffssituation mit den derzeit aktiven Policies vereinbar ist. 
-Wird eine Verletzung erkannt, kann der Userspace-PEP ein nachträgliches Enforcement auslösen.
-Im Fall von Dateizugriffen kann dies beispielsweise bedeuten, dass betroffene File Descriptors eines Prozesses geschlossen werden.
+Wird eine Verletzung erkannt, führt der Userspace-PEP das Enforcement unmittelbar aus und schließt den konkret betroffenen File Descriptor.
 
 Der Userspace-PEP ergänzt damit die kernelbasierte Zugriffskontrolle.
 Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Userspace-PEP das Problem bereits bestehender Zugriffe bei nachträglich geänderten Bedingungen.
@@ -578,8 +578,10 @@ Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies,
 \paragraph{Attributloader}
 Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
 Diese Attribute sind nicht notwendigerweise Bestandteil eines einzelnen Zugriffsvorgangs, können aber die Entscheidung beeinflussen. 
-Im Prototyp betrifft dies insbesondere die aktuelle Zeit sowie externe Attribute aus dem Verzeichnis \texttt{attributes/}. 
-Der Attributloader schreibt diese Werte in den Kernelspace, damit sie dort bei der Auswertung von Streampolicies berücksichtigt werden können.
+Im Prototyp betrifft dies insbesondere die aktuelle Zeit sowie externe Attribute aus dem Verzeichnis \texttt{attributes/}.
+Die Zeit wird sekündlich in \texttt{CURRENT\_TIME} geschrieben. Externe Attribute werden nach
+Dateisystemereignissen im rekursiv überwachten Attributverzeichnis neu validiert und über
+\texttt{ATTRIBUTES} sowie \texttt{ATTRIBUTE\_GENERATION} aktiviert.
 
 Der Attributloader trifft selbst keine Zugriffsentscheidung. 
 Seine Aufgabe besteht darin, die Entscheidungsgrundlage aktuell zu halten.
@@ -592,8 +594,7 @@ Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweil
 Der Userspace-PEP betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen.
 Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
-Wird eine Verletzung erkannt, kann ein nachträgliches Enforcement ausgelöst werden. 
-Bei Dateizugriffen kann dies beispielsweise bedeuten, dass ein betroffener File Descriptor geschlossen und damit der Zugriff auf eine bereits geöffnete Ressource beendet wird.
+Wird eine Verletzung erkannt, schließt der Userspace-PEP den betroffenen File Descriptor und beendet damit den bereits bestehenden Dateizugriff.
 
 Der Userspace-PEP ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
 
@@ -789,9 +790,16 @@ Das eBPF-Programm muss diese Daten im LSM-Hook lesen können, ohne direkt auf Us
 Zusätzlich müssen weitere Userspace-Komponenten, insbesondere Userspace-PEP und Administrationswerkzeug, den aktuellen Zustand lesen können.
 
 Die Entscheidung lautet daher, die Kommunikation über eBPF-Maps umzusetzen.
-Policy-Einträge werden in Array-Maps abgelegt, dynamische Attribute in einer Hash-Map, und Generationen- sowie Zeitinformationen in eigenen Array-Maps.
+Policy-Einträge werden in Array-Maps abgelegt, dynamische Attribute in der Hash-Map
+\texttt{ATTRIBUTES} und ihre aktive Bank in \texttt{ATTRIBUTE\_GENERATION}. Die gemeinsame
+Zeitbasis liegt als Unix-Zeit in der einzigen Zeit-Map \texttt{CURRENT\_TIME}. Der gemeinsame Typ
+\texttt{PolicyTime} leitet daraus für Kernelspace-PEP und Userspace-PEP identisch die benötigten
+UTC-Komponenten ab.
 Für Zustände, die über mehrere Komponenten hinweg zugreifbar sein müssen, werden gepinnte Maps verwendet.
 Dadurch erhalten Loader, Userspace-PEP und Administrationswerkzeug einen stabilen Zugriffspfad auf dieselben Kernelobjekte, während das eBPF-Programm die Werte direkt im Kernel auswerten kann.
+Die Map \texttt{DECISIONS} ist davon ausgenommen: Sie ist nicht gepinnt und speichert nur
+Zwischenergebnisse zwischen den Tail-Call-Stufen des Kernelspace-PEP. Diese Entscheidungen werden
+nicht in den Userspace übertragen, sondern erscheinen ausschließlich in den jeweiligen Logs.
 
 Diese Entscheidung folgt aus dem eBPF-Ausführungsmodell.
 eBPF-Programme können nicht beliebige Speicherbereiche des Userspace lesen und sollen im Zugriffspfad mit festen, vom Verifier nachvollziehbaren Datenstrukturen arbeiten.
@@ -976,7 +984,7 @@ Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Us
 Der Userspace-PEP liest regelmäßig Informationen über laufende Prozesse und offene File Descriptors aus dem System.
 Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
 Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
-Wird eine Verletzung erkannt, kann der Userspace-PEP ein Enforcement auslösen.
+Wird eine Verletzung erkannt, führt der Userspace-PEP das Enforcement direkt aus.
 Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion. Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung lokal aus.
 
 Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
@@ -1002,7 +1010,7 @@ Dieser File Descriptor ist daher der konkrete Ansatzpunkt, um genau den betroffe
 
 Die Entscheidung lautet, Enforcement durch das Schließen des betroffenen File Descriptors umzusetzen.
 Der Userspace-PEP ermittelt Prozess-ID und File-Descriptor-Nummer der verletzenden Zugriffssituation.
-Anschließend versucht die Enforcement-Komponente, genau diesen File Descriptor im betroffenen Prozess zu schließen.
+Anschließend schließt die Enforcement-Komponente genau diesen File Descriptor im betroffenen Prozess.
 Im aktuellen Prototyp geschieht dies auf x86\_64-Linux über \texttt{ptrace}, indem im Zielprozess ein \texttt{close}-Systemaufruf für den ausgewählten File Descriptor ausgeführt wird.
 
 Diese Entscheidung ist feingranularer als ein Prozessabbruch.
@@ -1013,7 +1021,7 @@ Damit passt die Maßnahme zu der Anforderung, nur den betroffenen Zugriff zu bee
 Eine Alternative wäre, den gesamten Prozess zu terminieren.
 Dies wäre einfacher umzusetzen, aber deutlich invasiver.
 Eine weitere Alternative wäre, lediglich eine Verletzung zu protokollieren und kein Enforcement vorzunehmen.
-Dann könnte der Prototyp zwar Verstöße erkennen, aber nicht aktiv auf bestehende unzulässige Zugriffe reagieren.
+Diese Alternative wird nicht verwendet, weil eine erkannte Verletzung im Prototyp unmittelbar den Entzug des betroffenen Zugriffs auslösen muss.
 
 Die Konsequenz ist, dass das Enforcement betriebssystem- und architekturabhängig wird.
 Der aktuelle Ansatz ist auf x86\_64-Linux ausgelegt und benötigt ausreichende Berechtigungen für den Eingriff in fremde Prozesse.

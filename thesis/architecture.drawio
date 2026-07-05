@@ -16,19 +16,22 @@
         <mxCell id="policymgmt" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Policyverwaltung&lt;br&gt;Einlesen, Parsen, Validieren" vertex="1">
           <mxGeometry height="70" width="240" x="140" y="240" as="geometry" />
         </mxCell>
-        <mxCell id="attributes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;div&gt;Attributloader&lt;/div&gt;Stream-Attribute&lt;div&gt;&lt;span style=&quot;font-family: &amp;quot;Courier New&amp;quot;;&quot;&gt;attributes/&lt;/span&gt;&lt;br&gt;Zeit, DEFCON&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="240" x="140" y="350" as="geometry" />
+        <mxCell id="attributes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Attributloader&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;CURRENT_TIME&lt;/font&gt; sekündlich&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;attributes/&lt;/font&gt; ereignisgesteuert" vertex="1">
+          <mxGeometry height="80" width="240" x="140" y="345" as="geometry" />
         </mxCell>
-        <mxCell id="monitor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Userspace-PEP&lt;br&gt;bestehende Zugriffe" vertex="1">
-          <mxGeometry height="70" width="240" x="140" y="460" as="geometry" />
+        <mxCell id="monitor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Userspace-PEP&lt;br&gt;Nachbewertung und direktes&lt;br&gt;FD-Enforcement" vertex="1">
+          <mxGeometry height="75" width="240" x="140" y="455" as="geometry" />
         </mxCell>
-        <mxCell id="procfs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Prozess- und Ressourcenstatus&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;/proc/*/fd&lt;/font&gt;, &lt;font face=&quot;Courier New&quot;&gt;/proc/net/*&lt;/font&gt;" vertex="1">
-          <mxGeometry height="70" width="240" x="140" y="610" as="geometry" />
+        <mxCell id="logging" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Logging&lt;br&gt;Kernel- und Userspace-Entscheidungen" vertex="1">
+          <mxGeometry height="60" width="200" x="470" y="550" as="geometry" />
         </mxCell>
-        <mxCell id="maps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="eBPF-Maps&lt;br&gt;Policies, Attribute, Entscheidungen" vertex="1">
-          <mxGeometry height="70" width="240" x="765" y="130" as="geometry" />
+        <mxCell id="procfs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Prozess- und Ressourcenstatus&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;/proc/*/fd&lt;/font&gt;&lt;br&gt;reguläre Datei-FDs" vertex="1">
+          <mxGeometry height="70" width="240" x="140" y="625" as="geometry" />
         </mxCell>
-        <mxCell id="hooks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="LSM-Hooks&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;file_open&lt;/font&gt;, &lt;font face=&quot;Courier New&quot;&gt;socket_bind&lt;/font&gt;" vertex="1">
+        <mxCell id="maps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="eBPF-Maps&lt;br&gt;Policies, Attribute, Zeit, Generationen&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;DECISIONS&lt;/font&gt; nur kernelintern" vertex="1">
+          <mxGeometry height="80" width="260" x="755" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="hooks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Aktiver LSM-Hook&lt;br&gt;&lt;font face=&quot;Courier New&quot;&gt;file_open&lt;/font&gt;" vertex="1">
           <mxGeometry height="70" width="240" x="765" y="240" as="geometry" />
         </mxCell>
         <mxCell id="evaluation" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Policy-Auswertung&lt;br&gt;static und stream" vertex="1">
@@ -48,7 +51,7 @@
             <mxPoint x="550" y="220" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-attributes-maps" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="maps" value="aktuelle Attribute">
+        <mxCell id="edge-attributes-maps" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="maps" value="Zeit / aktuelle Attribute">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="edge-hooks-evaluation" edge="1" parent="1" source="hooks" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" target="evaluation" value="LSM-Kontext">
@@ -70,31 +73,27 @@
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-attributes-monitor" edge="1" parent="1" source="attributes" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="aktuelle Attribute">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="geöffnete Dateien">
+        <mxCell id="edge-procfs-monitor" edge="1" parent="1" source="procfs" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="monitor" value="offene Datei-FDs">
           <mxGeometry relative="1" y="90" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-monitor-procfs" edge="1" parent="1" source="monitor" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="procfs" value="FD-Enforcement">
+        <mxCell id="edge-monitor-procfs" edge="1" parent="1" source="monitor" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="procfs" value="close(betroffener FD)">
           <mxGeometry relative="1" y="60" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="rKoR5bsgmGmYZk1vTzpR-1" edge="1" parent="1" source="maps" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" target="monitor" value="aktuelle Policies / Attribute&amp;nbsp;">
+        <mxCell id="rKoR5bsgmGmYZk1vTzpR-1" edge="1" parent="1" source="maps" style="endArrow=block;html=1;rounded=0;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" target="monitor" value="Policies / Attribute / Zeit">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="480" y="480" as="sourcePoint" />
             <mxPoint x="907" y="330" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="rKoR5bsgmGmYZk1vTzpR-2" edge="1" parent="1" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" value="Systemzeit&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
-          <mxGeometry relative="1" x="0.5" y="20" as="geometry">
-            <mxPoint as="offset" />
-            <mxPoint x="150" y="650" as="sourcePoint" />
-            <mxPoint x="150" y="570" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="edge-monitor-logging" edge="1" parent="1" source="monitor" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="logging" value="Enforcement-Log">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-combining-logging" edge="1" parent="1" source="combining" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;" target="logging" value="Entscheidungs-Log">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
