@@ -4,83 +4,66 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="Abhängigkeiten der projektinternen Rust-Crates" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="280" y="25" width="610" height="30" as="geometry" />
+        <mxCell id="title" value="Vereinfachte Abhängigkeitsübersicht der Rust-Crates" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="25" width="670" height="30" as="geometry" />
         </mxCell>
 
-        <mxCell id="main" value="&lt;b&gt;tails-pdp&lt;/b&gt;&lt;br&gt;Hauptprogramm&lt;br&gt;&lt;font size=&quot;11&quot;&gt;direkte Nutzung gemeinsamer Crates&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=15;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="435" y="100" width="300" height="82" as="geometry" />
+        <mxCell id="main" value="&lt;b&gt;tails-pdp&lt;/b&gt;&lt;br&gt;Hauptprogramm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=15;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="435" y="95" width="300" height="65" as="geometry" />
         </mxCell>
 
         <mxCell id="ebpf" value="&lt;b&gt;tails-pdp-ebpf&lt;/b&gt;&lt;br&gt;eBPF-LSM-Programm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="65" y="290" width="230" height="68" as="geometry" />
+          <mxGeometry x="95" y="275" width="240" height="68" as="geometry" />
         </mxCell>
         <mxCell id="userspace-group" value="&lt;b&gt;Userspace-Verarbeitung&lt;/b&gt;&lt;br&gt;&lt;font size=&quot;12&quot;&gt;tails-pdp-policy-loader&lt;br&gt;tails-pdp-attribute-loader&lt;br&gt;tails-pdp-userspace-pep&lt;/font&gt;&lt;br&gt;&lt;font size=&quot;11&quot;&gt;gleiche interne Abhängigkeiten&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=15;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="365" y="255" width="440" height="135" as="geometry" />
+          <mxGeometry x="430" y="250" width="395" height="135" as="geometry" />
         </mxCell>
         <mxCell id="admintool" value="&lt;b&gt;tails-pdp-admintool&lt;/b&gt;&lt;br&gt;Eigenständiges Administrationstool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="875" y="290" width="235" height="68" as="geometry" />
+          <mxGeometry x="50" y="525" width="230" height="68" as="geometry" />
         </mxCell>
 
         <mxCell id="common" value="&lt;b&gt;tails-pdp-common&lt;/b&gt;&lt;br&gt;Gemeinsame ABI-, Policy- und Attributstrukturen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="240" y="535" width="350" height="72" as="geometry" />
+          <mxGeometry x="350" y="525" width="350" height="72" as="geometry" />
         </mxCell>
         <mxCell id="userspace-common" value="&lt;b&gt;tails-pdp-userspace-common&lt;/b&gt;&lt;br&gt;Gemeinsamer Map-Zugriff und Hilfsfunktionen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=14;align=center;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="655" y="535" width="350" height="72" as="geometry" />
+          <mxGeometry x="760" y="525" width="350" height="72" as="geometry" />
         </mxCell>
 
         <mxCell id="legend" value="&lt;b&gt;Leserichtung&lt;/b&gt;&lt;br&gt;A --&gt; B: Crate A hängt von Crate B ab.&lt;br&gt;&lt;br&gt;Durchgezogen: reguläre Cargo-Abhängigkeit&lt;br&gt;Gestrichelt: Build-Abhängigkeit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;fontSize=12;align=left;verticalAlign=middle;spacingLeft=10;" vertex="1" parent="1">
-          <mxGeometry x="65" y="670" width="370" height="100" as="geometry" />
+          <mxGeometry x="50" y="675" width="370" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="note" value="Die drei Crates der Userspace-Verarbeitung besitzen jeweils dieselben beiden Abhängigkeiten." style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
-          <mxGeometry x="470" y="690" width="640" height="24" as="geometry" />
+        <mxCell id="note" value="Die direkten Abhängigkeiten von tails-pdp zu den beiden gemeinsamen Crates sind aus Übersichtsgründen nicht eingezeichnet." style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="425" y="690" width="685" height="24" as="geometry" />
         </mxCell>
 
         <mxCell id="edge-main-ebpf" value="Build" style="endArrow=block;html=1;rounded=0;strokeWidth=2;dashed=1;dashPattern=8 8;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="main" target="ebpf">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="320" y="140" />
-              <mxPoint x="320" y="324" />
+              <mxPoint x="375" y="128" />
+              <mxPoint x="375" y="310" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-main-userspace" value="regulär" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="main" target="userspace-group">
+        <mxCell id="edge-main-userspace" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="main" target="userspace-group">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-main-common" value="direkt" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="main" target="common">
+        <mxCell id="edge-ebpf-common" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="ebpf" target="common">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="200" y="205" />
-              <mxPoint x="200" y="500" />
+              <mxPoint x="245" y="430" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-main-userspace-common" value="direkt" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="main" target="userspace-common">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1040" y="205" />
-              <mxPoint x="1040" y="500" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="edge-ebpf-common" value="regulär" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ebpf" target="common">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="180" y="435" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="edge-userspace-common" value="jeweils" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="userspace-group" target="common">
+        <mxCell id="edge-userspace-common" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="userspace-group" target="common">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-userspace-userspace-common" value="jeweils" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="userspace-group" target="userspace-common">
+        <mxCell id="edge-userspace-userspace-common" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="userspace-group" target="userspace-common">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge-admin-common" value="regulär" style="endArrow=block;html=1;rounded=0;strokeWidth=2;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="admintool" target="common">
+        <mxCell id="edge-admin-common" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="admintool" target="common">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="855" y="430" />
-              <mxPoint x="630" y="430" />
+              <mxPoint x="315" y="559" />
             </Array>
           </mxGeometry>
         </mxCell>
