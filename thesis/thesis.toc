@@ -62,8 +62,6 @@
 \contentsline {subsection}{\numberline {5.1}Implementierungsstruktur}{35}{subsection.5.1}%
 \contentsline {subsubsection}{\numberline {5.1.1}Aufteilung des Rust-Workspaces}{35}{subsubsection.5.1.1}%
 \contentsline {subsubsection}{\numberline {5.1.2}Abhängigkeiten zwischen den Crates}{36}{subsubsection.5.1.2}%
-\contentsline {paragraph}{tails-pdp}{36}{section*.8}%
-\contentsline {paragraph}{}{36}{section*.9}%
 \contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{38}{subsection.5.2}%
 \contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{38}{subsubsection.5.2.1}%
 \contentsline {subsubsection}{\numberline {5.2.2}Repräsentation dynamischer Attribute}{38}{subsubsection.5.2.2}%

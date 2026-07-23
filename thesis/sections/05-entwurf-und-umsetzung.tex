@@ -40,8 +40,9 @@ Gemeinsame Datenstrukturen befinden sich in einem separaten Crate, damit Userspa
         \hline
         \texttt{tails-pdp-ebpf} & Enthält die im Kernel ausgeführten eBPF-LSM-Programme für den Hook \texttt{file\_open}, die Policy-Auswertung, Tail Calls und die Durchsetzung der Zugriffsentscheidung. \\
         \hline
-        \hline
+
         \texttt{tails-pdp-admintool} & Administrationstool zur Anzeige aktiver Policies, Attribute und Generationen aus gepinnten eBPF-Maps. \\
+        \hline
     \end{tabular}
     \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
     \label{tab:rust-workspace-crates}
@@ -52,12 +53,11 @@ Gemeinsame Datenstrukturen befinden sich in einem separaten Crate, damit Userspa
 
 
 \subsubsection{Abhängigkeiten zwischen den Crates}
-\paragraph{tails-pdp}
-Das Hauptprogramm startet den Attribute und Policy-Loader sowie den Userspace-PEP. Weiterhin lädt es das ebpf-Programm.
-\paragraph{tails-pdp-policy-loader}
-Der Policy Loader überwacht das Policyverzeichnis
 
-
+Die Abhängigkeiten zwischen den Crates folgen der fachlichen und technischen Trennung des Prototyps.
+Gemeinsame Datenstrukturen und Auswertungslogik werden zentral in \texttt{tails-pdp-common} bereitgestellt.
+Die Crates für Policyverarbeitung, Attributbereitstellung und nachträgliches Enforcement verwenden diese gemeinsame Grundlage, ohne voneinander abhängig zu sein.
+Weiterhin hängt das crate \texttt{tail-pdp-ebpf} ausschließlich vom crate \texttt{tails-pdp-commmon} ab, da es hier auf gemeinsame Auswertelogik zugreift.
 
 
 

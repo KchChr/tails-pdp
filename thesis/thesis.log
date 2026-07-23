@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  23 JUL 2026 16:37
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  23 JUL 2026 16:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -791,12 +791,6 @@ Underfull \hbox (badness 1708) in paragraph at lines 41--42
 []\T1/ntxtlf/m/n/10.95 Enthält die im Ker-nel aus-ge-führ-ten eBPF-LSM-
  []
 
-
-Overfull \hbox (19.344pt too wide) in paragraph at lines 56--57
- []\T1/ntxtlf/b/n/12 tails-pdp[] \T1/ntxtlf/m/n/12 Das Haupt-pro-gramm star-tet
- den At-tri-bu-te und Policy-Loader so-wie den Userspace-
- []
-
 [35] [36] [37]
 Overfull \vbox (164.76935pt too high) has occurred while \output is active []
 
@@ -814,9 +808,9 @@ Package rerunfilecheck Info: File `thesis.out' has not changed.
 (rerunfilecheck)             Checksum: 8529A2C3CDA6731E2BD57DF9FBD631FF;21735.
  ) 
 Here is how much of TeX's memory you used:
- 14281 strings out of 478994
- 199768 string characters out of 5858184
- 520153 words of memory out of 5000000
+ 14279 strings out of 478994
+ 199747 string characters out of 5858184
+ 520210 words of memory out of 5000000
  31320 multiletter control sequences out of 15000+600000
  471838 words of font info for 134 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -828,11 +822,11 @@ e/2021/texmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021
 /texmf-dist/fonts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-di
 st/fonts/type1/public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/
 type1/public/newtx/ztmri.pfb>
-Output written on /Users/ck/Code/tails-pdp/thesis/thesis.pdf (42 pages, 496973 
+Output written on /Users/ck/Code/tails-pdp/thesis/thesis.pdf (42 pages, 497128 
 bytes).
 PDF statistics:
- 846 PDF objects out of 1000 (max. 8388607)
- 783 compressed objects within 8 object streams
- 173 named destinations out of 1000 (max. 500000)
+ 844 PDF objects out of 1000 (max. 8388607)
+ 781 compressed objects within 8 object streams
+ 171 named destinations out of 1000 (max. 500000)
  790 words of extra memory for PDF output out of 10000 (max. 10000000)
 
