@@ -1,0 +1,110 @@
+\section{Entwurf und Umsetzung}
+
+Auf Grundlage der zuvor entwickelten Konzeption beschreibt dieses Kapitel deren technische Ausgestaltung im Prototyp.
+Zunächst wird die Implementierungsstruktur des Rust-Workspaces dargestellt.
+Anschließend werden die gemeinsamen Datenstrukturen und die gepinnten eBPF-Maps als Schnittstelle zwischen Userspace und Kernelspace erläutert.
+Darauf aufbauend werden die Initialisierung des Prototyps, die Verarbeitung von Policies und dynamischen Attributen sowie die Zugriffskontrolle für neue und bereits bestehende Dateizugriffe beschrieben.
+Den Abschluss bilden die Administrationsfunktion, die Fehlerbehandlung sowie die technischen Grenzen von Build und Zielsystem.
+
+\subsection{Implementierungsstruktur}
+
+\subsubsection{Aufteilung des Rust-Workspaces}
+
+Die Umsetzung ist in mehrere Rust-Crates mit klar abgegrenzten Verantwortlichkeiten aufgeteilt.
+Diese Struktur bildet die zuvor begründete Trennung zwischen Userspace und Kernelspace technisch ab.
+Das Crate \texttt{tails-pdp-ebpf} enthält den eBPF-Programmcode, der im Kernel ausgeführt wird und deshalb den dort geltenden Einschränkungen unterliegt.
+Die Userspace-Crates übernehmen dagegen Initialisierung, Policy- und Attributverarbeitung, Überwachung bestehender Zugriffe sowie Administration.
+Gemeinsame Datenstrukturen befinden sich in einem separaten Crate, damit Userspace und eBPF-Programm dieselben Map-Layouts verwenden.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabular}{|p{5.3cm}|p{8.4cm}|}
+        \hline
+        \textbf{Crate} & \textbf{Aufgabe} \\
+        \hline
+        \texttt{tails-pdp} & Hauptprogramm zum Laden des eBPF-Objekts, Einrichten der gepinnten Maps und Tail Calls sowie Starten der Userspace-Komponenten. \\
+
+
+
+        \hline
+        \texttt{tails-pdp-policy-loader} & Einlesen, Validieren und Übersetzen von Policydateien sowie Aktivieren vollständiger Policy-Generationen. \\
+        \hline
+        \texttt{tails-pdp-attribute-loader} & Bereitstellung und Aktualisierung von Zeit-, System-, Subject- und Ressourcenattributen. \\
+        \hline
+        \texttt{tails-pdp-userspace-common} & Gemeinsame Hilfsfunktionen und Zugriff auf die gepinnten eBPF-Maps für Userspace-Komponenten. \\
+        \hline
+        \texttt{tails-pdp-userspace-pep} & Überwachung bestehender Dateizugriffe und gezielter Entzug unzulässiger File Descriptors. \\
+        \hline
+        \texttt{tails-pdp-common} & Gemeinsam verwendeter Code mit Datenstrukturen und Auswertungslogik, insbesondere Policy-, Attribut- und Map-Strukturen. \\
+        \hline
+        \texttt{tails-pdp-ebpf} & Enthält die im Kernel ausgeführten eBPF-LSM-Programme für den Hook \texttt{file\_open}, die Policy-Auswertung, Tail Calls und die Durchsetzung der Zugriffsentscheidung. \\
+        \hline
+        \hline
+        \texttt{tails-pdp-admintool} & Administrationstool zur Anzeige aktiver Policies, Attribute und Generationen aus gepinnten eBPF-Maps. \\
+    \end{tabular}
+    \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
+    \label{tab:rust-workspace-crates}
+\end{table}
+
+
+
+
+
+\subsubsection{Abhängigkeiten zwischen den Crates}
+\paragraph{tails-pdp}
+Das Hauptprogramm startet den Attribute und Policy-Loader sowie den Userspace-PEP. Weiterhin lädt es das ebpf-Programm.
+\paragraph{tails-pdp-policy-loader}
+Der Policy Loader überwacht das Policyverzeichnis
+
+
+
+
+
+
+\subsection{Gemeinsame Datenstrukturen und Map-ABI}
+\subsubsection{Kernelgeeignete Policy-Strukturen}
+\subsubsection{Repräsentation dynamischer Attribute}
+\subsubsection{Objektidentitäten im Map-Schlüssel}
+\subsubsection{Aufbau und Pinning der eBPF-Maps}
+
+\subsection{Initialisierung und Laufzeitsteuerung}
+\subsubsection{Laden und Prüfen des eBPF-Programms}
+\subsubsection{Initialisierung der Maps und Tail Calls}
+\subsubsection{Start der Userspace-Komponenten}
+
+\subsection{Verarbeitung und Laden von Policies}
+\subsubsection{Einlesen der Policydateien}
+\subsubsection{Syntaktische Verarbeitung}
+\subsubsection{Semantische Validierung}
+\subsubsection{Übersetzung in Map-Einträge}
+\subsubsection{Generationenwechsel und Rollback}
+
+\subsection{Bereitstellung dynamischer Attribute}
+\subsubsection{Aufbau des Attributverzeichnisses}
+\subsubsection{Parsen und Validieren der Attribute}
+\subsubsection{Attributschlüssel und Hashwerte}
+\subsubsection{Aktualisierung der Attributgeneration}
+\subsubsection{Bereitstellung der Zeitinformation}
+
+\subsection{Implementierung des Kernelspace-PEP}
+\subsubsection{Verarbeitung des file\_open-Hooks}
+\subsubsection{Tail-Call-Kette}
+\subsubsection{Auswertung statischer Policies}
+\subsubsection{Auswertung von Streampolicies}
+\subsubsection{Combining und Durchsetzung}
+
+\subsection{Implementierung des Userspace-PEP}
+\subsubsection{Ermittlung bestehender Dateizugriffe}
+\subsubsection{Erneute Policy-Auswertung}
+\subsubsection{Entzug des betroffenen File Descriptors}
+
+\subsection{Implementierung des Administrationstools}
+
+\subsection{Fehlerbehandlung und Konsistenzsicherung}
+
+\subsection{Build und Deployment auf dem Zielsystem}
+\subsubsection{Cross-Compilation und Build-Artefakte}
+\subsubsection{Implementierungsbedingte Grenzen}
+
+\newpage

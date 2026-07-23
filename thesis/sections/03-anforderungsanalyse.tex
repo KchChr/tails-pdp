@@ -1,0 +1,122 @@
+\section{Anforderungsanalyse}
+In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen beschrieben. 
+Die Anforderungen ergeben sich aus der Zielsetzung, zu untersuchen, wie Attribute Stream-Based Access Control im Linux-Kernel prototypisch umgesetzt werden kann.
+Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit zeigen soll.
+
+\subsection{Funktionale Anforderungen}
+
+Funktionale Anforderungen beschreiben, welche fachlichen Funktionen der Prototyp bereitstellen muss. 
+Sie sind im Regelfall direkt testbar, da geprüft werden kann, ob eine Funktion vorhanden ist und das erwartete Verhalten zeigt. 
+Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten von Policies, die Zugriffskontrolle über LSM-Hooks sowie die nachträgliche Überwachung bestehender Zugriffe.
+
+\begin{description}
+    \item[FA-01 Policy-Einlesen:]
+    Der Prototyp muss ASBAC-Policies aus einer definierten Quelle im Userspace einlesen können.
+    
+    \textit{Akzeptanzkriterium:} Eine im Policy-Verzeichnis abgelegte Policy wird erkannt und für die weitere Verarbeitung bereitgestellt.
+
+    \item[FA-02 Policy-Verwaltung:]
+    Der Prototyp muss Änderungen an Policies erkennen und aktualisierte Policies in die Zugriffskontrolle übernehmen können.
+    
+    \textit{Akzeptanzkriterium:} Wird eine Policy geändert, hinzugefügt oder entfernt, wird diese Änderung vom System verarbeitet.
+
+    %\item[FA-03 Kommunikation zwischen Userspace und Kernelspace:]
+    %Der Prototyp muss eine Schnittstelle bereitstellen, über die Informationen zwischen Userspace und Kernelspace ausgetauscht werden können.
+    
+    %\textit{Akzeptanzkriterium:} Der Userspace kann dem Kernel entscheidungsrelevante Informationen übermitteln.
+
+    \item[FA-04 Zugriffskontrolle bei Dateiöffnungen:]
+    Der Prototyp muss Dateiöffnungen über den Linux-Security-Module-Hook \texttt{file\_open} abfangen können.
+    
+    \textit{Akzeptanzkriterium:} Das Öffnen einer durch eine Policy erfassten Datei wird durch den LSM-Hook \texttt{file\_open} kontrolliert.
+
+    \item[FA-05 Entscheidungsfindung anhand von Policies:]
+    Der Prototyp muss Zugriffsentscheidungen auf Grundlage der geladenen Policies treffen können.
+    
+    \textit{Akzeptanzkriterium:} Ein Zugriff wird abhängig von einer Policy erlaubt oder verweigert.
+
+    \item[FA-06 Unterstützung dynamischer Attribute:]
+    Der Prototyp muss dynamische Attribute, beispielsweise Zeitinformationen oder externe Zustandsinformationen, in Zugriffsentscheidungen einbeziehen können.
+    
+    \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
+
+    \item[FA-07 Überwachung und Enforcement bestehender Dateizugriffe:]
+    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und unmittelbar beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
+    Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter File Descriptor eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
+    Der Userspace-PEP ermittelt den zugehörigen Prozess und File Descriptor, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und schließt den File Descriptor bei einer Verletzung direkt.
+    Eine reine Ausgabe der Verletzung ohne Enforcement ist nicht vorgesehen.
+
+    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, schließt der Userspace-PEP den betroffenen File Descriptor. Andere File Descriptors desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen.
+
+    \item[FA-09 Administrationsschnittstelle:]
+    Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die zentrale Informationen zum Zustand des Prototyps lesend eingesehen werden können.
+    
+    \textit{Akzeptanzkriterium:} Ein Administrator kann zentrale Informationen zum Zustand des Prototyps abrufen, ohne über die Administrationsschnittstelle Policies, Attribute oder Kernelzustand zu verändern.
+
+    \item[FA-10 Gültige Policy-Generationen:]
+    \hypertarget{anf:gueltige-policy-generationen}{Der Prototyp muss sicherstellen, dass nur erfolgreich erzeugte und validierte Generationen von Policies für Zugriffsentscheidungen verwendet werden.}
+    Fehlerhafte, unvollständige oder nicht erfolgreich verarbeitete Policy-Generationen dürfen nicht als aktive Entscheidungsgrundlage gelten.
+    
+    \textit{Akzeptanzkriterium:} Eine neue Policy-Generation wird erst dann aktiviert, wenn sie vollständig verarbeitet und erfolgreich validiert wurde. Andernfalls bleibt die zuletzt gültige Policy-Generation aktiv.
+
+    \item[FA-11 Eingabevalidierung:]
+    Der Prototyp muss Eingaben aus dem Userspace validieren, bevor diese im Kernel für Zugriffsentscheidungen verwendet werden.
+    
+    \textit{Akzeptanzkriterium:} Ungültige oder manipulierte Eingaben werden erkannt und nicht als Entscheidungsgrundlage im Kernel verwendet.
+
+    \item[FA-12 beliebige Attributnamen:]
+    In Policies muss es für den Nutzer möglich sein, Attributnamen frei zu vergeben, ohne dass diese vorher im Prototyp fest definiert sein müssen.
+    Zulässige Attributnamen dürfen nicht leer sein und bestehen aus ASCII-Buchstaben (\texttt{A-Z}, \texttt{a-z}), Ziffern (\texttt{0-9}), Unterstrich (\texttt{\_}) und Bindestrich (\texttt{-}).
+    
+    \textit{Akzeptanzkriterium:} Eine Policy mit einem gültigen, zuvor nicht bekannten Attributnamen, beispielsweise \texttt{subject.position == "engineer"}, wird erfolgreich verarbeitet. Eine Policy mit einem Attributnamen außerhalb des zulässigen Zeichensatzes wird abgelehnt.
+
+\end{description}
+
+\subsection{Operative Anforderungen}
+
+Operative Anforderungen beschreiben, wie gut der Prototyp seine Funktionen im Betrieb erfüllen soll. 
+Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation sichtbar sind, beispielsweise Stabilität, Beobachtbarkeit, Nachvollziehbarkeit, Performance und Reproduzierbarkeit.
+
+\begin{description}
+    \item[OA-01 Stabilität:]
+    Der Prototyp darf die Stabilität des Linux-Kernels nicht unnötig gefährden.
+    
+    \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
+
+    \item[OA-02 Beobachtbarkeit und Nachvollziehbarkeit:]
+    Der Prototyp soll zentrale Zustände und Entscheidungen so sichtbar machen, dass Betrieb und Evaluation nachvollziehen können, welche Policies, Attribute oder Zustände eine Zugriffsentscheidung beeinflusst haben.
+    
+    \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
+
+    \item[OA-03 Performance:]
+    Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
+    
+    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet.
+
+    \item[OA-04 Reproduzierbarkeit:]
+    Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
+    
+    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen werden können.
+\end{description}
+
+\subsection{Entwicklungsbezogene Anforderungen}
+
+Entwicklungsbezogene Anforderungen beschreiben Eigenschaften, die vor allem für die Entwicklung und spätere Erweiterung des Prototyps relevant sind. 
+Sie sind für Nutzer nicht immer unmittelbar sichtbar, beeinflussen aber, wie verständlich, änderbar und erweiterbar das System bleibt.
+
+\begin{description}
+    \item[EA-01 Wartbarkeit:]
+    Die Implementierung soll modular aufgebaut sein, sodass Userspace-Komponenten, Kernel-Komponenten und Kommunikationsschnittstelle getrennt betrachtet werden können.
+
+    \item[EA-02 Erweiterbarkeit:]
+    Der Prototyp soll so entworfen werden, dass weitere Attribute, Policies oder LSM-Hooks ergänzt werden können.
+
+    \item[EA-03 Begrenzter Kernel-Anteil:]
+    Komplexe Policy-Logik soll möglichst im Userspace verbleiben, um die Komplexität im Kernel zu reduzieren.
+\end{description}
+
+
+
+
+\newpage
+
