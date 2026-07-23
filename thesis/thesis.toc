@@ -62,44 +62,44 @@
 \contentsline {subsection}{\numberline {5.1}Implementierungsstruktur}{35}{subsection.5.1}%
 \contentsline {subsubsection}{\numberline {5.1.1}Aufteilung des Rust-Workspaces}{35}{subsubsection.5.1.1}%
 \contentsline {subsubsection}{\numberline {5.1.2}Abhängigkeiten zwischen den Crates}{36}{subsubsection.5.1.2}%
-\contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{38}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{38}{subsubsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{37}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{37}{subsubsection.5.2.1}%
 \contentsline {subsubsection}{\numberline {5.2.2}Repräsentation dynamischer Attribute}{38}{subsubsection.5.2.2}%
 \contentsline {subsubsection}{\numberline {5.2.3}Objektidentitäten im Map-Schlüssel}{38}{subsubsection.5.2.3}%
-\contentsline {subsubsection}{\numberline {5.2.4}Aufbau und Pinning der eBPF-Maps}{38}{subsubsection.5.2.4}%
-\contentsline {subsection}{\numberline {5.3}Initialisierung und Laufzeitsteuerung}{38}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}Laden und Prüfen des eBPF-Programms}{38}{subsubsection.5.3.1}%
-\contentsline {subsubsection}{\numberline {5.3.2}Initialisierung der Maps und Tail Calls}{38}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}Start der Userspace-Komponenten}{38}{subsubsection.5.3.3}%
-\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{38}{subsection.5.4}%
-\contentsline {subsubsection}{\numberline {5.4.1}Einlesen der Policydateien}{38}{subsubsection.5.4.1}%
-\contentsline {subsubsection}{\numberline {5.4.2}Syntaktische Verarbeitung}{38}{subsubsection.5.4.2}%
-\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{38}{subsubsection.5.4.3}%
-\contentsline {subsubsection}{\numberline {5.4.4}Übersetzung in Map-Einträge}{38}{subsubsection.5.4.4}%
-\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{38}{subsubsection.5.4.5}%
-\contentsline {subsection}{\numberline {5.5}Bereitstellung dynamischer Attribute}{38}{subsection.5.5}%
-\contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{38}{subsubsection.5.5.1}%
-\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{38}{subsubsection.5.5.2}%
-\contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{38}{subsubsection.5.5.3}%
-\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{38}{subsubsection.5.5.4}%
-\contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{38}{subsubsection.5.5.5}%
-\contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{38}{subsection.5.6}%
-\contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{38}{subsubsection.5.6.1}%
-\contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{38}{subsubsection.5.6.2}%
-\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{38}{subsubsection.5.6.3}%
-\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{38}{subsubsection.5.6.4}%
-\contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{38}{subsubsection.5.6.5}%
-\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{38}{subsection.5.7}%
-\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{38}{subsubsection.5.7.1}%
-\contentsline {subsubsection}{\numberline {5.7.2}Erneute Policy-Auswertung}{38}{subsubsection.5.7.2}%
-\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{38}{subsubsection.5.7.3}%
-\contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{38}{subsection.5.8}%
-\contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{38}{subsection.5.9}%
-\contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{38}{subsection.5.10}%
-\contentsline {subsubsection}{\numberline {5.10.1}Cross-Compilation und Build-Artefakte}{38}{subsubsection.5.10.1}%
-\contentsline {subsubsection}{\numberline {5.10.2}Implementierungsbedingte Grenzen}{38}{subsubsection.5.10.2}%
-\contentsline {section}{\numberline {6}Evaluation}{39}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Testumgebung}{39}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Testszenarien}{39}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Ergebnisse}{39}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{40}{section.7}%
+\contentsline {subsubsection}{\numberline {5.2.4}Aufbau und Pinning der eBPF-Maps}{39}{subsubsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.3}Initialisierung und Laufzeitsteuerung}{40}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Laden und Prüfen des eBPF-Programms}{40}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}Initialisierung der Maps und Tail Calls}{40}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}Start der Userspace-Komponenten}{40}{subsubsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{40}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Einlesen der Policydateien}{40}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Syntaktische Verarbeitung}{40}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{40}{subsubsection.5.4.3}%
+\contentsline {subsubsection}{\numberline {5.4.4}Übersetzung in Map-Einträge}{40}{subsubsection.5.4.4}%
+\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{40}{subsubsection.5.4.5}%
+\contentsline {subsection}{\numberline {5.5}Bereitstellung dynamischer Attribute}{40}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{41}{subsubsection.5.5.1}%
+\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{41}{subsubsection.5.5.2}%
+\contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{41}{subsubsection.5.5.3}%
+\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{41}{subsubsection.5.5.4}%
+\contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{41}{subsubsection.5.5.5}%
+\contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{41}{subsection.5.6}%
+\contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{41}{subsubsection.5.6.1}%
+\contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{41}{subsubsection.5.6.2}%
+\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{41}{subsubsection.5.6.3}%
+\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{41}{subsubsection.5.6.4}%
+\contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{41}{subsubsection.5.6.5}%
+\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{41}{subsection.5.7}%
+\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{41}{subsubsection.5.7.1}%
+\contentsline {subsubsection}{\numberline {5.7.2}Erneute Policy-Auswertung}{41}{subsubsection.5.7.2}%
+\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{41}{subsubsection.5.7.3}%
+\contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{41}{subsection.5.8}%
+\contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{41}{subsection.5.9}%
+\contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{41}{subsection.5.10}%
+\contentsline {subsubsection}{\numberline {5.10.1}Cross-Compilation und Build-Artefakte}{41}{subsubsection.5.10.1}%
+\contentsline {subsubsection}{\numberline {5.10.2}Implementierungsbedingte Grenzen}{41}{subsubsection.5.10.2}%
+\contentsline {section}{\numberline {6}Evaluation}{42}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Testumgebung}{42}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Testszenarien}{42}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Ergebnisse}{42}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{43}{section.7}%
