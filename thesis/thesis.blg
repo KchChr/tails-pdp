@@ -3,44 +3,47 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: thesis.aux
 The style file: plainnat.bst
 Database file #1: literatur.bib
-You've used 19 entries,
+Warning--entry type for "cargoBuildScripts" isn't style-file defined
+--line 17 of file literatur.bib
+You've used 20 entries,
             2773 wiz_defined-function locations,
-            694 strings with 7732 characters,
-and the built_in function-call counts, 6634 in all, are:
-= -- 599
-> -- 315
-< -- 18
-+ -- 121
-- -- 96
-* -- 396
-:= -- 1049
-add.period$ -- 77
-call.type$ -- 19
-change.case$ -- 89
-chr.to.int$ -- 13
-cite$ -- 38
-duplicate$ -- 303
-empty$ -- 607
-format.name$ -- 117
-if$ -- 1401
+            699 strings with 7868 characters,
+and the built_in function-call counts, 6931 in all, are:
+= -- 625
+> -- 325
+< -- 19
++ -- 125
+- -- 99
+* -- 411
+:= -- 1094
+add.period$ -- 80
+call.type$ -- 20
+change.case$ -- 93
+chr.to.int$ -- 14
+cite$ -- 40
+duplicate$ -- 318
+empty$ -- 639
+format.name$ -- 121
+if$ -- 1465
 int.to.chr$ -- 7
 int.to.str$ -- 1
 missing$ -- 2
-newline$ -- 123
-num.names$ -- 76
-pop$ -- 229
+newline$ -- 128
+num.names$ -- 80
+pop$ -- 241
 preamble$ -- 1
-purify$ -- 70
+purify$ -- 73
 quote$ -- 0
-skip$ -- 234
+skip$ -- 248
 stack$ -- 0
-substring$ -- 57
-swap$ -- 28
+substring$ -- 59
+swap$ -- 29
 text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 209
+type$ -- 220
 warning$ -- 0
-while$ -- 59
+while$ -- 62
 width$ -- 0
-write$ -- 278
+write$ -- 290
+(There was 1 warning)

@@ -53,11 +53,21 @@ Gemeinsame Datenstrukturen befinden sich in einem separaten Crate, damit Userspa
 
 
 \subsubsection{Abhängigkeiten zwischen den Crates}
+Die folgenden Abhängigkeiten beziehen sich auf die im Workspace definierten internen Crates. Zunächst ist zwischen einer regulären Cargo-Abhängigkeit und einer Build-Abhängigkeit zu unterscheiden. Reguläre Abhängigkeiten stehen im Manifestabschnitt \texttt{dependencies} und dem Programmcode der jeweiligen Crate zur Verfügung. Build-Abhängigkeiten werden dagegen im Abschnitt \texttt{build-dependencies} angegeben und können ausschließlich durch das Build-Skript \texttt{build.rs} verwendet werden; sie stehen dem eigentlichen Programmcode nicht automatisch zur Verfügung \citep{cargoBuildScripts}.
 
-Die Abhängigkeiten zwischen den Crates folgen der fachlichen und technischen Trennung des Prototyps.
-Gemeinsame Datenstrukturen und Auswertungslogik werden zentral in \texttt{tails-pdp-common} bereitgestellt.
-Die Crates für Policyverarbeitung, Attributbereitstellung und nachträgliches Enforcement verwenden diese gemeinsame Grundlage, ohne voneinander abhängig zu sein.
-Weiterhin hängt das crate \texttt{tail-pdp-ebpf} ausschließlich vom crate \texttt{tails-pdp-commmon} ab, da es hier auf gemeinsame Auswertelogik zugreift.
+Im Prototyp stellt \path{tails-pdp-ebpf} einen Sonderfall dar. Die Crate ist technisch als Build-Abhängigkeit von \path{tails-pdp} eingetragen. Das Build-Skript ermittelt ihr Manifest und veranlasst mit \texttt{aya-build} die separate Erzeugung des eBPF-Artefakts. Das Artefakt wird anschließend in das Hauptprogramm eingebettet und zur Laufzeit geladen. Es handelt sich daher nicht um eine reguläre Bibliotheksabhängigkeit mit Funktionsaufrufen zwischen \path{tails-pdp} und \path{tails-pdp-ebpf}. Die Einordnung als Build-Abhängigkeit ist ein dokumentierter Ersatz für die auf stabilem Cargo nicht verwendbare Artefakt-Abhängigkeit. Diese Umsetzung ergibt sich aus \path{tails-pdp/Cargo.toml} und \path{tails-pdp/build.rs}.
+
+Die regulären internen Abhängigkeiten sind wie folgt aufgebaut:
+\begin{itemize}
+    \item Das Hauptprogramm \path{tails-pdp} bindet \path{tails-pdp-attribute-loader}, \path{tails-pdp-policy-loader}, \path{tails-pdp-userspace-common}, \path{tails-pdp-userspace-pep} und \path{tails-pdp-common} ein.
+    \item \path{tails-pdp-attribute-loader}, \path{tails-pdp-policy-loader} und \path{tails-pdp-userspace-pep} verwenden jeweils \path{tails-pdp-common} für gemeinsame Datenstrukturen sowie \path{tails-pdp-userspace-common} für den Zugriff auf die Userspace-seitigen Map-Funktionen.
+    \item Das Kernelprogramm \path{tails-pdp-ebpf} hängt ausschließlich von \path{tails-pdp-common} ab. Dadurch bleiben die gemeinsamen Map-Layouts und Policy-Strukturen zwischen Userspace und Kernelspace konsistent, ohne dass das eBPF-Programm von Userspace-spezifischen Crates abhängt.
+    \item Das eigenständig gestartete \path{tails-pdp-admintool} verwendet \path{tails-pdp-common}, liest die gepinnten Maps jedoch selbst und hängt deshalb nicht von \path{tails-pdp-userspace-common} ab.
+    \item \path{tails-pdp-common} und \path{tails-pdp-userspace-common} besitzen keine weiteren internen Crate-Abhängigkeiten. Sie bilden damit die unteren Schichten des Abhängigkeitsgraphen.
+\end{itemize}
+
+
+
 
 
 
