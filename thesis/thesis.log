@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  23 JUL 2026 20:06
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  24 JUL 2026 18:14
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -750,7 +750,7 @@ File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
 (Font)              scaled to size 12.0pt on input line 49.
  [17]
-<graphics/architecture.jpg, id=622, 1606.0pt x 1051.93pt>
+<graphics/architecture.jpg, id=657, 1606.0pt x 1051.93pt>
 File: graphics/architecture.jpg Graphic file (type jpg)
 <use graphics/architecture.jpg>
 Package pdftex.def Info: graphics/architecture.jpg  used on input line 69.
@@ -775,24 +775,29 @@ s-ID und File-Descriptor-Nummer
 
 [32] [33] [34]) (./sections/05-entwurf-und-umsetzung.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.95pt on input line 21.
-LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 10.95pt on input line 22.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.0pt on input line 22.
+(Font)              scaled to size 10.95pt on input line 23.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 6.1pt on input line 22.
+(Font)              scaled to size 8.0pt on input line 23.
+LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
+(Font)              scaled to size 6.1pt on input line 23.
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 10.95pt on input line 24.
+(Font)              scaled to size 10.95pt on input line 25.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 10.95pt on input line 26.
+(Font)              scaled to size 10.95pt on input line 27.
 
-Underfull \hbox (badness 1708) in paragraph at lines 41--42
+Underfull \hbox (badness 1708) in paragraph at lines 42--43
 []\T1/ntxtlf/m/n/10.95 Enthält die im Ker-nel aus-ge-führ-ten eBPF-LSM-
  []
 
 [35] [36]
-<graphics/abhaengigkeiten.jpg, id=720, 340.27126pt x 180.675pt>
+Overfull \hbox (15.51294pt too wide) in paragraph at lines 71--72
+[]\T1/ntxtlf/m/n/12 Die ge-mein-sa-men Cra-tes tren-nen die Da-ten-re-prä-sen-t
+a-ti-on von der Userspace-Infrastruktur.
+ []
+
+<graphics/abhaengigkeiten.jpg, id=755, 340.27126pt x 180.675pt>
 File: graphics/abhaengigkeiten.jpg Graphic file (type jpg)
 <use graphics/abhaengigkeiten.jpg>
 Package pdftex.def Info: graphics/abhaengigkeiten.jpg  used on input line 75.
@@ -848,39 +853,47 @@ Overfull \hbox (11.01083pt too wide) in paragraph at lines 116--133
  [][] 
  []
 
-[39] [40] [41]) (./sections/06-evaluation.tex [42])
-(./sections/07-zusammenfassung-und-ausblick.tex [43])
-(/Users/ck/Code/tails-pdp/thesis/thesis.bbl
+[39] [40]
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 8.8pt on input line 64.
+(Font)              scaled to size 8.8pt on input line 154.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 6.6pt on input line 64.
- [44]) [45]
+(Font)              scaled to size 6.6pt on input line 154.
+ [41] [42] [43] [44] [45] [46] [47] [48] [49] [50] [51]
+Overfull \hbox (56.38766pt too wide) in paragraph at lines 326--327
+\T1/ntxtlf/m/n/12 Die Build-Aliasse er-zeu-gen je-weils die Release-Binaries fü
+r \T1/ntxtt/m/n/12 tails-pdp \T1/ntxtlf/m/n/12 und \T1/ntxtt/m/n/12 tails-pdp-a
+dmintool\T1/ntxtlf/m/n/12 ;
+ []
+
+[52] [53]) (./sections/06-evaluation.tex [54])
+(./sections/07-zusammenfassung-und-ausblick.tex [55])
+(/Users/ck/Code/tails-pdp/thesis/thesis.bbl [56]) [57]
 (/Users/ck/Code/tails-pdp/thesis/thesis.aux)
 Package rerunfilecheck Info: File `thesis.out' has not changed.
-(rerunfilecheck)             Checksum: 8529A2C3CDA6731E2BD57DF9FBD631FF;21735.
+(rerunfilecheck)             Checksum: 86ADC37CDAA42327A3872B76A79181BA;23674.
  ) 
 Here is how much of TeX's memory you used:
- 14310 strings out of 478994
- 200402 string characters out of 5858184
- 519559 words of memory out of 5000000
- 31340 multiletter control sequences out of 15000+600000
- 475534 words of font info for 138 fonts, out of 8000000 for 9000
+ 14341 strings out of 478994
+ 200808 string characters out of 5858184
+ 518272 words of memory out of 5000000
+ 31348 multiletter control sequences out of 15000+600000
+ 476870 words of font info for 142 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 71i,10n,74p,815b,514s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,10n,74p,1007b,514s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/
 local/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/local/
-texlive/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texliv
-e/2021/texmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021
-/texmf-dist/fonts/type1/public/newtx/txsys.pfb></usr/local/texlive/2021/texmf-d
-ist/fonts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts
-/type1/public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/pu
-blic/newtx/ztmri.pfb>
-Output written on /Users/ck/Code/tails-pdp/thesis/thesis.pdf (45 pages, 528997 
+texlive/2021/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texliv
+e/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021
+/texmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021/texmf
+-dist/fonts/type1/public/newtx/txsys.pfb></usr/local/texlive/2021/texmf-dist/fo
+nts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1
+/public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/n
+ewtx/ztmri.pfb>
+Output written on /Users/ck/Code/tails-pdp/thesis/thesis.pdf (57 pages, 573461 
 bytes).
 PDF statistics:
- 875 PDF objects out of 1000 (max. 8388607)
- 805 compressed objects within 9 object streams
- 177 named destinations out of 1000 (max. 500000)
- 795 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 969 PDF objects out of 1000 (max. 8388607)
+ 885 compressed objects within 9 object streams
+ 196 named destinations out of 1000 (max. 500000)
+ 851 words of extra memory for PDF output out of 10000 (max. 10000000)
 
