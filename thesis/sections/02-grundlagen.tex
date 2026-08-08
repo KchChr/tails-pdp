@@ -125,6 +125,11 @@ eBPF-LSM verbindet eBPF mit dem LSM-Framework.
 Die Kernel-Dokumentation beschreibt LSM-BPF-Programme als Möglichkeit, LSM-Hooks zur Laufzeit durch privilegierte Benutzer zu instrumentieren, um systemweite Mandatory-Access-Control- oder Audit-Policies mit eBPF umzusetzen \citep{kernelBpfLsm}. 
 Damit kann ein eBPF-Programm an einem LSM-Hook ausgeführt werden und dort eine Entscheidung über die angeforderte Operation zurückgeben.
 
+Für das Laden und die typgerechte Anbindung solcher Programme ist außerdem das \emph{BPF Type Format} (BTF) relevant.
+BTF ist ein Metadatenformat, das unter anderem Typ- und Funktionsinformationen zu Kernel- und eBPF-Strukturen beschreibt \citep{kernelBtf}.
+Ein Loader kann die vom Zielkernel unter \path{/sys/kernel/btf/vmlinux} bereitgestellten Informationen verwenden, um den vorgesehenen LSM-Hook und die Typen seiner Argumente aufzulösen.
+BTF ist damit keine Policy- oder Attributquelle, sondern eine technische Voraussetzung für das Laden des in dieser Arbeit eingesetzten eBPF-LSM-Programms.
+
 In den Grundlagen wird eBPF noch nicht als endgültige Lösung begründet, sondern als technischer Mechanismus eingeordnet. 
 Für diese Arbeit ist eBPF interessant, weil es eine Ausführung im Kernel ermöglicht, ohne ein klassisches Kernelmodul zu entwickeln. 
 Gleichzeitig ist eBPF durch Verifier, eingeschränkte Sprachelemente, begrenzten Stack, fehlende allgemeine Heap-Allokation und definierte Hilfsfunktionen deutlich stärker beschränkt als allgemeiner Kernelcode. 
@@ -221,4 +226,3 @@ Für den Prototyp kann ein Userspace-PEP diese Informationen nutzen, um zu erken
 Wird eine bestehende Zugriffssituation durch neue Attribute oder Policies unzulässig, kann der Userspace-PEP gezielt den betroffenen Zugriff behandeln, ohne notwendigerweise alle Zugriffe desselben Prozesses zu beenden.
 
 \newpage
-

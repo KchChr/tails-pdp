@@ -65,48 +65,48 @@
 \contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{37}{subsection.5.2}%
 \contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{37}{subsubsection.5.2.1}%
 \contentsline {subsubsection}{\numberline {5.2.2}Repräsentation dynamischer Attribute}{38}{subsubsection.5.2.2}%
-\contentsline {subsubsection}{\numberline {5.2.3}Objektidentitäten im Map-Schlüssel}{38}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.3}Objektidentitäten im Map-Schlüssel}{39}{subsubsection.5.2.3}%
 \contentsline {subsubsection}{\numberline {5.2.4}Aufbau und Pinning der eBPF-Maps}{39}{subsubsection.5.2.4}%
 \contentsline {subsection}{\numberline {5.3}Initialisierung und Laufzeitsteuerung}{40}{subsection.5.3}%
 \contentsline {subsubsection}{\numberline {5.3.1}Laden und Prüfen des eBPF-Programms}{40}{subsubsection.5.3.1}%
 \contentsline {subsubsection}{\numberline {5.3.2}Initialisierung der Maps und Tail Calls}{41}{subsubsection.5.3.2}%
 \contentsline {subsubsection}{\numberline {5.3.3}Start der Userspace-Komponenten}{41}{subsubsection.5.3.3}%
-\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{41}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{42}{subsection.5.4}%
 \contentsline {subsubsection}{\numberline {5.4.1}Einlesen der Policydateien}{42}{subsubsection.5.4.1}%
 \contentsline {subsubsection}{\numberline {5.4.2}Syntaktische Verarbeitung}{42}{subsubsection.5.4.2}%
-\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{42}{subsubsection.5.4.3}%
+\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{43}{subsubsection.5.4.3}%
 \contentsline {subsubsection}{\numberline {5.4.4}Übersetzung in Map-Einträge}{43}{subsubsection.5.4.4}%
-\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{43}{subsubsection.5.4.5}%
+\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{44}{subsubsection.5.4.5}%
 \contentsline {subsection}{\numberline {5.5}Bereitstellung dynamischer Attribute}{44}{subsection.5.5}%
 \contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{44}{subsubsection.5.5.1}%
-\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{44}{subsubsection.5.5.2}%
+\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{45}{subsubsection.5.5.2}%
 \contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{45}{subsubsection.5.5.3}%
-\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{45}{subsubsection.5.5.4}%
+\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{46}{subsubsection.5.5.4}%
 \contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{46}{subsubsection.5.5.5}%
 \contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{46}{subsection.5.6}%
 \contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{46}{subsubsection.5.6.1}%
 \contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{47}{subsubsection.5.6.2}%
 \contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{47}{subsubsection.5.6.3}%
-\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{47}{subsubsection.5.6.4}%
+\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{48}{subsubsection.5.6.4}%
 \contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{48}{subsubsection.5.6.5}%
-\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{48}{subsection.5.7}%
-\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{48}{subsubsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{49}{subsection.5.7}%
+\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{49}{subsubsection.5.7.1}%
 \contentsline {subsubsection}{\numberline {5.7.2}Erneute Policy-Auswertung}{49}{subsubsection.5.7.2}%
-\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{49}{subsubsection.5.7.3}%
+\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{50}{subsubsection.5.7.3}%
 \contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{50}{subsection.5.8}%
-\contentsline {subsubsection}{\numberline {5.8.1}Auswahl der aktiven Datenbanken}{50}{subsubsection.5.8.1}%
-\contentsline {subsubsection}{\numberline {5.8.2}Darstellung nicht umkehrbarer Hashwerte}{50}{subsubsection.5.8.2}%
+\contentsline {subsubsection}{\numberline {5.8.1}Auswahl und Ausgabe des aktiven Zustands}{50}{subsubsection.5.8.1}%
+\contentsline {subsubsection}{\numberline {5.8.2}Darstellung nicht umkehrbarer Hashwerte}{51}{subsubsection.5.8.2}%
 \contentsline {subsubsection}{\numberline {5.8.3}Read-only-Schnittstelle und Fehlerverhalten}{51}{subsubsection.5.8.3}%
 \contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{51}{subsection.5.9}%
 \contentsline {subsubsection}{\numberline {5.9.1}Startfehler und Map-Kompatibilität}{51}{subsubsection.5.9.1}%
-\contentsline {subsubsection}{\numberline {5.9.2}Konsistente Aktualisierung von Policies und Attributen}{51}{subsubsection.5.9.2}%
+\contentsline {subsubsection}{\numberline {5.9.2}Konsistente Aktualisierung von Policies und Attributen}{52}{subsubsection.5.9.2}%
 \contentsline {subsubsection}{\numberline {5.9.3}Fail-closed und laufzeitbezogene Fehler}{52}{subsubsection.5.9.3}%
 \contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{52}{subsection.5.10}%
-\contentsline {subsubsection}{\numberline {5.10.1}Cross-Compilation und Build-Artefakte}{52}{subsubsection.5.10.1}%
-\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem und Prüfung}{53}{subsubsection.5.10.2}%
+\contentsline {subsubsection}{\numberline {5.10.1}Build-Prozess und Build-Artefakte}{53}{subsubsection.5.10.1}%
+\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem}{53}{subsubsection.5.10.2}%
 \contentsline {subsubsection}{\numberline {5.10.3}Implementierungsbedingte Grenzen}{53}{subsubsection.5.10.3}%
-\contentsline {section}{\numberline {6}Evaluation}{54}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Testumgebung}{54}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Testszenarien}{54}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Ergebnisse}{54}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{55}{section.7}%
+\contentsline {section}{\numberline {6}Evaluation}{55}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Testumgebung}{55}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Testszenarien}{55}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Ergebnisse}{55}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{56}{section.7}%

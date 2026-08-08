@@ -1,14 +1,17 @@
-\section{Evaluation}
-% Inhalt einfügen.
+\section{Evaluation}\label{sec:evaluation}
+Dieses Kapitel überprüft, inwieweit der implementierte Prototyp die in Kapitel~3 formulierten Anforderungen erfüllt. Dazu werden zunächst die Testumgebung und die automatisierten Prüfungen beschrieben. Anschließend werden die fachlichen Testszenarien und ihre Ergebnisse dargestellt.
 
 \subsection{Testumgebung}
-% Inhalt einfügen.
+Die Evaluation erfolgt auf einem dedizierten \texttt{x86\_64}-Linux-System, dessen Kernel BPF-LSM, BTF und das BPF-Dateisystem bereitstellt. Das Laden und Anheften der eBPF-Programme sowie der Zugriff auf die gepinnten Maps benötigen erhöhte Berechtigungen. Die konkrete Kernel-, Rust- und Toolchain-Version ist gemeinsam mit den Messergebnissen zu dokumentieren, damit die Prüfung gemäß OA-04 reproduzierbar bleibt.
+
+Das Skript \path{test.sh} führt die nicht privilegierten Prüfungen aus. Dazu gehören die Formatprüfung, die Unit- und Komponententests der gemeinsamen und Userspace-Crates, Clippy mit als Fehler behandelten Warnungen sowie ein Release-Build mit eingebettetem eBPF-Objekt. Diese Schritte prüfen Quellcode, Übersetzung und isolierbare Logik, laden das Programm jedoch noch nicht in den Kernel.
 
 \subsection{Testszenarien}
-% Inhalt einfügen.
+Die Kernel- und Durchsetzungsszenarien führt \path{test-e2e.sh} mit Root-Rechten auf dem dedizierten Testsystem aus. Das Skript prüft das Laden durch den Verifier, das Anheften des \texttt{file\_open}-Hooks, statische und zeitabhängige Policies, Änderungen von Subject-, System- und Ressourcenattributen, das Beibehalten der letzten gültigen Generation nach einer fehlerhaften Änderung sowie den gezielten Entzug eines einzelnen File Descriptors. Ein Szenario mit zwei geöffneten Dateien überprüft insbesondere, dass nur der Deskriptor der unzulässig gewordenen Datei geschlossen wird.
+
+Während dieses Tests verwendet der Prototyp die gepinnten Maps unter \path{/sys/fs/bpf/tails-pdp}. Der Test darf deshalb nicht parallel zu einer regulären Instanz und nicht auf einem Produktivsystem ausgeführt werden. Für jedes Szenario sind Ausgangszustand, Änderung, erwartete Entscheidung und beobachtetes Ergebnis festzuhalten.
 
 \subsection{Ergebnisse}
-% Inhalt einfügen.
+% Messergebnisse und Zuordnung zu den Anforderungen ergänzen.
 
 \newpage
-
