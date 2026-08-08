@@ -1,0 +1,2 @@
+- FA-07 verlangt „unmittelbares“ Beenden, der Userspace-PEP prüft jedoch im Sekundentakt. Lösung: Akzeptanzkriterium auf ein definiertes Prüfintervall begrenzen oder eine ereignisgesteuerte Überwachung entwickeln.
+- OA-02 verlangt die Zuordnung konkreter Entscheidungen. Administrationstool und Debug-Ausgabe zeigen Zustände, bilden aber kein dauerhaftes Entscheidungsaudit. Lösung: Anforderung enger formulieren oder eine gepinnte Audit-/Event-Map ergänzen.
