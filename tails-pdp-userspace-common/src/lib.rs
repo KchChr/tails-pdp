@@ -5,8 +5,78 @@ use aya::{
     Pod,
     maps::{Array, HashMap, Map, MapData},
 };
+use tokio::sync::mpsc;
 
 pub mod fs_watch;
+
+/// A successfully activated state that requires the userspace PEP to re-evaluate open files.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EnforcementTrigger {
+    PolicyGenerationActivated { generation: u32 },
+    AttributeGenerationActivated { generation: u32 },
+    TimeConditionChanged { unix_seconds: u64 },
+}
+
+pub const ENFORCEMENT_TRIGGER_CHANNEL_CAPACITY: usize = 1;
+
+/// Queues a re-evaluation request without allowing unbounded update backlogs.
+///
+/// A full channel already represents a pending re-evaluation. Dropping the newer notification is
+/// safe because the PEP reads the active map generations at the beginning of its next scan.
+pub fn notify_enforcement(
+    sender: &mpsc::Sender<EnforcementTrigger>,
+    trigger: EnforcementTrigger,
+) -> anyhow::Result<bool> {
+    match sender.try_send(trigger) {
+        Ok(()) => Ok(true),
+        Err(mpsc::error::TrySendError::Full(_)) => Ok(false),
+        Err(mpsc::error::TrySendError::Closed(_)) => {
+            anyhow::bail!("userspace PEP trigger channel is closed")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bounded_trigger_channel_coalesces_without_growing() {
+        let (sender, mut receiver) = mpsc::channel(ENFORCEMENT_TRIGGER_CHANNEL_CAPACITY);
+        assert!(
+            notify_enforcement(
+                &sender,
+                EnforcementTrigger::PolicyGenerationActivated { generation: 1 }
+            )
+            .expect("first trigger")
+        );
+        assert!(
+            !notify_enforcement(
+                &sender,
+                EnforcementTrigger::AttributeGenerationActivated { generation: 2 }
+            )
+            .expect("full channel is coalesced")
+        );
+        assert_eq!(
+            receiver.try_recv().expect("queued trigger"),
+            EnforcementTrigger::PolicyGenerationActivated { generation: 1 }
+        );
+        assert!(receiver.try_recv().is_err());
+    }
+
+    #[test]
+    fn closed_trigger_channel_is_an_error() {
+        let (sender, receiver) = mpsc::channel(ENFORCEMENT_TRIGGER_CHANNEL_CAPACITY);
+        drop(receiver);
+        assert!(
+            notify_enforcement(
+                &sender,
+                EnforcementTrigger::PolicyGenerationActivated { generation: 1 }
+            )
+            .is_err()
+        );
+    }
+}
 
 pub const BPF_PIN_DIRECTORY: &str = "/sys/fs/bpf/tails-pdp";
 

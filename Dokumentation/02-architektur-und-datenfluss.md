@@ -108,6 +108,25 @@ Die konkrete Auswertung liegt in:
 Der Kernel-Teil liest die Ressource als `device + inode`, nicht als Pfad. Das ist robuster, weil im
 LSM-Hook ein vollständiger Pfad schwer und verifier-unfreundlich zu ermitteln ist.
 
+## Ereignisbasierte Nachbewertung
+
+Nach erfolgreicher Policy- oder Attributaktivierung sendet der jeweilige Loader einen internen
+`EnforcementTrigger` an den Userspace-PEP. Der Trigger wird erst nach dem vollständigen Schreiben
+der inaktiven Bank und dem Umschalten der Generation erzeugt. Ungültige Eingaben und fehlgeschlagene
+Map-Updates behalten die vorherige Generation bei und lösen keine Neubewertung aus.
+
+Der Kanal ist auf einen ausstehenden Trigger begrenzt. Dadurch bleiben Scans sequenziell; schnelle
+Änderungen werden koalesziert und führen nach einem laufenden Scan zu höchstens einem weiteren Scan
+mit den dann aktiven Generationen. Zeitabhängige Policies werden separat betrachtet: Der PEP
+berechnet aus der aktiven Stream-Policy-Bank die nächste Zeitgrenze, an der sich eine Bedingung
+ändern kann. Die sekündliche Aktualisierung von `CURRENT_TIME` für neue Kernelzugriffe bleibt
+bestehen, löst aber selbst keinen vollständigen `/proc`-Scan aus.
+
+Die Nachbewertung ist keine atomare Systemaufnahme und garantiert keinen sofortigen FD-Entzug.
+Nach erfolgreicher Aktivierung einer entscheidungsrelevanten Policy-, Attribut- oder Zeitänderung
+stößt der Prototyp ereignisgetrieben eine Neubewertung bestehender Dateizugriffe an. Bei einer
+erkannten Verletzung versucht der Userspace-PEP, den zugeordneten File Descriptor zu schließen.
+
 ## Warum Tail Calls?
 
 Ein Tail Call ist ein Sprung von einem eBPF-Programm in ein anderes eBPF-Programm über eine

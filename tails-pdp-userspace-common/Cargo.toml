@@ -9,7 +9,7 @@ license.workspace = true
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
 libc = { workspace = true }
-tokio = { workspace = true, features = ["net"] }
+tokio = { workspace = true, features = ["net", "sync"] }
 
 [lib]
 path = "src/lib.rs"

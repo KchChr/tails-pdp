@@ -13,7 +13,7 @@ anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
-tokio = { workspace = true, features = ["time"] }
+tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 
 [lib]
 path = "src/lib.rs"

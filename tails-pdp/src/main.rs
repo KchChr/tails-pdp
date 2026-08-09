@@ -15,7 +15,7 @@ use tails_pdp_attribute_loader::{
 use tails_pdp_policy_loader::{PolicyDirectorySync, verify_pinned_map_layouts};
 use tails_pdp_userspace_common::BPF_PIN_DIRECTORY;
 use tails_pdp_userspace_pep::run_userspace_pep;
-use tokio::signal;
+use tokio::{signal, sync::mpsc};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -72,9 +72,11 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("failed to open FILE_OPEN_JUMP_TABLE")?;
 
+    let (enforcement_trigger_sender, enforcement_trigger_receiver) =
+        mpsc::channel(tails_pdp_userspace_common::ENFORCEMENT_TRIGGER_CHANNEL_CAPACITY);
     let mut current_time = open_current_time_map()?;
     let mut attribute_maps = open_attribute_maps()?;
-    let mut policy_sync = PolicyDirectorySync::new()?;
+    let mut policy_sync = PolicyDirectorySync::new(enforcement_trigger_sender.clone())?;
 
     for (index, program_name) in FILE_OPEN_TAIL_PROGRAMS {
         let program: &Lsm = ebpf
@@ -91,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
 
     policy_sync.sync_initial()?;
     write_current_time(&mut current_time)?;
-    write_current_attributes(&mut attribute_maps)?;
+    write_current_attributes(&mut attribute_maps, &enforcement_trigger_sender)?;
     info!(
         "Watching policy directory '{}'",
         policy_sync.directory().display()
@@ -114,9 +116,9 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::select! {
         result = run_current_time_updater(&mut current_time) => result?,
-        result = run_attribute_updater(&mut attribute_maps) => result?,
+        result = run_attribute_updater(&mut attribute_maps, enforcement_trigger_sender.clone()) => result?,
         result = policy_sync.run() => result?,
-        result = run_userspace_pep() => result?,
+        result = run_userspace_pep(enforcement_trigger_receiver) => result?,
         result = signal::ctrl_c() => result?,
     }
     info!("Exiting...");

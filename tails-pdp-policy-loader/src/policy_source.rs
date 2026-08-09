@@ -13,8 +13,13 @@ use tails_pdp_common::{
     POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily, SocketTransport, StreamAttribute,
     StreamOperator, attribute_hash, policy_bank_offset,
 };
-use tails_pdp_userspace_common::{fs_watch, open_pinned_array};
-use tokio::time::{Duration, sleep};
+use tails_pdp_userspace_common::{
+    EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array,
+};
+use tokio::{
+    sync::mpsc,
+    time::{Duration, sleep},
+};
 
 const POLICY_DIRECTORY_NAME: &str = "policies";
 const POLICY_FILE_EXTENSION: &str = "policy";
@@ -94,10 +99,11 @@ pub struct PolicyDirectorySync {
     maps: PinnedPolicyMaps,
     last_applied_documents: Option<Vec<PolicyDocument>>,
     last_failed_documents: Option<Vec<PolicyDocument>>,
+    enforcement_triggers: mpsc::Sender<EnforcementTrigger>,
 }
 
 impl PolicyDirectorySync {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(enforcement_triggers: mpsc::Sender<EnforcementTrigger>) -> anyhow::Result<Self> {
         let policy_dir = default_policy_directory()?;
         fs::create_dir_all(&policy_dir).with_context(|| {
             format!(
@@ -111,6 +117,7 @@ impl PolicyDirectorySync {
             maps: PinnedPolicyMaps::open()?,
             last_applied_documents: None,
             last_failed_documents: None,
+            enforcement_triggers,
         })
     }
 
@@ -135,6 +142,7 @@ impl PolicyDirectorySync {
         self.last_applied_documents = Some(documents);
         self.last_failed_documents = None;
         print_policy_summary(&self.policy_dir, generation, &translated);
+        self.notify_activation(generation)?;
         Ok(())
     }
 
@@ -166,6 +174,7 @@ impl PolicyDirectorySync {
                 self.last_applied_documents = Some(documents);
                 self.last_failed_documents = None;
                 print_policy_summary(&self.policy_dir, generation, &translated);
+                self.notify_activation(generation)?;
             }
             Err(error) => {
                 error!(
@@ -174,6 +183,22 @@ impl PolicyDirectorySync {
                 );
                 self.last_failed_documents = Some(documents);
             }
+        }
+        Ok(())
+    }
+
+    fn notify_activation(&self, generation: u32) -> anyhow::Result<()> {
+        let trigger = EnforcementTrigger::PolicyGenerationActivated { generation };
+        if notify_enforcement(&self.enforcement_triggers, trigger)? {
+            info!(
+                "POLICY generation={} activated; queued userspace PEP re-evaluation",
+                generation
+            );
+        } else {
+            info!(
+                "POLICY generation={} activated; userspace PEP re-evaluation coalesced",
+                generation
+            );
         }
         Ok(())
     }

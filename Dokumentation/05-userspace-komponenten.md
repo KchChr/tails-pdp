@@ -133,7 +133,12 @@ Userspace-PEP löst ein anderes Problem: Der LSM-Hook sieht nur den Moment, in d
 passiert. Wenn eine Policy später aktiv wird, ist der Hook für bereits geöffnete Ressourcen schon
 vorbei.
 
-Der Userspace-PEP prüft deshalb regelmäßig laufende Prozesse:
+Der Userspace-PEP prüft laufende Prozesse ereignisgetrieben. Eine Neubewertung wird erst nach der
+erfolgreichen Aktivierung einer Policy- oder Attributgeneration ausgelöst. Zeitabhängige
+Stream-Policies planen zusätzlich den nächsten Zeitpunkt, an dem sich ihre Zeitbedingung ändern
+kann. Rohereignisse des Dateisystem-Watchers lösen keinen Scan aus.
+
+Jeder Scan betrachtet:
 
 - offene File Descriptors aus `/proc/<pid>/fd`
 - Prozessinformationen aus `/proc/<pid>/status`
@@ -143,9 +148,14 @@ Danach verwendet er dieselben Funktionen aus `tails-pdp-common` wie der Kernel-T
 - `evaluate_file_open_static_policy`
 - `evaluate_file_open_stream_policy`
 
-Wenn eine Deny-Policy zutrifft, erzeugt der Userspace-PEP eine Violation und setzt die Entscheidung
-durch Schließen des konkreten File Descriptors durch. Er enthält damit neben der Enforcement-Funktion
-auch die für die Nachbewertung erforderliche Entscheidungslogik. Die `/proc`-Schnittstellen und
+Der Trigger-Kanal ist auf einen ausstehenden Eintrag begrenzt. Treffen während eines Scans weitere
+Aktivierungen ein, werden sie zu einem Folge-Scan zusammengefasst. Der Folge-Scan liest dann die
+aktuell aktiven Generationen. Ein Scan ist dennoch keine atomare Momentaufnahme: Prozesse, File
+Descriptors und Generationen können sich parallel ändern.
+
+Wenn eine Deny-Policy zutrifft, erzeugt der Userspace-PEP eine Violation und versucht, den konkreten
+File Descriptor zu schließen. Er enthält damit neben der Enforcement-Funktion auch die für die
+Nachbewertung erforderliche Entscheidungslogik. Die `/proc`-Schnittstellen und
 `ptrace` sind Linux-Interfaces und werden durch die Man-Pages beziehungsweise Kernel-Dokumentation
 beschrieben [Q12], [Q13], [Q14], [Q15].
 
@@ -164,6 +174,8 @@ Das geschieht auf x86_64 Linux per `ptrace`:
 7. Prozess detachen.
 
 Das ist technisch mächtig, aber auch riskant. Es funktioniert aktuell nur auf `x86_64` Linux.
+Ereignisgetriggerte Neubewertung macht den Entzug weder atomar noch race-frei: TOCTTOU, FD-Reuse,
+Threads, `dup`, Vererbung, `mmap` und die Berechtigungsgrenzen von `ptrace` bleiben bestehen.
 
 ## Admin-Tool
 

@@ -11,8 +11,13 @@ use tails_pdp_common::{
     AttributeKey, AttributeNamespace, AttributeValue, AttributeValueKind, DEFAULT_DEFCON_LEVEL,
     DEFCON_MAX_LEVEL, DEFCON_MIN_LEVEL, attribute_bank, attribute_hash, encode_kernel_dev_t,
 };
-use tails_pdp_userspace_common::{fs_watch, open_pinned_array, open_pinned_hash_map};
-use tokio::time::{Duration, sleep};
+use tails_pdp_userspace_common::{
+    EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array, open_pinned_hash_map,
+};
+use tokio::{
+    sync::mpsc,
+    time::{Duration, sleep},
+};
 
 const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "attributes";
 const ATTRIBUTE_FILE_EXTENSION: &str = "attributes";
@@ -53,23 +58,35 @@ pub fn open_attribute_maps() -> anyhow::Result<AttributeMaps> {
     })
 }
 
-pub fn write_current_attributes(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
+pub fn write_current_attributes(
+    attribute_maps: &mut AttributeMaps,
+    enforcement_triggers: &mpsc::Sender<EnforcementTrigger>,
+) -> anyhow::Result<()> {
     let directory = ensure_attribute_directory()?;
     let attributes = read_attribute_directory(&directory)?;
-    commit_attributes(attribute_maps, &attributes)
+    let generation = commit_attributes(attribute_maps, &attributes)?;
+    notify_attribute_activation(enforcement_triggers, generation)
 }
 
-pub async fn run_attribute_updater(attribute_maps: &mut AttributeMaps) -> anyhow::Result<()> {
+pub async fn run_attribute_updater(
+    attribute_maps: &mut AttributeMaps,
+    enforcement_triggers: mpsc::Sender<EnforcementTrigger>,
+) -> anyhow::Result<()> {
     let directory = ensure_attribute_directory()?;
     let mut watcher = fs_watch::watch_directory_recursive(&directory)?;
-    let mut last_applied = None;
-
-    apply_attribute_directory(&directory, attribute_maps, &mut last_applied)?;
+    // The main program performs and announces the initial successful activation before this
+    // watcher starts. Remembering that state avoids a second, unchanged initial generation.
+    let mut last_applied = Some(read_attribute_directory(&directory)?);
 
     loop {
         watcher.wait_for_change().await?;
         sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
-        apply_attribute_directory(&directory, attribute_maps, &mut last_applied)?;
+        apply_attribute_directory(
+            &directory,
+            attribute_maps,
+            &mut last_applied,
+            &enforcement_triggers,
+        )?;
     }
 }
 
@@ -114,11 +131,13 @@ fn apply_attribute_directory(
     directory: &Path,
     attribute_maps: &mut AttributeMaps,
     last_applied: &mut Option<Vec<ParsedAttribute>>,
+    enforcement_triggers: &mpsc::Sender<EnforcementTrigger>,
 ) -> anyhow::Result<()> {
     match read_attribute_directory(directory) {
         Ok(attributes) if last_applied.as_ref() != Some(&attributes) => {
-            commit_attributes(attribute_maps, &attributes)?;
+            let generation = commit_attributes(attribute_maps, &attributes)?;
             *last_applied = Some(attributes);
+            notify_attribute_activation(enforcement_triggers, generation)?;
         }
         Ok(_) => {}
         Err(error) => {
@@ -375,10 +394,29 @@ fn ensure_unique_attributes(attributes: &[ParsedAttribute]) -> anyhow::Result<()
     Ok(())
 }
 
+fn notify_attribute_activation(
+    enforcement_triggers: &mpsc::Sender<EnforcementTrigger>,
+    generation: u32,
+) -> anyhow::Result<()> {
+    let trigger = EnforcementTrigger::AttributeGenerationActivated { generation };
+    if notify_enforcement(enforcement_triggers, trigger)? {
+        info!(
+            "ATTRIBUTES generation={} activated; queued userspace PEP re-evaluation",
+            generation
+        );
+    } else {
+        info!(
+            "ATTRIBUTES generation={} activated; userspace PEP re-evaluation coalesced",
+            generation
+        );
+    }
+    Ok(())
+}
+
 fn commit_attributes(
     attribute_maps: &mut AttributeMaps,
     attributes: &[ParsedAttribute],
-) -> anyhow::Result<()> {
+) -> anyhow::Result<u32> {
     let current_generation = attribute_maps.generation.get(&0, 0).unwrap_or(0);
     let next_generation = current_generation.wrapping_add(1);
     let bank = attribute_bank(next_generation);
@@ -417,7 +455,7 @@ fn commit_attributes(
         attributes.len()
     );
 
-    Ok(())
+    Ok(next_generation)
 }
 
 fn clear_attribute_bank(attributes: &mut AttributeMap, bank: u32) -> anyhow::Result<()> {

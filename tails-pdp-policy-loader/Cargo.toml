@@ -12,7 +12,7 @@ tails-pdp-userspace-common = { path = "../tails-pdp-userspace-common" }
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
 log = { workspace = true }
-tokio = { workspace = true, features = ["time"] }
+tokio = { workspace = true, features = ["time", "sync"] }
 
 [lib]
 path = "src/lib.rs"
