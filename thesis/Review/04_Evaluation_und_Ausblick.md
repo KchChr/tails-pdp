@@ -44,7 +44,7 @@ Ergebnis darf lauten „nicht zuverlässig unterstützt“; entscheidend ist die
 
 ### E6 – Credential-Konsistenz
 
-Normale UID, unterschiedliche Real/Effective/Saved/Filesystem UID sowie – sofern sicher im Testsystem möglich – setuid-Szenario. Kernel- und `/proc`-basierte Identität protokollieren. Das Experiment ist notwendig, um P0-03 aufzulösen.
+Normale UID sowie kontrolliert unterschiedliche Real/Effective/Saved/Filesystem UIDs verwenden. Der vorhandene Unit-Test belegt, dass der Userspace-PEP das Real-UID-Feld auswählt. Ein privilegiertes Szenario muss zusätzlich zeigen, dass Kernel- und Userspace-PEP dieselbe Real-UID-gefilterte Policy gleich entscheiden. Bis zur tatsächlichen Durchführung ist dies ein geplanter E2E-Nachweis und kein bereits belegtes Ergebnis.
 
 ### E7 – Performance von `open/openat`
 

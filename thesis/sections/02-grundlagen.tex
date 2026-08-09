@@ -49,20 +49,30 @@ Die Auswertung dieser Bedingungen und die Durchsetzung der Entscheidung können 
 Diese Trennung ist für den Prototyp wichtig, weil die Policy-Verarbeitung im Userspace stattfinden kann, während die Zugriffsdurchsetzung später im Kernel betrachtet wird.
 
 \subsection{Attribute Stream-Based Access Control}
-Attribute Stream-Based Access Control (ASBAC) wird in dieser Arbeit als Erweiterung von ABAC verstanden, bei der Attribute nicht nur als statische Werte betrachtet werden. 
-Stattdessen können Attribute zur Laufzeit aktualisiert werden und dadurch einen Strom von Zustandsänderungen bilden. 
-Eine Zugriffsentscheidung hängt dann nicht nur von den Attributwerten zum Zeitpunkt der ersten Prüfung ab, sondern auch davon, ob sich diese Werte während einer bestehenden Zugriffssituation ändern.
+Attribute Stream-Based Access Control (ASBAC) erweitert attributbasierte Zugriffskontrolle um fortlaufend veränderliche Entscheidungsgrundlagen und Autorisierungsentscheidungen.
+Während eine klassische ABAC-Anfrage typischerweise zu einer einzelnen Entscheidung führt, können in ASBAC Attribute, Policies und weitere Entscheidungsgrundlagen als veränderliche Datenströme betrachtet werden.
+Eine bestehende Autorisierung kann dadurch neu bewertet werden, sobald sich ein entscheidungsrelevanter Wert ändert.
 
-Diese Sichtweise steht inhaltlich in der Nähe von Usage Control.
+Heutelbeck beschreibt ASBAC im Zusammenhang mit der Streaming Attribute Policy Language (SAPL) als Publish-Subscribe-Modell.
+Ein Policy Enforcement Point stellt dazu eine Autorisierungsanfrage als Subscription an einen Policy Decision Point.
+Der Policy Decision Point bezieht die für die Entscheidung benötigten Datenströme ein und kann dem Policy Enforcement Point aktualisierte Entscheidungen übermitteln, wenn sich Policies, Attribute oder weitere Entscheidungsgrundlagen ändern \citep{heutelbeck2021asbac}.
+
+Die fortlaufende Neubewertung steht inhaltlich in der Nähe von Usage Control.
 Unter Usage Control werden Zugriffskontrollmodelle verstanden, die eine Nutzung nicht nur zum Zeitpunkt der initialen Autorisierung betrachten, sondern auch Bedingungen während der laufenden Nutzung einbeziehen.
 Usage Control erweitert klassische Zugriffskontrolle unter anderem um die Veränderbarkeit von Attributen und die Fortdauer von Entscheidungen während einer Nutzung.
-Gouglidis et al. beschreiben diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} \citep{gouglidis2018usecon}. 
-Für ASBAC bedeutet dies, dass ein zunächst erlaubter Zugriff später erneut relevant werden kann, wenn sich ein entscheidungsrelevantes Attribut ändert.
+Gouglidis et al. beschreiben diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} \citep{gouglidis2018usecon}.
+Usage Control dient in dieser Arbeit damit als verwandtes theoretisches Konzept, ersetzt jedoch nicht die Definition von ASBAC.
 
-Im Kontext dieser Arbeit ist dieser Punkt zentral. 
-Ein Zugriff auf eine Datei kann beim Öffnen zunächst zulässig sein, weil die aktuellen Attribute die Policy erfüllen. 
-Ändert sich später beispielsweise ein Subjektattribut oder ein Systemattribut, kann dieselbe Zugriffssituation nach der aktuellen Policy-Lage unzulässig werden. 
-ASBAC beschreibt damit den fachlichen Bedarf, Attributänderungen nicht nur für zukünftige Zugriffe, sondern auch für bereits bestehende Zugriffssituationen zu berücksichtigen.
+Der in dieser Arbeit entwickelte Prototyp übernimmt nicht die vollständige Publish-Subscribe-Architektur von SAPL.
+Insbesondere existiert kein zentraler PDP, der für jede bestehende Autorisierung einen individuellen Strom aktualisierter Entscheidungen an einen PEP übermittelt.
+Stattdessen werden Policies und dynamische Attribute im Userspace verarbeitet und über eBPF-Maps als generationsbasierter Zustand bereitgestellt.
+Neue Dateiöffnungen werden anhand dieses Zustands durch einen eBPF-LSM-basierten Kernelspace-Pfad bewertet.
+Nach der erfolgreichen Aktivierung einer neuen Policy- oder Attributgeneration stößt der Prototyp ereignisbasiert eine Neubewertung bestehender Dateizugriffe an; zeitabhängige Policies lösen eine solche Neubewertung beim Erreichen einer entscheidungsrelevanten Zeitgrenze aus.
+
+Ein geöffneter File Descriptor wird dabei als technische Repräsentation einer fortdauernden Nutzungssituation betrachtet, nicht als ASBAC-Subscription.
+Der Prototyp registriert beim Öffnen keine fortdauernde Autorisierungsanfrage und verwaltet keinen individuellen Decision Stream.
+Der Userspace rekonstruiert vielmehr nach einem Aktivierungs- oder Zeitereignis aus den dann sichtbaren Prozess- und File-Descriptor-Informationen eine Zugriffsanfrage und bewertet diese lokal erneut.
+Der Prototyp realisiert somit keinen allgemeinen ASBAC-Decision-Stream, überträgt aber zentrale ASBAC-Eigenschaften auf einen begrenzten Zugriffskontrollmechanismus für Linux-Dateiöffnungen: veränderliche Entscheidungsgrundlagen, eine durch deren Änderung ausgelöste Neubewertung und die Reaktion auf eine geänderte Autorisierungsentscheidung.
 
 \subsection{Policy-Beschreibungen für ASBAC}
 Policies beschreiben die Bedingungen, unter denen eine Zugriffsentscheidung getroffen wird. 
@@ -75,10 +85,21 @@ Im Prototyp kann dies beispielsweise bedeuten, dass das Öffnen einer bestimmten
 Die Policy-Datei bleibt dabei eine textuelle Beschreibung im Userspace. 
 Für die Auswertung im Kernel muss diese Beschreibung später in eine kernelgeeignete Repräsentation überführt werden.
 
-Etablierte Zugriffskontrollarchitekturen unterscheiden häufig zwischen Komponenten zur Entscheidung und Komponenten zur Durchsetzung. 
-XACML beschreibt beispielsweise eine Architektur mit Policy Decision Point und Policy Enforcement Point sowie eine Policy-Sprache zur Beschreibung attributbasierter Entscheidungen \citep{oasisXacml30}. 
-Der Policy Decision Point (PDP) wertet eine Zugriffsanfrage anhand der geltenden Policies aus und liefert eine Entscheidung. Der Policy Enforcement Point (PEP) fängt die zu kontrollierende Operation ab und setzt die Entscheidung technisch durch.
-Diese Arbeit übernimmt nicht XACML als Sprache oder vollständiges Architekturmodell, verwendet die Begriffe aber zur Einordnung der Durchsetzungspunkte. Im Prototyp sind Entscheidung und Durchsetzung teilweise eng gekoppelt: Das eBPF-LSM bildet den Kernelspace-PEP für neue Dateiöffnungen, während ein zusätzlicher Userspace-PEP bereits bestehende Dateizugriffe nach Änderungen von Policies oder Attributen erneut bewertet und gegebenenfalls beendet.
+Etablierte Zugriffskontrollarchitekturen unterscheiden häufig zwischen logischen Rollen zur Entscheidung und zur Durchsetzung.
+XACML beschreibt beispielsweise eine Architektur mit Policy Decision Point und Policy Enforcement Point sowie eine Policy-Sprache zur Beschreibung attributbasierter Entscheidungen \citep{oasisXacml30}.
+Der Policy Decision Point (PDP) wertet die für eine Zugriffsanfrage anwendbaren Policies aus und erzeugt eine Autorisierungsentscheidung.
+Der Policy Enforcement Point (PEP) schützt die Ressource, bildet eine Entscheidungsanfrage und setzt die erhaltene Entscheidung technisch durch.
+PDP und PEP bezeichnen damit logische Rollen und müssen nicht notwendigerweise als getrennte Prozesse implementiert sein.
+
+Diese Arbeit übernimmt weder XACML als Policy-Sprache noch dessen vollständiges Architekturmodell.
+Im Prototyp sind Entscheidungs- und Durchsetzungsfunktion technisch eng gekoppelt.
+Im Kernelspace erfassen der Einstieg und der Rückgabepfad des eBPF-LSM-Programms eine neue \texttt{file\_open}-Operation und setzen das Ergebnis über den LSM-Rückgabewert durch; sie erfüllen damit die PEP-Funktion.
+Die dazwischenliegenden Stufen zur Auswahl und Auswertung statischer und dynamischer Policies sowie zum Combining erfüllen logisch eine integrierte PDP-Funktion.
+
+Entsprechend rekonstruiert die Userspace-Komponente bestehende Zugriffssituationen aus Prozess- und File-Descriptor-Informationen, wertet sie lokal anhand der aktiven Policies und Attribute aus und versucht bei einer Deny-Entscheidung, den betroffenen File Descriptor zu schließen.
+Auch diese Komponente verbindet somit eine Policy-Entscheidungsfunktion mit einer Durchsetzungsfunktion.
+Die Bezeichnungen \emph{Kernelspace-PEP} und \emph{Userspace-PEP} werden im weiteren Verlauf beibehalten, um die jeweilige Durchsetzungsfunktion hervorzuheben.
+Ein eigenständiger, von beiden PEPs getrennter PDP ist nicht Bestandteil des Prototyps.
 
 \subsection{Userspace und Kernelspace in Linux}
 Linux trennt zwischen Userspace und Kernelspace. 

@@ -44,13 +44,16 @@ begrenzt werden müssen.
 
 Die Architektur des Prototyps ist in zwei zentrale Bereiche unterteilt: den Userspace und den Kernelspace. 
 Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-Systemen und ermöglicht es, komplexe Logik zur Policy-Verarbeitung außerhalb des Kernels auszuführen, während sicherheitskritische Zugriffsentscheidungen direkt im Kernel umgesetzt werden.
+Die im Folgenden verwendeten Bezeichnungen Kernelspace-PEP und Userspace-PEP heben die jeweilige Durchsetzungsfunktion hervor.
+Wie in den Grundlagen erläutert, enthalten beide Pfade zugleich eine integrierte PDP-Funktion, weil sie die anwendbaren Policies lokal auswerten und daraus eine Entscheidung ableiten.
+Ein separater PDP-Prozess und ein Nachrichtenaustausch von Entscheidungsanfragen und Entscheidungen zwischen PDP und PEP sind nicht Bestandteil der Architektur.
 
 \begin{itemize}
     \item \textbf{Userspace:} Im Userspace befinden sich die Komponenten zur Verwaltung und Verarbeitung von Policies.
     Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Userspace-PEP sowie die Policyverwaltung.
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
     Die Policyverwaltung liest die textuellen Policy-Dateien, parst diese und übersetzt sie in kernelgeeignete Map-Einträge.
-    Der Userspace-PEP überwacht bestehende Dateizugriffe und setzt erkannte Policy-Verletzungen unmittelbar durch das Schließen des betroffenen File Descriptors durch.
+    Der Userspace-PEP rekonstruiert nach entscheidungsrelevanten Ereignissen bestehende Dateizugriffe, bewertet sie erneut und versucht, erkannte Policy-Verletzungen durch das Schließen des betroffenen File Descriptors durchzusetzen.
     
     \item \textbf{Kernelspace:} Im Kernelspace wird ein eBPF-Programm an einen LSM-Hook angebunden.
     Dieser Kernelspace-PEP greift bei neuen Dateiöffnungen in die sicherheitsrelevante Operation ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies.
@@ -578,7 +581,9 @@ Der Userspace-PEP liest Informationen über laufende Prozesse und offene File De
 Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
 Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
 Wird eine Verletzung erkannt, versucht der Userspace-PEP, den zugeordneten File Descriptor zu schließen.
-Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion. Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung lokal aus.
+Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion.
+Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung als integrierte PDP-Funktion lokal aus.
+Ein gefundener File Descriptor repräsentiert dabei eine fortdauernde Nutzungssituation, jedoch keine registrierte ASBAC-Subscription.
 
 Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
 Der Kernel bleibt für neue Dateiöffnungen der unmittelbare Durchsetzungspunkt.

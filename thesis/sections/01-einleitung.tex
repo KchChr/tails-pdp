@@ -3,7 +3,7 @@
 
 \subsection{Motivation}
 Die Sicherheit von Linux-Systemen ist ein fundamentales Anliegen in der heutigen IT-Landschaft. 
-Das Linux Security Module Framework stellt Mechanismen für verschiedene Sicherheitsprüfungen mittels Attribute-Based Access Control im Linux-Kernel dar\citep{kernelorgLSM}.
+Das Linux Security Module Framework stellt Schnittstellen bereit, über die Sicherheitsmodule unterschiedliche Zugriffskontrollmodelle im Linux-Kernel durchsetzen können\citep{kernelorgLSM}.
 LSM-Hooks ermöglichen es, sicherheitsrelevante Kerneloperationen abzufangen und auf dieser Grundlage Zugriffsentscheidungen zu treffen.
 Ein LSM-Hook prüft einen Zugriff jedoch grundsätzlich zu dem Zeitpunkt, an dem die jeweilige Kerneloperation ausgeführt wird.
 Bei dauerhaft bestehenden Zugriffen wird eine spätere Änderung der Entscheidungsgrundlage dadurch nicht automatisch erneut bewertet.
@@ -11,26 +11,28 @@ Bei dauerhaft bestehenden Zugriffen wird eine spätere Änderung der Entscheidun
 
 
 \subsection{Wissenschaftliche Fragestellung}
-Diese Arbeit untersucht, inwieweit Attribute Stream-Based Access Control im Linux-Kernel prototypisch umgesetzt werden kann. 
-Im Mittelpunkt steht dabei die Frage, wie dynamische Attribute aus dem Userspace für Zugriffsentscheidungen im Kernel bereitgestellt und bei Änderungen nachträglich berücksichtigt werden können.
+Diese Arbeit untersucht, wie zentrale Prinzipien von Attribute Stream-Based Access Control für Dateiöffnungen unter Linux prototypisch umgesetzt werden können.
+Im Mittelpunkt steht dabei die Frage, wie dynamische Attribute aus dem Userspace für Zugriffsentscheidungen eines eBPF-LSM-Programms bereitgestellt und Änderungen bei bereits bestehenden Dateizugriffen nachträglich berücksichtigt werden können.
 
 Daraus ergibt sich folgende wissenschaftliche Fragestellung:
 
 \begin{quote}
-Wie kann Attribute Stream-Based Access Control mit dynamischen Attributen im Linux-Kernel prototypisch umgesetzt werden, und welche technischen Einschränkungen ergeben sich dabei?
+Wie können zentrale Prinzipien von Attribute Stream-Based Access Control für Dateiöffnungen prototypisch mittels eBPF-LSM unter Linux umgesetzt werden, und welche technischen Einschränkungen ergeben sich insbesondere bei der nachträglichen Kontrolle bereits bestehender Dateizugriffe?
 \end{quote}
 
 Zur Beantwortung dieser Fragestellung werden insbesondere die Überführung textueller Policy-Dateien in eine kernelgeeignete Repräsentation, die Bereitstellung dynamischer Attribute für Zugriffsentscheidungen im Kernel sowie die nachträgliche Überwachung bestehender Zugriffssituationen betrachtet.
 
 \subsection{Zielsetzung}
-Zielsetzung der Arbeit ist ein Prototyp, anhand dessen eine Zugriffskontrolle mittels Attribute Stream-Based Access Control im Linux-Kernel stattfindet.
+Zielsetzung der Arbeit ist ein Prototyp, der zentrale Eigenschaften von Attribute Stream-Based Access Control auf die Kontrolle von Dateiöffnungen unter Linux überträgt.
 Insbesondere sollen Stream-Attribute wie Zeitinformationen sowie externe, zur Laufzeit aktualisierte Attribute in die Zugriffsentscheidung einbezogen werden.
-Ziel ist die Implementierung eines Prototyps, der Policies einliest, in den Kernel überträgt und Zugriffsentscheidungen anhand dieser Policies trifft. 
-Darüber hinaus soll der Prototyp bereits bestehende Zugriffssituationen bei nachträglich geänderten Bedingungen erkennen und einschränken können.
+Der Prototyp soll textuelle Policies einlesen, in eine kernelgeeignete Repräsentation übersetzen und neue Dateiöffnungen mittels eBPF-LSM im Kernel bewerten.
+Nach der erfolgreichen Aktivierung geänderter Policies oder Attribute sowie beim Erreichen entscheidungsrelevanter Zeitgrenzen soll er bereits bestehende Dateizugriffe im Userspace ereignisbasiert erneut bewerten und bei einer festgestellten Verletzung einen Entzug versuchen.
+
+Nicht Gegenstand der Arbeit ist die vollständige Implementierung der Publish-Subscribe-Architektur der Streaming Attribute Policy Language oder eines allgemeinen, eigenständigen ASBAC-PDP.
+Der Prototyp ist auf Dateiöffnungen über den LSM-Hook \texttt{file\_open} und auf die nachträgliche Untersuchung geöffneter File Descriptors beschränkt.
 
 
 \subsection{Aufbau der Arbeit}
 % Inhalt einfügen.
 
 \newpage
-

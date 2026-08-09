@@ -35,22 +35,23 @@
 **Aufwand:** mittel für Claim-/Scope-Korrektur; sehr hoch für technische Härtung  
 **Erwarteter Nutzen:** sehr hoch; verhindert einen zentralen Gutachtereinwand und beeinflusst die Note wahrscheinlich deutlich.
 
-## P0-03 – Unterschiedliche UID-Semantik in Kernel- und Userspace-PEP
+## Behoben – vormals P0-03: Subjekt-UID war nicht ausdrücklich definiert
 
 **Fundstelle:** Kapitel 5.7.1/5.7.2, PDF S. 49; `tails-pdp-ebpf/src/hooks.rs`, Zeile 15; `file_open_static_policies.rs`, Zeile 73; `file_open_stream_policies.rs`, Zeile 133; `tails-pdp-userspace-pep/src/pep.rs`, Zeilen 381–399.
 
-**Beschreibung:** Der eBPF-Pfad verwendet `ctx.uid()`. Der Userspace-Pfad liest den ersten Wert der vier `Uid:`-Felder in `/proc/<pid>/status`, also die Real UID. Die Thesis behauptet dieselbe Repräsentation und fachliche Auswertung, definiert die konkrete Credential-Semantik jedoch nicht. Bei setuid- oder anderweitig credential-verändernden Prozessen können Entscheidungen auseinanderfallen.
+**Beschreibung:** Die ursprüngliche Bewertung unterstellte eine mögliche Abweichung zwischen `ctx.uid()` und dem ersten `Uid:`-Feld aus `/proc/<pid>/status`. Die Code- und API-Prüfung ergibt jedoch: Aya verwendet den BPF-Helper `bpf_get_current_uid_gid()`, der die Real UID liefert; das erste Feld in `/proc/<pid>/status` ist ebenfalls die Real UID. Das tatsächliche Problem war daher keine Implementierungsinkonsistenz, sondern die zuvor fehlende ausdrückliche Definition der Subjektidentität und ihres Geltungsbereichs.
 
-**Begründung:** Zwei PEPs, die „dieselbe“ Policy auswerten, müssen identische Subjektsemantik besitzen oder die Abweichung explizit modellieren. Dies betrifft Korrektheit, Nachvollziehbarkeit und potenziell Security.
+**Begründung:** Zwei PEPs, die dieselbe Policy auswerten, müssen identische Subjektsemantik besitzen und diese nachvollziehbar dokumentieren. Real UID, Effective UID und Filesystem-UID haben unter Linux unterschiedliche Bedeutungen. Ohne Festlegung wäre unklar, welche Identität eine UID-gefilterte Policy tatsächlich kontrolliert.
 
 **Lösungsmöglichkeiten:**
 
-- **Lösung A (empfohlen):** Exakt feststellen und dokumentieren, welche UID Aya `ctx.uid()` liefert; Userspace denselben Credential-Wert verwenden lassen oder Policies explizit typisieren. Dazu E2E-Test mit setuid/wechselnden Credentials. *Vorteil:* echte Konsistenz. *Nachteil:* Testumgebung und ggf. Codeänderung erforderlich. *Wirkung:* sehr hoch.
-- **Lösung B:** Setuid-/Credential-Wechsel explizit aus dem Scope ausschließen und als Limitierung belegen. *Vorteil:* geringerer Aufwand. *Nachteil:* relevante Linux-Sicherheitsgrenze bleibt offen. *Wirkung:* mittel bis hoch.
+- **Umgesetzte Lösung A:** Real UID als verbindliche Subjektidentität festlegen und für beide Pfade belegen. Die Userspace-Auswahl wird durch einen Unit-Test mit abweichenden vier UID-Feldern abgesichert. Grenzen bei Credential-Wechseln, Threads und User Namespaces werden dokumentiert. Ein privilegierter Kernel-/Userspace-E2E-Test bleibt als Evaluationsszenario ausgewiesen und darf erst nach tatsächlicher Ausführung als Nachweis gelten. *Vorteil:* konsistente, überprüfbare Semantik ohne unnötigen Produktionscode-Umbau. *Nachteil:* andere Linux-Credentials sind bewusst nicht Teil des Modells. *Wirkung:* hoch.
+- **Alternative B:** Mehrere Credential-Typen als explizite Policyattribute modellieren. *Vorteil:* feinere Sicherheitssemantik. *Nachteil:* deutlich größerer Entwurfs-, ABI- und Evaluationsaufwand. Für den gegenwärtigen Prototyp nicht empfohlen.
 
-**Priorität:** P0  
-**Aufwand:** mittel (30 Minuten bis 2 Stunden) für Analyse/Text, höher bei Codeänderung  
-**Erwarteter Nutzen:** hoch; kann eine echte Inkonsistenz und negative Bewertung vermeiden.
+**Status:** in Code und Thesis umgesetzt; der privilegierte E2E-Nachweis ist Bestandteil der noch durchzuführenden Evaluation.
+**Verbleibende Priorität:** P2 für die Ausführung und Dokumentation des E2E-Szenarios
+**Aufwand:** mittel (30 Minuten bis 2 Stunden)
+**Erwarteter Nutzen:** hoch; verhindert eine unklare Interpretation von UID-gefilterten Policies.
 
 ## P0-04 – Formale Platzhalter in der gerenderten Thesis
 

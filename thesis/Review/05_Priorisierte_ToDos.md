@@ -5,7 +5,7 @@
 1. **Abschnitt 2.3 und Related Work:** ASBAC-Primärliteratur (insbesondere SACMAT 2021, DOI `10.1145/3450569.3464397`) lesen, korrekt darstellen und den pollingbasierten Prototyp vom Publish-/Subscribe-/Decision-Stream-Modell abgrenzen.
 2. **Kapitel 1:** Forschungslücke, Scope/Nicht-Ziele, Methode und konkrete Eigenbeiträge ergänzen; Forschungsfrage ggf. auf `file_open` und die teilweise Userspace-basierte Nachkontrolle präzisieren.
 3. **FA-07:** „unmittelbar beenden“ durch eine empirisch prüfbare best-effort/zeitgebundene Formulierung ersetzen oder Implementierung entsprechend härten; FD-Reuse, Threads, Duplikate, Vererbung, `mmap` und nicht attachbare Prozesse explizit behandeln.
-4. **UID-Konsistenz:** Semantik von `ctx.uid()` und `/proc/<pid>/status Uid` feststellen; Kernel-/Userspace-PEP angleichen oder Credential-Wechsel klar ausschließen; E2E-Test ergänzen.
+4. **UID-Konsistenz (inhaltlich umgesetzt):** Real UID ist für beide Pfade belegt, in der Thesis definiert und im Userspace unit-getestet. Vor Abschluss der Evaluation noch den vorgesehenen privilegierten Kernel-/Userspace-E2E-Vergleich ausführen und dessen Ergebnis dokumentieren.
 5. **Formalia:** Abschnitt 1.4 vervollständigen und den großen TODO-Platzhalter auf PDF-Seite 38 durch eine fertige Abbildung oder eine präzise Tabelle ersetzen.
 6. **Kapitel 6:** Anforderungs-Traceability, Messwerte, Baselines, Wiederholungen/Statistik, Revocation-Latenz, Performance, Fehlerfälle und Race-/Grenztests durchführen und dokumentieren.
 

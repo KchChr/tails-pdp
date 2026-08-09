@@ -10,10 +10,10 @@
 | Policy-Generationen | zwei Bänke, Aktivierung nach vollständigem Schreiben | `next_generation`, inaktive Bank, dann Generation setzen | grundsätzlich | Mehrfachupdates während langer Scans/Races evaluieren |
 | Attributgenerationen | gleiche Double-Buffer-Idee | HashMap-Bank wird gelöscht/befüllt, dann aktiviert | grundsätzlich | Verhalten bei Fehlern und schneller Wiederverwendung testen |
 | Zeit | einmal pro Sekunde, UTC-Konvertierung gemeinsam | gemeinsame `PolicyTime`, Map-Update | ja | Zeitauflösung, Clock-Sprünge und Aktualisiererausfall messen |
-| Userspace-PEP Scan | regelmäßiger `/proc`-Scan | `tokio::interval(Duration::from_secs(1))`; Fehler werden geloggt | ja | „unmittelbar“ entfernen; Latenz messen |
+| Userspace-PEP Scan | ereignisbasierte Nachbewertung | erfolgreiche Policy-/Attributaktivierung oder relevante Zeitgrenze löst Scan aus; Fehler werden geloggt | ja | Aktivierungs- und Entzugslatenz messen |
 | Zielgenauer Entzug | betroffener FD wird geschlossen, andere bleiben | `PTRACE_ATTACH`, Opcode-Patch, `close(fd)`, Register-/Text-Restore | nur im einfachen Fall | FD-Reuse, Threads, Signale, attach failures, EBADF testen/diskutieren |
 | Geschützte Prozesse | allgemeine bestehende Zugriffe | PID 0, PID 1 und eigener PID werden nie behandelt | nein/Scope-Lücke | explizit als Ausschluss nennen und begründen |
-| UID | gleiche Request-Repräsentation | Kernel `ctx.uid()`; Userspace erste `/proc/status Uid` = Real UID | potenziell nein | P0: Semantik angleichen oder ausschließen |
+| UID | Real UID als definierte Subjektidentität | Kernel `ctx.uid()` und erstes `/proc/status Uid`-Feld liefern Real UID; Userspace-Auswahl ist unit-getestet | ja für definierte Semantik | privilegierten E2E-Vergleich durchführen; Credential-Grenzen beibehalten |
 | Command | Prozesskommando als Filter | Kernel `ctx.command()` vs. Userspace `/proc/status Name` | wahrscheinlich, aber nicht nachgewiesen | Trunkierung/Threadnamen und `comm`-Semantik testen |
 | Ressource | Device/Inode in beiden Pfaden | Kernel liest File/Inode; Userspace `metadata(/proc/pid/fd/N)` und eigene `dev_t`-Kodierung | plausibel | Overlay-/Namespace-/Device-Kodierung auf Zielsystem testen |
 | Fehlendes Attribut | keine klare globale Semantik | Bedingung matcht nicht; Deny greift nicht; Default-Permit | teilweise | explizite Policysemantik und Negativtest |

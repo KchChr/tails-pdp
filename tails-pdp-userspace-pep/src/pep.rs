@@ -607,6 +607,10 @@ fn parse_fd(name: OsString) -> Option<i32> {
 
 fn read_process_info(pid: u32) -> Option<ProcessInfo> {
     let status = fs::read_to_string(format!("/proc/{pid}/status")).ok()?;
+    parse_process_info(pid, &status)
+}
+
+fn parse_process_info(pid: u32, status: &str) -> Option<ProcessInfo> {
     let mut command = None;
     let mut uid = None;
 
@@ -614,6 +618,8 @@ fn read_process_info(pid: u32) -> Option<ProcessInfo> {
         if let Some(value) = line.strip_prefix("Name:") {
             command = Some(value.trim().to_string());
         } else if let Some(value) = line.strip_prefix("Uid:") {
+            // proc_pid_status(5) lists real, effective, saved-set and filesystem UID.
+            // Policies deliberately use the real UID, matching the eBPF context UID.
             uid = value.split_whitespace().next()?.parse().ok();
         }
     }
@@ -672,6 +678,17 @@ mod tests {
         assert_eq!(parse_pid(OsString::from("self")), None);
         assert_eq!(parse_fd(OsString::from("17")), Some(17));
         assert_eq!(parse_fd(OsString::from("cwd")), None);
+    }
+
+    #[test]
+    fn process_subject_uses_real_uid_from_proc_status() {
+        let status = "Name:\tcredential-test\nUid:\t1000\t0\t2000\t3000\n";
+
+        let process = parse_process_info(4242, status).expect("valid process status");
+
+        assert_eq!(process.pid, 4242);
+        assert_eq!(process.uid, 1000);
+        assert_eq!(process.command, "credential-test");
     }
 
     #[test]
