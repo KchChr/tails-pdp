@@ -131,9 +131,9 @@ Bei streambasierten Policies kann sich die Entscheidungslage jedoch nachträglic
 Ein bereits geöffneter Zugriff wird dadurch nicht automatisch erneut durch denselben LSM-Hook geprüft.
 
 Aus diesem Grund enthält der Prototyp zusätzlich einen Userspace-PEP.
-Der Userspace-PEP betrachtet regelmäßig aktive Prozesse und deren aktuell verwendete Ressourcen.
+Der Userspace-PEP bewertet aktive Prozesse und deren aktuell verwendete Ressourcen nach erfolgreicher Aktivierung einer entscheidungsrelevanten Policy- oder Attributgeneration sowie an relevanten Zeitgrenzen erneut.
 Dabei prüft er, ob eine bestehende Zugriffssituation mit den derzeit aktiven Policies vereinbar ist. 
-Wird eine Verletzung erkannt, führt der Userspace-PEP das Enforcement unmittelbar aus und schließt den konkret betroffenen File Descriptor.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den konkret betroffenen File Descriptor zu schließen.
 
 Der Userspace-PEP ergänzt damit die kernelbasierte Zugriffskontrolle.
 Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Userspace-PEP das Problem bereits bestehender Zugriffe bei nachträglich geänderten Bedingungen.
@@ -184,10 +184,10 @@ Der Userspace-PEP ergänzt die kernelbasierte Zugriffskontrolle um die nachträg
 Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweiligen Kernelereignisses prüft. 
 Ändern sich danach dynamische Attribute, wird ein bereits bestehender Zugriff nicht automatisch erneut durch denselben Hook geprüft.
 
-Der Userspace-PEP betrachtet deshalb regelmäßig laufende Prozesse und deren verwendete Ressourcen.
+Der Userspace-PEP betrachtet laufende Prozesse und deren verwendete Ressourcen nur nach erfolgreichen entscheidungsrelevanten Aktivierungen oder an relevanten Zeitgrenzen.
 Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
-Wird eine Verletzung erkannt, schließt der Userspace-PEP den betroffenen File Descriptor und beendet damit den bereits bestehenden Dateizugriff.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den betroffenen File Descriptor zu schließen.
 
 Der Userspace-PEP ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
 
@@ -574,10 +574,10 @@ Wenn der Zugriff erlaubt wurde, kann der Prozess die Datei anschließend über d
 Für ASBAC ist genau dieser Fall relevant, weil eine zunächst zulässige Zugriffssituation durch spätere Attributänderungen unzulässig werden kann.
 
 Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Userspace-PEP zu ergänzen.
-Der Userspace-PEP liest regelmäßig Informationen über laufende Prozesse und offene File Descriptors aus dem System.
+Der Userspace-PEP liest Informationen über laufende Prozesse und offene File Descriptors aus dem System, wenn eine erfolgreiche entscheidungsrelevante Aktivierung oder eine relevante Zeitgrenze dies auslöst.
 Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
 Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
-Wird eine Verletzung erkannt, führt der Userspace-PEP das Enforcement direkt aus.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den zugeordneten File Descriptor zu schließen.
 Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion. Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung lokal aus.
 
 Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
@@ -593,7 +593,7 @@ Eine andere Alternative wäre, bestehende Zugriffe nicht nachträglich zu behand
 Dann würde der Prototyp jedoch einen wesentlichen Teil der ASBAC-Fragestellung nicht abdecken.
 
 Die Konsequenz ist, dass neben der kernelbasierten Zugriffskontrolle eine zusätzliche Userspace-Komponente erforderlich ist.
-Diese Komponente arbeitet beobachtend und periodisch, nicht als Ersatz für den LSM-Hook.
+Diese Komponente arbeitet ereignisgetrieben und nicht als Ersatz für den LSM-Hook. Der nachträgliche Entzug bleibt wegen TOCTTOU-, FD-Reuse-, Thread-, \texttt{dup}-, Vererbungs-, \texttt{mmap}- und \texttt{ptrace}-Grenzen weder atomar noch garantiert.
 Sie erweitert den Prototyp um die Fähigkeit, bestehende Dateizugriffe nach Änderungen der Entscheidungsgrundlage erneut zu bewerten.
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}
@@ -646,4 +646,3 @@ Dafür können geladene Policies und Attribute unabhängig von der Policyverwalt
 Die Diagnose bleibt allerdings teilweise best-effort: Wenn ein Hashwert nicht aus den vorhandenen Policy- oder Attributdateien rekonstruiert werden kann, kann das Tool ihn nur als Hash beziehungsweise unbekannten Wert anzeigen.
 
 \newpage
-

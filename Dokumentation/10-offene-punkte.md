@@ -68,7 +68,8 @@ Vorschlag:
 ## Keine Ring-Buffer-Events
 
 Es gibt keine Eventübertragung vom Kernel zum Userspace. Das ist bewusst oder zumindest aktuell so.
-Der Userspace-PEP arbeitet stattdessen pollend über `/proc` [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [Q12], [Q13], [Q14].
+Der Userspace-PEP bewertet `/proc` ereignisgetrieben nach erfolgreicher Generationsaktivierung oder
+an einer relevanten Zeitgrenze erneut [[P6]](../tails-pdp-userspace-pep/src/pep.rs), [Q12], [Q13], [Q14].
 
 Grenze:
 

@@ -76,7 +76,17 @@ einen Fake-`FdCloser`. Sie prüfen:
 - Entzug genau des verletzenden FDs,
 - höchstens einen Schließversuch pro FD und Scan,
 - unabhängige Behandlung verschiedener FDs,
-- Fortsetzung des Scans, wenn ein Schließversuch fehlschlägt.
+- Fortsetzung des Scans, wenn ein Schließversuch fehlschlägt,
+- ausbleibende Ausführung ohne Trigger,
+- expliziten Fehler bei geschlossenem Trigger-Kanal,
+- die Berechnung relevanter Stunden- und Modulo-Zeitgrenzen.
+
+Zusätzlich prüfen die Tests in
+[`tails-pdp-userspace-common/src/lib.rs`](../tails-pdp-userspace-common/src/lib.rs), dass der
+Trigger-Kanal begrenzt ist, schnelle Aktivierungen koalesziert und ein geschlossener Kanal nicht
+stillschweigend ignoriert wird. Die Commit-Tests der Loader stellen sicher, dass ein Fehler beim
+Schreiben oder Aktivieren keine neue Generation sichtbar macht; damit wird für diesen Pfad auch
+kein Trigger erzeugt.
 
 ## Privilegierte End-to-End-Tests
 

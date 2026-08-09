@@ -256,6 +256,8 @@ Notes:
 
 The eBPF LSM hook is the kernelspace PEP for new `file_open` operations. The userspace PEP
 re-evaluates file descriptors that were already open when policies or attributes changed.
+It is triggered only after a successful policy or attribute generation activation, or at a relevant
+time-policy boundary; it does not periodically scan `/proc`.
 
 It:
 
@@ -264,7 +266,8 @@ It:
 - logs violations on the command line
 
 For violations, the userspace PEP tries to close only the offending file descriptors in the affected
-process.
+process. Event-triggered re-evaluation does not make this `ptrace`-based operation atomic or
+race-free.
 
 ## FD schließen
 
