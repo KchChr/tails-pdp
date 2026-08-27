@@ -1,0 +1,73 @@
+ <html><head><title>The Protection of Information in Computer Systems</title></head>
+<body bgcolor=#ffffff>
+<table width="95%"><tr>
+<td align="left"><a href="Meta.html">About this paper</a></td>
+<td align="right"><a href="https://accessibility.mit.edu">Accessibility</a></td>
+</tr></table>
+<h1 align=center>The Protection of Information in Computer Systems</h1>
+<h3 align=center> JEROME H. SALTZER, <font size=-1>SENIOR MEMBER, IEEE, AND <br></font>MICHAEL D. SCHROEDER,<font size=-1> MEMBER, IEEE</font></h3>
+<h3 align=center><i>Invited Paper</i></h3><p>
+<b><i>Abstract</b> - This tutorial paper explores the mechanics of
+protecting computer-stored information from unauthorized use or modification.
+It concentrates on those architectural structures--whether hardware or software--that are necessary to support information protection.
+The paper develops in three main sections. Section I describes desired functions, design principles, and examples of elementary protection and authentication mechanisms. Any reader familiar with computers should find the first section to be reasonably accessible. Section II requires some familiarity with descriptor-based computer architecture. It examines in depth the principles of modern protection architectures
+and the relation between capability systems and access control list
+systems, and ends with a brief analysis of protected subsystems and
+protected objects. The reader who is dismayed by either the prerequisites or the level of detail in the second section may wish to skip
+to Section III, which reviews the state of the art and current research
+projects and provides suggestions for further reading.</i>
+<h3 align=center>Glossary</h3>
+The following glossary provides, for reference, brief definitions for several terms as used in this paper in the context of protecting information in computers.
+<dl>
+<dt>Access<dd> The ability to make use of information
+stored in a computer system. Used frequently as a verb, to the horror of grammarians.
+<dt>Access control list<dd>A list of principals that are authorized to have access to some object.
+<dt>Authenticate<dd>To verify the identity of a person (or other agent external to the protection system) making a request.
+<dt>Authorize<dd>To grant a principal access to certain information.
+<dt>Capability<dd>In a computer system, an unforgeable ticket, which when presented can be taken as incontestable proof that the presenter is authorized to have access to the object named in the ticket.
+<dt>Certify<dd>To check the accuracy, correctness, and completeness of a security or protection mechanism.
+<dt>Complete isolation<dd>A protection system that separates principals into compartments between which no flow of information or control is possible.
+<dt>Confinement<dd>Allowing a borrowed program to have access to data, while ensuring that the program cannot release the information.
+<dt>Descriptor<dd>A protected value which is (or leads to) the physical address of some protected object.
+<dt>Discretionary<dd> (In contrast with <I>nondiscretionary</i>.) Controls on access to an object that may be changed by the creator of the object.
+<dt>Domain<dd>The set of objects that currently may be directly accessed by a principal.
+<dt>Encipherment<dd>The (usually) reversible scrambling of data according to a secret transformation key, so as to make it safe for transmission or storage in a physically unprotected environment.<dt><dd> <dt><dd> <dt><dd> <dt><dd> <dt><dd> <dt>Grant<dd>To authorize (<I>q. v.</i>).
+<dt>Hierarchical control<dd>Referring to ability to change authorization, a scheme in which the record of each authorization is controlled by another authorization, resulting in a hierarchical tree of authorizations.
+<dt>List-oriented<dd> Used to describe a protection system in which each protected object has a list of authorized principals.
+<dt>Password<dd>A secret character string used to authenticate the claimed identity of an individual.
+<dt>Permission<dd>A particular form of allowed access, e.g., permission to READ as contrasted with permission to WRITE.
+<dt>Prescript<dd>A rule that must be followed before access to an object is permitted, thereby introducing an opportunity for human judgment about the need for access, so that abuse of the access is discouraged.
+<dt>Principal<dd>The entity in a computer system to which authorizations are granted; thus the unit of accountability in a computer system.
+<dt>Privacy<dd>The ability of an individual (or organization) to decide whether, when, and to whom personal (or organizational) information is released.
+<dt>Propagation<dd> When a principal, having been authorized access to some object, in turn authorizes access to another principal.
+<dt>Protected object<dd>A data structure whose existence is known, but whose internal organization is not accessible, except by invoking the protected subsystem (<i>q.v.</i>) that manages it.
+<dt>Protected subsystem<dd> A collection of procedures and data objects that is encapsulated in a domain of its own so that the internal structure of a data object is accessible only to the procedures of the protected subsystem and the procedures may be called only at designated domain entry points.
+<dt>Protection<dd> 1) Security (<i>q.v.</i>).<br>2) Used more narrowly to denote mechanisms and techniques that control the access of executing programs to stored information.
+<dt>Protection group<dd> A principal that may be used by several different individuals.
+<dt>Revoke<dd> To take away previously authorized access from some principal.
+<dt>Security<dd> With respect to information processing systems, used to denote mechanisms and techniques that control who may use or modify the computer or the information stored in it.
+<dt>Self control<dd> Referring to ability to change authorization, a scheme in which each authorization contains within it the specification of which principals may change it.
+<dt>Ticket-oriented<dd>Used to describe a protection system in which each principal maintains a list of unforgeable bit patterns, called tickets, one for each object the principal is authorized to have access.
+<dt>User<dd>Used imprecisely to refer to the individual who is accountable for some identifiable set of activities in a computer system.
+</dl>
+<ol>
+<li><a href="Basic.html">Basic Principles Of Information Protection</a>
+<li><a href="Descriptors.html">Descriptor-Based Protection Systems</a>
+<li><a href="State.html">The State of the Art</a>
+<li><a href="References.html">References</a>
+<li><a href="notes.html">Footnotes</a>
+<hr><li>Figures: <a href="fig1.html">1</a>,
+<a href="fig2.html">2</a>,
+<a href="fig3.html">3</a>,
+<a href="fig4.html">4</a>,
+<a href="fig5.html">5</a>,
+<a href="fig6.html">6</a>,
+<a href="fig7.html">7</a>,
+<a href="fig8.html">8</a>,
+<a href="fig9.html">9</a>,
+<a href="fig10.html">10</a>,
+<a href="fig11.html">11</a>,
+<a href="fig12.html">12</a>,
+<a href="fig13.html">13</a>,
+<a href="fig14.html">14</a></ol>
+</body></html>

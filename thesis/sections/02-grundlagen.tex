@@ -33,7 +33,7 @@ Dadurch entsteht zusätzlich die Herausforderung, dass eine zunächst erlaubte Z
 Das klassische Reference-Monitor-Konzept erklärt daher zunächst die unmittelbare Kontrolle eines Zugriffs, während die spätere Arbeit zusätzlich betrachtet, wie bestehende Zugriffssituationen nachträglich überwacht werden können.
 
 \subsection{Attribute-Based Access Control}
-Attribute-Based Access Control (ABAC) ist ein Zugriffskontrollmodell, bei dem eine Autorisierungsentscheidung nicht allein anhand einer festen Subjektidentität, wie bei ACL- oder identitätsbasierter Zugriffskontrolle, oder anhand einer zugewiesenen Rolle, wie bei Role-Based Access Control (RBAC), getroffen wird.
+Attribute-Based Access Control (ABAC) ist ein Zugriffskontrollmodell, bei dem eine Autorisierungsentscheidung nicht allein anhand einer festen Subjektidentität oder einer an der Ressource hinterlegten Access Control List (ACL) getroffen wird. Eine ACL ordnet einzelnen Subjekten oder Gruppen konkrete Berechtigungen für eine Ressource zu. Ebenso beruht die Entscheidung nicht ausschließlich auf einer zugewiesenen Rolle, wie bei Role-Based Access Control (RBAC).
 Stattdessen werden Attribute ausgewertet, die sich auf das Subjekt, die Ressource, die angeforderte Operation und gegebenenfalls auf die Umgebung beziehen.
 Das National Institute of Standards and Technology (NIST) beschreibt ABAC als logische Zugriffskontrollmethode, bei der solche Attribute gegen Policies, Regeln oder Beziehungen geprüft werden, um zu entscheiden, ob eine Operation zulässig ist \citep{nistSP800162}.
 
@@ -127,11 +127,7 @@ LSM-Hooks sind für Zugriffskontrolle besonders relevant, weil sie Operationen a
 Wright et al. beschreiben das LSM-Framework als allgemeine Sicherheitsunterstützung im Linux-Kernel, bei der Hooks Zugriff auf Kernelobjekte vermitteln und Rückgabewerte über Erfolg oder Fehler der Operation entscheiden können \citep{wright2002linux}. 
 Damit eignen sich LSM-Hooks grundsätzlich als technische Grundlage für einen Reference-Monitor-ähnlichen Durchsetzungspunkt.
 
-Für den Prototyp ist insbesondere der Hook \texttt{file\_open} relevant. 
-Er erlaubt eine Kontrolle beim Öffnen einer Datei und passt damit zur funktionalen Einschränkung dieser Arbeit auf Dateiöffnungen. 
-LSM-Hooks bewerten jedoch jeweils konkrete Kerneloperationen. 
-Ein beim Öffnen erlaubter Zugriff wird nicht automatisch erneut durch denselben Hook geprüft, wenn sich später Attribute ändern. 
-Diese Eigenschaft erklärt, warum zusätzlich eine Überwachung bestehender Zugriffssituationen betrachtet werden muss.
+Für den Prototyp ist der LSM-Hook \texttt{file\_open} maßgeblich. Er wird beim Öffnen einer Datei aufgerufen und deckt damit die in dieser Arbeit betrachtete Operation ab. Seine Entscheidung bezieht sich jedoch ausschließlich auf den aktuellen Öffnungsvorgang. Ändern sich Attribute erst danach, wird ein bereits geöffneter Dateizugriff nicht erneut durch denselben Hook bewertet. Daher ist für solche bestehenden Zugriffssituationen eine ergänzende nachträgliche Überwachung erforderlich.
 
 \subsection{eBPF und eBPF-LSM}
 eBPF ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können. 
@@ -158,7 +154,7 @@ Diese Einschränkungen müssen in der späteren Konzeption gegen die Vorteile ab
 
 \subsection{eBPF-Maps und gepinnte Maps}
 eBPF-Maps sind Datenstrukturen im Kernel, die von eBPF-Programmen und Userspace-Anwendungen gemeinsam genutzt werden können. 
-Die Kernel-Dokumentation beschreibt Maps als generischen Speicher für unterschiedliche Datentypen, der unter anderem den Datenaustausch zwischen Kernelspace und Userspace ermöglicht \citep{kernelBpfMaps}. 
+Die Kernel-Dokumentation beschreibt Maps als generischen Speicher für unterschiedliche Datentypen, der unter anderem den Datenaustausch zwischen Kernelspace und Userspace ermöglicht \citep{kernelBpfMaps,manBpf}.
 Über den Systemaufruf \texttt{bpf()} können Maps erzeugt sowie Einträge gelesen, aktualisiert oder gelöscht werden \citep{manBpf}.
 
 Für Zugriffskontrolle sind Maps relevant, weil eBPF-Programme nicht beliebige komplexe Userspace-Datenstrukturen direkt verwenden können. 
@@ -182,10 +178,11 @@ Der Verifier verfolgt unter anderem, ob Register initialisiert sind, welche Zeig
 Unklare oder zu komplexe Zugriffsmuster können dazu führen, dass ein Programm abgelehnt wird, auch wenn die fachliche Logik korrekt erscheint.
 Darüber hinaus muss der Kontrollfluss eines eBPF-Programms für den Verifier analysierbar bleiben.
 Schleifen dürfen nicht unbeschränkt sein, Rekursion ist nicht als allgemeines Programmiermittel verfügbar, und Speicherzugriffe müssen durch bekannte Grenzen abgesichert sein.
-Auch der Zugriff auf Kernelinformationen erfolgt nicht beliebig, sondern über den Hook-Kontext, Maps oder für den jeweiligen Programmtyp zugelassene Hilfsfunktionen.
+Auch der Zugriff auf Kernelinformationen erfolgt nicht beliebig, sondern über den Hook-Kontext, Maps oder für den jeweiligen Programmtyp zugelassene Hilfsfunktionen \citep{kernelBpfVerifier}.
+
 
 Zusätzlich bestehen praktische Begrenzungen bei Stack und Programmkomplexität. 
-Die BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}. 
+Die für diese Arbeit am 12. Juni 2026 abgerufene Fassung der BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}.
 Die offizielle Aya-Dokumentation beschreibt eBPF als eingeschränkte Laufzeitumgebung und weist darauf hin, dass eBPF-Programme nur 512 Byte Stack besitzen; bei Programmen, die Tail Calls verwenden, kann der verfügbare Stack auf 256 Byte begrenzt sein \citep{ayaBook}. 
 Der Stack eignet sich damit nur für kleine lokale Hilfsdaten, etwa Schlüsselstrukturen für Map-Zugriffe oder wenige temporäre Werte. 
 Größere lokale Puffer, dynamisch wachsende Listen oder Zeichenketten können dort nicht sinnvoll abgelegt werden. 
@@ -203,7 +200,7 @@ Für die Arbeit bedeutet dies, dass komplexe Policy-Logik möglichst im Userspac
 \subsection{Aya als Rust-Framework für eBPF}
 Aya ist ein Rust-Framework zur Entwicklung von eBPF-Anwendungen. 
 Die offizielle Aya-Dokumentation beschreibt Aya als Möglichkeit, eBPF-Programme mit Rust zu entwickeln und dabei Cargo, Rust-Strukturen sowie gemeinsame Codeanteile zwischen Userspace und eBPF-Programm zu nutzen \citep{ayaBook}. 
-Neben Rust-basierten Frameworks existieren etablierte eBPF-Werkzeuge im C- und Skriptsprachenumfeld.
+Neben Rust-basierten Frameworks existieren etablierte eBPF-Werkzeuge mit C- sowie Hochsprachen-Schnittstellen.
 libbpf ist eine C-Bibliothek für die Entwicklung und das Laden von BPF- beziehungsweise eBPF-Programmen, während BCC (BPF Compiler Collection) ein Toolkit für BPF-basierte Analyse-, Tracing- und Monitoring-Werkzeuge ist \citep{libbpf,bcc}.
 Aya stellt dazu eine Rust-basierte Alternative dar.
 
@@ -224,7 +221,8 @@ Die Idee veränderlicher Attribute knüpft an Usage-Control-Modelle an, in denen
 
 Für den Prototyp bedeutet dies, dass Attribute nicht nur beim Start einmalig geladen werden dürfen. 
 Änderungen müssen vom Userspace erkannt, validiert und in die kernelgeeignete Repräsentation übertragen werden. 
-Da eBPF-Programme zur Laufzeit auf Maps zugreifen können, bieten Maps eine geeignete Schnittstelle, um aktuelle Attributwerte für Zugriffsentscheidungen bereitzustellen \citep{kernelBpfMaps}. 
+eBPF-Programme können Map-Einträge während ihrer Ausführung lesen, während Userspace-Anwendungen dieselben Maps aktualisieren können \citep{manBpf}.
+Der Prototyp nutzt diese Eigenschaft, um aktuelle Attributwerte für Zugriffsentscheidungen bereitzustellen.
 Die Attributnamen und Werte müssen dabei im Userspace so verarbeitet werden, dass das eBPF-Programm mit festen Schlüssel- und Wertstrukturen arbeiten kann.
 
 Policy-Generationen beschreiben zusammengehörige gültige Stände von Policies. 
@@ -232,7 +230,7 @@ Dieser Begriff ist für den Prototyp wichtig, weil Policy-Dateien im Userspace g
 Eine neue Generation sollte erst dann aktiv werden, wenn alle dazugehörigen Map-Einträge vollständig erzeugt und konsistent bereitgestellt wurden. 
 Dadurch wird vermieden, dass der Kernel während einer Aktualisierung auf einen unvollständigen oder widersprüchlichen Policy-Zustand zugreift.
 
-\subsection{Überwachung bestehender Zugriffe und File Descriptors}
+\subsection{Überwachung bestehender Zugriffe und File Descriptors}\label{sec:fd-monitoring-foundations}
 Ein Dateizugriff in Linux wird häufig über einen File Descriptor repräsentiert. 
 Der Systemaufruf \texttt{open()} liefert bei Erfolg einen nichtnegativen File Descriptor zurück, der in nachfolgenden Systemaufrufen wie \texttt{read()}, \texttt{write()} oder \texttt{lseek()} als Referenz auf die geöffnete Datei verwendet wird \citep{manOpen}. 
 Damit entsteht nach dem Öffnen eine bestehende Zugriffssituation, die unabhängig vom ursprünglichen Pfad weiter über den File Descriptor genutzt werden kann.
@@ -245,5 +243,24 @@ Linux stellt über \texttt{/proc/<pid>/fd} Informationen über die geöffneten F
 Die man-pages beschreiben die Einträge in diesem Verzeichnis als symbolische Links auf die geöffneten Dateien oder andere referenzierte Objekte; der Zugriff darauf unterliegt eigenen Berechtigungsprüfungen \citep{manProcPidFd}. 
 Für den Prototyp kann ein Userspace-PEP diese Informationen nutzen, um zu erkennen, welcher Prozess über welchen File Descriptor auf welche Datei zugreift.
 Wird eine bestehende Zugriffssituation durch neue Attribute oder Policies unzulässig, kann der Userspace-PEP gezielt den betroffenen Zugriff behandeln, ohne notwendigerweise alle Zugriffe desselben Prozesses zu beenden.
+
+Eine solche nachträgliche Behandlung ist jedoch nicht atomar. Zwischen dem Ermitteln eines File
+Descriptors, der Policy-Auswertung und dem späteren Entzugsversuch kann sich der Zustand des
+Prozesses verändern. Eine derartige Zustandsänderung zwischen Prüfung und Verwendung wird als
+Time-of-check-to-time-of-use-Race-Condition (TOCTTOU) bezeichnet \citep{mitreCwe367}. Linux kann
+eine geschlossene File-Descriptor-Nummer erneut vergeben; bei mehrthreadigen Prozessen kann zudem
+eine bereits laufende E/A-Operation auch nach dem Schließen des Descriptors noch abgeschlossen
+werden \citep{manClose}.
+
+Weitere Referenzen auf dieselbe geöffnete Dateibeschreibung können unabhängig vom betrachteten
+Descriptor bestehen. \texttt{dup()} erzeugt einen zusätzlichen File Descriptor für dieselbe
+geöffnete Dateibeschreibung, und ein durch \texttt{fork()} erzeugter Kindprozess übernimmt
+entsprechende Deskriptorreferenzen \citep{manDup,manFork}. Das Schließen eines einzelnen File
+Descriptors beseitigt diese weiteren Referenzen nicht. Ebenso bleibt eine mit \texttt{mmap()}
+erzeugte Speicherabbildung nach dem Schließen des zugehörigen File Descriptors bestehen
+\citep{manMmap}. Der für den Prototyp verwendete \texttt{ptrace}-Mechanismus ermöglicht zwar die
+Steuerung eines Zielprozesses, unterliegt jedoch Berechtigungsprüfungen und arbeitet auf der Ebene
+einzelner Threads \citep{manPtrace}. Ein FD-basierter Entzug aus dem Userspace kann deshalb nur als
+nachträglicher, bestmöglicher Entzugsversuch verstanden werden.
 
 \newpage

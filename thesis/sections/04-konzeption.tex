@@ -104,10 +104,13 @@ Minute und Sekunde ab. Dadurch verwenden beide Ausführungspfade dieselbe Zeitba
 Konvertierungslogik.
 
 Externe Attribute werden dagegen ereignisgesteuert aktualisiert. Der Attributloader überwacht das
-Verzeichnis \texttt{attributes/} rekursiv. Nach einer erkannten Dateisystemänderung wartet er eine
-kurze Debounce-Zeit von 100 Millisekunden ab, validiert den neuen Gesamtstand und aktiviert ihn über
-die Attributgeneration. Ohne Dateisystemereignis findet keine periodische Neuladung dieser Dateien
-statt.
+Verzeichnis \texttt{attributes/} rekursiv. Da ein Änderungsvorgang mehrere unmittelbar
+aufeinanderfolgende \texttt{inotify}-Ereignisse erzeugen kann \citep{manInotify}, wartet der Loader
+nach dem ersten Ereignis 100 Millisekunden, bevor er den Gesamtbestand erneut einliest und
+validiert. Diese prototypspezifisch gewählte Bündelungsverzögerung reduziert redundante
+Verarbeitungsvorgänge und die Wahrscheinlichkeit, einen vorübergehenden Zwischenstand einzulesen.
+Erst nach erfolgreicher Validierung und Übernahme wird die neue Attributgeneration aktiviert. Ohne
+Dateisystemereignis findet keine periodische Neuladung dieser Dateien statt.
 
 
 \subsubsection{Zugriffsentscheidungen im Kernel}
@@ -183,16 +186,10 @@ Der Attributloader trifft selbst keine Zugriffsentscheidung.
 Seine Aufgabe besteht darin, die Entscheidungsgrundlage aktuell zu halten.
 
 \paragraph{Userspace-PEP}
-Der Userspace-PEP ergänzt die kernelbasierte Zugriffskontrolle um die nachträgliche Überwachung bereits bestehender Zugriffssituationen.
-Dies ist notwendig, weil ein LSM-Hook einen Zugriff nur zum Zeitpunkt des jeweiligen Kernelereignisses prüft. 
-Ändern sich danach dynamische Attribute, wird ein bereits bestehender Zugriff nicht automatisch erneut durch denselben Hook geprüft.
-
-Der Userspace-PEP betrachtet laufende Prozesse und deren verwendete Ressourcen nur nach erfolgreichen entscheidungsrelevanten Aktivierungen oder an relevanten Zeitgrenzen.
+Der Userspace-PEP bewertet laufende Prozesse und deren verwendete Ressourcen nur nach erfolgreichen entscheidungsrelevanten Aktivierungen oder zu Zeitpunkten, an denen sich das Ergebnis einer aktiven zeitabhängigen Policybedingung ändern kann.
 Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
 Wird eine Verletzung erkannt, versucht der Userspace-PEP, den betroffenen File Descriptor zu schließen.
-
-Der Userspace-PEP ersetzt damit nicht die Zugriffskontrolle im Kernelspace, sondern ergänzt sie für Zugriffssituationen, die nach der ursprünglichen Hook-Entscheidung unzulässig werden.
 
 \subsubsection{Kernelspace-Komponenten}
 
@@ -252,17 +249,19 @@ Diese Zwischenergebnisse werden im Combining zusammengeführt und bestimmen die 
 
 \subsection{Entwurfsentscheidungen}
 
+Die folgenden Entwurfsentscheidungen leiten aus den fachlichen Anforderungen und den technischen
+Rahmenbedingungen die grundlegende Gestaltung des Prototyps ab. Für jede Entscheidung werden das
+Ausgangsproblem, die gewählte Lösung, berücksichtigte Alternativen und die daraus entstehenden
+Konsequenzen dargestellt.
+
 \subsubsection{Trennung von Userspace und Kernelspace}
 Das Reference-Monitor-Konzept bildet eine grundlegende theoretische 
 Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
 muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
 muss eine vollständige Überprüfung aller Zugriffe auf geschützte Ressourcen gewährleistet sein
 \cite{anderson1972computer}.
-Wright et al. beschreiben, dass das LSM-Framework Sicherheits-Hooks 
-an sicherheitskritischen Stellen des Kernels einfügt und dass diese Hooks
-Rückgabewerte liefern, welche über Erfolg oder Fehler der angeforderten Operation 
-entscheiden. Daraus folgt, dass die Zugriffskontrollentscheidung innerhalb des Kernel-Ausführungspfades 
-erfolgen muss~\cite{wright2002linux}.
+Wright et al. beschreiben, dass LSM-Hooks unmittelbar vor dem Zugriff auf interne Kernelobjekte ausgeführt werden und den Zugriff erlauben oder verweigern können~\cite{wright2002linux}.
+Für den in dieser Arbeit gewählten LSM-Durchsetzungspfad wird die Zugriffskontrollentscheidung daher innerhalb des Kernel-Ausführungspfades getroffen.
 
 Daraus folgt jedoch nicht, dass die gesamte Policy-Verarbeitung im Kernelspace erfolgen muss. 
 Insbesondere das Einlesen, Parsen und Validieren textueller Policy-Dateien ist vergleichsweise komplex und fehleranfällig. 
@@ -282,13 +281,14 @@ Für einen experimentellen Prototyp führt dies zu vergleichsweise langen Entwic
 
 Gewählt wurde daher die Implementierung als eBPF-LSM.
 Diese Implementierung erlaubt es, eBPF-Programme an LSM-Hooks auszuführen und damit Zugriffskontrollentscheidungen im Kernel-Ausführungspfad zu treffen~\cite{kernelBpfLsm}.
-Die Programme können zur Laufzeit geladen werden und werden vor der Ausführung durch den eBPF-Verifier geprüft~\cite{kernelBpfVerifier}.
+Die Programme können zur Laufzeit geladen werden und werden vor der Ausführung durch den eBPF-Verifier geprüft~\cite{kernelBpfLsm,kernelBpfVerifier}.
 
 Ein weiterer Grund für diese Entscheidung ist die Möglichkeit, eBPF-Programme mit Rust zu entwickeln.
 Der Prototyp nutzt dafür Aya.
 Aya ist eine Rust-Bibliothek für die Entwicklung von eBPF-Programmen und stellt damit eine Alternative zu einer C-basierten Implementierung dar~\cite{ayaBook}.
 Dadurch können Userspace- und eBPF-Anteile innerhalb desselben Rust-Workspaces entwickelt werden.
-Zusätzlich können gemeinsame Datenstrukturen und Teile der Policy-Auswertungslogik in einem gemeinsamen Crate abgebildet werden.
+Zusätzlich können gemeinsame Datenstrukturen und Teile der Policy-Auswertungslogik in einer
+gemeinsamen Rust-Kompilationseinheit (Crate) abgebildet werden.
 Dies verbessert die Konsistenz zwischen Userspace und Kernelspace und reduziert doppelte Implementierungen.
 
 Eine Alternative wäre die Entwicklung eines klassischen LSM gewesen.
@@ -387,7 +387,7 @@ Zusätzlich müssen weitere Userspace-Komponenten, insbesondere Userspace-PEP un
 
 Die Entscheidung lautet daher, die Kommunikation über eBPF-Maps umzusetzen.
 Policy-Einträge werden in Array-Maps abgelegt, dynamische Attribute in der Hash-Map
-\texttt{ATTRIBUTES} und ihre aktive Bank in \texttt{ATTRIBUTE\_GENERATION}. Die gemeinsame
+\texttt{ATTRIBUTES}; \texttt{ATTRIBUTE\_GENERATION} kennzeichnet den aktiven Attributstand. Die gemeinsame
 Zeitbasis liegt als Unix-Zeit in der einzigen Zeit-Map \texttt{CURRENT\_TIME}. Der gemeinsame Typ
 \texttt{PolicyTime} leitet daraus für Kernelspace-PEP und Userspace-PEP identisch die benötigten
 UTC-Komponenten ab.
@@ -417,9 +417,14 @@ Gleichzeitig entsteht dadurch eine klare Schnittstelle: Der Userspace schreibt v
 Policies können während des Betriebs geändert, hinzugefügt oder entfernt werden.
 Dabei darf der Kernel während einer Zugriffentscheidung nicht auf einen teilweise aktualisierten Policy-Zustand zugreifen.
 Problematisch wäre beispielsweise, wenn einzelne Map-Einträge bereits überschrieben wurden, andere Einträge derselben Policy-Menge aber noch zum vorherigen Stand gehören.
-In diesem Fall könnte eine Zugriffentscheidung auf einer widersprüchlichen Mischung aus alter und neuer Policy-Lage beruhen.
+In diesem Fall könnte eine Zugriffentscheidung auf einer widersprüchlichen Mischung aus Einträgen der bisherigen und der neu vorbereiteten Policy-Generation beruhen.
 
 Die Entscheidung lautet daher, Policy-Aktualisierungen über ein Generationenmodell umzusetzen.
+Als Bank wird im Folgenden einer von zwei logisch getrennten Speicherbereichen innerhalb derselben
+Map bezeichnet. Eine Bank ist somit weder ein eigener eBPF-Map-Typ noch eine separate Map. Jede
+Bank kann einen vollständigen Policy- beziehungsweise Attributstand aufnehmen. Zu einem Zeitpunkt
+wird nur eine Bank aktiv ausgewertet, während die andere Bank für die nächste Generation
+vorbereitet werden kann.
 Die Policy-Maps werden in zwei Bänke aufgeteilt.
 Eine Bank enthält die aktuell aktive Policy-Generation, während die andere Bank als inaktive Bank für die nächste Generation vorbereitet wird.
 Bei einer Änderung schreibt der Userspace zunächst alle vorbereiteten Policy-Einträge in die inaktive Bank.
@@ -524,24 +529,36 @@ Dafür bleibt jeder Auswertungsschritt kleiner und besser kontrollierbar.
 Mehrere Policies können auf dieselbe Zugriffssituation anwendbar sein.
 Dabei können einzelne Policies zu unterschiedlichen Aussagen kommen, etwa \textit{Permit} oder \textit{Deny}.
 Der Prototyp benötigt daher eine Strategie, mit der die Zwischenergebnisse der Policy-Auswertung zu einer finalen Hook-Entscheidung zusammengeführt werden.
+Eine solche Regel wird als Combining-Algorithmus bezeichnet. XACML unterscheidet unter anderem
+\textit{Deny-overrides}, bei dem eine Deny-Entscheidung Vorrang hat, \textit{Permit-overrides}, bei
+dem eine Permit-Entscheidung Vorrang hat, und \textit{First-applicable}, bei dem das Ergebnis der
+ersten anwendbaren Policy übernommen wird \citep{oasisXacml30}. Diese Arbeit übernimmt damit nur
+die etablierte Terminologie zur Einordnung der Konfliktauflösung, nicht die XACML-Policy-Sprache
+oder deren vollständiges Entscheidungsmodell.
 
 Die Entscheidung lautet, Zwischenergebnisse zunächst in einem kleinen Entscheidungszustand abzulegen und die finale Entscheidung in einem separaten Combining-Schritt zu treffen.
 Die statische und die streambasierte Auswertung halten fest, ob während ihres jeweiligen Auswertungspfades eine passende Permit- oder Deny-Policy gefunden wurde.
 Das Combining-Programm liest diesen Zustand und entscheidet daraus, ob der Hook den Zugriff erlaubt oder verweigert.
-Im aktuellen Prototyp wird eine Deny-overrides-Strategie verwendet: Sobald eine Deny-Entscheidung vorliegt, wird der Zugriff verweigert.
+Im aktuellen Prototyp wird eine vereinfachte, an \textit{Deny-overrides} angelehnte Strategie
+verwendet: Sobald eine Deny-Entscheidung vorliegt, wird der Zugriff verweigert; andernfalls wird er
+erlaubt. Die XACML-Ergebnisse \textit{Indeterminate} und \textit{NotApplicable} werden dabei nicht
+als eigene Ergebnisse abgebildet.
 
 Diese Aufteilung trennt Policy-Matching und finale Konfliktauflösung.
 Die einzelnen Auswertungspfade müssen nicht selbst die vollständige globale Entscheidung treffen, sondern liefern nur ihre Zwischenergebnisse.
 Das macht die Struktur des eBPF-Programms nachvollziehbarer und erlaubt es, die Combining-Logik an einer klar abgegrenzten Stelle zu betrachten.
 
-Eine Alternative wäre ein sofortiger Abbruch beim ersten passenden Ergebnis, beispielsweise als Priority-Deny- oder Priority-Permit-Strategie.
-Dabei würde ein Auswertungspfad unmittelbar mit einem erlaubenden oder verweigernden Rückgabewert terminieren.
+Eine Alternative wäre eine reihenfolgeabhängige \textit{First-applicable}-Strategie, bei der das
+Ergebnis der ersten anwendbaren Policy als Gesamtentscheidung übernommen und die Auswertung
+anschließend beendet wird.
 Diese Variante wäre für eine feste Strategie einfacher, würde aber die spätere Untersuchung anderer Combining-Algorithmen erschweren.
 Außerdem würde die Reihenfolge der Policy-Auswertung stärker in die Semantik eingehen.
 
 Die Konsequenz ist, dass ein zusätzlicher Entscheidungszustand zwischen den Tail-Call-Schritten benötigt wird.
 Dafür bleibt die Konfliktauflösung zentralisiert.
-Der Prototyp verwendet aktuell Deny-overrides, ohne die Policy-Auswertung selbst fest auf einen frühen Abbruch nach der ersten passenden Policy zu beschränken.
+Der Prototyp verwendet aktuell die vereinfachte, an \textit{Deny-overrides} angelehnte Strategie,
+ohne die Policy-Auswertung selbst fest auf einen frühen Abbruch nach der ersten passenden Policy zu
+beschränken.
 
 \subsubsection{Identifikation von Dateien über Device und Inode}
 Policies werden für Nutzer über Dateipfade formuliert.
@@ -556,7 +573,9 @@ In der Policy-Map werden anschließend Device und Inode gespeichert.
 Beim \texttt{file\_open}-Hook liest das eBPF-Programm die entsprechenden Werte aus dem Kernelkontext der geöffneten Datei und vergleicht diese mit den vorbereiteten Policy-Werten.
 
 Diese Repräsentation passt besser zum Kernelkontext.
-Der Kernel arbeitet beim geöffneten Dateiobjekt ohnehin mit Inode- und Superblock-Informationen.
+Beim geöffneten Dateiobjekt liest der Kernel die Inode-Nummer aus dem Feld \texttt{i\_ino} des
+Inodes und die Device-Kennung aus dem Feld \texttt{s\_dev} des zugehörigen Superblocks. Die
+Kombination beider Werte dient dem Prototyp zur Identifikation der Datei.
 Dadurch muss das eBPF-Programm keinen vollständigen Pfad rekonstruieren und keine langen Zeichenketten vergleichen.
 Außerdem werden unterschiedliche Pfadschreibweisen reduziert, weil die Entscheidung auf der identifizierten Datei und nicht auf der Schreibweise des Pfades basiert.
 
@@ -598,7 +617,14 @@ Eine andere Alternative wäre, bestehende Zugriffe nicht nachträglich zu behand
 Dann würde der Prototyp jedoch einen wesentlichen Teil der ASBAC-Fragestellung nicht abdecken.
 
 Die Konsequenz ist, dass neben der kernelbasierten Zugriffskontrolle eine zusätzliche Userspace-Komponente erforderlich ist.
-Diese Komponente arbeitet ereignisgetrieben und nicht als Ersatz für den LSM-Hook. Der nachträgliche Entzug bleibt wegen TOCTTOU-, FD-Reuse-, Thread-, \texttt{dup}-, Vererbungs-, \texttt{mmap}- und \texttt{ptrace}-Grenzen weder atomar noch garantiert.
+Diese Komponente arbeitet ereignisgetrieben und nicht als Ersatz für den LSM-Hook. Die
+Neubewertung und der Entzugsversuch bilden keine atomare Operation: Zwischen dem Einlesen der
+Prozessinformationen, der Policy-Auswertung und dem Schließen des File Descriptors kann sich dessen
+Zuordnung verändern. Zudem beendet das Schließen eines einzelnen Descriptors weder bereits
+laufende E/A-Operationen noch Zugriffe über duplizierte oder vererbte File Descriptors oder
+bestehende Speicherabbildungen (vgl. Abschnitt~\ref{sec:fd-monitoring-foundations}). Der
+Userspace-PEP kann einen erkannten Verstoß daher nur nachträglich und bestmöglich behandeln; ein
+vollständiger oder verzögerungsfreier Entzug ist nicht garantiert.
 Sie erweitert den Prototyp um die Fähigkeit, bestehende Dateizugriffe nach Änderungen der Entscheidungsgrundlage erneut zu bewerten.
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}

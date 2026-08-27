@@ -1,10 +1,9 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  9 AUG 2026 16:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  27 AUG 2026 21:25
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
 **thesis.tex
-(/Users/ck/Code/tails-pdp/thesis/thesis.tex
+(./thesis.tex
 LaTeX2e <2020-10-01> patch level 4
 L3 programming layer <2021-02-18>
 (/usr/local/texlive/2021/texmf-dist/tex/latex/base/article.cls
@@ -502,14 +501,13 @@ File: l3backend-pdftex.def 2021-03-18 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count289
 \l__pdf_internal_box=\box49
 )
-(/Users/ck/Code/tails-pdp/thesis/thesis.aux)
+(./thesis.aux)
 \openout1 = `thesis.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/ntxmi/m/it on input line 26.
 LaTeX Font Info:    Trying to load font information for OML+ntxmi on input line
  26.
-
-(/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/omlntxmi.fd
+ (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/omlntxmi.fd
 File: omlntxmi.fd 2015/08/25 Fontinst v1.933 font definitions for OML/ntxmi.
 )
 LaTeX Font Info:    ... okay on input line 26.
@@ -526,7 +524,6 @@ LaTeX Font Info:    ... okay on input line 26.
 LaTeX Font Info:    Checking defaults for U/ntxexa/m/n on input line 26.
 LaTeX Font Info:    Trying to load font information for U+ntxexa on input line 
 26.
-
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/untxexa.fd
 File: untxexa.fd 2012/04/16 Fontinst v1.933 font definitions for U/ntxexa.
 )
@@ -591,8 +588,7 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 LaTeX Info: Redefining \ref on input line 26.
 LaTeX Info: Redefining \pageref on input line 26.
 LaTeX Info: Redefining \nameref on input line 26.
- (/Users/ck/Code/tails-pdp/thesis/thesis.out)
-(/Users/ck/Code/tails-pdp/thesis/thesis.out)
+ (./thesis.out) (./thesis.out)
 \@outlinefile=\write3
 \openout3 = `thesis.out'.
 
@@ -684,8 +680,7 @@ LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
 (Font)              scaled to size 17.28pt on input line 31.
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
 (Font)              scaled to size 17.28pt on input line 31.
-
-(/Users/ck/Code/tails-pdp/thesis/thesis.toc
+ (./thesis.toc
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
 (Font)              scaled to size 12.0pt on input line 2.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
@@ -694,12 +689,12 @@ LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 8.8pt on input line 3.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 6.6pt on input line 3.
- [2] [3])
+
+[2] [3])
 \tf@toc=\write4
 \openout4 = `thesis.toc'.
 
- [4]
-(./sections/01-einleitung.tex
+ [4] (./sections/01-einleitung.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
 (Font)              scaled to size 14.4pt on input line 4.
 LaTeX Font Info:    Trying to load font information for T1+ntxtt on input line 
@@ -711,15 +706,11 @@ File: t1ntxtt.fd 2012/04/20 v3.1
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
 (Font)              scaled to size 12.0pt on input line 32.
  [5] [6])
-(./sections/02-grundlagen.tex [7]
-
-Package natbib Warning: Citation `heutelbeck2021asbac' on page 8 undefined on i
-nput line 58.
-
-[8]
+(./sections/02-grundlagen.tex [7] [8]
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/it' will be
 (Font)              scaled to size 12.0pt on input line 63.
- [9] [10] [11] [12] [13] [14] [15]) (./sections/03-anforderungsanalyse.tex
+ [9] [10] [11] [12] [13] [14] [15])
+(./sections/03-anforderungsanalyse.tex
 Underfull \hbox (badness 10000) in paragraph at lines 44--48
 []\T1/ntxtlf/m/n/12 Der Pro-to-typ
  []
@@ -739,27 +730,27 @@ File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 )
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
 (Font)              scaled to size 12.0pt on input line 52.
-<graphics/architecture.jpg, id=667, 1606.0pt x 1051.93pt>
+<graphics/architecture.jpg, id=683, 1606.0pt x 1051.93pt>
 File: graphics/architecture.jpg Graphic file (type jpg)
 <use graphics/architecture.jpg>
 Package pdftex.def Info: graphics/architecture.jpg  used on input line 72.
 (pdftex.def)             Requested size: 405.45047pt x 265.56609pt.
- [20] [21 </Users/ck/Code/tails-pdp/thesis/graphics/architecture.jpg>] [22] [23
-] [24]
-[25] [26] [27] [28] [29] [30] [31] [32] [33] [34]
-Underfull \hbox (badness 1838) in paragraph at lines 609--613
+ [20] [21 <./graphics/architecture.jpg>] [22] [23] [24] [25] [26] [27] [28] [29
+] [30]
+[31] [32] [33] [34]
+Underfull \hbox (badness 1838) in paragraph at lines 635--639
 []\T1/ntxtlf/m/n/12 Die Ent-schei-dung lau-tet, En-for-ce-ment durch das Schlie
 -ÿen des be-trof-fe-nen
  []
 
 
-Underfull \hbox (badness 1072) in paragraph at lines 609--613
+Underfull \hbox (badness 1072) in paragraph at lines 635--639
 \T1/ntxtlf/m/n/12 Fi-le De-s-crip-tors um-zu-set-zen. Der Userspace-PEP er-mit-
 telt Prozess-ID und File-
  []
 
 
-Underfull \hbox (badness 1460) in paragraph at lines 609--613
+Underfull \hbox (badness 1460) in paragraph at lines 635--639
 \T1/ntxtlf/m/n/12 Descriptor-Nummer der ver-let-zen-den Zu-griffs-si-tua-ti-on.
  An-schlie-ÿend schlieÿt die
  []
@@ -783,100 +774,86 @@ Underfull \hbox (badness 1708) in paragraph at lines 42--43
  []
 
 [37] [38]
-<graphics/abhaengigkeiten.jpg, id=767, 340.27126pt x 180.675pt>
+<graphics/abhaengigkeiten.jpg, id=788, 340.27126pt x 180.675pt>
 File: graphics/abhaengigkeiten.jpg Graphic file (type jpg)
 <use graphics/abhaengigkeiten.jpg>
-Package pdftex.def Info: graphics/abhaengigkeiten.jpg  used on input line 75.
+Package pdftex.def Info: graphics/abhaengigkeiten.jpg  used on input line 82.
 (pdftex.def)             Requested size: 405.45047pt x 215.29536pt.
- [39 </Users/ck/Code/tails-pdp/thesis/graphics/abhaengigkeiten.jpg>]
-[40]
+ [39 <./graphics/abhaengigkeiten.jpg>] [40]
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.0pt on input line 120.
+(Font)              scaled to size 8.0pt on input line 135.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 8.0pt on input line 120.
+(Font)              scaled to size 8.0pt on input line 135.
 
-Underfull \hbox (badness 5711) in paragraph at lines 120--121
+Underfull \hbox (badness 5711) in paragraph at lines 135--136
 \T1/ntxtlf/m/n/10.95 Generation und be-stimmt
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 120--121
+Underfull \hbox (badness 10000) in paragraph at lines 135--136
 \T1/ntxtlf/m/n/10.95 da-mit die aus-zu-wer-ten-de
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 122--123
+Underfull \hbox (badness 10000) in paragraph at lines 137--138
 []\T1/ntxtlf/m/n/10.95 Enthält die sta-ti-schen
  []
 
 
-Underfull \hbox (badness 5133) in paragraph at lines 122--123
+Underfull \hbox (badness 5133) in paragraph at lines 137--138
 \T1/ntxtt/m/n/10.95 file_open\T1/ntxtlf/m/n/10.95 -Policies bei-der
  []
 
 
-Underfull \hbox (badness 4217) in paragraph at lines 124--125
+Underfull \hbox (badness 4217) in paragraph at lines 139--140
 []\T1/ntxtlf/m/n/10.95 Enthält die attribut- und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 124--125
+Underfull \hbox (badness 10000) in paragraph at lines 139--140
 \T1/ntxtlf/m/n/10.95 Policies bei-der Policy-
  []
 
 
-Underfull \hbox (badness 1371) in paragraph at lines 126--127
+Underfull \hbox (badness 1371) in paragraph at lines 141--142
 []\T1/ntxtlf/m/n/10.95 Stellt den ak-tu-el-len Unix-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 130--130
+Underfull \hbox (badness 10000) in paragraph at lines 145--145
 []\T1/ntxtlf/m/n/10.95 Hash-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 130--131
+Underfull \hbox (badness 10000) in paragraph at lines 145--146
 []\T1/ntxtlf/m/n/10.95 Enthält die dy-na-mi-schen
  []
 
 [41] [42]
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 8.8pt on input line 154.
+(Font)              scaled to size 8.8pt on input line 167.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 6.6pt on input line 154.
- [43] [44] [45] [46] [47]
-
-Package natbib Warning: Citation `kernelCredentials' on page 48 undefined on in
-put line 230.
-
-[48] [49] [50]
-
-Package natbib Warning: Citation `manProcPidStatus' on page 51 undefined on inp
-ut line 267.
-
-[51] [52] [53] [54] [55] [56]) (./sections/06-evaluation.tex
+(Font)              scaled to size 6.6pt on input line 167.
+ [43] [44] [45] [46] [47] [48] [49] [50] [51] [52] [53] [54] [55]
+[56]) (./sections/06-evaluation.tex
 Underfull \hbox (badness 1147) in paragraph at lines 16--17
 \T1/ntxtlf/m/n/12 ge-se-hen: Ein Test-pro-zess er-hält kon-trol-liert von-ein-a
 n-der ab-wei-chen-de Real- und
  []
 
-[57]) (./sections/07-zusammenfassung-und-ausblick.tex [58])
-(/Users/ck/Code/tails-pdp/thesis/thesis.bbl [59])
-
-Package natbib Warning: There were undefined citations.
-
-[60] (/Users/ck/Code/tails-pdp/thesis/thesis.aux)
+[57] [58]) (./sections/07-zusammenfassung-und-ausblick.tex [59]) (./thesis.bbl
+[60] [61]) [62] (./thesis.aux)
 Package rerunfilecheck Info: File `thesis.out' has not changed.
 (rerunfilecheck)             Checksum: 954C7C6077DABEEBB0B822E5176025DE;23636.
  ) 
 Here is how much of TeX's memory you used:
- 14370 strings out of 478994
- 201363 string characters out of 5858184
- 518551 words of memory out of 5000000
- 31368 multiletter control sequences out of 15000+600000
+ 14412 strings out of 478994
+ 201656 string characters out of 5858184
+ 524981 words of memory out of 5000000
+ 31399 multiletter control sequences out of 15000+600000
  476870 words of font info for 142 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 71i,10n,74p,1367b,514s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,10n,74p,1367b,533s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/
 local/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/local/
 texlive/2021/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texliv
@@ -886,11 +863,10 @@ e/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021
 nts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1
 /public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/n
 ewtx/ztmri.pfb>
-Output written on /Users/ck/Code/tails-pdp/thesis/thesis.pdf (60 pages, 587655 
-bytes).
+Output written on thesis.pdf (62 pages, 594917 bytes).
 PDF statistics:
- 1014 PDF objects out of 1200 (max. 8388607)
- 926 compressed objects within 10 object streams
- 205 named destinations out of 1000 (max. 500000)
+ 1075 PDF objects out of 1200 (max. 8388607)
+ 985 compressed objects within 10 object streams
+ 217 named destinations out of 1000 (max. 500000)
  851 words of extra memory for PDF output out of 10000 (max. 10000000)
 

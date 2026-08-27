@@ -27,10 +27,10 @@
 \contentsline {subsection}{\numberline {4.3}Datenfluss}{20}{subsection.4.3}%
 \contentsline {subsubsection}{\numberline {4.3.1}Policy-Datenfluss}{20}{subsubsection.4.3.1}%
 \contentsline {subsubsection}{\numberline {4.3.2}Datenfluss dynamischer Attribute}{21}{subsubsection.4.3.2}%
-\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{21}{subsubsection.4.3.3}%
+\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{22}{subsubsection.4.3.3}%
 \contentsline {subsubsection}{\numberline {4.3.4}Nachträgliche Kontrolle bestehender Zugriffe}{22}{subsubsection.4.3.4}%
 \contentsline {subsection}{\numberline {4.4}Komponenten}{22}{subsection.4.4}%
-\contentsline {subsubsection}{\numberline {4.4.1}Userspace-Komponenten}{22}{subsubsection.4.4.1}%
+\contentsline {subsubsection}{\numberline {4.4.1}Userspace-Komponenten}{23}{subsubsection.4.4.1}%
 \contentsline {paragraph}{Policies}{23}{section*.2}%
 \contentsline {paragraph}{Policyverwaltung}{23}{section*.3}%
 \contentsline {paragraph}{Attributloader}{23}{section*.4}%
@@ -44,11 +44,11 @@
 \contentsline {subsubsection}{\numberline {4.5.2}Datenobjekte im Kernelspace}{24}{subsubsection.4.5.2}%
 \contentsline {subsection}{\numberline {4.6}Entwurfsentscheidungen}{25}{subsection.4.6}%
 \contentsline {subsubsection}{\numberline {4.6.1}Trennung von Userspace und Kernelspace}{25}{subsubsection.4.6.1}%
-\contentsline {subsubsection}{\numberline {4.6.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{25}{subsubsection.4.6.2}%
+\contentsline {subsubsection}{\numberline {4.6.2}Einsatz von eBPF-LSM statt klassischem Kernelmodul}{26}{subsubsection.4.6.2}%
 \contentsline {subsubsection}{\numberline {4.6.3}Auswahl des LSM-Hooks}{26}{subsubsection.4.6.3}%
 \contentsline {subsubsection}{\numberline {4.6.4}Policy-Verarbeitung im Userspace}{27}{subsubsection.4.6.4}%
 \contentsline {subsubsection}{\numberline {4.6.5}Reduzierte Policy-Repräsentation im Kernelspace}{28}{subsubsection.4.6.5}%
-\contentsline {subsubsection}{\numberline {4.6.6}Kommunikation über eBPF-Maps}{28}{subsubsection.4.6.6}%
+\contentsline {subsubsection}{\numberline {4.6.6}Kommunikation über eBPF-Maps}{29}{subsubsection.4.6.6}%
 \contentsline {subsubsection}{\numberline {4.6.7}Generationenmodell für Policy-Aktualisierungen}{29}{subsubsection.4.6.7}%
 \contentsline {subsubsection}{\numberline {4.6.8}Trennung statischer Policies und Streampolicies}{30}{subsubsection.4.6.8}%
 \contentsline {subsubsection}{\numberline {4.6.9}Aufteilung der Policy-Maps nach Hook und Policy-Typ}{31}{subsubsection.4.6.9}%
@@ -57,7 +57,7 @@
 \contentsline {subsubsection}{\numberline {4.6.12}Identifikation von Dateien über Device und Inode}{33}{subsubsection.4.6.12}%
 \contentsline {subsubsection}{\numberline {4.6.13}Nachträgliche Überwachung durch den Userspace-PEP}{34}{subsubsection.4.6.13}%
 \contentsline {subsubsection}{\numberline {4.6.14}Enforcement durch Schließen von File Descriptors}{35}{subsubsection.4.6.14}%
-\contentsline {subsubsection}{\numberline {4.6.15}Administration und Diagnose über ein separates Tool}{35}{subsubsection.4.6.15}%
+\contentsline {subsubsection}{\numberline {4.6.15}Administration und Diagnose über ein separates Tool}{36}{subsubsection.4.6.15}%
 \contentsline {section}{\numberline {5}Entwurf und Umsetzung}{37}{section.5}%
 \contentsline {subsection}{\numberline {5.1}Implementierungsstruktur}{37}{subsection.5.1}%
 \contentsline {subsubsection}{\numberline {5.1.1}Aufteilung des Rust-Workspaces}{37}{subsubsection.5.1.1}%
@@ -81,12 +81,12 @@
 \contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{46}{subsubsection.5.5.1}%
 \contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{47}{subsubsection.5.5.2}%
 \contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{47}{subsubsection.5.5.3}%
-\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{48}{subsubsection.5.5.4}%
+\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{47}{subsubsection.5.5.4}%
 \contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{48}{subsubsection.5.5.5}%
 \contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{48}{subsection.5.6}%
 \contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{48}{subsubsection.5.6.1}%
 \contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{49}{subsubsection.5.6.2}%
-\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{50}{subsubsection.5.6.3}%
+\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{49}{subsubsection.5.6.3}%
 \contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{50}{subsubsection.5.6.4}%
 \contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{50}{subsubsection.5.6.5}%
 \contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{51}{subsection.5.7}%
@@ -96,17 +96,17 @@
 \contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{53}{subsection.5.8}%
 \contentsline {subsubsection}{\numberline {5.8.1}Auswahl und Ausgabe des aktiven Zustands}{53}{subsubsection.5.8.1}%
 \contentsline {subsubsection}{\numberline {5.8.2}Darstellung nicht umkehrbarer Hashwerte}{53}{subsubsection.5.8.2}%
-\contentsline {subsubsection}{\numberline {5.8.3}Read-only-Schnittstelle und Fehlerverhalten}{54}{subsubsection.5.8.3}%
+\contentsline {subsubsection}{\numberline {5.8.3}Read-only-Schnittstelle und Fehlerverhalten}{53}{subsubsection.5.8.3}%
 \contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{54}{subsection.5.9}%
 \contentsline {subsubsection}{\numberline {5.9.1}Startfehler und Map-Kompatibilität}{54}{subsubsection.5.9.1}%
 \contentsline {subsubsection}{\numberline {5.9.2}Konsistente Aktualisierung von Policies und Attributen}{54}{subsubsection.5.9.2}%
-\contentsline {subsubsection}{\numberline {5.9.3}Fail-closed und laufzeitbezogene Fehler}{55}{subsubsection.5.9.3}%
+\contentsline {subsubsection}{\numberline {5.9.3}Fail-closed und laufzeitbezogene Fehler}{54}{subsubsection.5.9.3}%
 \contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{55}{subsection.5.10}%
 \contentsline {subsubsection}{\numberline {5.10.1}Build-Prozess und Build-Artefakte}{55}{subsubsection.5.10.1}%
-\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem}{56}{subsubsection.5.10.2}%
+\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem}{55}{subsubsection.5.10.2}%
 \contentsline {subsubsection}{\numberline {5.10.3}Implementierungsbedingte Grenzen}{56}{subsubsection.5.10.3}%
 \contentsline {section}{\numberline {6}Evaluation}{57}{section.6}%
 \contentsline {subsection}{\numberline {6.1}Testumgebung}{57}{subsection.6.1}%
 \contentsline {subsection}{\numberline {6.2}Testszenarien}{57}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Ergebnisse}{57}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{58}{section.7}%
+\contentsline {subsection}{\numberline {6.3}Ergebnisse}{58}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{59}{section.7}%

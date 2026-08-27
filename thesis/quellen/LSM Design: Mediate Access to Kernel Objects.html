@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+<!--Converted with LaTeX2HTML 2002-1 (1.68)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>LSM Design: Mediate Access to Kernel Objects</TITLE>
+<META NAME="description" CONTENT="LSM Design: Mediate Access to Kernel Objects">
+<META NAME="keywords" CONTENT="lsm-html">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-1">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="lsm-html.css">
+
+<LINK REL="next" HREF="node4.html">
+<LINK REL="previous" HREF="node2.html">
+<LINK REL="up" HREF="index.html">
+<LINK REL="next" HREF="node4.html">
+</HEAD>
+
+<a href="https://www.usenix.org"><img src="/graphics/new_usenix.jpg" width="288" height="232" alt="Check out the new USENIX Web site." align="right"></a>
+
+
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html91"
+  HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="../../buttons/next_motif.gif"></A> 
+<A NAME="tex2html89"
+  HREF="index.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="../../buttons/up_motif.gif"></A> 
+<A NAME="tex2html83"
+  HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="../../buttons/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html92"
+  HREF="node4.html">Implementation</A>
+<B> Up:</B> <A NAME="tex2html90"
+  HREF="index.html">Linux Security Modules: General</A>
+<B> Previous:</B> <A NAME="tex2html84"
+  HREF="node2.html">The Problem: Constrained Design</A>
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H1><A NAME="SECTION00030000000000000000"></A>
+<A NAME="sec:design"></A>
+<BR>
+LSM Design: Mediate Access to Kernel Objects
+</H1>
+
+<P>
+The system call interface provides an abstraction for userspace to
+interact with the kernel, and is a tempting location to mediate
+access.  In fact, no kernel modifications are required to overwrite
+entries in the system call lookup table, making it trivial to mediate
+this interface using kernel modules&nbsp;[<A
+ HREF="node30.html#badger99">18</A>,<A
+ HREF="node30.html#fraser00">19</A>].  While
+this is an attractive feature, mediating the system call interface
+provides limited value for a general purpose security framework such
+as LSM&nbsp;[<A
+ HREF="node30.html#spencer99:flask">41</A>].  This level of mediation is not
+race-free, may require code duplication, and may not adequately
+express the full context needed to make security policy decisions.
+
+<P>
+The basic abstraction of the LSM interface is to mediate
+access to <EM>internal</EM> kernel objects.  LSM seeks to allow modules
+to answer the question ``May a subject <TT>S</TT> perform a kernel operation 
+<TT>OP</TT> on an internal kernel object <TT>OBJ</TT>?''  
+
+<P>
+
+<DIV ALIGN="CENTER"><A NAME="fig:lsmarch"></A><A NAME="175"></A>
+<TABLE>
+<CAPTION ALIGN="BOTTOM"><STRONG>Figure:</STRONG>
+<FONT SIZE="-1">LSM Hook Architecture</FONT></CAPTION>
+<TR><TD><IMG
+ WIDTH="345" HEIGHT="275" BORDER="0"
+ SRC="img1.png"
+ ALT="\begin{figure}\begin{center}
+\epsfxsize =3.0in
+\epsfbox{design-pic}\end{center}\end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+
+<P>
+LSM allows modules to mediate access to kernel objects by placing <EM>hooks</EM> in the kernel code just ahead of the access, as shown in
+Figure&nbsp;<A HREF="node3.html#fig:lsmarch">1</A>. Just before the kernel <EM>would</EM> have
+accessed an internal object, a hook makes a call to a function that the
+LSM module must provide. The module can either let the access occur, or
+deny access, forcing an error code return.
+
+<P>
+The LSM framework leverages the kernel's existing mechanisms to translate
+user supplied data -- typically strings, handles or simplified data
+structures -- into internal data structures.  This avoids time of check
+to time of use (TOCTTOU) races&nbsp;[<A
+ HREF="node30.html#bishop96">8</A>] and
+inefficient duplicate look ups. It also allows the LSM framework to
+directly mediate access to the core kernel data structures.  With such an
+approach, the LSM framework has access to the full kernel context just
+before the kernel actually performs the requested service.  This
+improves access control granularity.
+
+<P>
+Given the constrained design space described in
+Section&nbsp;<A HREF="node2.html#sec:problem">2</A>, the LSM project chose to limit the scope of
+the LSM design to supporting the core access control functionality
+required by the existing Linux security projects.  This limitation
+enabled the LSM framework to remain conceptually simple and minimally
+invasive while still meeting the needs of many of the security
+projects.  It also strengthened the justification for adopting the LSM
+framework into the Linux kernel, since the need for enhanced access
+controls was more generally accepted by the kernel developers than the
+need for other kinds of security functionality such as auditing.
+
+<P>
+A consequence of the ``stay simple'' design decision is that LSM hooks
+are primarily <EM>restrictive</EM>: where the kernel was about to
+grant access, the module may deny access, but when the kernel would
+deny access, the module is not consulted. This design simplification
+exists largely because the Linux kernel ``short-circuits'' many
+decisions early when error conditions are detected. Providing for <EM>authoritative</EM> hooks (where the module can override either decision)
+would require many more hooks into the Linux kernel.
+
+<P>
+
+<DIV ALIGN="CENTER"><A NAME="fig:permissive"></A><A NAME="176"></A>
+<TABLE>
+<CAPTION ALIGN="BOTTOM"><STRONG>Figure:</STRONG>
+<FONT SIZE="-1">Permissive LSM hook.  This hook allows the
+security policy to override a DAC restriction.</FONT></CAPTION>
+<TR><TD><IMG
+ WIDTH="344" HEIGHT="186" BORDER="0"
+ SRC="img2.png"
+ ALT="\begin{figure}\begin{center}
+\epsfxsize =3.0in
+\epsfbox{permissive}\end{center}\end{figure}"></TD></TR>
+</TABLE>
+</DIV>
+
+<P>
+However, the POSIX.1e capabilities
+logic requires the ability to grant accesses that would ordinarily be
+denied at a coarse level of granularity.  In order to support this
+logic as a security module, LSM provides some minimal support for these
+<EM>permissive</EM> hooks, where the module can grant access the kernel was
+about to deny.  The permissive hooks are typically coupled with a simple
+DAC check, and allow the module to override the DAC restriction.  
+Figure&nbsp;<A HREF="node3.html#fig:permissive">2</A> shows a user access request where a failed
+user ID check can be overridden by a permissive hook.
+These hooks are limited to the extent that the kernel already consults
+the POSIX.1e <TT>capable()</TT> function.
+
+<P>
+Although LSM was not designed to explicitly support security auditing,
+some forms of auditing can be supported using the features provided
+for access control.  For example, many of the existing Linux security
+projects provide support for auditing the access checks performed by
+their access controls. LSM also enables support for this kind of
+auditing.  Some security auditing can also be supported via existing
+kernel modules by interposing on system calls, as in the SNARE
+project&nbsp;[<A
+ HREF="node30.html#snare">25</A>].
+
+<P>
+Many security models require binding security attributes to kernel
+objects. To facilitate this, LSM provides for opaque <EM>security
+fields</EM> that are attached to various internal kernel objects (detailed in
+Section&nbsp;<A HREF="node6.html#subsec:opaque">4.1.1</A>). However, the module is completely
+responsible for managing these fields, including allocation,
+deallocation, and concurrency control.
+
+<P>
+Finally, module composition presented a challenge to the LSM design. On
+the one hand, there clearly is a need to compose some modules with
+complementary functionality. On the other hand, fully generic security
+policy composition is known to be intractable&nbsp;[<A
+ HREF="node30.html#gligor98">21</A>].
+Therefore, LSM <EM>permits</EM> module stacking, but pushes most of the
+work to the modules themselves. A module that wishes to be stackable
+must itself export an LSM-like interface, and make
+calls to subsequently loaded modules when appropriate. The first module
+loaded has ultimate control over all decisions, determining when to call 
+any other modules and how to combine their results.
+
+<P>
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html91"
+  HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next"
+ SRC="../../buttons/next_motif.gif"></A> 
+<A NAME="tex2html89"
+  HREF="index.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up"
+ SRC="../../buttons/up_motif.gif"></A> 
+<A NAME="tex2html83"
+  HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous"
+ SRC="../../buttons/previous_motif.gif"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html92"
+  HREF="node4.html">Implementation</A>
+<B> Up:</B> <A NAME="tex2html90"
+  HREF="index.html">Linux Security Modules: General</A>
+<B> Previous:</B> <A NAME="tex2html84"
+  HREF="node2.html">The Problem: Constrained Design</A>
+<!--End of Navigation Panel-->
+<ADDRESS>
+Chris Wright
+2002-05-13
+</ADDRESS>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2b9d8ee5e6f4d4a',t:'MTc4NjgxNDE4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></BODY>
+</HTML>

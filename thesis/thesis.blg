@@ -3,44 +3,44 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: thesis.aux
 The style file: plainnat.bst
 Database file #1: literatur.bib
-You've used 26 entries,
+You've used 36 entries,
             2773 wiz_defined-function locations,
-            727 strings with 8591 characters,
-and the built_in function-call counts, 8767 in all, are:
-= -- 795
-> -- 385
-< -- 25
-+ -- 154
-- -- 117
-* -- 499
-:= -- 1374
-add.period$ -- 105
-call.type$ -- 26
-change.case$ -- 117
-chr.to.int$ -- 15
-cite$ -- 52
-duplicate$ -- 408
-empty$ -- 831
-format.name$ -- 145
-if$ -- 1863
-int.to.chr$ -- 12
+            778 strings with 10316 characters,
+and the built_in function-call counts, 12025 in all, are:
+= -- 1103
+> -- 485
+< -- 36
++ -- 202
+- -- 147
+* -- 666
+:= -- 1862
+add.period$ -- 147
+call.type$ -- 36
+change.case$ -- 157
+chr.to.int$ -- 17
+cite$ -- 72
+duplicate$ -- 573
+empty$ -- 1169
+format.name$ -- 185
+if$ -- 2577
+int.to.chr$ -- 20
 int.to.str$ -- 1
-missing$ -- 2
-newline$ -- 165
-num.names$ -- 104
-pop$ -- 313
+missing$ -- 3
+newline$ -- 226
+num.names$ -- 144
+pop$ -- 430
 preamble$ -- 1
-purify$ -- 91
+purify$ -- 121
 quote$ -- 0
-skip$ -- 311
+skip$ -- 429
 stack$ -- 0
-substring$ -- 71
-swap$ -- 41
-text.length$ -- 2
+substring$ -- 115
+swap$ -- 69
+text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 286
+type$ -- 396
 warning$ -- 0
-while$ -- 80
+while$ -- 113
 width$ -- 0
-write$ -- 376
+write$ -- 520
