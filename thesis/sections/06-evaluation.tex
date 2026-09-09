@@ -60,20 +60,15 @@ Die Entwicklungs- und Build-Umgebung wird mit \texttt{nix-shell} aus
 \path{nix-config/shell.nix} erzeugt. Für den regulären Projektbuild sind insbesondere Rustup und
 Cargo, LLVM~21 einschließlich seiner Laufzeitbibliothek sowie \texttt{bpf-linker} erforderlich.
 Der Shell-Hook wählt die Rust-Nightly-Toolchain \texttt{nightly-2025-08-01} einschließlich
-\texttt{rust-src} und des Targets \texttt{bpfel-unknown-none} aus. Das Build-Skript der
-eBPF-Crate setzt die Verfügbarkeit des \texttt{bpf-linker} voraus; die Shell-Konfiguration sieht
-dafür Version 0.9.15 mit LLVM-21-Unterstützung vor. Die Rust-Abhängigkeiten werden durch
-\path{Cargo.lock} festgelegt; der verwendete Stand enthält Aya 0.13.2 und \texttt{aya-ebpf}
-0.1.2.
+\texttt{rust-src}, \texttt{rustfmt} und Clippy aus. Aya führt den Build der eBPF-Crate für das
+Ziel \texttt{bpfel-unknown-none} aus. Das Build-Skript dieser Crate setzt die Verfügbarkeit des
+\texttt{bpf-linker} voraus; die Shell-Konfiguration sieht dafür Version 0.9.15 mit
+LLVM-21-Unterstützung vor. Die Rust-Abhängigkeiten werden durch \path{Cargo.lock} festgelegt; der
+verwendete Stand enthält Aya 0.13.2 und \texttt{aya-ebpf} 0.1.2.
 
-Weitere in der Nix-Shell enthaltene Programme erfüllen unterstützende Aufgaben. \texttt{bpftool},
-\texttt{pahole}, \texttt{elfutils} und \texttt{binutils} dienen der Diagnose geladener
-BPF-Programme, Maps sowie BTF- und ELF-Artefakte, werden von der regulären Build- und Testkette
-aber nicht unmittelbar aufgerufen. Clang ergänzt die LLVM-Werkzeugumgebung, während der aktuelle
-eBPF-Build selbst über Rust, Aya und \texttt{bpf-linker} erfolgt. Komfort- und Hilfswerkzeuge wie
-\texttt{bash-completion}, \texttt{cargo-generate} und \texttt{jq} sind für die in dieser Arbeit
-ausgeführten Builds und Tests nicht erforderlich. Der privilegierte End-to-End-Test benötigt
-zusätzlich Bash, übliche Unix-Werkzeuge und Python~3; diese stehen im NixOS-Gastsystem bereit.
+Für die Ausführung der Skripte enthält die Umgebung außerdem Bash, Coreutils, GNU Grep, Procps und
+Python~3. Reine Komfort- und Diagnosewerkzeuge, die von der regulären Build- und Testkette nicht
+aufgerufen werden, sind nicht Bestandteil der minimalen Evaluationsumgebung.
 
 Tabelle~\ref{tab:testumgebung} fasst die aus den archivierten Konfigurationsdateien ableitbaren
 Merkmale zusammen. Die konkrete Proxmox-, NixOS-, Nixpkgs-, Rust- und Cargo-Version sowie der
