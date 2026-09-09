@@ -4,10 +4,10 @@
 
 | ID | Frage | Bezug |
 |---|---|---|
-| EF-1 | Erfüllt der Prototyp jede funktionale Anforderung unter Normalbedingungen? | FA-01 bis FA-12 |
-| EF-2 | Stimmen Kernel- und Userspace-PEP für identische Requests und Attribute überein? | Forschungsfrage, FA-05–07 |
+| EF-1 | Erfüllt der Prototyp jede funktionale Anforderung unter Normalbedingungen? | FA-01 bis FA-10 |
+| EF-2 | Stimmen Kernel- und Userspace-PEP für identische Requests und Attribute überein? | Forschungsfrage, FA-04–06 |
 | EF-3 | Welche Latenz liegt zwischen Attribut-/Policyänderung und wirksamem Entzugsversuch? | ASBAC-/Revocation-Kernbeitrag |
-| EF-4 | Wie verhält sich das System bei ungültigen, fehlenden oder partiell aktualisierten Zuständen? | FA-10/11, Security |
+| EF-4 | Wie verhält sich das System bei ungültigen, fehlenden oder partiell aktualisierten Zuständen? | FA-08/09, Security |
 | EF-5 | Welchen Overhead erzeugt der `file_open`-PEP? | OA-03 |
 | EF-6 | Wie skalieren Hook-Latenz, Scanzeit und CPU-Last mit Policies, Attributen, Prozessen und FDs? | technische Einschränkungen |
 | EF-7 | Welche Umgehungs- und Race-Szenarien bleiben bestehen? | Diskussion/Limitierungen |
@@ -16,7 +16,7 @@
 
 ### E1 – Anforderungs-Traceability
 
-Für jede Anforderung eine Tabellenzeile mit Setup, Eingabe, erwarteter Beobachtung, tatsächlicher Beobachtung, Test-ID und Ergebnis. Nicht nur „Test bestanden“, sondern relevante Log-/Map-/Return-Werte angeben. FA-07 muss vorab realistisch umformuliert werden.
+Für jede Anforderung eine Tabellenzeile mit Setup, Eingabe, erwarteter Beobachtung, tatsächlicher Beobachtung, Test-ID und Ergebnis. Nicht nur „Test bestanden“, sondern relevante Log-/Map-/Return-Werte angeben. FA-06 muss vorab realistisch umformuliert werden.
 
 ### E2 – Policysemantik
 

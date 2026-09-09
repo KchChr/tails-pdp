@@ -1,12 +1,121 @@
 \section{Evaluation}\label{sec:evaluation}
-Dieses Kapitel überprüft, inwieweit der implementierte Prototyp die in Kapitel~3 formulierten Anforderungen erfüllt. Dazu werden zunächst die Testumgebung und die automatisierten Prüfungen beschrieben. Anschließend werden die fachlichen Testszenarien und ihre Ergebnisse dargestellt.
+Ziel der Evaluation ist es, zu untersuchen, ob der implementierte Prototyp die zentralen Prinzipien von Attribute Stream-Based Access Control für Dateiöffnungen unter Linux wie vorgesehen umsetzt. Dazu werden die Verarbeitung von Policies und dynamischen Attributen, die Kontrolle neuer Dateiöffnungen sowie die Nachbewertung bereits bestehender Dateizugriffe überprüft. Zusätzlich werden der Laufzeitaufwand und die technischen Grenzen der prototypischen Umsetzung betrachtet.
+
 
 \subsection{Testumgebung}
-Die Evaluation erfolgt auf einem dedizierten \texttt{x86\_64}-Linux-System mit Linux-Kernel 6.16.12. Der Kernel stellt BPF-LSM, BTF unter \path{/sys/kernel/btf/vmlinux} und das BPF-Dateisystem bereit. Das Laden und Anheften der eBPF-Programme sowie der Zugriff auf die gepinnten Maps benötigen erhöhte Berechtigungen. Die eingesetzte Distribution sowie die Rust- und Toolchain-Version sind gemeinsam mit den Messergebnissen zu dokumentieren, damit die Prüfung gemäß OA-04 reproduzierbar bleibt.
 
-Das Skript \path{test.sh} führt die nicht privilegierten Prüfungen aus. Dazu gehören die Formatprüfung, die Unit- und Komponententests der gemeinsamen und Userspace-Crates, Clippy mit als Fehler behandelten Warnungen sowie ein Release-Build mit eingebettetem eBPF-Objekt. Diese Schritte prüfen Quellcode, Übersetzung und isolierbare Logik, laden das Programm jedoch noch nicht in den Kernel.
+Die Evaluation erfolgt in einer ausschließlich für die Untersuchung verwendeten virtuellen
+Maschine. Dadurch lassen sich die für das Laden der eBPF-Programme erforderlichen privilegierten
+Operationen ausführen, ohne ein Produktivsystem zu beeinflussen. Während der privilegierten
+End-to-End-Tests läuft keine weitere Instanz des Prototyps, da die Tests vorübergehend die
+gepinnten BPF-Maps unter \path{/sys/fs/bpf/tails-pdp} verwenden. Die VM-Konfiguration, die
+NixOS-Systemkonfiguration und die Definition der Entwicklungsumgebung werden gemeinsam mit dem
+Quellcode archiviert. Die Dateien \path{nix-config/configuration.nix},
+\path{nix-config/hardware-configuration.nix} und \path{nix-config/shell.nix} dokumentieren die
+für die Evaluation relevanten System-, Hardwareerkennungs- und Werkzeugvoraussetzungen.
 
-Ein Regressionstest des Userspace-PEP verwendet bewusst voneinander abweichende Real-, Effective-, Saved-Set- und Filesystem-UIDs in einem repräsentativen \path{/proc/<pid>/status}-Datensatz. Er prüft, dass ausschließlich das erste Feld und damit die definierte Real UID in den Policy-Request eingeht.
+Für die Kernel- und Durchsetzungstests muss BPF in der aktiven LSM-Reihenfolge enthalten sein.
+Darüber hinaus werden BTF-Informationen unter \path{/sys/kernel/btf/vmlinux} und ein unter
+\path{/sys/fs/bpf} eingehängtes BPF-Dateisystem vorausgesetzt. Das Laden und Anheften der
+eBPF-Programme, der Zugriff auf die gepinnten Maps und der \texttt{ptrace}-basierte Entzug eines
+File Descriptors benötigen erhöhte Berechtigungen. Root-Berechtigung und BTF-Verfügbarkeit werden
+vom Testskript explizit geprüft; die Verfügbarkeit von BPF-LSM und BPF-Dateisystem wird durch den
+erfolgreichen Runtime-Start, das Anhängen des Hooks und die erzeugten Map-Pins nachgewiesen.
+
+\subsubsection{Hard- und Softwareumgebung}
+
+Die virtuelle Maschine wird mittels QEMU/KVM auf einem Proxmox-VE-Host betrieben. Für die
+Reproduzierbarkeit sind dabei zwei Perspektiven zu unterscheiden: Die von Proxmox ausgegebene
+VM-Konfiguration beschreibt die vom Hypervisor bereitgestellten Ressourcen, während die von
+NixOS erzeugte \path{hardware-configuration.nix} die im Gastsystem erkannten Geräte und die zu
+ladenden Kernelmodule festhält. Keine der beiden Konfigurationen ersetzt daher vollständig die
+jeweils andere.
+
+Als virtuelles Prozessormodell ist \texttt{x86-64-v2-AES} konfiguriert. Zwei virtuelle Sockel mit
+jeweils zwei Kernen stellen insgesamt vier virtuelle CPUs bereit; zusätzlich sind 8192~MiB
+Arbeitsspeicher zugewiesen. Das virtuelle Systemlaufwerk besitzt eine Kapazität von 64~GiB und ist
+über VirtIO-SCSI angebunden. Diese Angaben werden aus der VM-Konfiguration übernommen, weil sie
+nicht Bestandteil der NixOS-Hardwarekonfiguration sind. Weitere betriebliche Kennungen und
+Gerätedetails der VM sind für die durchgeführten Funktions- und Laufzeittests nicht
+entscheidungsrelevant und werden daher nicht einzeln aufgeführt.
+
+Als Gastbetriebssystem kommt NixOS zum Einsatz. Die archivierte Systemkonfiguration setzt
+\texttt{system.stateVersion} auf \texttt{25.05}; dieser Wert definiert den Kompatibilitätsstand
+der NixOS-Konfiguration und ist nicht mit der tatsächlich installierten NixOS-Version
+gleichzusetzen. Der Kernel wird durch die Konfiguration aus den Quellen des stabilen
+Linux-Kernels 6.16.12 mit festgelegtem SHA-256-Hash gebaut. Die Konfiguration aktiviert unter
+anderem die Kerneloptionen für das Security-Framework und SecurityFS. Über den Kernelparameter
+\texttt{lsm=lockdown,capability,yama,apparmor,bpf} wird BPF in die beim Systemstart ausgewählte
+LSM-Reihenfolge aufgenommen. Die tatsächlich aktive Reihenfolge wird auf dem Testsystem über
+\path{/sys/kernel/security/lsm} kontrolliert.
+
+Die von NixOS generierte \path{hardware-configuration.nix} bindet das QEMU-Gastprofil ein und
+legt \texttt{x86\_64-linux} als Plattform des Gastsystems fest. Für den Systemstart werden unter
+anderem die Module für VirtIO-PCI, VirtIO-SCSI und SCSI-Datenträger in die Initial Ramdisk
+aufgenommen. Das Root-Dateisystem verwendet ext4, die EFI-Systempartition vfat; ein Swap-Gerät
+ist nicht konfiguriert. Die in dieser Datei enthaltenen UUIDs dienen ausschließlich der Zuordnung
+der Dateisysteme und werden deshalb nicht in der Übersichtstabelle wiederholt.
+
+Die Entwicklungs- und Build-Umgebung wird mit \texttt{nix-shell} aus
+\path{nix-config/shell.nix} erzeugt. Für den regulären Projektbuild sind insbesondere Rustup und
+Cargo, LLVM~21 einschließlich seiner Laufzeitbibliothek sowie \texttt{bpf-linker} erforderlich.
+Der Shell-Hook wählt die Rust-Nightly-Toolchain \texttt{nightly-2025-08-01} einschließlich
+\texttt{rust-src} und des Targets \texttt{bpfel-unknown-none} aus. Das Build-Skript der
+eBPF-Crate setzt die Verfügbarkeit des \texttt{bpf-linker} voraus; die Shell-Konfiguration sieht
+dafür Version 0.9.15 mit LLVM-21-Unterstützung vor. Die Rust-Abhängigkeiten werden durch
+\path{Cargo.lock} festgelegt; der verwendete Stand enthält Aya 0.13.2 und \texttt{aya-ebpf}
+0.1.2.
+
+Weitere in der Nix-Shell enthaltene Programme erfüllen unterstützende Aufgaben. \texttt{bpftool},
+\texttt{pahole}, \texttt{elfutils} und \texttt{binutils} dienen der Diagnose geladener
+BPF-Programme, Maps sowie BTF- und ELF-Artefakte, werden von der regulären Build- und Testkette
+aber nicht unmittelbar aufgerufen. Clang ergänzt die LLVM-Werkzeugumgebung, während der aktuelle
+eBPF-Build selbst über Rust, Aya und \texttt{bpf-linker} erfolgt. Komfort- und Hilfswerkzeuge wie
+\texttt{bash-completion}, \texttt{cargo-generate} und \texttt{jq} sind für die in dieser Arbeit
+ausgeführten Builds und Tests nicht erforderlich. Der privilegierte End-to-End-Test benötigt
+zusätzlich Bash, übliche Unix-Werkzeuge und Python~3; diese stehen im NixOS-Gastsystem bereit.
+
+Tabelle~\ref{tab:testumgebung} fasst die aus den archivierten Konfigurationsdateien ableitbaren
+Merkmale zusammen. Die konkrete Proxmox-, NixOS-, Nixpkgs-, Rust- und Cargo-Version sowie der
+getestete Git-Commit werden unmittelbar auf dem Testsystem erfasst und zusammen mit den
+Testergebnissen dokumentiert. Dies ist insbesondere für Nixpkgs erforderlich, weil die aktuelle
+\path{nix-config/shell.nix} das zum Ausführungszeitpunkt konfigurierte \texttt{<nixpkgs>}
+importiert und keine feste Nixpkgs-Revision enthält.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Hard- und Softwarekonfiguration der Testumgebung}
+    \label{tab:testumgebung}
+    \begin{tabular}{p{0.36\textwidth}p{0.55\textwidth}}
+        \hline
+        \textbf{Komponente} & \textbf{Konfiguration} \\
+        \hline
+        Virtualisierungsplattform & Proxmox VE mit QEMU/KVM \\
+        Virtuelles CPU-Modell & \texttt{x86-64-v2-AES} \\
+        CPU-Konfiguration & 2 Sockel, jeweils 2 Kerne; insgesamt 4 vCPUs \\
+        Arbeitsspeicher & 8192 MiB \\
+        Virtuelles Laufwerk & 64 GiB \\
+        Speicheranbindung & VirtIO-SCSI \\
+        NixOS-Hardwareprofil & QEMU-Gast, Plattform \texttt{x86\_64-linux} \\
+        Dateisysteme & ext4 für \path{/}, vfat für \path{/boot}; kein Swap \\
+        Gastbetriebssystem & NixOS; \texttt{system.stateVersion} 25.05 \\
+        Linux-Kernel & 6.16.12, aus festgelegtem Quellarchiv gebaut \\
+        LSM-Reihenfolge laut Konfiguration & \texttt{lockdown,capability,yama,apparmor,bpf} \\
+        Entwicklungsumgebung & \texttt{nix-shell} auf Basis von \texttt{<nixpkgs>} \\
+        LLVM & LLVM-Paketfamilie 21 einschließlich \texttt{libLLVM} \\
+        Rust-Toolchain & \texttt{nightly-2025-08-01} mit \texttt{rust-src} \\
+        eBPF-Zielarchitektur & \texttt{bpfel-unknown-none} \\
+        \texttt{bpf-linker} & 0.9.15 \\
+        Aya / \texttt{aya-ebpf} & 0.13.2 / 0.1.2 gemäß \path{Cargo.lock} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Da die Evaluation innerhalb einer virtuellen Maschine erfolgt, können insbesondere Zeitmessungen
+durch das Scheduling des Hypervisors und durch gleichzeitig auf dem Proxmox-Host ausgeführte
+Arbeitslasten beeinflusst werden. Gemessene Laufzeiten charakterisieren daher die dokumentierte
+Testumgebung und sind nicht ohne Weiteres als allgemeingültige Werte für andere Hard- und
+Softwarekonfigurationen zu verstehen.
 
 \subsection{Testszenarien}
 Die Kernel- und Durchsetzungsszenarien führt \path{test-e2e.sh} mit Root-Rechten auf dem dedizierten Testsystem aus. Das Skript prüft das Laden durch den Verifier, das Anheften des \texttt{file\_open}-Hooks, statische und zeitabhängige Policies, Änderungen von Subject-, System- und Ressourcenattributen, das Beibehalten der letzten gültigen Generation nach einer fehlerhaften Änderung sowie den gezielten Entzug eines einzelnen File Descriptors. Ein Szenario mit zwei geöffneten Dateien überprüft insbesondere, dass nur der Deskriptor der unzulässig gewordenen Datei geschlossen wird.

@@ -95,7 +95,7 @@ Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Po
 \subsubsection{Datenfluss dynamischer Attribute}
 
 Neben den Policies werden dynamische Attribute aus dem Userspace in den Kernelspace übertragen.
-Im Prototyp betrifft dies die aktuelle Zeit sowie vom Nutzer frei wählbare Attribute (vgl. FA-12).
+Im Prototyp betrifft dies die aktuelle Zeit sowie vom Nutzer frei wählbare Attribute (vgl. FA-10).
 
 Der Attributloader schreibt die Unix-Zeit einmal pro Sekunde in die einzige gepinnte Zeit-Map
 \texttt{CURRENT\_TIME}. Kernelspace-PEP und Userspace-PEP lesen denselben Wert und leiten daraus

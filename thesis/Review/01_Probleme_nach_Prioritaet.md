@@ -19,7 +19,7 @@
 
 ## P0-02 – „Unmittelbarer“ FD-Entzug ist durch Architektur und Code nicht erfüllt
 
-**Fundstelle:** Kapitel 3, FA-07, PDF S. 14–15; `03-anforderungsanalyse.tex`, Zeilen 43–49. Kapitel 4.3.4/4.6.13–14, PDF S. 20/32–33. Kapitel 5.7, PDF S. 49–50. Code: `tails-pdp-userspace-pep/src/pep.rs`, Zeilen 105–131, 323–399; `fd_revoker.rs`, Zeilen 3–18, 38–86.
+**Fundstelle:** Kapitel 3, FA-06, PDF S. 14–15; `03-anforderungsanalyse.tex`. Kapitel 4.3.4/4.6.13–14, PDF S. 20/32–33. Kapitel 5.7, PDF S. 49–50. Code: `tails-pdp-userspace-pep/src/pep.rs`, Zeilen 105–131, 323–399; `fd_revoker.rs`, Zeilen 3–18, 38–86.
 
 **Beschreibung:** Der Scan läuft einmal pro Sekunde. Zwischen `/proc`-Erfassung, Policyprüfung und `close(fd)` kann sich die FD-Belegung ändern. Nur ein Thread wird angehalten; andere Threads können dieselbe FD-Tabelle verändern. Duplikate, vererbte Deskriptoren, bereits erstellte `mmap`-Abbildungen und weitere Zugriffskanäle bleiben bestehen. PID 1 und der eigene Prozess werden ausdrücklich ausgenommen; `ptrace` kann zudem scheitern.
 
@@ -27,7 +27,7 @@
 
 **Lösungsmöglichkeiten:**
 
-- **Lösung A (empfohlen):** FA-07 auf „innerhalb eines periodischen Scanintervalls best-effort erkennen und einen zum Prüfzeitpunkt zugeordneten FD-Entzug versuchen“ präzisieren; Garantien und Nicht-Garantien explizit auflisten und messen. *Vorteil:* entspricht Code und Bachelor-Scope. *Nachteil:* schwächeres Sicherheitsversprechen. *Wirkung:* sehr hoch.
+- **Lösung A (empfohlen):** FA-06 auf eine empirisch prüfbare, ereignisbasierte Best-Effort-Nachbewertung und einen gezielten FD-Entzugsversuch präzisieren; Garantien und Nicht-Garantien explizit auflisten und messen. *Vorteil:* entspricht Code und Bachelor-Scope. *Nachteil:* schwächeres Sicherheitsversprechen. *Wirkung:* sehr hoch.
 - **Lösung B:** Vor dem Entzug Identität erneut prüfen, Threadgruppe stabilisieren und Race-Tests ergänzen. *Vorteil:* reduziert Fehlentzug. *Nachteil:* hoher technischer Aufwand, keine vollständige Lösung. *Wirkung:* hoch.
 - **Lösung C:** Ereignis-/kernelbasierte kontinuierliche Mediation zusätzlicher Operationen entwerfen. *Vorteil:* näher am Modell. *Nachteil:* sehr hoher Aufwand und vermutlich außerhalb des verbleibenden Bachelor-Scope. Als Ausblick geeignet.
 
@@ -185,7 +185,7 @@
 
 ## P2-03 – Sprache und Terminologie sind stellenweise unpräzise
 
-**Fundstelle:** u. a. Kapitel 1.1 („LSM … mittels ABAC“), Kapitel 4.1 („praktische“ kleingeschrieben), FA-07 („unmittelbar“), wechselnd „Streamingattribute“, „Stream-Attribute“, „Streampolicies“, „Kernelprogramm“.
+**Fundstelle:** u. a. Kapitel 1.1 („LSM … mittels ABAC“), Kapitel 4.1 („praktische“ kleingeschrieben), FA-06 („unmittelbar“), wechselnd „Streamingattribute“, „Stream-Attribute“, „Streampolicies“, „Kernelprogramm“.
 
 **Beschreibung:** Mehrere Begriffe werden ohne feste Definition oder zu weitgehend verwendet. Einige Sätze machen aus plausiblen Entwurfsentscheidungen Notwendigkeiten („muss“, „verhindert“), obwohl nur ein Prototypweg gezeigt wird.
 
