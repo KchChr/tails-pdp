@@ -85,9 +85,9 @@ importiert und keine feste Nixpkgs-Revision enthält.
         \hline
         \textbf{Komponente} & \textbf{Konfiguration} \\
         \hline
-        Virtualisierungsplattform & Proxmox VE mit QEMU/KVM \\
+        Virtualisierungsplattform & Proxmox VE (8.4.17) mit QEMU/KVM \\
         Virtuelles CPU-Modell & \texttt{x86-64-v2-AES} \\
-        CPU-Konfiguration & 2 Sockel, jeweils 2 Kerne; insgesamt 4 vCPUs \\
+        CPU-Konfiguration & 4 vCPUs \\
         Arbeitsspeicher & 8192 MiB \\
         Virtuelles Laufwerk & 64 GiB \\
         Speicheranbindung & VirtIO-SCSI \\
@@ -112,12 +112,127 @@ Arbeitslasten beeinflusst werden. Gemessene Laufzeiten charakterisieren daher di
 Testumgebung und sind nicht ohne Weiteres als allgemeingültige Werte für andere Hard- und
 Softwarekonfigurationen zu verstehen.
 
-\subsection{Testszenarien}
-Die Kernel- und Durchsetzungsszenarien führt \path{test-e2e.sh} mit Root-Rechten auf dem dedizierten Testsystem aus. Das Skript prüft das Laden durch den Verifier, das Anheften des \texttt{file\_open}-Hooks, statische und zeitabhängige Policies, Änderungen von Subject-, System- und Ressourcenattributen, das Beibehalten der letzten gültigen Generation nach einer fehlerhaften Änderung sowie den gezielten Entzug eines einzelnen File Descriptors. Ein Szenario mit zwei geöffneten Dateien überprüft insbesondere, dass nur der Deskriptor der unzulässig gewordenen Datei geschlossen wird.
+\subsection{Teststrategie und Testszenarien}
 
-Während dieses Tests verwendet der Prototyp die gepinnten Maps unter \path{/sys/fs/bpf/tails-pdp}. Der Test darf deshalb nicht parallel zu einer regulären Instanz und nicht auf einem Produktivsystem ausgeführt werden. Für jedes Szenario sind Ausgangszustand, Änderung, erwartete Entscheidung und beobachtetes Ergebnis festzuhalten.
+Die Evaluation kombiniert automatisierte Unit- und Komponententests mit privilegierten
+End-to-End-Tests und ausgewählten Laufzeitmessungen. Die Teststufen liefern unterschiedliche
+Arten von Evidenz und werden deshalb getrennt betrachtet. Unit- und Komponententests prüfen
+isolierbare Logik unter kontrollierten Bedingungen. End-to-End-Szenarien untersuchen dagegen das
+Zusammenspiel der Userspace-Komponenten mit den BPF-Maps und dem tatsächlich geladenen
+eBPF-LSM-Programm. Die Laufzeitmessungen ergänzen die funktionalen Nachweise um quantitative
+Aussagen zur Reaktionszeit und zum zusätzlichen Aufwand bei kontrollierten Dateiöffnungen.
 
-Für die Subjektidentität ist ergänzend ein privilegiertes Credential-Szenario vorgesehen: Ein Testprozess erhält kontrolliert voneinander abweichende Real- und Effective-UIDs. Eine UID-gefilterte Policy muss sowohl beim neuen Öffnungsvorgang im Kernelspace-PEP als auch bei der Nachbewertung im Userspace-PEP anhand der Real UID entscheiden. Dieses Szenario wird erst nach seiner Ausführung als End-to-End-Nachweis gewertet; der Unit-Test allein belegt lediglich die Userspace-Auswahl des ersten \texttt{Uid:}-Feldes.
+Dieser Abschnitt beschreibt zunächst den Versuchsaufbau und das jeweils erwartete Verhalten. Die
+tatsächlich beobachteten Resultate werden davon getrennt in Abschnitt~6.3 dargestellt. Dadurch
+wird vermieden, die Bewertungskriterien nach Kenntnis der Ergebnisse anzupassen.
+
+\subsubsection{Teststufen und Bewertungskriterien}
+
+Die Unit-Tests untersuchen einzelne Funktionen mit fest vorgegebenen Eingaben und vergleichen deren
+Ausgabe durch Assertions mit dem erwarteten Ergebnis. Komponententests beziehen mehrere Funktionen
+einer Userspace-Komponente ein, ersetzen externe Abhängigkeiten jedoch teilweise durch
+Testdoubles. So prüfen die Generationstests die Reihenfolge von Bankschreiben und Aktivierung mit
+einem speicherbasierten Ersatz für die BPF-Maps. Die Tests des Userspace-PEP verwenden einen
+\texttt{FakeFdCloser}, der Schließversuche protokolliert, aber keinen realen Systemaufruf in einem
+anderen Prozess ausführt. Diese Tests können die fachliche Logik und das lokale Fehlerverhalten
+präzise prüfen, belegen jedoch weder die Annahme des eBPF-Programms durch den Kernel-Verifier noch
+die reale Durchsetzung einer Zugriffsentscheidung.
+
+Die End-to-End-Tests führen den vollständigen Pfad von einer Policy- oder Attributdatei über die
+Loader und gepinnten BPF-Maps bis zur beobachtbaren Wirkung auf einen Dateizugriff aus. Sie prüfen
+damit Eigenschaften, die sich in einer isolierten Testumgebung nicht nachweisen lassen, etwa das
+Laden des eBPF-Objekts, das Anhängen des \texttt{file\_open}-Hooks und den tatsächlichen Entzug
+eines File Descriptors. Quantitative Messungen werden wiederholt ausgeführt und anhand vorab
+festgelegter Messgrößen ausgewertet. Einzelne erfolgreiche Durchläufe werden nicht als Nachweis
+allgemeiner zeitlicher Garantien oder unbegrenzter Skalierbarkeit interpretiert.
+
+Tabelle~\ref{tab:teststufen} fasst die Teststufen und ihre Aussagegrenzen zusammen.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Teststufen der Evaluation}
+    \label{tab:teststufen}
+    \begin{tabular}{p{0.22\textwidth}p{0.32\textwidth}p{0.37\textwidth}}
+        \hline
+        \textbf{Teststufe} & \textbf{Gegenstand} & \textbf{Aussagegrenze} \\
+        \hline
+        Unit-Test & Einzelne Parser-, Vergleichs- und Hilfsfunktionen & Kein realer Kernel- oder
+        Durchsetzungsnachweis \\
+        Komponententest & Zusammenwirkende Funktionen einer Userspace-Komponente, teilweise mit
+        Testdoubles & Externe Schnittstellen wie BPF-Maps oder \texttt{ptrace} werden teilweise
+        ersetzt \\
+        End-to-End-Test & Vollständiger Pfad auf dem Linux-Zielsystem & Nachweis gilt für das
+        definierte Szenario und die dokumentierte Testumgebung \\
+        Laufzeitmessung & Reaktionszeit und Aufwand kontrollierter Dateiöffnungen & Keine
+        allgemeine Echtzeit- oder Skalierbarkeitsgarantie \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Für die abschließende Zuordnung zu den Anforderungen werden die Bewertungen \emph{erfüllt},
+\emph{teilweise erfüllt}, \emph{nicht erfüllt} und \emph{nicht untersucht} verwendet. Eine
+Anforderung gilt als erfüllt, wenn ihr Akzeptanzkriterium unter den dokumentierten Bedingungen
+vollständig beobachtet wird. Als teilweise erfüllt wird sie bewertet, wenn das vorgesehene
+Grundverhalten nachweisbar ist, aber relevante Einschränkungen oder nicht abgedeckte Fälle
+verbleiben. Schlägt das erwartete Verhalten fehl, gilt die Anforderung als nicht erfüllt. Fehlt
+ein geeigneter Nachweis, wird sie als nicht untersucht ausgewiesen. Die Bewertung bezieht sich
+stets auf den begrenzten Funktionsumfang des Prototyps und stellt keinen vollständigen
+Sicherheitsnachweis dar.
+
+\subsubsection{Unit- und Komponententests}
+
+Das Skript \path{test.sh} bündelt die nicht privilegierte Prüfkette. Es führt 46 automatisierte
+Rust-Tests in fünf Modulen aus. Die Option \texttt{--locked} stellt sicher, dass Cargo dabei die
+in \path{Cargo.lock} festgehaltene Abhängigkeitsauflösung nicht verändert. Der in der
+Cargo-Konfiguration für reguläre Programmstarts eingestellte privilegierte Runner wird für diese
+Tests durch \texttt{env} ersetzt. Die Tests benötigen daher keine Root-Rechte, laden kein
+eBPF-Programm in den Kernel und verändern keine gepinnten BPF-Maps.
+
+Die Tests der gemeinsamen Crate \path{tails-pdp-common} bilden mit 16 Testfällen die fachliche
+Entscheidungslogik ab. Sie prüfen das Matching statischer und zeitabhängiger Policies, die
+Ableitung von UTC-Komponenten, die Grenzen der Vergleichsoperatoren und die Combining-Regel
+\emph{deny-overrides}. Darüber hinaus untersuchen sie dynamische Zahlen-, Boolean- und
+Stringattribute, Typabweichungen sowie die unterschiedlichen Objektidentifikatoren der System-,
+Subject- und Resource-Namespaces. Da Teile dieser Funktionen sowohl im Kernelspace- als auch im
+Userspace-Pfad verwendet werden, prüfen die Tests die gemeinsam genutzte Semantik, nicht jedoch
+die Einbindung in die jeweilige Laufzeitumgebung.
+
+Der Policyloader besitzt 14 Tests für das Einlesen, Parsen, Übersetzen und Validieren textueller
+Policies. Abgedeckt sind unter anderem statische und zeitabhängige Policies, frei benannte
+dynamische Attribute, ungültige Attributnamen, doppelte Policynamen, fehlende Semikolons,
+unbekannte oder deaktivierte Actions, ungültige Zeitwerte und das Überschreiten der festgelegten
+Kapazitätsgrenzen. Weitere Tests prüfen das rekursive Einlesen ausschließlich von Dateien mit der
+Endung \path{.policy}. Ein speicherbasierter \texttt{FakePolicyStore} kontrolliert, dass zuerst
+die inaktive Bank beschrieben und erst danach die neue Generation aktiviert wird. Simulierte
+Schreib- und Aktivierungsfehler müssen die zuvor aktive Generation unverändert lassen; außerdem
+werden nicht mehr belegte Einträge einer neu vorbereiteten Bank deaktiviert.
+
+Zwei Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
+Stringwerte sowie die Validierung von Attributnamen und des zulässigen DEFCON-Wertebereichs. Zwei
+weitere Tests in \path{tails-pdp-userspace-common} untersuchen den begrenzten Trigger-Kanal. Sie
+prüfen, dass mehrere schnell aufeinanderfolgende Aktivierungen bei voller Kanalkapazität
+koalesziert werden und ein geschlossener Kanal als Fehler gemeldet wird.
+
+Die zwölf Tests des Userspace-PEP prüfen die Auswertung von Prozess- und
+File-Descriptor-Informationen sowie die Steuerung der Nachbewertung. Dazu gehören das Filtern
+numerischer Einträge unter \path{/proc}, die Auswahl der Real UID aus
+\path{/proc/<pid>/status}, die Erkennung regulärer Dateien und die gezielte Zuordnung eines
+Verstoßes zu Prozess und File Descriptor. Mit dem \texttt{FakeFdCloser} wird geprüft, dass ein
+File Descriptor innerhalb eines Scans höchstens einmal behandelt wird, unterschiedliche
+Deskriptoren unabhängig bleiben und ein fehlgeschlagener Schließversuch die Bearbeitung weiterer
+Verstöße nicht abbricht. Ergänzend testen asynchrone Fälle das Warten auf Aktivierungsereignisse
+sowie die Berechnung relevanter Stunden- und Modulo-Zeitgrenzen.
+
+Neben den funktionalen Rust-Tests führt \path{test.sh} drei Qualitätsprüfungen aus. Eine reine
+Formatprüfung kontrolliert mit \texttt{cargo fmt}, ob der Rust-Quellcode dem vorgegebenen Format
+entspricht. Clippy analysiert Produktions- und Testcode statisch; Warnungen werden dabei als
+Fehler behandelt. Abschließend erzeugt ein Release-Build die Userspace-Binaries und über das
+Build-Skript des Hauptprogramms auch das eingebettete eBPF-Objekt. Dieser Build belegt die
+Übersetzbarkeit des gemeinsamen Quellstands, ersetzt aber nicht die anschließende Prüfung durch
+den Kernel-Verifier. In der eBPF-Crate selbst werden keine nativen Unit-Tests ausgeführt, da ihr
+Code für die BPF-Zielarchitektur und eine \texttt{no\_std}-Umgebung übersetzt wird. Die
+gemeinsame Policylogik wird daher nativ getestet; die tatsächliche Kernelausführung ist
+Gegenstand der folgenden End-to-End-Szenarien.
 
 \subsection{Ergebnisse}
 % Messergebnisse und Zuordnung zu den Anforderungen ergänzen.

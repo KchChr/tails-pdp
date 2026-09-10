@@ -98,20 +98,28 @@ Linux-/NixOS-Zielsystem:
 sudo ./test-e2e.sh
 ```
 
-Das E2E-Skript startet die echte Release-Runtime in einem isolierten temporären Arbeitsverzeichnis.
-Es prüft anschließend:
+Die Hauptdatei richtet die gemeinsame Testumgebung ein und startet die echte Release-Runtime in
+einem isolierten temporären Arbeitsverzeichnis. Danach ruft sie pro Test-ID ein eigenes Skript aus
+[`tests/e2e/`](../tests/e2e/) auf. Gemeinsame Warte-, Policy- und Attributfunktionen liegen in
+[`tests/e2e/lib.sh`](../tests/e2e/lib.sh). Die Szenarien prüfen:
 
 1. Laden durch den Kernel-Verifier, Anhängen des LSM-Hooks und Vorhandensein der gepinnten Maps.
 2. Erlaubten Zugriff ohne Policy.
 3. Kernel-Enforcement einer statischen Deny-Policy.
 4. Auswertung der aktuellen UTC-Stunde über `CURRENT_TIME`.
 5. Ereignisgesteuerte Änderung von `system.defcon`.
-6. Rollback auf die letzte gültige Generation nach einem Parserfehler.
-7. Nachträgliches Userspace-Enforcement: Nur der verletzende bereits offene FD wird entzogen; ein
+6. Reale Auswertung und ereignisgesteuerte Änderung von `subject.position`.
+7. Reale Auswertung und ereignisgesteuerte Änderung von `resource.classification`.
+8. Rollback auf die letzte gültige Generation nach einem Parserfehler.
+9. Nachträgliches Userspace-Enforcement: Nur der verletzende bereits offene FD wird entzogen; ein
    zweiter erlaubter FD desselben Prozesses bleibt offen.
+10. Inhalt und Nur-Lese-Verhalten der Administrationsausgabe `show-active`.
 
 Policydateien werden im Test zunächst vollständig mit einer temporären Endung geschrieben und dann
 atomar auf `.policy` umbenannt. So verarbeitet der Dateiwächter keine halbfertigen Dokumente.
+Nicht blockierende Ausgangszustände werden zusätzlich über den tatsächlichen Policy- oder
+Attributgenerationswechsel synchronisiert, damit ein noch nicht verarbeitetes Update nicht als
+erfolgreiches `allow` gewertet wird.
 
 ### Sicherheitsgrenzen des E2E-Skripts
 

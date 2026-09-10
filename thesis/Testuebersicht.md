@@ -3,7 +3,7 @@
 ## 1. Zweck und Abgrenzung
 
 Dieses Dokument erfasst die im Repository aktuell implementierten Tests und
-Qualitätsprüfungen. Die Übersicht beruht auf dem Quellstand vom 8. September 2026.
+Qualitätsprüfungen. Die Übersicht beruht auf dem Quellstand vom 10. September 2026.
 Sie beschreibt, **was implementiert ist**, nicht ob ein konkreter Testlauf auf dem
 Zielsystem erfolgreich war. Die Ergebnisse eines ausgeführten Testlaufs müssen für
 die Evaluation gesondert protokolliert werden.
@@ -17,15 +17,16 @@ Der Testbestand ist in drei Ebenen gegliedert:
 3. **Statische Qualitäts- und Build-Prüfungen** prüfen Formatierung, Lints und
    Übersetzbarkeit. Sie sind keine funktionalen Laufzeittests im engeren Sinn.
 
-Aktuell sind **46 Rust-Tests** in fünf Testmodulen sowie **sieben
-End-to-End-Szenarien** in `test-e2e.sh` vorhanden.
+Aktuell sind **46 Rust-Tests** in fünf Testmodulen sowie **zehn
+End-to-End-Szenarien** vorhanden. `test-e2e.sh` richtet die gemeinsame Umgebung
+ein und ruft pro Test-ID genau ein Skript unter `tests/e2e/` auf.
 
 ## 2. Übersicht nach Testart
 
 | Testart | Ausführung | Anzahl | Benötigt Root? | Hauptzweck |
 |---|---|---:|---:|---|
 | Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 46 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP |
-| End-to-End-Tests | `sudo ./test-e2e.sh` | 7 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel |
+| End-to-End-Tests | `sudo ./test-e2e.sh` | 10 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel |
 | Formatprüfung | Teil von `./test.sh` | 1 Prüfschritt | nein | Einheitliche Rust-Formatierung |
 | Clippy | Teil von `./test.sh` | 1 Prüfschritt | nein | Statische Analyse mit Warnungen als Fehler |
 | Release-Build | Teil von `./test.sh` | 1 Prüfschritt | nein | Übersetzung der Userspace-Binaries und des eingebetteten eBPF-Objekts |
@@ -151,7 +152,8 @@ End-to-End-Szenario mit einem realen Hilfsprozess geprüft.
 
 ## 4. Privilegierte End-to-End-Tests
 
-**Datei:** `test-e2e.sh`  
+**Dateien:** `test-e2e.sh`, `tests/e2e/lib.sh` und je Test-ID ein Szenarioskript in `tests/e2e/`
+
 **Art:** System- und End-to-End-Tests  
 **Voraussetzung:** dediziertes Linux-Testsystem mit BPF-LSM, BTF, bpffs und
 Root-Rechten
@@ -160,15 +162,18 @@ Das Skript startet die Release-Runtime in einem temporären Arbeitsverzeichnis. 
 verwendet reale gepinnte Maps unter `/sys/fs/bpf/tails-pdp`, hängt den tatsächlichen
 `file_open`-Hook an und startet für den FD-Entzug einen realen Hilfsprozess.
 
-| Nr. | Szenario | Geprüftes Verhalten | Beobachtungskriterium |
-|---:|---|---|---|
-| 1 | Runtime-Start, Verifier und Attach | Das eBPF-Objekt wird vom Kernel akzeptiert, die Runtime bleibt aktiv und die erwarteten Maps sind gepinnt | Startmeldung im Runtime-Log und Existenz aller Map-Pfade |
-| 2 | Leerer Policystand | Ohne aktive Deny-Policy bleibt der Dateizugriff erlaubt | Lesen der Testdatei ist erfolgreich |
-| 3 | Statische Deny-Policy | Hinzufügen einer statischen Policy führt zur Ablehnung einer neuen Dateiöffnung; Entfernen erlaubt sie wieder | Lesen schlägt nach Aktivierung fehl und funktioniert nach Entfernung wieder |
-| 4 | Aktuelle UTC-Stunde | Der Kernelpfad verwendet `CURRENT_TIME` für eine Policy zur aktuellen UTC-Stunde | Zugriff wird während der passenden Stunde verweigert |
-| 5 | Dynamisches Systemattribut | Änderung von `system.defcon` verändert die reale Zugriffsentscheidung in beide Richtungen | DEFCON 5 erlaubt, DEFCON 2 verweigert, Rückkehr zu 5 erlaubt |
-| 6 | Ungültige Policygeneration | Eine syntaktisch ungültige Änderung ersetzt die zuvor gültige Generation nicht und beendet die Runtime nicht | Fehlermeldung im Log und vorheriges Deny bleibt wirksam |
-| 7 | Nachträglicher selektiver FD-Entzug | Der Userspace-PEP schließt einen bereits geöffneten, nachträglich unzulässigen FD; ein zweiter erlaubter FD bleibt geöffnet | Hilfsprozess meldet `target_closed=True safe_open=True` |
+| Test-ID / Skript | Szenario | Geprüftes Verhalten | Beobachtungskriterium |
+|---|---|---|---|
+| E2E-01 `E2E-01-runtime-start.sh` | Runtime-Start, Verifier und Attach | Das eBPF-Objekt wird vom Kernel akzeptiert, die Runtime bleibt aktiv und die erwarteten Maps sind gepinnt | Startmeldung im Runtime-Log und Existenz aller Map-Pfade |
+| E2E-02 `E2E-02-default-allow.sh` | Leerer Policystand | Ohne aktive Deny-Policy bleibt der Dateizugriff erlaubt | Lesen der Testdatei ist erfolgreich |
+| E2E-03 `E2E-03-static-deny.sh` | Statische Deny-Policy | Hinzufügen einer statischen Policy führt zur Ablehnung einer neuen Dateiöffnung; Entfernen erlaubt sie wieder | Lesen schlägt nach Aktivierung fehl und funktioniert nach Entfernung wieder |
+| E2E-04 `E2E-04-current-time.sh` | Aktuelle UTC-Stunde | Der Kernelpfad verwendet `CURRENT_TIME` für eine Policy zur aktuellen UTC-Stunde | Zugriff wird während der passenden Stunde verweigert |
+| E2E-05 `E2E-05-system-attribute.sh` | Dynamisches Systemattribut | Änderung von `system.defcon` verändert die reale Zugriffsentscheidung in beide Richtungen | DEFCON 5 erlaubt, DEFCON 2 verweigert, Rückkehr zu 5 erlaubt |
+| E2E-06 `E2E-06-subject-attribute.sh` | Frei benanntes Subject-Attribut | Das Attribut `subject.position` wird für die UID des Testprozesses geladen und bei Änderungen neu ausgewertet | `engineer` erlaubt, `intern` verweigert, Rückkehr zu `engineer` erlaubt |
+| E2E-07 `E2E-07-resource-attribute.sh` | Frei benanntes Resource-Attribut | Das Attribut `resource.classification` wird anhand von Device und Inode der Testdatei ausgewertet | `public` erlaubt, `internal` verweigert, Rückkehr zu `public` erlaubt |
+| E2E-08 `E2E-08-invalid-generation.sh` | Ungültige Policygeneration | Eine syntaktisch ungültige Änderung ersetzt die zuvor gültige Generation nicht und beendet die Runtime nicht | Fehlermeldung im Log und vorheriges Deny bleibt wirksam |
+| E2E-09 `E2E-09-selective-fd-revocation.sh` | Nachträglicher selektiver FD-Entzug | Der Userspace-PEP schließt einen bereits geöffneten, nachträglich unzulässigen FD; ein zweiter erlaubter FD bleibt geöffnet | Hilfsprozess meldet `target_closed=True safe_open=True` |
+| E2E-10 `E2E-10-admin-interface.sh` | Administrationsschnittstelle | `show-active` zeigt Generationen, aktive Policy, Ressource und Systemattribut an, ohne Generation oder Entscheidung zu verändern | Erwartete Textbestandteile, identische Generationen vor und nach erneutem Aufruf sowie weiterhin wirksames Deny |
 
 ### Sicherheits- und Ausführungsgrenzen
 
@@ -185,7 +190,6 @@ enthält aktuell jedoch keine:
 - quantitative Messung der Reaktions- oder Entzugslatenz,
 - Messung des Laufzeitaufwands von `open()` oder `openat()`,
 - Last-, Langzeit- oder Skalierungstests,
-- End-to-End-Prüfung frei benannter Subject- oder Resource-Attribute,
 - privilegierte Credential-Prüfung mit unterschiedlicher Real und Effective UID,
 - Race-Tests für FD-Wiederverwendung oder parallele Threads,
 - Tests für `dup()`, FD-Vererbung, `mmap()` oder Namespace-Grenzen,
@@ -222,14 +226,14 @@ ausgeführt und ihre Ergebnisse berichtet werden.
 | FA-02 Policy-Verwaltung | E2E-Hinzufügen und Entfernen; Unit-Tests zu Änderungserkennung und Generationen | Komponente + E2E | Schnelle parallele Änderungen nicht gezielt getestet |
 | FA-03 Kontrolle bei Dateiöffnungen | Statische E2E-Deny-Policy über den realen `file_open`-Hook | E2E | Nur der vorgesehene Hook und das Zielsystem |
 | FA-04 Policybasierte Entscheidung | Statische, zeitabhängige und dynamische Entscheidungen; `deny-overrides` | Unit + E2E | Keine vollständige Kombination aller Policyvarianten im E2E-Test |
-| FA-05 Dynamische Attribute | Wertelogik in Unit-Tests; reales `system.defcon` im E2E-Test | Unit + E2E | Subject- und Resource-Attribute nicht End-to-End getestet |
+| FA-05 Dynamische Attribute | Wertelogik in Unit-Tests; reale Änderungen von System-, Subject- und Resource-Attributen im E2E-Test | Unit + E2E | Gleichzeitige Massenänderungen mehrerer Attribute nicht gezielt getestet |
 | FA-06 Bestehende Dateizugriffe | Fake-FD-Enforcement sowie realer selektiver FD-Entzug | Komponente + E2E | Keine Zeitmessung; bekannte Race-, `dup`-, `fork`- und `mmap`-Grenzen |
-| FA-07 Administrationsschnittstelle | `show-active` wird im E2E-Test erfolgreich aufgerufen | E2E-Smoke-Test | Inhalt und Nur-Lese-Eigenschaft werden nicht ausdrücklich assertiert |
+| FA-07 Administrationsschnittstelle | `show-active` wird inhaltlich geprüft; ein zweiter Aufruf darf Generation und Entscheidung nicht verändern | E2E | Weitere Ausgabevarianten der einzelnen Unterbefehle nicht separat getestet |
 | FA-08 Gültige Generationen | Reihenfolgentests mit Fake-Store und ungültiges Update im E2E-Test | Komponente + E2E | Mehrfachupdates während eines laufenden Scans nicht gezielt getestet |
 | FA-09 Validierung von Policies | Umfangreiche Parser-, Wertebereichs- und Kapazitätstests | Unit/Komponente | Manipulation echter Maps ist nicht Teil der Tests |
-| FA-10 Beliebige Attributnamen | Übersetzung von `subject.position`; Ablehnung ungültiger Zeichen | Unit | Kein realer E2E-Zugriff mit einem frei benannten Attribut |
+| FA-10 Beliebige Attributnamen | Übersetzung und reale Auswertung von `subject.position` und `resource.classification`; Ablehnung ungültiger Zeichen | Unit + E2E | Keine breite Stichprobe vieler unterschiedlicher Namen erforderlich bzw. implementiert |
 | OA-01 Stabilität | Ungültiges Update beendet die Runtime im E2E-Test nicht | E2E | Kein Stress- oder Fuzz-Test; kein allgemeiner Stabilitätsnachweis |
-| OA-02 Beobachtbarkeit | Runtime-Logs und erfolgreicher Aufruf von `show-active` | E2E-Smoke-Test | Ausgabequalität wird nicht automatisiert bewertet |
+| OA-02 Beobachtbarkeit | Runtime-Logs und automatisierte Inhaltsprüfung von `show-active` | E2E | Verständlichkeit der Ausgabe bleibt zusätzlich qualitativ zu bewerten |
 | OA-03 Performance | Keine entsprechende Messung implementiert | keine | Mikrobenchmark für kontrollierte Dateiöffnungen fehlt |
 | OA-04 Reproduzierbarkeit | Automatisierte Skripte und temporäre Testumgebung vorhanden | Testinfrastruktur | Konkrete Zielsystemdaten und Messergebnisse müssen in Kapitel 6 ergänzt werden |
 | EA-01 bis EA-03 | Keine direkten Tests | analytisch zu bewerten | Modularität, Erweiterbarkeit und begrenzter Kernelanteil anhand des Entwurfs diskutieren |
