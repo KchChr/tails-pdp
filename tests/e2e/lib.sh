@@ -23,8 +23,8 @@ step() {
 fail() {
     echo "Fehler: $1" >&2
     return 1
-}
 
+}
 wait_for_log() {
     local pattern="$1"
     local description="$2"
