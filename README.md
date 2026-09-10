@@ -52,6 +52,18 @@ tests with root privileges:
 sudo ./test-e2e.sh
 ```
 
+Run the additional functional, FD, performance, capacity, and stability scenarios
+on the same dedicated target after building the release binaries:
+
+```shell
+sudo python3 tests/evaluation/run.py
+```
+
+Individual IDs can be appended, for example `E2E-12 PERF-02`. The runner preserves
+all results and logs and returns a failure status for unmet expectations. See
+[execution details](tests/evaluation/README.md) and the
+[test evaluation](thesis/Testbewertung.md) for measured results and known failures.
+
 The end-to-end test temporarily owns `/sys/fs/bpf/tails-pdp` and therefore refuses to run while
 another `tails-pdp` process is active. It must not be used on a production host.
 

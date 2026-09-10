@@ -60297,6 +60297,13 @@
     "LOAD-01": {
       "status": "FAIL",
       "error": "runtime exited 1: /LOAD-01/policies'; previous generation remains active: too many file_open stream policies: 17 > 16\n[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=2 count=512\n[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=2 activated; queued userspace PEP re-evaluation\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:2] policy_generation=33 attribute_generation=2\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=33 attribute_generation=2 violations=0 revocation_attempts=0\n[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=3 count=512\n[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=3 activated; queued userspace PEP re-evaluation\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:3] policy_generation=33 attribute_generation=3\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=33 attribute_generation=3 violations=0 revocation_attempts=0\n[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=4 count=512\n[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=4 activated; queued userspace PEP re-evaluation\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:4] policy_generation=33 attribute_generation=4\n[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=33 attribute_generation=4 violations=0 revocation_attempts=0\nError: failed to write ATTRIBUTES bank=1 namespace=System object_id_primary=0 object_id_secondary=0\n\nCaused by:\n    0: `bpf_map_update_elem` failed\n    1: Argument list too long (os error 7)\n"
+    },
+    "STAB-01": {
+      "status": "PASS",
+      "detail": {
+        "cycles": 100,
+        "duration_seconds": 87.33222609199584
+      }
     }
   }
 }

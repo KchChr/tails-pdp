@@ -1,0 +1,5 @@
+warning: tails-pdp@0.1.0: 
+warning: tails-pdp@0.1.0:     Finished `release` profile [optimized] target(s) in 7.48s
+   Compiling tails-pdp-attribute-loader v0.1.0 (/home/hntr/tails-pdp/tails-pdp-attribute-loader)
+   Compiling tails-pdp v0.1.0 (/home/hntr/tails-pdp/tails-pdp)
+    Finished `release` profile [optimized] target(s) in 3.06s

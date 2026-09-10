@@ -21,6 +21,13 @@ tails-pdp-attribute-loader --package tails-pdp-userspace-pep --all-targets -- -D
 warnings` erfolgreich geprüft. Auch der separate Release-Build war erfolgreich.
 Der Clippy-Befund der Gesamtsuite bleibt bestehen.
 
+Der vollständige zusätzliche Lauf hat **14 von 15 Szenarien bestanden**; LOAD-01
+schlägt aufgrund des unten beschriebenen Produktfehlers fehl. Die zehn bisherigen
+E2E-Szenarien bestanden auch bei der abschließenden Wiederholung mit der erweiterten
+Runtime. Insgesamt sind damit **24 von 25 privilegierten Szenarien bestanden**.
+Die Tests aus COMP-01 bis COMP-03 sind in den 52 bestandenen Rust-Tests enthalten.
+
+
 ## Reproduzierbarkeit
 
 Ziel: SSH-Alias `nixrun`, Hostname `nixos`, Linux 6.16.12, x86_64, BPF-LSM aktiv.
@@ -35,7 +42,18 @@ Der maßgebliche zusätzliche Evaluationslauf verwendet Commit `9848f19` und
 speichert seine Rohdaten in
 [`test-results/2026-09-10/evaluation.json`](test-results/2026-09-10/evaluation.json).
 Die Testtreiberkorrektur in diesem Commit betrifft ausschließlich die
-Fehlerprotokollierung während eines Runtime-Abbruchs.
+Fehlerprotokollierung während eines Runtime-Abbruchs. Die gesicherten Artefakte
+enthalten Runtime-Logs, Kernel-Logdifferenzen, Hilfsprozessergebnisse, Policy- und
+Attributfixtures sowie die Fehlerdetails:
+
+- [Vollständiges Artefaktarchiv](test-results/2026-09-10/evaluation-artifacts.tar.gz)
+- [Abschließender Lauf der bisherigen E2E-Tests](test-results/2026-09-10/original-e2e.log)
+- [Rust-Testergebnisse und bestehender Clippy-Fehler](test-results/2026-09-10/rust-tests-and-clippy.log)
+- [Clippy der geänderten Crates](test-results/2026-09-10/changed-crates-clippy.log)
+- [Release-Build-Abschluss](test-results/2026-09-10/release-build.log)
+
+Das Archiv wurde lokal geöffnet und sein vollständiger JSON-Bericht mit der
+separaten Ergebnisdatei auf Übereinstimmung geprüft.
 
 Ausführung:
 
@@ -116,6 +134,15 @@ RACE-01: Zehn Policyzyklen, 2535 Wechsel der Ressource hinter derselben FD-Numme
 kein beobachteter falscher Entzug eines sicheren FDs. Das ist ein begrenzter
 Stresstest. Die Lücke zwischen Identitätsaufnahme und späterem ptrace-Entzug bleibt
 bestehen; ein erfolgreicher Lauf ist kein Nachweis der Race-Freiheit.
+
+STAB-01: 100 Zyklen mit gültigen und ungültigen Policy- und Attributänderungen
+bestanden in 87,33 Sekunden. Am Ende standen Policygeneration 401 und
+Attributgeneration 201; die Runtime lief bis zum regulären Testende weiter.
+Die gesicherten Kernel-Logdifferenzen enthalten keine vom Test erkannten
+`BUG`-/Oops-/Panic-/General-Protection-Meldungen. Das ist keine vollständige
+Analyse aller Kernelmeldungen. Auch 100 Zyklen in rund anderthalb Minuten
+sind kein Langzeitstabilitätsnachweis. Längere Läufe sind über
+`EVAL_STAB_CYCLES` konfigurierbar.
 
 ## Nachgewiesener Produktfehler: Attributkapazität
 

@@ -302,17 +302,17 @@ ausgeführt und ihre Ergebnisse berichtet werden.
 | FA-01 Policy-Einlesen | Rekursives Einlesen von `.policy`-Dateien; E2E-Aktivierung einer neuen Policy | Komponente + E2E | Keine wesentliche Lücke für den definierten Umfang |
 | FA-02 Policy-Verwaltung | E2E-Hinzufügen und Entfernen; Unit-Tests zu Änderungserkennung und Generationen | Komponente + E2E | Schnelle parallele Änderungen nicht gezielt getestet |
 | FA-03 Kontrolle bei Dateiöffnungen | Statische E2E-Deny-Policy über den realen `file_open`-Hook | E2E | Nur der vorgesehene Hook und das Zielsystem |
-| FA-04 Policybasierte Entscheidung | Statische, zeitabhängige und dynamische Entscheidungen; `deny-overrides` | Unit + E2E | Reale Mehrfachentscheidung und kombinierte Attribute: E2E-11, E2E-12 (implementiert; Ergebnisse siehe Testbewertung) |
-| FA-05 Dynamische Attribute | Wertelogik in Unit-Tests; reale Änderungen von System-, Subject- und Resource-Attributen im E2E-Test | Unit + E2E | Kombinierte Attribute und ungültige Attributgeneration: E2E-12, E2E-13 (implementiert; Ergebnisse siehe Testbewertung) |
-| FA-06 Bestehende Dateizugriffe | Fake-FD-Enforcement sowie realer selektiver FD-Entzug | Komponente + E2E | Mehrere FDs, Fehlerpfad, Grenzfälle und Entzugslatenz: E2E-16, E2E-17, CHAR-01, RACE-01, PERF-03 (implementiert; Ergebnisse siehe Testbewertung) |
-| FA-07 Administrationsschnittstelle | `show-active` wird inhaltlich geprüft; ein zweiter Aufruf darf Generation und Entscheidung nicht verändern | E2E | Weitere Unterbefehle: COMP-04 (implementiert; Ergebnisse siehe Testbewertung) |
-| FA-08 Gültige Generationen | Reihenfolgentests mit Fake-Store und ungültiges Update im E2E-Test | Komponente + E2E | Mehrfachupdates während eines laufenden Scans nicht gezielt getestet |
-| FA-09 Validierung von Policies | Umfangreiche Parser-, Wertebereichs- und Kapazitätstests | Unit/Komponente | Manipulation echter Maps ist nicht Teil der Tests |
-| FA-10 Beliebige Attributnamen | Übersetzung und reale Auswertung von `subject.position` und `resource.classification`; Ablehnung ungültiger Zeichen | Unit + E2E | Keine breite Stichprobe vieler unterschiedlicher Namen erforderlich bzw. implementiert |
-| OA-01 Stabilität | Ungültiges Policyupdate beendet die Runtime im E2E-Test nicht | E2E | Ungültige Attribute, Last und längerer Wechselbetrieb: E2E-13, LOAD-01, STAB-01 (implementiert; Ergebnisse siehe Testbewertung) |
-| OA-02 Beobachtbarkeit | Runtime-Logs und automatisierte Inhaltsprüfung von `show-active` | E2E | Ursache einer konkreten Entscheidung nachvollziehen: E2E-14 (implementiert; Ergebnisse siehe Testbewertung) |
-| OA-03 Performance | PERF-01 bis PERF-03 mit Rohdaten und Zeitmessungen | Messung | Öffnungs-, Reaktions- und Entzugsmessung: PERF-01 bis PERF-03 (implementiert; Ergebnisse siehe Testbewertung) |
-| OA-04 Reproduzierbarkeit | Automatisierte Skripte und temporäre Testumgebung vorhanden | Testinfrastruktur | Konkrete Zielsystemdaten und Messergebnisse müssen in Kapitel 6 ergänzt werden |
+| FA-04 Policybasierte Entscheidung | Gemeinsame Logik sowie E2E-11 und E2E-12: deny-overrides und Attributkonjunktion | Unit + E2E | Kombinationen nur für die ausgewählten Fälle nachgewiesen |
+| FA-05 Dynamische Attribute | COMP-01 bis COMP-03, E2E-12 und E2E-13: Verzeichnisse, Commitfehler, Konjunktion und ungültige Updates | Komponente + E2E | LOAD-01 zeigt Runtime-Abbruch bei Attributkapazitätsüberschreitung |
+| FA-06 Bestehende Dateizugriffe | Selektiver Mehrfachentzug, ptrace-Fehlerpfad, CHAR-01, RACE-01 und PERF-03 | Komponente + E2E + Messung | mmap bleibt lesbar; Race-Freiheit nicht bewiesen |
+| FA-07 Administrationsschnittstelle | E2E-10 und COMP-04 prüfen Inhalte, Ausgabevarianten und unveränderte Generationen | E2E | Zustandsanzeige ist kein individuelles Entscheidungs-Auditlog |
+| FA-08 Gültige Generationen | Policy- und Attribut-Commitfehler mit Testdoubles; reale ungültige Updates und Kapazitätsfehler | Komponente + E2E | Attributgeneration bleibt in LOAD-01 erhalten, Runtime beendet sich trotzdem; parallele Updates während eines Scans nicht vollständig abgedeckt |
+| FA-09 Validierung von Policies | Parser-, Wertebereichs- und reale Kapazitätstests beider Policyarten | Komponente + E2E | Manipulation echter Maps durch externe Programme ist nicht Teil der Tests |
+| FA-10 Beliebige Attributnamen | Übersetzung und reale Auswertung frei benannter Subject-/Resource-Attribute; 512 Systemattribute in LOAD-01 | Komponente + E2E | Endliche Namensstichprobe |
+| OA-01 Stabilität | E2E-13, E2E-17 und STAB-01 bestehen; LOAD-01 schlägt fehl | E2E | Attributkapazitätsfehler beendet Runtime; 100 Zyklen sind kein Langzeitnachweis |
+| OA-02 Beobachtbarkeit | E2E-14 rekonstruiert Deny aus eindeutiger aktiver Policy, Bedingung und Attributwert | E2E | Kein individuelles Auditlog jeder Dateiöffnung |
+| OA-03 Performance | PERF-01 bis PERF-03 mit Rohdaten und Zeitmessungen | Messung | Python-/Pollingaufwand, sequenzielle Benchmarkphasen und kleine Latenzstichprobe; keine SLA-Vorgabe |
+| OA-04 Reproduzierbarkeit | Skripte, isolierte Testverzeichnisse, Zielsystemdaten und archivierte Rohdaten | Testinfrastruktur | Übernahme der Ergebnisse in Kapitel 6 bleibt redaktionelle Arbeit außerhalb dieser Testimplementierung |
 | EA-01 bis EA-03 | Keine direkten Tests | analytisch zu bewerten | Modularität, Erweiterbarkeit und begrenzter Kernelanteil anhand des Entwurfs diskutieren |
 
 ## 8. Zusammenfassung des aktuellen Teststands
