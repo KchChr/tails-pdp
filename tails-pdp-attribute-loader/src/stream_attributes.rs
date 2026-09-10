@@ -413,16 +413,42 @@ fn notify_attribute_activation(
     Ok(())
 }
 
+// Storage seam for COMP-02 fault injection; the real map operations are unchanged.
+trait AttributeStore {
+    fn current_generation(&self) -> u32;
+    fn clear_bank(&mut self, bank: u32) -> anyhow::Result<()>;
+    fn insert(&mut self, key: AttributeKey, value: AttributeValue) -> anyhow::Result<()>;
+    fn activate(&mut self, generation: u32) -> anyhow::Result<()>;
+}
+
+impl AttributeStore for AttributeMaps {
+    fn current_generation(&self) -> u32 {
+        self.generation.get(&0, 0).unwrap_or(0)
+    }
+
+    fn clear_bank(&mut self, bank: u32) -> anyhow::Result<()> {
+        clear_attribute_bank(&mut self.attributes, bank)
+    }
+
+    fn insert(&mut self, key: AttributeKey, value: AttributeValue) -> anyhow::Result<()> {
+        self.attributes.insert(key, value, 0)?;
+        Ok(())
+    }
+
+    fn activate(&mut self, generation: u32) -> anyhow::Result<()> {
+        self.generation.set(0, generation, 0)?;
+        Ok(())
+    }
+}
+
 fn commit_attributes(
-    attribute_maps: &mut AttributeMaps,
+    attribute_maps: &mut impl AttributeStore,
     attributes: &[ParsedAttribute],
 ) -> anyhow::Result<u32> {
-    let current_generation = attribute_maps.generation.get(&0, 0).unwrap_or(0);
+    let current_generation = attribute_maps.current_generation();
     let next_generation = current_generation.wrapping_add(1);
     let bank = attribute_bank(next_generation);
-
-    clear_attribute_bank(&mut attribute_maps.attributes, bank)?;
-
+    attribute_maps.clear_bank(bank)?;
     for attribute in attributes {
         let key = AttributeKey::new(
             bank,
@@ -431,30 +457,21 @@ fn commit_attributes(
             attribute.object_id_secondary,
             attribute.name_hash,
         );
-        attribute_maps
-            .attributes
-            .insert(key, attribute.value, 0)
-            .with_context(|| {
-                format!(
-                    "failed to write ATTRIBUTES bank={} namespace={:?} object_id_primary={} object_id_secondary={}",
-                    bank,
-                    attribute.namespace,
-                    attribute.object_id_primary,
-                    attribute.object_id_secondary
-                )
-            })?;
+        attribute_maps.insert(key, attribute.value).with_context(|| {
+            format!(
+                "failed to write ATTRIBUTES bank={} namespace={:?} object_id_primary={} object_id_secondary={}",
+                bank, attribute.namespace, attribute.object_id_primary, attribute.object_id_secondary
+            )
+        })?;
     }
-
     attribute_maps
-        .generation
-        .set(0, next_generation, 0)
+        .activate(next_generation)
         .context("failed to commit ATTRIBUTE_GENERATION[0]")?;
     info!(
         "Stream attributes committed generation={} count={}",
         next_generation,
         attributes.len()
     );
-
     Ok(next_generation)
 }
 
@@ -518,3 +535,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "evaluation_tests.rs"]
+mod evaluation_tests;

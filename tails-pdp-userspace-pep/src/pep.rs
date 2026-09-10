@@ -472,6 +472,26 @@ fn attribute_conditions_match(
     bank: u32,
     attributes: &AttributeMap,
 ) -> bool {
+    attribute_conditions_match_with_lookup(
+        condition_count,
+        conditions,
+        subject,
+        resource_device,
+        resource_inode,
+        bank,
+        |key| attributes.get(key, 0).ok(),
+    )
+}
+
+fn attribute_conditions_match_with_lookup(
+    condition_count: u8,
+    conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
+    subject: u32,
+    resource_device: u64,
+    resource_inode: u64,
+    bank: u32,
+    lookup: impl Fn(&AttributeKey) -> Option<AttributeValue>,
+) -> bool {
     for condition in conditions
         .iter()
         .take((condition_count as usize).min(MAX_ATTRIBUTE_CONDITIONS))
@@ -489,7 +509,7 @@ fn attribute_conditions_match(
             object_id_secondary,
             condition.name_hash,
         );
-        let Ok(value) = attributes.get(&key, 0) else {
+        let Some(value) = lookup(&key) else {
             return false;
         };
         if !matches_attribute_condition(condition, &value) {
@@ -831,3 +851,7 @@ mod tests {
         assert!(error.to_string().contains("trigger channel closed"));
     }
 }
+
+#[cfg(test)]
+#[path = "evaluation_tests.rs"]
+mod evaluation_tests;
