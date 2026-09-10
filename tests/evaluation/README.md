@@ -67,7 +67,17 @@ entsprechen hohe Perzentile praktisch dem Maximum und sind nur deskriptiv.
 
 LOAD-01 prüft je 16 statische und Stream-Policies sowie 512 Attribute pro Bank
 (1024 Map-Einträge insgesamt für zwei Banken). Der Versuch mit 513 Attributen bei
-512 Einträgen in der aktiven Bank soll kontrolliert abgelehnt werden.
+512 Einträgen in der aktiven Bank wird vor dem Schreiben abgelehnt. LOAD-01
+vergleicht danach Generationsnummern und aktive Attributwerte, prüft weiterhin
+wirksames Deny und anschließend zwei erfolgreiche Updates ohne Neustart
+(Deny–Allow–Deny). Die Runtime muss durchgehend aktiv bleiben.
+
+Die Kapazitätsprüfung verwendet die tatsächliche Größe der gepinnten Map und die
+Einträge außerhalb der zu ersetzenden Bank. 512 ist keine feste Obergrenze pro
+Generation: Größere Generationen sind möglich, wenn der verbleibende aktive
+Stand ausreichend Platz lässt. Bei einem fehlgeschlagenen Update bleiben aktive
+Generation und letzter erfolgreich geladener Stand erhalten. Ein späteres
+Dateiereignis kann einen erneuten Versuch auslösen.
 
 CHAR-01 erfasst `dup`, durch `fork` geerbte FDs und weiterhin lesbares `mmap`.
 RACE-01 wechselt wiederholt die Ressource hinter derselben FD-Nummer während

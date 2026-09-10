@@ -1,0 +1,14 @@
+    Checking tokio v1.49.0
+    Checking thiserror v2.0.18
+    Checking aya-obj v0.2.2 (https://github.com/aya-rs/aya#b93ee8c2)
+    Checking aya v0.13.2 (https://github.com/aya-rs/aya#b93ee8c2)
+    Checking tails-pdp-userspace-common v0.1.0 (/home/hntr/tails-pdp/tails-pdp-userspace-common)
+    Checking tails-pdp-common v0.1.0 (/home/hntr/tails-pdp/tails-pdp-common)
+    Checking tails-pdp-attribute-loader v0.1.0 (/home/hntr/tails-pdp/tails-pdp-attribute-loader)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.01s
+   Compiling tails-pdp-attribute-loader v0.1.0 (/home/hntr/tails-pdp/tails-pdp-attribute-loader)
+warning: tails-pdp@0.1.0:    Compiling tails-pdp-common v0.1.0 (/home/hntr/tails-pdp/tails-pdp-common)
+warning: tails-pdp@0.1.0:    Compiling tails-pdp-ebpf v0.1.0 (/home/hntr/tails-pdp/tails-pdp-ebpf)
+warning: tails-pdp@0.1.0:     Finished `release` profile [optimized] target(s) in 7.48s
+   Compiling tails-pdp v0.1.0 (/home/hntr/tails-pdp/tails-pdp)
+    Finished `release` profile [optimized] target(s) in 2.90s

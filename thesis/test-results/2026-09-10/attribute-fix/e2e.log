@@ -1,0 +1,42 @@
+
+==> Gemeinsame E2E-Testumgebung vorbereiten
+
+==> [E2E-01] Runtime-Start, Kernel-Verifier, LSM-Attach und Maps
+
+==> [E2E-02] Leerer Policystand erlaubt den Dateizugriff
+
+==> [E2E-03] Statische Deny-Policy und Policy-Lebenszyklus
+
+==> [E2E-04] Policy für die aktuelle UTC-Stunde
+
+==> [E2E-05] Ereignisgesteuertes Systemattribut system.defcon
+
+==> [E2E-06] Frei benanntes Subject-Attribut
+
+==> [E2E-07] Frei benanntes Resource-Attribut
+
+==> [E2E-08] Ungültiges Update lässt die letzte gültige Generation aktiv
+
+==> [E2E-09] Userspace-PEP entzieht ausschließlich den verletzenden FD
+
+==> [E2E-10] Administrationsschnittstelle zeigt aktive Daten und bleibt nur lesend
+
+==> Ergebnis
+Die bisherigen 10 E2E-Szenarien waren erfolgreich.
+Artifacts: /tmp/tails-eval-lp6edeug
+==> E2E-11
+E2E-11: PASS
+==> E2E-12
+E2E-12: PASS
+==> E2E-13
+E2E-13: PASS
+==> E2E-14
+E2E-14: PASS
+==> E2E-15
+E2E-15: PASS
+==> E2E-16
+E2E-16: PASS
+==> E2E-17
+E2E-17: PASS
+Report: /tmp/tails-eval-lp6edeug/report.json
+Alle 17 privilegierten End-to-End-Tests waren erfolgreich.

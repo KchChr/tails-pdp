@@ -1,5 +1,11 @@
 # Testbewertung und Evaluation vom 10. September 2026
 
+**Historischer Teststand vor der Produktkorrektur:** Die unten dokumentierten
+fehlgeschlagenen LOAD-01-Läufe bleiben als ursprüngliche Fehlernachweise erhalten.
+Der nachfolgend autorisierte Fix und seine Regressionstests stehen in
+[LOAD-01-Korrektur.md](LOAD-01-Korrektur.md). Der aktuelle Rust-Testbestand umfasst
+59 Tests.
+
 ## Ergebnis und Abgrenzung
 
 Die 18 offenen Testvorschläge aus der Testübersicht sind implementiert. Der Stand

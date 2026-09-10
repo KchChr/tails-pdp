@@ -161,6 +161,11 @@ The condition `system.defcon <= 3` is resolved against the global attributes in
 The condition `resource.classification == "internal"` is resolved against the opened file resource
 using its device and inode identity.
 
+Attribute updates are validated against the pinned map's actual capacity before
+replacing the inactive bank. A rejected update keeps the active generation and
+the runtime running; a later file change can retry. Initial loading errors still
+prevent startup. See the [LOAD-01 fix and regression tests](thesis/LOAD-01-Korrektur.md).
+
 Not supported:
 
 - `import`

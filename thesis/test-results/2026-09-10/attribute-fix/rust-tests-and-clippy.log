@@ -1,0 +1,74 @@
+==> Formatierung prüfen
+==> Alle automatisierten Unit- und Komponententests ausführen
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test stream_attributes::evaluation_tests::capacity_accounts_for_retained_entries_not_a_fixed_half_map_limit ... ok
+test stream_attributes::evaluation_tests::capacity_rejection_happens_before_any_map_mutation ... ok
+test stream_attributes::evaluation_tests::comp02_activation_follows_complete_write_and_clears_stale_entries ... ok
+test stream_attributes::evaluation_tests::closed_enforcement_channel_remains_fatal_after_successful_activation ... ok
+test stream_attributes::evaluation_tests::comp01_rejects_invalid_recognized_files_and_duplicate_attributes ... ok
+test stream_attributes::evaluation_tests::comp02_clear_partial_write_and_activation_errors_preserve_visible_generation ... ok
+test stream_attributes::evaluation_tests::generation_and_occupancy_read_errors_never_modify_either_bank ... ok
+test stream_attributes::evaluation_tests::initial_commit_failure_is_still_reported_to_the_caller ... ok
+test stream_attributes::evaluation_tests::comp01_reads_namespaces_resource_identity_and_ignores_other_extensions ... ok
+test stream_attributes::tests::parses_supported_attribute_values ... ok
+test stream_attributes::tests::validates_attribute_names_and_defcon_range ... ok
+test stream_attributes::evaluation_tests::update_capacity_and_generation_read_errors_send_no_trigger_and_recover ... ok
+test stream_attributes::evaluation_tests::update_commit_errors_preserve_state_and_allow_a_later_successful_update ... ok
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test tests::any_subject_static_policy_matches_every_uid ... ok
+test tests::attribute_conditions_match_numbers_and_booleans ... ok
+test tests::attribute_conditions_match_string_hashes_only_by_equality ... ok
+test tests::attribute_conditions_reject_type_mismatches ... ok
+test tests::attribute_object_ids_are_namespace_scoped ... ok
+test tests::decision_state_uses_deny_overrides ... ok
+test tests::file_open_static_policy_matches_all_request_fields ... ok
+test tests::file_open_stream_policy_respects_command_filter ... ok
+test tests::policy_time_derives_utc_components_from_unix_seconds ... ok
+test tests::socket_bind_stream_policy_respects_command_filter ... ok
+test tests::stream_policy_is_not_applicable_when_condition_does_not_match ... ok
+test tests::stream_policy_returns_entitlement_when_condition_matches ... ok
+test tests::stream_policy_uses_utc_hour_from_shared_policy_time ... ok
+test tests::stream_policy_with_dynamic_attributes_requires_map_lookup ... ok
+test tests::stream_policy_with_zero_modulo_is_not_applicable ... ok
+test tests::utc_component_policies_respect_operator_boundaries ... ok
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test policy_source::tests::preparing_bank_disables_entries_after_last_policy ... ok
+test policy_source::tests::failed_activation_does_not_report_new_generation ... ok
+test policy_source::tests::failed_bank_write_keeps_previous_generation_active ... ok
+test policy_source::tests::generation_is_activated_only_after_bank_write ... ok
+test policy_source::tests::rejects_disabled_socket_bind_action ... ok
+test policy_source::tests::rejects_duplicate_policy_names ... ok
+test policy_source::tests::rejects_invalid_time_ranges_and_zero_modulo ... ok
+test policy_source::tests::rejects_missing_semicolon_and_unknown_action ... ok
+test policy_source::tests::rejects_unsupported_attribute_name ... ok
+test policy_source::tests::reads_only_policy_files_recursively ... ok
+test policy_source::tests::rejects_too_many_dynamic_conditions_and_policies ... ok
+test policy_source::tests::translates_dynamic_subject_attribute ... ok
+test policy_source::tests::unchanged_and_repeatedly_failed_documents_are_not_retried ... ok
+test policy_source::tests::translates_static_and_time_policies ... ok
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test tests::bounded_trigger_channel_coalesces_without_growing ... ok
+test tests::closed_trigger_channel_is_an_error ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test pep::tests::does_not_schedule_constant_time_conditions ... ok
+test pep::tests::failed_close_is_attempted_once_without_aborting_scan ... ok
+test pep::evaluation_tests::failed_close_does_not_prevent_another_target_from_being_attempted ... ok
+test pep::evaluation_tests::comp03_all_conditions_required_with_missing_wrong_type_and_wrong_value ... ok
+test pep::tests::other_file_descriptors_remain_independently_enforceable ... ok
+test pep::tests::parses_only_numeric_process_and_fd_names ... ok
+test pep::tests::process_subject_uses_real_uid_from_proc_status ... ok
+test pep::tests::same_file_descriptor_is_closed_only_once_per_scan ... ok
+test pep::tests::schedules_hour_policy_at_the_next_decision_change ... ok
+test pep::tests::closed_trigger_channel_is_reported ... ok
+test pep::tests::regular_files_are_identified_but_directories_are_ignored ... ok
+test pep::tests::schedules_modulo_policy_at_the_next_truth_value_change ... ok
+test pep::tests::violation_targets_exactly_the_matching_file_descriptor ... ok
+test pep::tests::waits_without_scanning_when_no_trigger_arrives ... ok
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+==> Clippy ohne Warnungen ausführen
+error: items after a test module
+  --> tails-pdp-userspace-common/src/lib.rs:40:1
+error: could not compile `tails-pdp-userspace-common` (lib test) due to 1 previous error

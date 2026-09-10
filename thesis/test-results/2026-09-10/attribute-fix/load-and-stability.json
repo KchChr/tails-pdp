@@ -1,0 +1,25 @@
+{
+  "runner": "bash-scenarios",
+  "commit": "35e1d2ba43a32cff92c9cf6631c82b391b00fca2",
+  "kernel": {
+    "system": "Linux",
+    "node": "nixos",
+    "release": "6.16.12",
+    "version": "#1-NixOS SMP PREEMPT_DYNAMIC Sun Oct 12 11:01:05 UTC 2025",
+    "machine": "x86_64",
+    "processor": ""
+  },
+  "python": "3.12.11 (main, Jun  3 2025, 15:41:47) [GCC 14.3.0]",
+  "repeats": 10,
+  "stability_cycles": 100,
+  "results": {
+    "LOAD-01": {
+      "status": "PASS",
+      "detail": null
+    },
+    "STAB-01": {
+      "status": "PASS",
+      "detail": null
+    }
+  }
+}

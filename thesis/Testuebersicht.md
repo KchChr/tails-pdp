@@ -29,7 +29,7 @@ Der Testbestand ist in drei Ebenen gegliedert:
 3. **Statische Qualitäts- und Build-Prüfungen** prüfen Formatierung, Lints und
    Übersetzbarkeit. Sie sind keine funktionalen Laufzeittests im engeren Sinn.
 
-Aktuell sind **52 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
+Aktuell sind **59 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
 Szenarien** vorhanden. `test-e2e.sh` führt E2E-01 bis E2E-17 aus, mit einer Bashdatei je ID unter
 `tests/e2e/`. `test-evaluation.sh` führt die 15 ergänzten Szenarien aus
 (einschließlich E2E-11 bis E2E-17; diese werden bei der Gesamtzahl nur einmal
@@ -41,13 +41,16 @@ die übrigen als privilegierte Tests beziehungsweise Messungen.
 
 Ausgeführte Ergebnisse, Bewertung des bisherigen Bestands und nachgewiesene
 Produktgrenzen stehen in [Testbewertung.md](Testbewertung.md). Ein implementierter
-Test kann fehlschlagen; insbesondere LOAD-01 wird nicht als bestanden deklariert.
+Test kann fehlschlagen. Der früher in LOAD-01 nachgewiesene Runtime-Abbruch wurde
+nach gesondertem Auftrag korrigiert; Umsetzung und neue Nachweise stehen in
+[LOAD-01-Korrektur.md](LOAD-01-Korrektur.md). Die alten Ergebnisse bleiben als
+historischer Stand erhalten.
 
 ## 2. Übersicht nach Testart
 
 | Testart | Ausführung | Anzahl | Benötigt Root? | Hauptzweck | Status |
 |---|---|---:|---:|---|---|
-| Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 52 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
+| Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 59 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
 | End-to-End-Tests | `sudo ./test-e2e.sh` und `sudo ./test-evaluation.sh` | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
 | Formatprüfung | Teil von `./test.sh` | 1 Prüfschritt | nein | Einheitliche Rust-Formatierung | Implementiert |
 | Clippy | Teil von `./test.sh` | 1 Prüfschritt | nein | Statische Analyse mit Warnungen als Fehler | Implementiert |
@@ -119,7 +122,7 @@ abgedeckt.
 ### 3.3 Verarbeitung dynamischer Attributdateien
 
 **Datei:** `tails-pdp-attribute-loader/src/stream_attributes.rs`  
-**Anzahl:** 6 Tests (einschließlich `src/evaluation_tests.rs`)
+**Anzahl:** 13 Tests (einschließlich `src/evaluation_tests.rs`)
 **Art:** Unit- und Komponententests
 
 | Testfunktion | Geprüftes Verhalten | Status |
@@ -138,7 +141,11 @@ abgedeckt.
 
 **Aussagekraft:** Parser und Commitsteuerung werden mit echten Dateien beziehungsweise
 einem austauschbaren Speicher geprüft. Der Speicher ersetzt die BPF-Systemaufrufe;
-reale Map-Kapazitätsfehler werden ergänzend in LOAD-01 ausgelöst.
+die Kapazitätsablehnung und Wiederherstellung mit echten Maps prüft LOAD-01.
+Sieben zusätzliche Regressionstests prüfen Ablehnung vor jeder Map-Veränderung,
+dynamische Kapazitätsberechnung, fehlgeschlagene Generations-/Belegungsabfragen,
+Updatefehler ohne Trigger mit erfolgreichem Folgeupdate sowie weiterhin fatale
+Initialisierungs- und Benachrichtigungsfehler.
 
 ### 3.4 Trigger-Kanal zwischen Loadern und Userspace-PEP
 
@@ -281,7 +288,7 @@ Bank bei vollständiger Doppelbelegung.
 
 **Datei:** `test.sh`
 
-`test.sh` führt neben den 52 Rust-Tests weitere Prüfschritte aus:
+`test.sh` führt neben den 59 Rust-Tests weitere Prüfschritte aus:
 
 | Prüfschritt | Kommando | Bedeutung | Abgrenzung | Status |
 |---|---|---|---|---|
@@ -307,13 +314,13 @@ ausgeführt und ihre Ergebnisse berichtet werden.
 | FA-02 Policy-Verwaltung | E2E-Hinzufügen und Entfernen; Unit-Tests zu Änderungserkennung und Generationen | Komponente + E2E | Schnelle parallele Änderungen nicht gezielt getestet |
 | FA-03 Kontrolle bei Dateiöffnungen | Statische E2E-Deny-Policy über den realen `file_open`-Hook | E2E | Nur der vorgesehene Hook und das Zielsystem |
 | FA-04 Policybasierte Entscheidung | Gemeinsame Logik sowie E2E-11 und E2E-12: deny-overrides und Attributkonjunktion | Unit + E2E | Kombinationen nur für die ausgewählten Fälle nachgewiesen |
-| FA-05 Dynamische Attribute | COMP-01 bis COMP-03, E2E-12 und E2E-13: Verzeichnisse, Commitfehler, Konjunktion und ungültige Updates | Komponente + E2E | LOAD-01 zeigt Runtime-Abbruch bei Attributkapazitätsüberschreitung |
+| FA-05 Dynamische Attribute | COMP-01 bis COMP-03, E2E-12 und E2E-13: Verzeichnisse, Commitfehler, Konjunktion und ungültige Updates | Komponente + E2E | LOAD-01 prüft jetzt kontrollierte Kapazitätsablehnung und Folgeupdates; alte Fehlerevidenz bleibt archiviert |
 | FA-06 Bestehende Dateizugriffe | Selektiver Mehrfachentzug, ptrace-Fehlerpfad, CHAR-01, RACE-01 und PERF-03 | Komponente + E2E + Messung | mmap bleibt lesbar; Race-Freiheit nicht bewiesen |
 | FA-07 Administrationsschnittstelle | E2E-10 und COMP-04 prüfen Inhalte, Ausgabevarianten und unveränderte Generationen | E2E | Zustandsanzeige ist kein individuelles Entscheidungs-Auditlog |
-| FA-08 Gültige Generationen | Policy- und Attribut-Commitfehler mit Testdoubles; reale ungültige Updates und Kapazitätsfehler | Komponente + E2E | Attributgeneration bleibt in LOAD-01 erhalten, Runtime beendet sich trotzdem; parallele Updates während eines Scans nicht vollständig abgedeckt |
+| FA-08 Gültige Generationen | Policy- und Attribut-Commitfehler mit Testdoubles; reale ungültige Updates und Kapazitätsfehler | Komponente + E2E | LOAD-01 prüft unveränderte Attributwerte und Generation bei Ablehnung; parallele Updates während eines Scans nicht vollständig abgedeckt |
 | FA-09 Validierung von Policies | Parser-, Wertebereichs- und reale Kapazitätstests beider Policyarten | Komponente + E2E | Manipulation echter Maps durch externe Programme ist nicht Teil der Tests |
 | FA-10 Beliebige Attributnamen | Übersetzung und reale Auswertung frei benannter Subject-/Resource-Attribute; 512 Systemattribute in LOAD-01 | Komponente + E2E | Endliche Namensstichprobe |
-| OA-01 Stabilität | E2E-13, E2E-17 und STAB-01 bestehen; LOAD-01 schlägt fehl | E2E | Attributkapazitätsfehler beendet Runtime; 100 Zyklen sind kein Langzeitnachweis |
+| OA-01 Stabilität | E2E-13, E2E-17 und STAB-01 sowie korrigierter LOAD-01 | E2E | Ergebnisse der Korrektur separat dokumentiert; 100 Zyklen sind kein Langzeitnachweis |
 | OA-02 Beobachtbarkeit | E2E-14 rekonstruiert Deny aus eindeutiger aktiver Policy, Bedingung und Attributwert | E2E | Kein individuelles Auditlog jeder Dateiöffnung |
 | OA-03 Performance | PERF-01 bis PERF-03 mit Rohdaten und Zeitmessungen | Messung | Python-/Pollingaufwand, sequenzielle Benchmarkphasen und kleine Latenzstichprobe; keine SLA-Vorgabe |
 | OA-04 Reproduzierbarkeit | Skripte, isolierte Testverzeichnisse, Zielsystemdaten und archivierte Rohdaten | Testinfrastruktur | Übernahme der Ergebnisse in Kapitel 6 bleibt redaktionelle Arbeit außerhalb dieser Testimplementierung |
