@@ -29,17 +29,22 @@ Der Testbestand ist in drei Ebenen gegliedert:
 3. **Statische Qualitäts- und Build-Prüfungen** prüfen Formatierung, Lints und
    Übersetzbarkeit. Sie sind keine funktionalen Laufzeittests im engeren Sinn.
 
-Aktuell sind **46 Rust-Tests** in fünf Testmodulen sowie **zehn
-End-to-End-Szenarien** vorhanden. `test-e2e.sh` richtet die gemeinsame Umgebung
-ein und ruft pro Test-ID genau ein Skript unter `tests/e2e/` auf. Ergänzend sind
-in Abschnitt 5 **18 noch nicht implementierte Testvorschläge** als TODO erfasst.
+Aktuell sind **52 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
+Szenarien** vorhanden. Die zehn bisherigen E2E-Szenarien laufen über `test-e2e.sh`.
+`tests/evaluation/run.py` ergänzt 15 isolierte Szenarien. Die zuvor offenen
+**18 Testvorschläge sind implementiert**: COMP-01 bis COMP-03 als Rust-Tests,
+die übrigen als privilegierte Tests beziehungsweise Messungen.
+
+Ausgeführte Ergebnisse, Bewertung des bisherigen Bestands und nachgewiesene
+Produktgrenzen stehen in [Testbewertung.md](Testbewertung.md). Ein implementierter
+Test kann fehlschlagen; insbesondere LOAD-01 wird nicht als bestanden deklariert.
 
 ## 2. Übersicht nach Testart
 
 | Testart | Ausführung | Anzahl | Benötigt Root? | Hauptzweck | Status |
 |---|---|---:|---:|---|---|
-| Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 46 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
-| End-to-End-Tests | `sudo ./test-e2e.sh` | 10 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
+| Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 52 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
+| End-to-End-Tests | `sudo ./test-e2e.sh` und `sudo python3 tests/evaluation/run.py` | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
 | Formatprüfung | Teil von `./test.sh` | 1 Prüfschritt | nein | Einheitliche Rust-Formatierung | Implementiert |
 | Clippy | Teil von `./test.sh` | 1 Prüfschritt | nein | Statische Analyse mit Warnungen als Fehler | Implementiert |
 | Release-Build | Teil von `./test.sh` | 1 Prüfschritt | nein | Übersetzung der Userspace-Binaries und des eingebetteten eBPF-Objekts | Implementiert |
@@ -110,18 +115,26 @@ abgedeckt.
 ### 3.3 Verarbeitung dynamischer Attributdateien
 
 **Datei:** `tails-pdp-attribute-loader/src/stream_attributes.rs`  
-**Anzahl:** 2 Tests  
-**Art:** Unit-Tests
+**Anzahl:** 6 Tests (einschließlich `src/evaluation_tests.rs`)
+**Art:** Unit- und Komponententests
 
 | Testfunktion | Geprüftes Verhalten | Status |
 |---|---|---|
 | `parses_supported_attribute_values` | Parsen von Zahlen, Boolean-Werten und gehashten Stringwerten | Implementiert |
 | `validates_attribute_names_and_defcon_range` | Zulässige und unzulässige Attributnamen sowie Wertebereich von `system.defcon` | Implementiert |
 
-**Aussagekraft:** Die elementare Wert- und Namensvalidierung wird geprüft. Nicht
-durch Unit-Tests abgedeckt sind insbesondere das vollständige rekursive Einlesen
-aller Attributdateien, der reale Wechsel der Attributbank und Fehler beim Schreiben
-der echten BPF-Attributmap.
+**Ergänzungen in `src/evaluation_tests.rs`:**
+
+| Testfunktion | Geprüftes Verhalten | Status |
+|---|---|---|
+| `comp01_reads_namespaces_resource_identity_and_ignores_other_extensions` | Vollständiges Verzeichnis mit drei Namespaces, rekursiver Ressourcenauflösung und ignorierten Dateiendungen | Implementiert |
+| `comp01_rejects_invalid_recognized_files_and_duplicate_attributes` | Ungültige UID-Dateinamen, doppelte Attribute, DEFCON-Bereich und fehlende Ressource | Implementiert |
+| `comp02_clear_partial_write_and_activation_errors_preserve_visible_generation` | Simulierte Lösch-, Teil-Schreib- und Aktivierungsfehler erhalten die aktive Bank | Implementiert |
+| `comp02_activation_follows_complete_write_and_clears_stale_entries` | Reihenfolge, Bankbereinigung, leere Generation und Generationenüberlauf | Implementiert |
+
+**Aussagekraft:** Parser und Commitsteuerung werden mit echten Dateien beziehungsweise
+einem austauschbaren Speicher geprüft. Der Speicher ersetzt die BPF-Systemaufrufe;
+reale Map-Kapazitätsfehler werden ergänzend in LOAD-01 ausgelöst.
 
 ### 3.4 Trigger-Kanal zwischen Loadern und Userspace-PEP
 
@@ -140,7 +153,7 @@ Ereigniskette von einer Dateiänderung bis zum nachfolgenden `/proc`-Scan.
 ### 3.5 Userspace-PEP und FD-Enforcement
 
 **Datei:** `tails-pdp-userspace-pep/src/pep.rs`  
-**Anzahl:** 12 Tests  
+**Anzahl:** 14 Tests (einschließlich `src/evaluation_tests.rs`)
 **Art:** Unit- und asynchrone Komponententests; Enforcementtests mit `FakeFdCloser`
 
 | Testfunktion | Geprüftes Verhalten | Status |
@@ -157,6 +170,13 @@ Ereigniskette von einer Dateiänderung bis zum nachfolgenden `/proc`-Scan.
 | `does_not_schedule_constant_time_conditions` | Für zeitlich konstante Bedingungen wird keine unnötige Grenze eingeplant | Implementiert |
 | `waits_without_scanning_when_no_trigger_arrives` | Ohne Trigger bleibt der Userspace-PEP inaktiv und startet keinen Scan | Implementiert |
 | `closed_trigger_channel_is_reported` | Ein geschlossener Trigger-Kanal beendet das Warten mit einem expliziten Fehler | Implementiert |
+
+**Ergänzungen in `src/evaluation_tests.rs`:**
+
+| Testfunktion | Geprüftes Verhalten | Status |
+|---|---|---|
+| `comp03_all_conditions_required_with_missing_wrong_type_and_wrong_value` | Vier Bedingungen im produktiven Lookup-Ablauf, jedes fehlende/falsche Attribut sowie falsche UID und Bank | Implementiert |
+| `failed_close_does_not_prevent_another_target_from_being_attempted` | Nach einem fehlgeschlagenen Entzug wird ein anderer Prozess weiterhin verarbeitet | Implementiert |
 
 **Aussagekraft:** Die Auswahl und Deduplizierung von Entzugszielen sowie das
 Trigger- und Zeitverhalten werden isoliert geprüft. Der `FakeFdCloser` führt keinen
@@ -195,72 +215,69 @@ parallel zu einer regulären Instanz und nicht auf einem Produktivsystem ausgef�
 werden. Das Skript prüft dies teilweise, indem es bei einer bereits laufenden
 `tails-pdp`-Runtime abbricht und beim Beenden nur selbst gestartete Prozesse stoppt.
 
-### Aussagegrenzen des aktuellen End-to-End-Tests
+### Aussagegrenzen des bisherigen End-to-End-Tests
 
-Die implementierten Szenarien weisen das Verhalten nur für die jeweils kontrollierte
-Testsituation nach. Quantitative Aussagen, Langzeitstabilität und bekannte
-Grenzfälle des Userspace-Entzugs sind damit noch nicht abgedeckt. Die daraus
-abgeleiteten offenen Tests sind im folgenden Abschnitt einzeln als **TODO**
-aufgeführt.
+Die zehn bisherigen Szenarien sind gezielte Funktionsnachweise, keine quantitative
+Evaluation. Abschnitt 5 ergänzt die bisher offenen Prüfungen. Messungen und
+Charakterisierung bleiben auf die konkrete Zielumgebung begrenzt.
 
-## 5. Sinnvolle noch zu implementierende Tests
+## 5. Ergänzend implementierte Tests
 
-Die folgende Liste ist eine Test-Roadmap und kein Anspruch auf einen vollständigen
-Produktions- oder Sicherheitsnachweis. Für die Evaluation des Prototyps sollten
-zuerst die Tests mit Priorität A umgesetzt werden. Priorität B verbessert die
-Aussagekraft. Priorität C charakterisiert vor allem technische Grenzen und kann bei
-begrenzter Bearbeitungszeit auch analytisch diskutiert werden.
+Die folgenden 18 Vorschläge wurden umgesetzt. Priorität und Aufwand bleiben als
+ursprüngliche Planungseinschätzung erhalten. Der Status bezeichnet vorhandenen
+Testcode und ist ausdrücklich kein Bestehensnachweis.
 
-Der Aufwand ist relativ zur bestehenden Testinfrastruktur geschätzt:
-
-- **klein:** ungefähr wenige Stunden,
-- **mittel:** ungefähr ein halber bis ein Arbeitstag,
-- **hoch:** mehrere Arbeitstage oder zusätzliche Hilfsprogramme beziehungsweise
-  Systemkonfiguration.
+COMP-01 bis COMP-03 laufen über `./test.sh`. Alle anderen IDs dieses Abschnitts
+laufen über `sudo python3 tests/evaluation/run.py`, optional gefolgt von einzelnen
+IDs. Details zu Parametern und Beobachtungsgrenzen stehen in
+[`tests/evaluation/README.md`](../tests/evaluation/README.md).
 
 ### 5.1 Funktions- und Komponententests
 
 | Test-ID | Vorgeschlagener Test | Erwartetes Ergebnis | Bezug | Priorität | Aufwand | Status |
 |---|---|---|---|---:|---:|---|
-| COMP-01 | Rekursives Einlesen eines vollständigen Attributverzeichnisses mit System-, Subject- und Resource-Dateien | Nur gültige Dateien werden eingelesen und den korrekten Namespaces sowie Objektidentifikatoren zugeordnet | FA-05, FA-10 | B | mittel | TODO |
-| COMP-02 | Transaktionaler Wechsel der Attributgeneration mit simuliertem Schreib- oder Aktivierungsfehler | Eine fehlerhafte Attributgeneration wird nicht aktiviert; die letzte gültige Generation bleibt sichtbar | FA-05, FA-08, OA-01 | A | mittel bis hoch | TODO |
-| COMP-03 | Kombination mehrerer dynamischer Bedingungen in einer Policy | Die Policy greift nur, wenn alle Bedingungen erfüllt sind; Typabweichungen oder fehlende Attribute führen zu keinem Match | FA-04, FA-05 | A | klein | TODO |
-| COMP-04 | Ausgabevarianten des Administrationstools (`show`, `show-policies`, `show-attributes`) | Aktive Bank, Policies und Attribute werden je Unterbefehl vollständig und ohne Zustandsänderung ausgegeben | FA-07, OA-02 | B | klein | TODO |
+| COMP-01 | Rekursives Einlesen eines vollständigen Attributverzeichnisses mit System-, Subject- und Resource-Dateien | Nur gültige Dateien werden eingelesen und den korrekten Namespaces sowie Objektidentifikatoren zugeordnet | FA-05, FA-10 | B | mittel | Implementiert |
+| COMP-02 | Transaktionaler Wechsel der Attributgeneration mit simuliertem Schreib- oder Aktivierungsfehler | Eine fehlerhafte Attributgeneration wird nicht aktiviert; die letzte gültige Generation bleibt sichtbar | FA-05, FA-08, OA-01 | A | mittel bis hoch | Implementiert |
+| COMP-03 | Kombination mehrerer dynamischer Bedingungen in einer Policy | Die Policy greift nur, wenn alle Bedingungen erfüllt sind; Typabweichungen oder fehlende Attribute führen zu keinem Match | FA-04, FA-05 | A | klein | Implementiert |
+| COMP-04 | Ausgabevarianten des Administrationstools (`show`, `show-policies`, `show-attributes`) | Aktive Bank, Policies und Attribute werden je Unterbefehl vollständig und ohne Zustandsänderung ausgegeben | FA-07, OA-02 | B | klein | Implementiert |
 
 ### 5.2 Weitere End-to-End-Tests
 
 | Test-ID | Vorgeschlagenes Szenario | Erwartetes Ergebnis | Bezug | Priorität | Aufwand | Status |
 |---|---|---|---|---:|---:|---|
-| E2E-11 | Mehrere gleichzeitig aktive Policies einschließlich Permit und Deny | Die reale Kernelentscheidung folgt der Combining-Regel `deny-overrides`; nach Entfernen des Deny ist der Zugriff wieder erlaubt | FA-04 | A | klein | TODO |
-| E2E-12 | Gemeinsame Policy mit System-, Subject- und Resource-Attribut | Der Zugriff wird nur verweigert, wenn die gesamte Attributkonjunktion erfüllt ist; die Änderung jedes einzelnen Attributs wird wirksam | FA-04, FA-05, FA-10 | A | mittel | TODO |
-| E2E-13 | Ungültiges Update einer Attributdatei | Die Runtime bleibt aktiv, meldet den Fehler und verwendet weiterhin die letzte gültige Attributgeneration | FA-05, FA-08, OA-01 | A | mittel | TODO |
-| E2E-14 | Nachvollziehbarkeit einer konkreten Ablehnung | Log oder Administrationsausgabe macht erkennbar, welche Policy beziehungsweise welcher Zustand die Entscheidung beeinflusst hat | OA-02 | A | mittel; gegebenenfalls Implementierungsänderung nötig | TODO |
-| E2E-15 | Unterschiedliche Real und Effective UID eines Hilfsprozesses | Die Entscheidung verwendet entsprechend der dokumentierten Semantik die Real UID | FA-03, FA-04 | B | mittel; separater Benutzer nötig | TODO |
-| E2E-16 | Mehrere bereits geöffnete, verletzende und weiterhin erlaubte File Descriptors | Alle verletzenden FDs werden entzogen, während nicht betroffene FDs geöffnet bleiben | FA-06 | B | mittel | TODO |
-| E2E-17 | Zielprozess kann nicht mit `ptrace` erreicht werden | Der Fehler wird protokolliert; Runtime, Kernel und die Verarbeitung weiterer Prozesse bleiben funktionsfähig | FA-06, OA-01 | B | mittel; angepasste Schutzdomäne nötig | TODO |
-| CHAR-01 | Charakterisierung von `dup()`, FD-Vererbung, `fork()` und `mmap()` | Das beobachtete Verhalten und die Grenzen des prototypischen FD-Enforcements werden reproduzierbar dokumentiert | FA-06, Prototypgrenzen | C | hoch | TODO |
-| RACE-01 | Parallele Dateioperationen und Wiederverwendung derselben FD-Nummer während eines Scans | Kein falscher FD wird geschlossen; erkannte Restrisiken werden dokumentiert | FA-06, OA-01 | C | hoch | TODO |
+| E2E-11 | Mehrere gleichzeitig aktive Policies einschließlich Permit und Deny | Die reale Kernelentscheidung folgt der Combining-Regel `deny-overrides`; nach Entfernen des Deny ist der Zugriff wieder erlaubt | FA-04 | A | klein | Implementiert |
+| E2E-12 | Gemeinsame Policy mit System-, Subject- und Resource-Attribut | Der Zugriff wird nur verweigert, wenn die gesamte Attributkonjunktion erfüllt ist; die Änderung jedes einzelnen Attributs wird wirksam | FA-04, FA-05, FA-10 | A | mittel | Implementiert |
+| E2E-13 | Ungültiges Update einer Attributdatei | Die Runtime bleibt aktiv, meldet den Fehler und verwendet weiterhin die letzte gültige Attributgeneration | FA-05, FA-08, OA-01 | A | mittel | Implementiert |
+| E2E-14 | Nachvollziehbarkeit einer konkreten Ablehnung | Log oder Administrationsausgabe macht erkennbar, welche Policy beziehungsweise welcher Zustand die Entscheidung beeinflusst hat | OA-02 | A | mittel; gegebenenfalls Implementierungsänderung nötig | Implementiert |
+| E2E-15 | Unterschiedliche Real und Effective UID eines Hilfsprozesses | Die Entscheidung verwendet entsprechend der dokumentierten Semantik die Real UID | FA-03, FA-04 | B | mittel; separater Benutzer nötig | Implementiert |
+| E2E-16 | Mehrere bereits geöffnete, verletzende und weiterhin erlaubte File Descriptors | Alle verletzenden FDs werden entzogen, während nicht betroffene FDs geöffnet bleiben | FA-06 | B | mittel | Implementiert |
+| E2E-17 | Zielprozess kann nicht mit `ptrace` erreicht werden | Der Fehler wird protokolliert; Runtime, Kernel und die Verarbeitung weiterer Prozesse bleiben funktionsfähig | FA-06, OA-01 | B | mittel; angepasste Schutzdomäne nötig | Implementiert |
+| CHAR-01 | Charakterisierung von `dup()`, FD-Vererbung, `fork()` und `mmap()` | Das beobachtete Verhalten und die Grenzen des prototypischen FD-Enforcements werden reproduzierbar dokumentiert | FA-06, Prototypgrenzen | C | hoch | Implementiert |
+| RACE-01 | Parallele Dateioperationen und Wiederverwendung derselben FD-Nummer während eines Scans | Kein falscher FD wird geschlossen; erkannte Restrisiken werden dokumentiert | FA-06, OA-01 | C | hoch | Implementiert |
 
 ### 5.3 Performance-, Last- und Stabilitätstests
 
 | Test-ID | Vorgeschlagener Test | Messgröße beziehungsweise Erwartung | Bezug | Priorität | Aufwand | Status |
 |---|---|---|---|---:|---:|---|
-| PERF-01 | Mikrobenchmark kontrollierter Dateiöffnungen ohne Runtime, mit Runtime ohne passende Policy und mit passender Allow-Policy | Laufzeit pro `open()` beziehungsweise `openat()`, Median sowie geeignete Perzentile; relativer Overhead gegenüber der Baseline | OA-03 | A | mittel | TODO |
-| PERF-02 | Reaktionslatenz nach einer Policy- und nach einer Attributänderung | Zeit von der atomaren Dateiänderung bis zur beobachtbaren neuen Zugriffsentscheidung, jeweils über mehrere Wiederholungen | FA-02, FA-05, OA-03 | A | mittel | TODO |
-| PERF-03 | Entzugslatenz eines bereits geöffneten FDs | Zeit von der aktivierten verletzenden Änderung bis zum festgestellten `EBADF`, jeweils über mehrere Wiederholungen | FA-06, OA-03 | A | mittel | TODO |
-| LOAD-01 | Reale Belegung bis an die dokumentierten Policy- und Attributkapazitäten | Grenzwerte werden akzeptiert; Überschreitungen werden kontrolliert abgelehnt und verändern die aktive Generation nicht | FA-08, FA-09, OA-01 | B | mittel | TODO |
-| STAB-01 | Wiederholte gültige und ungültige Policy- sowie Attributwechsel über einen längeren Lauf | Keine Runtime-Beendigung, kein Kernelproblem und konsistente letzte Generation nach jedem Wechsel | OA-01, OA-04 | B | mittel bis hoch | TODO |
+| PERF-01 | Mikrobenchmark kontrollierter Dateiöffnungen ohne Runtime, mit Runtime ohne passende Policy und mit passender Allow-Policy | Laufzeit pro `open()` beziehungsweise `openat()`, Median sowie geeignete Perzentile; relativer Overhead gegenüber der Baseline | OA-03 | A | mittel | Implementiert |
+| PERF-02 | Reaktionslatenz nach einer Policy- und nach einer Attributänderung | Zeit von der atomaren Dateiänderung bis zur beobachtbaren neuen Zugriffsentscheidung, jeweils über mehrere Wiederholungen | FA-02, FA-05, OA-03 | A | mittel | Implementiert |
+| PERF-03 | Entzugslatenz eines bereits geöffneten FDs | Zeit von der aktivierten verletzenden Änderung bis zum festgestellten `EBADF`, jeweils über mehrere Wiederholungen | FA-06, OA-03 | A | mittel | Implementiert |
+| LOAD-01 | Reale Belegung bis an die dokumentierten Policy- und Attributkapazitäten | Grenzwerte werden akzeptiert; Überschreitungen werden kontrolliert abgelehnt und verändern die aktive Generation nicht | FA-08, FA-09, OA-01 | B | mittel | Implementiert |
+| STAB-01 | Wiederholte gültige und ungültige Policy- sowie Attributwechsel über einen längeren Lauf | Keine Runtime-Beendigung, kein Kernelproblem und konsistente letzte Generation nach jedem Wechsel | OA-01, OA-04 | B | mittel bis hoch | Implementiert |
 
-Für eine prototypgerechte Evaluation bilden **COMP-02, COMP-03, E2E-11 bis
-E2E-14 sowie PERF-01 bis PERF-03** den sinnvollsten nächsten Umfang. Die übrigen
-Tests erhöhen die Robustheitsaussage, sind aber nicht erforderlich, um jede
-denkbare Produktionssituation abzudecken.
+COMP-04 wird gegen echte Maps geprüft und benötigt daher Root. E2E-15 verwendet
+numerische Real UIDs bei Effective UID 0 ohne neue Benutzerkonten. E2E-17 erzeugt
+den Attach-Fehler durch einen bereits vorhandenen Tracer. PERF-03 protokolliert
+ein Intervall für die Aktivierung-bis-EBADF-Latenz. RACE-01 kann eine beobachtete
+Fehlrevokation nachweisen, aber durch einen erfolgreichen Lauf keine Race-Freiheit
+beweisen. LOAD-01 unterscheidet 1024 gesamte Map-Einträge von 512 Einträgen pro
+Bank bei vollständiger Doppelbelegung.
 
 ## 6. Statische Qualitäts- und Build-Prüfungen
 
 **Datei:** `test.sh`
 
-`test.sh` führt neben den 46 Rust-Tests weitere Prüfschritte aus:
+`test.sh` führt neben den 52 Rust-Tests weitere Prüfschritte aus:
 
 | Prüfschritt | Kommando | Bedeutung | Abgrenzung | Status |
 |---|---|---|---|---|
@@ -285,16 +302,16 @@ ausgeführt und ihre Ergebnisse berichtet werden.
 | FA-01 Policy-Einlesen | Rekursives Einlesen von `.policy`-Dateien; E2E-Aktivierung einer neuen Policy | Komponente + E2E | Keine wesentliche Lücke für den definierten Umfang |
 | FA-02 Policy-Verwaltung | E2E-Hinzufügen und Entfernen; Unit-Tests zu Änderungserkennung und Generationen | Komponente + E2E | Schnelle parallele Änderungen nicht gezielt getestet |
 | FA-03 Kontrolle bei Dateiöffnungen | Statische E2E-Deny-Policy über den realen `file_open`-Hook | E2E | Nur der vorgesehene Hook und das Zielsystem |
-| FA-04 Policybasierte Entscheidung | Statische, zeitabhängige und dynamische Entscheidungen; `deny-overrides` | Unit + E2E | Reale Mehrfachentscheidung und kombinierte Attribute: E2E-11, E2E-12 (TODO) |
-| FA-05 Dynamische Attribute | Wertelogik in Unit-Tests; reale Änderungen von System-, Subject- und Resource-Attributen im E2E-Test | Unit + E2E | Kombinierte Attribute und ungültige Attributgeneration: E2E-12, E2E-13 (TODO) |
-| FA-06 Bestehende Dateizugriffe | Fake-FD-Enforcement sowie realer selektiver FD-Entzug | Komponente + E2E | Mehrere FDs, Fehlerpfad, Grenzfälle und Entzugslatenz: E2E-16, E2E-17, CHAR-01, RACE-01, PERF-03 (TODO) |
-| FA-07 Administrationsschnittstelle | `show-active` wird inhaltlich geprüft; ein zweiter Aufruf darf Generation und Entscheidung nicht verändern | E2E | Weitere Unterbefehle: COMP-04 (TODO) |
+| FA-04 Policybasierte Entscheidung | Statische, zeitabhängige und dynamische Entscheidungen; `deny-overrides` | Unit + E2E | Reale Mehrfachentscheidung und kombinierte Attribute: E2E-11, E2E-12 (implementiert; Ergebnisse siehe Testbewertung) |
+| FA-05 Dynamische Attribute | Wertelogik in Unit-Tests; reale Änderungen von System-, Subject- und Resource-Attributen im E2E-Test | Unit + E2E | Kombinierte Attribute und ungültige Attributgeneration: E2E-12, E2E-13 (implementiert; Ergebnisse siehe Testbewertung) |
+| FA-06 Bestehende Dateizugriffe | Fake-FD-Enforcement sowie realer selektiver FD-Entzug | Komponente + E2E | Mehrere FDs, Fehlerpfad, Grenzfälle und Entzugslatenz: E2E-16, E2E-17, CHAR-01, RACE-01, PERF-03 (implementiert; Ergebnisse siehe Testbewertung) |
+| FA-07 Administrationsschnittstelle | `show-active` wird inhaltlich geprüft; ein zweiter Aufruf darf Generation und Entscheidung nicht verändern | E2E | Weitere Unterbefehle: COMP-04 (implementiert; Ergebnisse siehe Testbewertung) |
 | FA-08 Gültige Generationen | Reihenfolgentests mit Fake-Store und ungültiges Update im E2E-Test | Komponente + E2E | Mehrfachupdates während eines laufenden Scans nicht gezielt getestet |
 | FA-09 Validierung von Policies | Umfangreiche Parser-, Wertebereichs- und Kapazitätstests | Unit/Komponente | Manipulation echter Maps ist nicht Teil der Tests |
 | FA-10 Beliebige Attributnamen | Übersetzung und reale Auswertung von `subject.position` und `resource.classification`; Ablehnung ungültiger Zeichen | Unit + E2E | Keine breite Stichprobe vieler unterschiedlicher Namen erforderlich bzw. implementiert |
-| OA-01 Stabilität | Ungültiges Policyupdate beendet die Runtime im E2E-Test nicht | E2E | Ungültige Attribute, Last und längerer Wechselbetrieb: E2E-13, LOAD-01, STAB-01 (TODO) |
-| OA-02 Beobachtbarkeit | Runtime-Logs und automatisierte Inhaltsprüfung von `show-active` | E2E | Ursache einer konkreten Entscheidung nachvollziehen: E2E-14 (TODO) |
-| OA-03 Performance | Keine quantitative Messung implementiert | keine | Öffnungs-, Reaktions- und Entzugsmessung: PERF-01 bis PERF-03 (TODO) |
+| OA-01 Stabilität | Ungültiges Policyupdate beendet die Runtime im E2E-Test nicht | E2E | Ungültige Attribute, Last und längerer Wechselbetrieb: E2E-13, LOAD-01, STAB-01 (implementiert; Ergebnisse siehe Testbewertung) |
+| OA-02 Beobachtbarkeit | Runtime-Logs und automatisierte Inhaltsprüfung von `show-active` | E2E | Ursache einer konkreten Entscheidung nachvollziehen: E2E-14 (implementiert; Ergebnisse siehe Testbewertung) |
+| OA-03 Performance | PERF-01 bis PERF-03 mit Rohdaten und Zeitmessungen | Messung | Öffnungs-, Reaktions- und Entzugsmessung: PERF-01 bis PERF-03 (implementiert; Ergebnisse siehe Testbewertung) |
 | OA-04 Reproduzierbarkeit | Automatisierte Skripte und temporäre Testumgebung vorhanden | Testinfrastruktur | Konkrete Zielsystemdaten und Messergebnisse müssen in Kapitel 6 ergänzt werden |
 | EA-01 bis EA-03 | Keine direkten Tests | analytisch zu bewerten | Modularität, Erweiterbarkeit und begrenzter Kernelanteil anhand des Entwurfs diskutieren |
 
@@ -308,9 +325,7 @@ eBPF-Programm akzeptiert, neue Dateiöffnungen tatsächlich kontrolliert werden 
 ein bereits geöffneter File Descriptor in einem kontrollierten Szenario selektiv
 geschlossen wird.
 
-Für die Evaluation fehlen vor allem die als Priorität A gekennzeichneten
-Anforderungs- und Laufzeitnachweise. Die aufwendigeren Prioritäten B und C müssen
-für den Prototyp nicht vollständig umgesetzt werden. Nicht implementierte
-Grenzfälle sind in der Arbeit jedoch ausdrücklich als Aussagegrenzen zu benennen,
-damit aus den bestandenen Szenarien kein vollständiger Produktions- oder
-Sicherheitsnachweis abgeleitet wird.
+Die ehemals offenen Tests sind jetzt automatisiert. Die Auswertung in
+[Testbewertung.md](Testbewertung.md) trennt bestandene Szenarien, fehlgeschlagene
+Anforderungen und Messgrenzen. Insbesondere ein bestandener Race-Stresstest oder
+ein zeitlich begrenzter Stabilitätslauf ist kein allgemeiner Produktionsnachweis.
