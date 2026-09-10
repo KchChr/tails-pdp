@@ -198,3 +198,38 @@ und 10,84 ms. Die einzelnen Intervallpaare stehen im JSON; daraus wird keine
 scheinexakte einzelne Aktivierungslatenz abgeleitet. Generationsabfragen und
 Hilfsprozessmessung verursachen selbst Aufwand. Bei zehn Wiederholungen sind p95
 und p99 das beobachtete Maximum, keine belastbare Tail-Latenzschätzung.
+
+## Nachprüfung nach Umstellung auf einzelne Bashdateien
+
+Die Szenarioschritte wurden mit Commit `e4ef193` aus dem zentralen Python-Treiber
+in einzelne Bashdateien verlagert. E2E-11 bis E2E-16 stehen unter `tests/e2e/`;
+COMP-04, CHAR-01, RACE-01, LOAD-01 und STAB-01 unter `tests/evaluation/`.
+E2E-17 und PERF-01 bis PERF-03 haben je eine Bashdatei als Einstieg und eine eigene
+Pythondatei für ptrace-Koordination beziehungsweise Messungen. FD- und UID-Helfer
+führen weiterhin die benötigten Systemaufrufe aus. Der gemeinsame Python-Runner
+verwaltet nur noch Fixture-Lebenszyklus, Bashaufrufe und Ergebnisse.
+
+Die umgestellte Struktur wurde vollständig auf `nixrun` nachgeprüft:
+
+- `sudo ./test-e2e.sh`: alle 17 E2E-Szenarien bestanden.
+- `sudo ./test-evaluation.sh COMP-04 CHAR-01 RACE-01 PERF-01 PERF-02 PERF-03 LOAD-01 STAB-01`:
+  sieben Szenarien bestanden; LOAD-01 meldet weiterhin den bekannten Runtime-Abbruch.
+- STAB-01: 100 Zyklen in 178 Sekunden. Die zusätzliche Shell-/Prozesskoordination
+  verändert die Laufzeit der Suite; dies ist keine neue Messung des reinen
+  Runtime-Aufwands.
+- Nach Commit `7a3419c` außerdem die Einzelaufrufe
+  `sudo bash tests/e2e/E2E-11.sh` (Exit 0) und
+  `sudo bash tests/evaluation/LOAD-01.sh` (erwarteter Fehlernachweis, Exit 1).
+
+Die ursprünglichen Messdaten bleiben als eigener Lauf erhalten. Die neuen
+Nachweise liegen separat vor:
+
+- [Zusammenfassung der Bash-Läufe](test-results/2026-09-10/bash/summary.json)
+- [Log aller 17 E2E-Szenarien](test-results/2026-09-10/bash/e2e.log)
+- [Artefakte E2E-11 bis E2E-17](test-results/2026-09-10/bash/e2e-artifacts.tar.gz)
+- [Übrige Bash-Szenarien samt neuen Rohdaten](test-results/2026-09-10/bash/evaluation-artifacts.tar.gz)
+- [Direkte Einzelaufrufe](test-results/2026-09-10/bash/direct-invocations.log)
+- [Letzter LOAD-01-Lauf](test-results/2026-09-10/bash/load-final-artifacts.tar.gz)
+
+Bei dieser Umstellung wurde kein Produktivcode verändert. Der bekannte
+Clippy-Befund und der Attributkapazitätsfehler bleiben bestehen.

@@ -1,0 +1,234 @@
+{
+  "e2e-artifacts.tar.gz": {
+    "runner": "bash-scenarios",
+    "commit": "e4ef193e4216a7c78337fe1feb97ed1e62461d40",
+    "kernel": {
+      "system": "Linux",
+      "node": "nixos",
+      "release": "6.16.12",
+      "version": "#1-NixOS SMP PREEMPT_DYNAMIC Sun Oct 12 11:01:05 UTC 2025",
+      "machine": "x86_64",
+      "processor": ""
+    },
+    "python": "3.12.11 (main, Jun  3 2025, 15:41:47) [GCC 14.3.0]",
+    "repeats": 10,
+    "stability_cycles": 100,
+    "results": {
+      "E2E-11": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-12": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-13": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-14": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-15": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-16": {
+        "status": "PASS",
+        "detail": null
+      },
+      "E2E-17": {
+        "status": "PASS",
+        "detail": {
+          "blocked": {
+            "closed": [
+              false,
+              false,
+              false
+            ],
+            "safe_open": [
+              true,
+              true
+            ],
+            "observed_ns": 4917573090697
+          },
+          "healthy": {
+            "closed": [
+              true,
+              true,
+              true
+            ],
+            "safe_open": [
+              true,
+              true
+            ],
+            "observed_ns": 4917564996426
+          }
+        }
+      }
+    }
+  },
+  "evaluation-artifacts.tar.gz": {
+    "runner": "bash-scenarios",
+    "commit": "e4ef193e4216a7c78337fe1feb97ed1e62461d40",
+    "kernel": {
+      "system": "Linux",
+      "node": "nixos",
+      "release": "6.16.12",
+      "version": "#1-NixOS SMP PREEMPT_DYNAMIC Sun Oct 12 11:01:05 UTC 2025",
+      "machine": "x86_64",
+      "processor": ""
+    },
+    "python": "3.12.11 (main, Jun  3 2025, 15:41:47) [GCC 14.3.0]",
+    "repeats": 10,
+    "stability_cycles": 100,
+    "results": {
+      "COMP-04": {
+        "status": "PASS",
+        "detail": null
+      },
+      "CHAR-01": {
+        "status": "PASS",
+        "detail": null
+      },
+      "RACE-01": {
+        "status": "PASS",
+        "detail": null
+      },
+      "PERF-01": {
+        "status": "PASS",
+        "detail": {
+          "unit": "ns",
+          "measurement": "warm-cache os.open including Python and timer overhead; close excluded",
+          "baseline": {
+            "n": 20000,
+            "median": 3295.0,
+            "p95": 3437,
+            "p99": 5323,
+            "min": 3109,
+            "max": 31436
+          },
+          "runtime_empty": {
+            "n": 20000,
+            "median": 4023.0,
+            "p95": 4165,
+            "p99": 7502,
+            "min": 3827,
+            "max": 32332
+          },
+          "runtime_permit": {
+            "n": 20000,
+            "median": 3908.0,
+            "p95": 4196,
+            "p99": 10548,
+            "min": 3719,
+            "max": 31867
+          },
+          "relative_median_overhead": {
+            "empty": 0.22094081942336885,
+            "permit": 0.1860394537177541
+          }
+        }
+      },
+      "PERF-02": {
+        "status": "PASS",
+        "detail": {
+          "unit": "ns",
+          "poll_interval_ms": 10,
+          "policy": {
+            "n": 10,
+            "median": 104331380.0,
+            "p95": 114249287,
+            "p99": 114249287,
+            "min": 93914480,
+            "max": 114249287
+          },
+          "attribute": {
+            "n": 10,
+            "median": 104699248.5,
+            "p95": 115031628,
+            "p99": 115031628,
+            "min": 104341901,
+            "max": 115031628
+          }
+        }
+      },
+      "PERF-03": {
+        "status": "PASS",
+        "detail": {
+          "unit": "ns",
+          "file_change_to_EBADF": {
+            "n": 10,
+            "median": 67776865.0,
+            "p95": 108471781,
+            "p99": 108471781,
+            "min": 56416972,
+            "max": 108471781
+          },
+          "activation_to_EBADF_bounds": [
+            {
+              "lower_ns": 6526604,
+              "upper_ns": 9029161,
+              "activation_bracket_ns": 2502557
+            },
+            {
+              "lower_ns": 6188997,
+              "upper_ns": 8835005,
+              "activation_bracket_ns": 2646008
+            },
+            {
+              "lower_ns": 7261187,
+              "upper_ns": 9822913,
+              "activation_bracket_ns": 2561726
+            },
+            {
+              "lower_ns": 7102704,
+              "upper_ns": 9511500,
+              "activation_bracket_ns": 2408796
+            },
+            {
+              "lower_ns": 6895017,
+              "upper_ns": 9267115,
+              "activation_bracket_ns": 2372098
+            },
+            {
+              "lower_ns": 6806168,
+              "upper_ns": 9072873,
+              "activation_bracket_ns": 2266705
+            },
+            {
+              "lower_ns": 6374558,
+              "upper_ns": 8779249,
+              "activation_bracket_ns": 2404691
+            },
+            {
+              "lower_ns": 6273059,
+              "upper_ns": 8577113,
+              "activation_bracket_ns": 2304054
+            },
+            {
+              "lower_ns": 6597659,
+              "upper_ns": 9174698,
+              "activation_bracket_ns": 2577039
+            },
+            {
+              "lower_ns": 6548335,
+              "upper_ns": 9780068,
+              "activation_bracket_ns": 3231733
+            }
+          ],
+          "note": "activation is bracketed by generation reads; no falsely exact activation timestamp; FD poll 1ms"
+        }
+      },
+      "LOAD-01": {
+        "status": "FAIL",
+        "error": "Bash scenario exited 1; see scenario.log"
+      },
+      "STAB-01": {
+        "status": "PASS",
+        "detail": null
+      }
+    }
+  }
+}
