@@ -430,8 +430,17 @@ def load(r):
     before = r.generations()
     offset = len(r.log())
     atomic(r.attrs / "system.attributes", "".join(f"field{i} = 4\n" for i in range(513)))
-    r.wait(lambda: r.proc.poll() is not None or "failed to write ATTRIBUTES" in r.log()[offset:], "attribute capacity rejection")
-    assert r.generations() == before
+    # On failure the runtime can briefly deny opens while tearing down its maps.
+    # Wait for exit without opening diagnostic files during that interval.
+    try:
+        r.proc.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        r.wait(lambda: "failed to write ATTRIBUTES" in r.log()[offset:], "attribute capacity rejection")
+    after = r.generations()
+    (r.root / "capacity-observation.json").write_text(json.dumps({
+        "before": before, "after": after, "runtime_exit": r.proc.poll(),
+        "accepted_per_bank": 512, "attempted_new_bank": 513}, indent=2))
+    assert after == before
     r.alive()  # A runtime exit is a failure, not a successful rejection.
     return {"static_capacity": 16, "stream_capacity": 16, "attribute_double_bank_capacity": 512}
 
@@ -483,6 +492,7 @@ def main():
         print(f"==> {name}", flush=True)
         runtime = Runtime(root / name)
         before_kernel = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
+        failure = None
         try:
             if name != "PERF-01":
                 runtime.start()
@@ -490,9 +500,11 @@ def main():
             report["results"][name] = {"status": "PASS", "detail": detail}
         except Exception as error:
             report["results"][name] = {"status": "FAIL", "error": str(error)}
-            (runtime.root / "failure.txt").write_text(traceback.format_exc())
+            failure = traceback.format_exc()
         finally:
             runtime.close()
+        if failure:
+            (runtime.root / "failure.txt").write_text(failure)
         after_kernel = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
         new_kernel = after_kernel[len(before_kernel):] if after_kernel.startswith(before_kernel) else after_kernel
         (runtime.root / "kernel.log").write_text(new_kernel)
