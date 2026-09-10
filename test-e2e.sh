@@ -16,16 +16,16 @@ readonly ADM_TOOL_BIN="${ADM_TOOL_BIN:-$PROJECT_ROOT/target/release/tails-pdp-ad
 readonly E2E_TIMEOUT_SECONDS="${E2E_TIMEOUT_SECONDS:-15}"
 readonly BPF_PIN_DIRECTORY="/sys/fs/bpf/tails-pdp"
 readonly SCENARIOS=(
-    E2E-01-runtime-start.sh
-    E2E-02-default-allow.sh
-    E2E-03-static-deny.sh
-    E2E-04-current-time.sh
-    E2E-05-system-attribute.sh
-    E2E-06-subject-attribute.sh
-    E2E-07-resource-attribute.sh
-    E2E-08-invalid-generation.sh
-    E2E-09-selective-fd-revocation.sh
-    E2E-10-admin-interface.sh
+    E2E-01.sh
+    E2E-02.sh
+    E2E-03.sh
+    E2E-04.sh
+    E2E-05.sh
+    E2E-06.sh
+    E2E-07.sh
+    E2E-08.sh
+    E2E-09.sh
+    E2E-10.sh
 )
 
 # Root wird für BPF-LSM, gepinnte Maps und ptrace-basiertes FD-Enforcement

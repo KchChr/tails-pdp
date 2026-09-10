@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Test-ID: E2E-06
 set -Eeuo pipefail
 
 readonly SCENARIO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
