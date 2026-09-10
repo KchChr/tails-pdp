@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Privileged evaluation scenarios. Each owns a fresh runtime and preserves artifacts.
-
-Run via sudo python3 tests/evaluation/run.py [IDs ...]. No third-party Python packages.
-Failures are reported as FAIL, never converted into successful characterization.
-"""
+"""Shared runtime, FD helpers and statistics; scenario logic lives in ID files."""
 import argparse
 import ctypes
 import errno

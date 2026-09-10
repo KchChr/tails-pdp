@@ -30,6 +30,7 @@ for revision in 1 2 3; do
     [[ "$(admin | grep -c '^system.field')" == 512 ]]
 done
 before="$(read_generations)"
+offset="$(log_offset)"
 for ((i=0; i<513; i++)); do printf 'field%s = 4\n' "$i"; done | install_attribute "$ATTRIBUTE_DIR/system.attributes"
 # Avoid diagnostic file opens during the known runtime-teardown interval.
 sleep 3
@@ -37,3 +38,4 @@ after="$(read_generations)"
 printf 'before=%s\nafter=%s\naccepted_per_bank=512\nattempted_new_bank=513\n' "$before" "$after" > "$TEST_ROOT/capacity-observation.txt"
 [[ "$after" == "$before" ]] || fail "Attributüberlauf aktiviert"
 runtime_alive || fail "Runtime nach Attributüberlauf beendet (bekannter Produktfehler)"
+wait_for_new_log "$offset" 'failed to write ATTRIBUTES'
