@@ -30,8 +30,12 @@ Der Testbestand ist in drei Ebenen gegliedert:
    Übersetzbarkeit. Sie sind keine funktionalen Laufzeittests im engeren Sinn.
 
 Aktuell sind **52 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
-Szenarien** vorhanden. Die zehn bisherigen E2E-Szenarien laufen über `test-e2e.sh`.
-`tests/evaluation/run.py` ergänzt 15 isolierte Szenarien. Die zuvor offenen
+Szenarien** vorhanden. `test-e2e.sh` führt E2E-01 bis E2E-17 aus, mit einer Bashdatei je ID unter
+`tests/e2e/`. `test-evaluation.sh` führt die 15 ergänzten Szenarien aus
+(einschließlich E2E-11 bis E2E-17; diese werden bei der Gesamtzahl nur einmal
+gezählt). Weitere IDs liegen unter `tests/evaluation/` ebenfalls als Bashdatei.
+Nur ptrace-Koordination und präzise Messungen verwenden je eine Pythondatei
+hinter einem Bash-Wrapper; FD- und UID-Systemaufrufe verwenden kleine Helfer. Die zuvor offenen
 **18 Testvorschläge sind implementiert**: COMP-01 bis COMP-03 als Rust-Tests,
 die übrigen als privilegierte Tests beziehungsweise Messungen.
 
@@ -44,7 +48,7 @@ Test kann fehlschlagen; insbesondere LOAD-01 wird nicht als bestanden deklariert
 | Testart | Ausführung | Anzahl | Benötigt Root? | Hauptzweck | Status |
 |---|---|---:|---:|---|---|
 | Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 52 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
-| End-to-End-Tests | `sudo ./test-e2e.sh` und `sudo python3 tests/evaluation/run.py` | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
+| End-to-End-Tests | `sudo ./test-e2e.sh` und `sudo ./test-evaluation.sh` | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
 | Formatprüfung | Teil von `./test.sh` | 1 Prüfschritt | nein | Einheitliche Rust-Formatierung | Implementiert |
 | Clippy | Teil von `./test.sh` | 1 Prüfschritt | nein | Statische Analyse mit Warnungen als Fehler | Implementiert |
 | Release-Build | Teil von `./test.sh` | 1 Prüfschritt | nein | Übersetzung der Userspace-Binaries und des eingebetteten eBPF-Objekts | Implementiert |
@@ -228,7 +232,7 @@ ursprüngliche Planungseinschätzung erhalten. Der Status bezeichnet vorhandenen
 Testcode und ist ausdrücklich kein Bestehensnachweis.
 
 COMP-01 bis COMP-03 laufen über `./test.sh`. Alle anderen IDs dieses Abschnitts
-laufen über `sudo python3 tests/evaluation/run.py`, optional gefolgt von einzelnen
+laufen über `sudo ./test-evaluation.sh`, optional gefolgt von einzelnen
 IDs. Details zu Parametern und Beobachtungsgrenzen stehen in
 [`tests/evaluation/README.md`](../tests/evaluation/README.md).
 

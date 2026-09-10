@@ -56,10 +56,11 @@ Run the additional functional, FD, performance, capacity, and stability scenario
 on the same dedicated target after building the release binaries:
 
 ```shell
-sudo python3 tests/evaluation/run.py
+sudo ./test-evaluation.sh
 ```
 
-Individual IDs can be appended, for example `E2E-12 PERF-02`. The runner preserves
+Individual IDs can be appended, for example `E2E-12 PERF-02`. Each scenario has its own Bash file;
+`sudo ./test-e2e.sh` runs E2E-01 through E2E-17. The runner preserves
 all results and logs and returns a failure status for unmet expectations. See
 [execution details](tests/evaluation/README.md) and the
 [test evaluation](thesis/Testbewertung.md) for measured results and known failures.

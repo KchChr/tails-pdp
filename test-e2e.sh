@@ -137,4 +137,13 @@ done
 
 echo
 echo "==> Ergebnis"
-echo "Alle ${#SCENARIOS[@]} privilegierten End-to-End-Tests waren erfolgreich."
+echo "Die bisherigen ${#SCENARIOS[@]} E2E-Szenarien waren erfolgreich."
+
+# The new per-ID scripts use isolated runtimes. Release the shared fixture first.
+kill -INT "$runtime_pid"
+wait "$runtime_pid"
+runtime_pid=""
+bash "$PROJECT_ROOT/remove_maps.sh" >/dev/null
+bash "$PROJECT_ROOT/test-evaluation.sh" E2E-11 E2E-12 E2E-13 E2E-14 E2E-15 E2E-16 E2E-17
+
+echo "Alle 17 privilegierten End-to-End-Tests waren erfolgreich."
