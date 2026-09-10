@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, bail};
-use aya::maps::{Array, HashMap as AyaHashMap, MapData};
+use aya::maps::{Array, HashMap as AyaHashMap, IterableMap, MapData};
 use log::{info, warn};
 use tails_pdp_common::{
     AttributeKey, AttributeNamespace, AttributeValue, AttributeValueKind, DEFAULT_DEFCON_LEVEL,
@@ -129,15 +129,28 @@ fn ensure_attribute_directory() -> anyhow::Result<PathBuf> {
 
 fn apply_attribute_directory(
     directory: &Path,
-    attribute_maps: &mut AttributeMaps,
+    attribute_maps: &mut impl AttributeStore,
     last_applied: &mut Option<Vec<ParsedAttribute>>,
     enforcement_triggers: &mpsc::Sender<EnforcementTrigger>,
 ) -> anyhow::Result<()> {
     match read_attribute_directory(directory) {
         Ok(attributes) if last_applied.as_ref() != Some(&attributes) => {
-            let generation = commit_attributes(attribute_maps, &attributes)?;
-            *last_applied = Some(attributes);
-            notify_attribute_activation(enforcement_triggers, generation)?;
+            match commit_attributes(attribute_maps, &attributes) {
+                Ok(generation) => {
+                    *last_applied = Some(attributes);
+                    // A closed enforcement channel is still fatal: activation succeeded,
+                    // but existing FDs can no longer be re-evaluated.
+                    notify_attribute_activation(enforcement_triggers, generation)?;
+                }
+                Err(error) => {
+                    // The commit never switches the active generation on failure. Keep
+                    // last_applied too, so a subsequent filesystem event can retry.
+                    warn!(
+                        "ATTRIBUTES update rejected for '{}'; previous generation remains active: {error:#}",
+                        directory.display()
+                    );
+                }
+            }
         }
         Ok(_) => {}
         Err(error) => {
@@ -413,17 +426,41 @@ fn notify_attribute_activation(
     Ok(())
 }
 
-// Storage seam for COMP-02 fault injection; the real map operations are unchanged.
+// Shared commit interface for real maps and deterministic fault-injection tests.
 trait AttributeStore {
-    fn current_generation(&self) -> u32;
+    fn current_generation(&self) -> anyhow::Result<u32>;
+    fn capacity(&self) -> anyhow::Result<usize>;
+    fn retained_entries(&self, replaced_bank: u32) -> anyhow::Result<usize>;
     fn clear_bank(&mut self, bank: u32) -> anyhow::Result<()>;
     fn insert(&mut self, key: AttributeKey, value: AttributeValue) -> anyhow::Result<()>;
     fn activate(&mut self, generation: u32) -> anyhow::Result<()>;
 }
 
 impl AttributeStore for AttributeMaps {
-    fn current_generation(&self) -> u32 {
-        self.generation.get(&0, 0).unwrap_or(0)
+    fn current_generation(&self) -> anyhow::Result<u32> {
+        self.generation
+            .get(&0, 0)
+            .context("failed to read ATTRIBUTE_GENERATION[0]")
+    }
+
+    fn capacity(&self) -> anyhow::Result<usize> {
+        Ok(self
+            .attributes
+            .map()
+            .info()
+            .context("failed to inspect ATTRIBUTES capacity")?
+            .max_entries() as usize)
+    }
+
+    fn retained_entries(&self, replaced_bank: u32) -> anyhow::Result<usize> {
+        let mut count = 0;
+        for key in self.attributes.keys() {
+            let key = key.context("failed to inspect ATTRIBUTES occupancy")?;
+            if key.bank != replaced_bank {
+                count += 1;
+            }
+        }
+        Ok(count)
     }
 
     fn clear_bank(&mut self, bank: u32) -> anyhow::Result<()> {
@@ -445,9 +482,22 @@ fn commit_attributes(
     attribute_maps: &mut impl AttributeStore,
     attributes: &[ParsedAttribute],
 ) -> anyhow::Result<u32> {
-    let current_generation = attribute_maps.current_generation();
+    let current_generation = attribute_maps.current_generation()?;
     let next_generation = current_generation.wrapping_add(1);
     let bank = attribute_bank(next_generation);
+    let capacity = attribute_maps.capacity()?;
+    let retained = attribute_maps.retained_entries(bank)?;
+    // Only the target bank is replaced. Check BEFORE clearing or writing anything,
+    // using the actual pinned map capacity, not a fixed per-generation limit.
+    if retained > capacity || attributes.len() > capacity - retained {
+        bail!(
+            "ATTRIBUTES capacity exceeded: retained={} requested={} capacity={}; generation {} unchanged",
+            retained,
+            attributes.len(),
+            capacity,
+            current_generation
+        );
+    }
     attribute_maps.clear_bank(bank)?;
     for attribute in attributes {
         let key = AttributeKey::new(

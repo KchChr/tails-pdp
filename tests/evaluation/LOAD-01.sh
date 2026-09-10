@@ -29,13 +29,37 @@ for revision in 1 2 3; do
     attribute_and_wait system.attributes "$values"
     [[ "$(admin | grep -c '^system.field')" == 512 ]]
 done
+# Use one existing policy slot to prove the active attribute values still enforce
+# Deny after the rejected change (field0=3), then Allow after recovery (field0=4).
+policy_and_wait stream-0 deny 'system.field0 == 3;'
+expect_access deny
 before="$(read_generations)"
+admin show-attributes > "$TEST_ROOT/attributes-before.txt"
 offset="$(log_offset)"
 for ((i=0; i<513; i++)); do printf 'field%s = 4\n' "$i"; done | install_attribute "$ATTRIBUTE_DIR/system.attributes"
-# Avoid diagnostic file opens during the known runtime-teardown interval.
-sleep 3
+wait_for_new_log "$offset" 'ATTRIBUTES capacity exceeded: retained=512 requested=513 capacity=1024'
+wait_for_new_log "$offset" 'ATTRIBUTES update rejected'
 after="$(read_generations)"
-printf 'before=%s\nafter=%s\naccepted_per_bank=512\nattempted_new_bank=513\n' "$before" "$after" > "$TEST_ROOT/capacity-observation.txt"
 [[ "$after" == "$before" ]] || fail "Attributüberlauf aktiviert"
-runtime_alive || fail "Runtime nach Attributüberlauf beendet (bekannter Produktfehler)"
-wait_for_new_log "$offset" 'failed to write ATTRIBUTES'
+runtime_alive || fail "Runtime nach abgelehntem Attributupdate beendet"
+admin show-attributes > "$TEST_ROOT/attributes-after-rejection.txt"
+cmp "$TEST_ROOT/attributes-before.txt" "$TEST_ROOT/attributes-after-rejection.txt"
+expect_access deny
+
+# Correct the file without restarting. The watcher must still activate updates.
+values=''
+for ((i=0; i<512; i++)); do values+="field$i = 4"$'\n'; done
+attribute_and_wait system.attributes "$values"
+expect_access allow
+recovered="$(read_generations)"
+[[ "$recovered" != "$before" ]] || fail "Korrigiertes Update nicht aktiviert"
+[[ "$(admin | grep -c '^system.field')" == 512 ]]
+# A further Deny proves enforcement is still attached, not just default Allow
+# after a dead runtime.
+values=''
+for ((i=0; i<512; i++)); do values+="field$i = 3"$'\n'; done
+attribute_and_wait system.attributes "$values"
+expect_access deny
+runtime_alive || fail "Runtime nach Wiederherstellung beendet"
+printf 'before=%s\nafter_rejection=%s\nrecovered=%s\naccepted_per_bank=512\nrejected_new_bank=513\nenforcement=deny-allow-deny\n' \
+    "$before" "$after" "$recovered" > "$TEST_ROOT/capacity-observation.txt"
