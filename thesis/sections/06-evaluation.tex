@@ -181,8 +181,8 @@ Sicherheitsnachweis dar.
 
 \subsubsection{Unit- und Komponententests}
 
-Das Skript \path{test.sh} bündelt die nicht privilegierte Prüfkette. Es führt 46 automatisierte
-Rust-Tests in fünf Modulen aus. Die Option \texttt{--locked} stellt sicher, dass Cargo dabei die
+Das Skript \path{test.sh} bündelt die nicht privilegierte Prüfkette. Es führt 52 automatisierte
+Rust-Tests in fünf Testbereichen aus. Die Option \texttt{--locked} stellt sicher, dass Cargo dabei die
 in \path{Cargo.lock} festgehaltene Abhängigkeitsauflösung nicht verändert. Der in der
 Cargo-Konfiguration für reguläre Programmstarts eingestellte privilegierte Runner wird für diese
 Tests durch \texttt{env} ersetzt. Die Tests benötigen daher keine Root-Rechte, laden kein
@@ -207,21 +207,27 @@ die inaktive Bank beschrieben und erst danach die neue Generation aktiviert wird
 Schreib- und Aktivierungsfehler müssen die zuvor aktive Generation unverändert lassen; außerdem
 werden nicht mehr belegte Einträge einer neu vorbereiteten Bank deaktiviert.
 
-Zwei Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
-Stringwerte sowie die Validierung von Attributnamen und des zulässigen DEFCON-Wertebereichs. Zwei
+Sechs Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
+Stringwerte sowie die Validierung von Attributnamen und des zulässigen DEFCON-Wertebereichs.
+Ergänzend werden ein vollständiges Verzeichnis mit System-, Subject- und Resource-Attributen sowie
+die transaktionale Aktivierung einer neuen Attributbank mit simulierten Lösch-, Schreib- und
+Aktivierungsfehlern untersucht. Zwei
 weitere Tests in \path{tails-pdp-userspace-common} untersuchen den begrenzten Trigger-Kanal. Sie
 prüfen, dass mehrere schnell aufeinanderfolgende Aktivierungen bei voller Kanalkapazität
 koalesziert werden und ein geschlossener Kanal als Fehler gemeldet wird.
 
-Die zwölf Tests des Userspace-PEP prüfen die Auswertung von Prozess- und
+Die 14 Tests des Userspace-PEP prüfen die Auswertung von Prozess- und
 File-Descriptor-Informationen sowie die Steuerung der Nachbewertung. Dazu gehören das Filtern
 numerischer Einträge unter \path{/proc}, die Auswahl der Real UID aus
 \path{/proc/<pid>/status}, die Erkennung regulärer Dateien und die gezielte Zuordnung eines
 Verstoßes zu Prozess und File Descriptor. Mit dem \texttt{FakeFdCloser} wird geprüft, dass ein
 File Descriptor innerhalb eines Scans höchstens einmal behandelt wird, unterschiedliche
 Deskriptoren unabhängig bleiben und ein fehlgeschlagener Schließversuch die Bearbeitung weiterer
-Verstöße nicht abbricht. Ergänzend testen asynchrone Fälle das Warten auf Aktivierungsereignisse
-sowie die Berechnung relevanter Stunden- und Modulo-Zeitgrenzen.
+Verstöße nicht abbricht. Ein zusätzlicher Test bildet die Konjunktion mehrerer dynamischer
+Bedingungen im produktiven Lookup-Ablauf ab; ein weiterer weist nach, dass ein fehlgeschlagener
+Entzug die Verarbeitung eines anderen Zielprozesses nicht verhindert. Ergänzend testen asynchrone
+Fälle das Warten auf Aktivierungsereignisse sowie die Berechnung relevanter Stunden- und
+Modulo-Zeitgrenzen.
 
 Neben den funktionalen Rust-Tests führt \path{test.sh} drei Qualitätsprüfungen aus. Eine reine
 Formatprüfung kontrolliert mit \texttt{cargo fmt}, ob der Rust-Quellcode dem vorgegebenen Format
@@ -234,6 +240,109 @@ Code für die BPF-Zielarchitektur und eine \texttt{no\_std}-Umgebung übersetzt 
 gemeinsame Policylogik wird daher nativ getestet; die tatsächliche Kernelausführung ist
 Gegenstand der folgenden End-to-End-Szenarien.
 
+\subsubsection{Privilegierte End-to-End-Tests}
+
+Die End-to-End-Prüfung wird auf dem in Abschnitt~6.1 beschriebenen Linux-Zielsystem mit
+Root-Rechten ausgeführt. Das Skript \path{test-e2e.sh} bildet den gemeinsamen Einstiegspunkt und
+ruft für die Test-IDs \texttt{E2E-01} bis \texttt{E2E-17} jeweils eine eigene Bashdatei unter
+\path{tests/e2e/} auf. Vor dem Start bricht die Hauptdatei ab, wenn bereits eine Instanz des
+Prototyps läuft; anschließend entfernt sie die bekannten Test-Maps unter
+\path{/sys/fs/bpf/tails-pdp}. Deshalb darf die Suite ausschließlich auf dem dedizierten Testsystem
+und nicht parallel zu einer regulären Instanz oder einem weiteren Testlauf ausgeführt werden.
+
+Für die ersten zehn Szenarien startet die Hauptdatei eine gemeinsame Runtime in einem temporären
+Arbeitsverzeichnis. Dieses enthält eigene Policy- und Attributverzeichnisse sowie eine geschützte
+und eine nicht geschützte Testdatei. Änderungen werden zunächst vollständig in eine temporäre
+Datei geschrieben und anschließend atomar aktiviert. Wo ein erlaubter Zugriff allein noch keinen
+Nachweis für die Verarbeitung einer Änderung liefern würde, wartet der Test zusätzlich auf einen
+Wechsel der Policy- oder Attributgeneration. Nach \texttt{E2E-10} wird diese Runtime beendet und
+der gepinnte Testzustand entfernt.
+
+Die Szenarien \texttt{E2E-11} bis \texttt{E2E-17} werden anschließend über
+\path{test-evaluation.sh} mit jeweils eigener Runtime und isoliertem Arbeitsverzeichnis
+ausgeführt. Der zugehörige Runner sperrt parallele Evaluationsläufe, verwaltet ausschließlich die
+von ihm gestarteten Prozesse und verweigert den Start, wenn bekannte gepinnte Maps bereits
+vorhanden sind. Beim Aufräumen entfernt er nur die durch den jeweiligen Lauf erzeugten Maps. Für
+die Prüfung neuer Dateiöffnungen verwendet dieser Teil der Suite einen kleinen Syscall-Helfer. Ein
+Zugriff gilt nur dann als durch den LSM-Hook verweigert, wenn \texttt{open()} mit \texttt{EPERM}
+fehlschlägt; andere Ein-/Ausgabefehler werden nicht als erfolgreiches Deny gewertet.
+
+Tabelle~\ref{tab:e2e-basis} fasst die grundlegenden Start-, Entscheidungs- und Attributszenarien
+zusammen. Die Kriterien beschreiben den vorab erwarteten Zustand; die tatsächlich beobachteten
+Ergebnisse werden getrennt in Abschnitt~6.3 berichtet.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Grundlegende End-to-End-Szenarien}
+    \label{tab:e2e-basis}
+    \begin{tabular}{p{0.16\textwidth}p{0.34\textwidth}p{0.41\textwidth}}
+        \hline
+        \textbf{Test-ID} & \textbf{Gegenstand} & \textbf{Bestehenskriterium} \\
+        \hline
+        E2E-01 & Runtime, Kernel-Verifier, LSM-Attach und Maps & Die Runtime bleibt aktiv und alle
+        erwarteten Maps sind gepinnt. \\
+        E2E-02 bis E2E-04 & Standardentscheidung, statische Deny-Policy und aktuelle UTC-Stunde &
+        Der Zugriff ist ohne passende Deny-Policy erlaubt, wird bei passender statischer oder
+        zeitabhängiger Policy verweigert und nach deren Entfernung wieder erlaubt. \\
+        E2E-05 bis E2E-07 & System-, Subject- und Resource-Attribute & Änderungen von
+        \texttt{system.defcon}, \texttt{subject.position} und
+        \texttt{resource.classification} verändern die reale Zugriffsentscheidung in beide
+        Richtungen. \\
+        E2E-08 & Ungültige Policygeneration & Die Runtime meldet den Parserfehler, aktiviert die
+        fehlerhafte Generation nicht und erzwingt weiterhin die letzte gültige Deny-Policy. \\
+        E2E-12 & Konjunktion mehrerer Attribut-Namespaces & Die Deny-Policy greift nur bei
+        gleichzeitig passenden System-, Subject- und Resource-Attributen; fehlende, typfalsche
+        oder abweichende Einzelwerte heben das Deny auf. \\
+        E2E-13 & Ungültige Attributgeneration & Ein unzulässiger Attributwert wird gemeldet, ohne
+        die sichtbare Generation oder die zuvor gültige Entscheidung zu verändern. \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Die weiteren Szenarien in Tabelle~\ref{tab:e2e-enforcement} konzentrieren sich auf die
+Combining-Regel, bestehende File Descriptors, die Administrationsschnittstelle und kontrollierte
+Fehlerfälle. Beim nachträglichen Entzug hält ein Hilfsprozess mehrere Deskriptoren geöffnet und
+prüft über \texttt{fstat()}, ob ausschließlich die von der neuen Entscheidung betroffenen
+Deskriptoren mit \texttt{EBADF} ungültig werden.
+
+\begin{table}[htbp]
+    \centering
+    \caption{End-to-End-Szenarien für Enforcement und Fehlerverhalten}
+    \label{tab:e2e-enforcement}
+    \begin{tabular}{p{0.16\textwidth}p{0.34\textwidth}p{0.41\textwidth}}
+        \hline
+        \textbf{Test-ID} & \textbf{Gegenstand} & \textbf{Bestehenskriterium} \\
+        \hline
+        E2E-09 und E2E-16 & Selektiver Entzug bestehender File Descriptors & Ein beziehungsweise
+        mehrere verletzende Deskriptoren werden geschlossen; weiterhin zulässige Deskriptoren
+        desselben Prozesses bleiben geöffnet. \\
+        E2E-10 und E2E-14 & Administrationsschnittstelle und Nachvollziehbarkeit & Die Ausgabe
+        enthält aktive Generation, Deny-Policy, Ressourcenidentität, Attributbedingung und
+        Attributwert, ohne den Zustand zu verändern. Dies weist die rekonstruierbare Ursache im
+        kontrollierten Szenario nach, jedoch kein individuelles Auditlog jeder Entscheidung. \\
+        E2E-11 & Combining-Regel \emph{deny-overrides} & Bei gleichzeitig passender Permit- und
+        Deny-Policy wird der Zugriff unabhängig von der lexikalischen Policyreihenfolge verweigert;
+        nach Entfernen des Deny wird er erlaubt. \\
+        E2E-15 & Real und Effective UID & Bei privilegiertem Effective- und Filesystem-User wird
+        die Entscheidung anhand der gesetzten Real UID getroffen; eine andere Real UID bildet die
+        Negativkontrolle. \\
+        E2E-17 & Nicht erreichbarer Zielprozess beim FD-Entzug & Der gezielt erzeugte
+        \texttt{ptrace}-Attach-Konflikt wird protokolliert, ein anderer Zielprozess wird dennoch
+        verarbeitet und weitere Policyaktivierungen sowie Kernelentscheidungen bleiben möglich. \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Ein Szenario gilt nur dann als bestanden, wenn sein Skript ohne fehlgeschlagene Assertion endet,
+die Runtime während der vorgesehenen Prüfung aktiv bleibt und im neu hinzugekommenen Kernel-Log
+kein Hinweis auf \emph{Kernel panic}, \emph{Oops}, \emph{BUG} oder einen General-Protection-Fault
+enthalten ist. Für die isolierten Szenarien werden Status, Parameter und gegebenenfalls erzeugte
+Detaildaten in \path{report.json} gespeichert. Runtime-, Szenario- und Kernel-Logs bleiben im
+ausgegebenen Verzeichnis unter \path{/tmp/tails-eval-*} erhalten. Diese Artefakte bilden die
+Grundlage für die Ergebnisdarstellung, sind aber selbst noch kein Nachweis über andere Kernel,
+Konfigurationen oder Lastsituationen hinaus.
+
+\clearpage
 \subsection{Ergebnisse}
 % Messergebnisse und Zuordnung zu den Anforderungen ergänzen.
 
