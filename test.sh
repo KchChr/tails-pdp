@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# Nicht privilegierte, reproduzierbare Prüfkette für den gesamten Rust-Workspace.
+# Zentrale, reproduzierbare Prüfkette für den gesamten Prototyp.
 #
-# Dieses Skript verändert keine aktiven LSM-Hooks und keine gepinnten eBPF-Maps. Die echten
-# Kernel-, Attach- und Enforcement-Szenarien stehen deshalb getrennt in test-e2e.sh.
+# Die Rust-Prüfungen laufen mit den Rechten des aufrufenden Benutzers. Für die anschließenden
+# Kernel-, Attach-, Enforcement- und Evaluationsszenarien fordert das Skript über sudo gezielt
+# Root-Rechte an. Diese Tests verändern vorübergehend die gepinnten Maps unter
+# /sys/fs/bpf/tails-pdp und dürfen nur auf dem dedizierten Linux-Testsystem ausgeführt werden.
 
 # -E: ERR-Trap würde in Funktionen weitergereicht, -e: beim ersten Fehler abbrechen,
 # -u: nicht gesetzte Variablen als Fehler behandeln, pipefail: Pipeline-Fehler nicht verdecken.
@@ -30,6 +32,19 @@ readonly -a WORKSPACE_PACKAGES=(
     tails-pdp-userspace-pep
 )
 
+# E2E-11 bis E2E-17 werden bereits durch test-e2e.sh ausgeführt. Hier stehen deshalb nur die
+# übrigen privilegierten Evaluationsszenarien, damit kein Test doppelt läuft.
+readonly -a EVALUATION_SCENARIOS=(
+    COMP-04
+    CHAR-01
+    RACE-01
+    PERF-01
+    PERF-02
+    PERF-03
+    LOAD-01
+    STAB-01
+)
+
 # Explizite --package-Argumente vermeiden, dass das no_std-eBPF-Crate als gewöhnlicher
 # Userspace-Test gestartet wird. Das eBPF-Crate wird später über build.rs für das BPF-Target gebaut.
 package_arguments=()
@@ -45,6 +60,24 @@ run_step() {
     echo "==> $description"
     "$@"
 }
+
+run_privileged_step() {
+    local description="$1"
+    shift
+
+    if [[ "${EUID}" -eq 0 ]]; then
+        run_step "$description" "$@"
+    else
+        run_step "$description" \
+            sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,EVAL_TIMEOUT,EVAL_REPEATS,EVAL_STAB_CYCLES \
+            "$@"
+    fi
+}
+
+if [[ "${EUID}" -ne 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+    echo "Fehler: Für die privilegierten Systemtests wird sudo benötigt." >&2
+    exit 1
+fi
 
 # Reine Formatprüfung: Es werden keine Dateien automatisch verändert.
 run_step "Formatierung prüfen" \
@@ -67,7 +100,13 @@ run_step "Clippy ohne Warnungen ausführen" \
 run_step "Release-Binaries einschließlich eBPF-Objekt bauen" \
     cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool
 
+# Führt E2E-01 bis E2E-17 aus. E2E-11 bis E2E-17 verwenden dabei jeweils eine isolierte Runtime.
+run_privileged_step "Alle privilegierten End-to-End-Tests ausführen" \
+    bash "$PROJECT_ROOT/test-e2e.sh"
+
+# Ergänzt die E2E-Suite um reale Map-, Grenzfall-, Performance-, Last- und Stabilitätsprüfungen.
+run_privileged_step "Ergänzende Evaluationsszenarien ausführen" \
+    bash "$PROJECT_ROOT/test-evaluation.sh" "${EVALUATION_SCENARIOS[@]}"
+
 echo
-echo "Alle automatisierten Tests und Checks waren erfolgreich."
-echo "Hinweis: Verifier-, Attach- und LSM-Enforcement-Tests benötigen weiterhin einen"
-echo "privilegierten Lauf auf dem Zielsystem mit: sudo ./test-e2e.sh"
+echo "Alle automatisierten Tests, Qualitätsprüfungen und Evaluationsszenarien waren erfolgreich."

@@ -1,6 +1,16 @@
 # Ergänzende Evaluation
 
-Nur auf dem dedizierten Linux-Testsystem, nach dem Release-Build:
+Die vollständige Prüfkette wird auf dem dedizierten Linux-Testsystem über einen einzigen
+Einstieg gestartet:
+
+```bash
+./test.sh
+```
+
+Das Skript führt zunächst Formatierung, Rust-Tests, Clippy und Release-Build ohne erhöhte
+Berechtigungen aus. Für die anschließenden Kernel- und Evaluationsszenarien fordert es selbst
+über `sudo` Root-Rechte an. Die Teilrunner können für gezielte Wiederholungen weiterhin direkt
+aufgerufen werden:
 
 ```bash
 sudo ./test-evaluation.sh
@@ -8,7 +18,7 @@ sudo ./test-evaluation.sh
 sudo ./test-evaluation.sh E2E-11 COMP-04 PERF-02
 ```
 
-COMP-01 bis COMP-03 laufen als Rust-Komponententests über `./test.sh`.
+COMP-01 bis COMP-03 laufen als Rust-Komponententests im ersten Teil von `./test.sh`.
 COMP-04 verwendet echte Maps und benötigt deshalb hier Root.
 `sudo ./test-e2e.sh` führt jetzt E2E-01 bis E2E-17 aus. Die ersten zehn
 verwenden ihre bisherige gemeinsame Fixture, die sieben neuen jeweils eine

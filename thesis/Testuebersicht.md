@@ -30,7 +30,9 @@ Der Testbestand ist in drei Ebenen gegliedert:
    Übersetzbarkeit. Sie sind keine funktionalen Laufzeittests im engeren Sinn.
 
 Aktuell sind **59 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
-Szenarien** vorhanden. `test-e2e.sh` führt E2E-01 bis E2E-17 aus, mit einer Bashdatei je ID unter
+Szenarien** vorhanden. `./test.sh` ist der zentrale Einstiegspunkt für sämtliche Prüfungen und
+fordert für die Systemtests selbst über `sudo` Root-Rechte an. `test-e2e.sh` führt E2E-01 bis
+E2E-17 aus, mit einer Bashdatei je ID unter
 `tests/e2e/`. `test-evaluation.sh` führt die 15 ergänzten Szenarien aus
 (einschließlich E2E-11 bis E2E-17; diese werden bei der Gesamtzahl nur einmal
 gezählt). Weitere IDs liegen unter `tests/evaluation/` ebenfalls als Bashdatei.
@@ -51,7 +53,7 @@ historischer Stand erhalten.
 | Testart | Ausführung | Anzahl | Benötigt Root? | Hauptzweck | Status |
 |---|---|---:|---:|---|---|
 | Unit- und Komponententests | `./test.sh` bzw. `cargo test` | 59 | nein | Isolierte Prüfung von Policylogik, Parsern, Generationen und Userspace-PEP | Implementiert |
-| End-to-End-Tests | `sudo ./test-e2e.sh` und `sudo ./test-evaluation.sh` | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen auf dem Linux-Zielkernel | Implementiert |
+| End-to-End- und Evaluationsszenarien | Bestandteil von `./test.sh`; Teilrunner separat aufrufbar | 25 Szenarien | ja | Reales Laden, Anhängen und Durchsetzen sowie Performance, Last und Stabilität | Implementiert |
 | Formatprüfung | Teil von `./test.sh` | 1 Prüfschritt | nein | Einheitliche Rust-Formatierung | Implementiert |
 | Clippy | Teil von `./test.sh` | 1 Prüfschritt | nein | Statische Analyse mit Warnungen als Fehler | Implementiert |
 | Release-Build | Teil von `./test.sh` | 1 Prüfschritt | nein | Übersetzung der Userspace-Binaries und des eingebetteten eBPF-Objekts | Implementiert |

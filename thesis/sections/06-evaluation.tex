@@ -181,8 +181,9 @@ Sicherheitsnachweis dar.
 
 \subsubsection{Unit- und Komponententests}
 
-Das Skript \path{test.sh} bündelt die nicht privilegierte Prüfkette. Es führt 52 automatisierte
-Rust-Tests in fünf Testbereichen aus. Die Option \texttt{--locked} stellt sicher, dass Cargo dabei die
+Das Skript \path{test.sh} bildet den zentralen Einstiegspunkt der gesamten Prüfkette. Sein erster,
+nicht privilegierter Teil führt 59 automatisierte Rust-Tests in fünf Testbereichen aus. Die Option
+\texttt{--locked} stellt sicher, dass Cargo dabei die
 in \path{Cargo.lock} festgehaltene Abhängigkeitsauflösung nicht verändert. Der in der
 Cargo-Konfiguration für reguläre Programmstarts eingestellte privilegierte Runner wird für diese
 Tests durch \texttt{env} ersetzt. Die Tests benötigen daher keine Root-Rechte, laden kein
@@ -207,11 +208,13 @@ die inaktive Bank beschrieben und erst danach die neue Generation aktiviert wird
 Schreib- und Aktivierungsfehler müssen die zuvor aktive Generation unverändert lassen; außerdem
 werden nicht mehr belegte Einträge einer neu vorbereiteten Bank deaktiviert.
 
-Sechs Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
+Die 13 Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
 Stringwerte sowie die Validierung von Attributnamen und des zulässigen DEFCON-Wertebereichs.
 Ergänzend werden ein vollständiges Verzeichnis mit System-, Subject- und Resource-Attributen sowie
 die transaktionale Aktivierung einer neuen Attributbank mit simulierten Lösch-, Schreib- und
-Aktivierungsfehlern untersucht. Zwei
+Aktivierungsfehlern untersucht. Weitere Fehlerfälle decken die Kapazitätsprüfung vor der ersten
+Map-Änderung, Fehler beim Lesen von Generation und Belegung sowie die Fortsetzung des laufenden
+Updaters nach einem fehlgeschlagenen Commit ab. Zwei
 weitere Tests in \path{tails-pdp-userspace-common} untersuchen den begrenzten Trigger-Kanal. Sie
 prüfen, dass mehrere schnell aufeinanderfolgende Aktivierungen bei voller Kanalkapazität
 koalesziert werden und ein geschlossener Kanal als Fehler gemeldet wird.
@@ -229,7 +232,8 @@ Entzug die Verarbeitung eines anderen Zielprozesses nicht verhindert. Ergänzend
 Fälle das Warten auf Aktivierungsereignisse sowie die Berechnung relevanter Stunden- und
 Modulo-Zeitgrenzen.
 
-Neben den funktionalen Rust-Tests führt \path{test.sh} drei Qualitätsprüfungen aus. Eine reine
+Neben den funktionalen Rust-Tests führt der nicht privilegierte Teil von \path{test.sh} drei
+Qualitätsprüfungen aus. Eine reine
 Formatprüfung kontrolliert mit \texttt{cargo fmt}, ob der Rust-Quellcode dem vorgegebenen Format
 entspricht. Clippy analysiert Produktions- und Testcode statisch; Warnungen werden dabei als
 Fehler behandelt. Abschließend erzeugt ein Release-Build die Userspace-Binaries und über das
@@ -243,7 +247,9 @@ Gegenstand der folgenden End-to-End-Szenarien.
 \subsubsection{Privilegierte End-to-End-Tests}
 
 Die End-to-End-Prüfung wird auf dem in Abschnitt~6.1 beschriebenen Linux-Zielsystem mit
-Root-Rechten ausgeführt. Das Skript \path{test-e2e.sh} bildet den gemeinsamen Einstiegspunkt und
+Root-Rechten ausgeführt. Der zentrale Runner \path{test.sh} fordert diese Berechtigungen nach dem
+Release-Build über \texttt{sudo} an und ruft \path{test-e2e.sh} auf. Dieses Skript bildet den
+gemeinsamen Einstiegspunkt der End-to-End-Stufe und
 ruft für die Test-IDs \texttt{E2E-01} bis \texttt{E2E-17} jeweils eine eigene Bashdatei unter
 \path{tests/e2e/} auf. Vor dem Start bricht die Hauptdatei ab, wenn bereits eine Instanz des
 Prototyps läuft; anschließend entfernt sie die bekannten Test-Maps unter
@@ -258,7 +264,7 @@ Nachweis für die Verarbeitung einer Änderung liefern würde, wartet der Test z
 Wechsel der Policy- oder Attributgeneration. Nach \texttt{E2E-10} wird diese Runtime beendet und
 der gepinnte Testzustand entfernt.
 
-Die Szenarien \texttt{E2E-11} bis \texttt{E2E-17} werden anschließend über
+Die Szenarien \texttt{E2E-11} bis \texttt{E2E-17} werden darin anschließend über
 \path{test-evaluation.sh} mit jeweils eigener Runtime und isoliertem Arbeitsverzeichnis
 ausgeführt. Der zugehörige Runner sperrt parallele Evaluationsläufe, verwaltet ausschließlich die
 von ihm gestarteten Prozesse und verweigert den Start, wenn bekannte gepinnte Maps bereits
@@ -266,6 +272,13 @@ vorhanden sind. Beim Aufräumen entfernt er nur die durch den jeweiligen Lauf er
 die Prüfung neuer Dateiöffnungen verwendet dieser Teil der Suite einen kleinen Syscall-Helfer. Ein
 Zugriff gilt nur dann als durch den LSM-Hook verweigert, wenn \texttt{open()} mit \texttt{EPERM}
 fehlschlägt; andere Ein-/Ausgabefehler werden nicht als erfolgreiches Deny gewertet.
+
+Nach Abschluss aller 17 End-to-End-Szenarien ruft \path{test.sh} denselben Evaluationsrunner ein
+zweites Mal ausschließlich für \texttt{COMP-04}, \texttt{CHAR-01}, \texttt{RACE-01},
+\texttt{PERF-01} bis \texttt{PERF-03}, \texttt{LOAD-01} und \texttt{STAB-01} auf. Damit werden
+alle Teststufen durch einen Aufruf von \path{test.sh} ausgeführt, ohne die Szenarien
+\texttt{E2E-11} bis \texttt{E2E-17} doppelt zu starten. Die Teilrunner bleiben für gezielte
+Wiederholungen einzelner Szenarien separat aufrufbar.
 
 Tabelle~\ref{tab:e2e-basis} fasst die grundlegenden Start-, Entscheidungs- und Attributszenarien
 zusammen. Die Kriterien beschreiben den vorab erwarteten Zustand; die tatsächlich beobachteten
@@ -344,6 +357,191 @@ Konfigurationen oder Lastsituationen hinaus.
 
 \clearpage
 \subsection{Ergebnisse}
-% Messergebnisse und Zuordnung zu den Anforderungen ergänzen.
+
+Die nachfolgend dargestellten Ergebnisse wurden am 10.~September 2026 auf dem in
+Abschnitt~6.1 beschriebenen Zielsystem erhoben. Die funktionalen Abschlussprüfungen beziehen sich
+auf den Quellstand \texttt{35e1d2b}; die quantitativen Messwerte wurden zuvor mit dem Quellstand
+\texttt{9848f19} auf demselben System erfasst. Zwischen beiden Ständen wurde die Behandlung einer
+überschrittenen Attributkapazität korrigiert. Da diese Änderung den Updatepfad des
+Attributloaders betrifft, nicht jedoch den eBPF-Pfad einer Dateiöffnung, werden die vorhandenen
+Messwerte weiterhin zur Charakterisierung des Prototyps herangezogen. Insbesondere die gemessene
+Attributreaktionszeit ist dennoch als Wert des früheren Quellstands auszuweisen und nicht als
+Neuvermessung der Korrektur zu verstehen.
+
+\subsubsection{Ergebnisse der funktionalen Prüfungen}
+
+Alle 59 Unit- und Komponententests wurden erfolgreich ausgeführt. Davon entfallen 16 Tests auf
+die gemeinsame Policylogik, 14 auf den Policyloader, 13 auf den Attributloader, zwei auf den
+gemeinsamen Triggerkanal und 14 auf den Userspace-PEP. Die Formatprüfung und der separate
+Release-Build der Runtime und des Administrationstools einschließlich des eBPF-Objekts waren
+ebenfalls erfolgreich. Damit ist nachgewiesen, dass der untersuchte Quellstand übersetzbar ist
+und die in Abschnitt~6.2.2 beschriebenen Assertions erfüllt.
+
+Die vollständige Ausführung von \path{test.sh} endet gleichwohl nicht mit einem Gesamterfolg.
+Nach den bestandenen Rust-Tests meldet Clippy für
+\path{tails-pdp-userspace-common/src/lib.rs} den Befund
+\texttt{items\_after\_test\_module}. Die separat geprüften, im Zuge der Kapazitätskorrektur
+geänderten Crates bestanden die statische Analyse mit als Fehler behandelten Warnungen. Der
+verbleibende Befund hat keinen beobachteten Einfluss auf das Laufzeitverhalten, zeigt jedoch,
+dass die definierte Qualitätsprüfkette des gesamten Workspace noch nicht vollständig erfolgreich
+ist.
+
+Auf dem Zielkernel bestanden alle 17 End-to-End-Szenarien. Die Runtime wurde vom
+Kernel-Verifier akzeptiert, der \texttt{file\_open}-Hook angehängt und die erwarteten Maps wurden
+gepinnt. Ohne passende Deny-Policy blieb der Zugriff erlaubt; statische, zeitabhängige und von
+dynamischen Attributen abhängige Deny-Policies führten dagegen zu \texttt{EPERM}. Änderungen von
+System-, Subject- und Resource-Attributen wurden in beide Entscheidungsrichtungen übernommen.
+Auch die Konjunktion mehrerer Attribut-Namespaces und die Combining-Regel
+\emph{deny-overrides} zeigten das erwartete Verhalten.
+
+Ungültige Policy- und Attributstände ersetzten die jeweils letzte gültige Generation nicht.
+Nach der Korrektur des Attributloaders wurde auch eine Überschreitung der realen Map-Kapazität
+kontrolliert abgelehnt: Je 512 Attribute pro vollständig belegter Bank wurden akzeptiert, ein
+Update auf 513 Attribute bei weiterhin 512 Einträgen der aktiven Bank dagegen vor einer
+Veränderung der Maps zurückgewiesen. Generation und aktive Attributwerte blieben unverändert;
+anschließende gültige Updates wurden ohne Neustart der Runtime verarbeitet. Für Policies wurden
+je 16 statische und 16 Stream-Policies akzeptiert und der jeweils 17. Eintrag kontrolliert
+abgelehnt. Damit wurde nicht nur das Verhalten an den vorgesehenen Grenzen, sondern auch die
+Wiederherstellung des regulären Updatebetriebs nach einer Ablehnung beobachtet.
+
+Der nachträgliche Entzug bestehender Dateizugriffe war in den vorgesehenen Szenarien ebenfalls
+erfolgreich. Sowohl ein einzelner als auch drei gleichzeitig verletzende File Descriptors wurden
+geschlossen, während die erlaubten Deskriptoren desselben Prozesses geöffnet blieben. War ein
+Zielprozess aufgrund eines bestehenden \texttt{ptrace}-Attachs nicht erreichbar, wurde der
+Fehler protokolliert und ein weiterer Prozess trotzdem erfolgreich verarbeitet. Nachfolgende
+Policyaktivierungen und Kernelentscheidungen blieben möglich. Die Administrationsschnittstelle
+zeigte aktive Generationen, Policies, Ressourcen und Attribute ohne beobachtete Zustandsänderung.
+Im kontrollierten Szenario ließ sich die Ursache einer Ablehnung aus der einzigen aktiven
+Deny-Policy, der Ressourcenidentität, der Attributbedingung und dem aktuellen Attributwert
+rekonstruieren. Ein individuelles Entscheidungsprotokoll für jede Dateiöffnung oder der
+ursprüngliche Policyname wird jedoch nicht ausgegeben.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Zusammenfassung der funktionalen Testergebnisse}
+    \label{tab:funktionale-ergebnisse}
+    \begin{tabular}{p{0.28\textwidth}p{0.18\textwidth}p{0.45\textwidth}}
+        \hline
+        \textbf{Prüfung} & \textbf{Ergebnis} & \textbf{Einordnung} \\
+        \hline
+        Rust-Tests & 59 von 59 bestanden & Unit- und Komponentennachweise ohne realen
+        Kernelpfad \\
+        End-to-End-Tests & 17 von 17 bestanden & Vollständiger Pfad einschließlich
+        Kernel-Verifier, LSM-Attach und Enforcement \\
+        Formatprüfung & Bestanden & Keine Formatabweichungen im Rust-Code \\
+        Clippy-Gesamtprüfung & Nicht bestanden & Bestehender Strukturhinweis
+        \texttt{items\_after\_test\_module} \\
+        Release-Build & Bestanden & Userspace-Binaries und eBPF-Objekt wurden erzeugt \\
+        Kapazitätstest & Bestanden & Kontrollierte Ablehnung ohne Zustandsverlust und mit
+        erfolgreichen Folgeupdates \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{Robustheit und Grenzen des Entzugsmechanismus}
+
+Im Stabilitätstest wurden 100 aufeinanderfolgende Zyklen mit gültigen und ungültigen Policy- und
+Attributänderungen ausgeführt. Die Runtime blieb bis zum regulären Testende aktiv. Die vom Runner
+ausgewertete Differenz des Kernel-Logs enthielt keinen Hinweis auf Kernel-Panic, Oops, BUG oder
+einen General-Protection-Fault. Der Abschlusslauf benötigte rund 178~Sekunden. Dieses Ergebnis
+belegt das Verhalten während des begrenzten Tests, stellt jedoch weder einen Langzeittest noch
+einen allgemeinen Nachweis der Kernelstabilität dar.
+
+Die Charakterisierung duplizierter und durch \texttt{fork()} vererbter Deskriptoren zeigte, dass
+in Eltern- und Kindprozess jeweils alle vier betroffenen Deskriptoren geschlossen wurden, während
+jeweils zwei erlaubte Deskriptoren geöffnet blieben. Eine bereits bestehende
+\texttt{mmap()}-Abbildung der Datei blieb danach lesbar. Der Prototyp entzieht somit den File
+Descriptor, widerruft aber keinen zuvor eingerichteten speicherabgebildeten Zugriff. Diese Grenze
+folgt aus dem in Kapitel~3 ausdrücklich auf File Descriptors eingegrenzten Prototypumfang, ist
+für die sicherheitstechnische Interpretation des Ergebnisses jedoch relevant.
+
+Im nebenläufigen Stresstest wurden während zehn Policyzyklen 2535 Wechsel der Ressource hinter
+derselben Deskriptornummer erzeugt. Dabei wurde kein erlaubter Deskriptor fälschlich geschlossen.
+Da der Test stochastisch ist, beweist dieses Ergebnis keine Race-Freiheit. Zwischen dem Erfassen
+der Deskriptoridentität und dem späteren \texttt{ptrace}-basierten Schließen verbleibt grundsätzlich
+ein Zeitfenster, in dem der Zielprozess die Deskriptornummer wiederverwenden kann.
+
+\subsubsection{Quantitative Ergebnisse}
+
+Tabelle~\ref{tab:performance-ergebnisse} enthält die zentralen Messwerte. Bei PERF-01 wurden je
+20\,000 Dateiöffnungen mit warmem Cache gemessen. Der Median stieg von 3,845~$\mu$s ohne
+Runtime auf 4,389~$\mu$s bei aktiver Runtime mit leerem Policystand und auf
+4,412~$\mu$s bei passender Permit-Policy. Dies entspricht einem medianen Mehraufwand von
+14,1 beziehungsweise 14,7~Prozent. Die Messung umfasst \texttt{os.open()} sowie den Aufwand der
+Python-Laufzeit und des Timers; \texttt{close()} liegt außerhalb des Messintervalls. Sie isoliert
+daher nicht ausschließlich die Ausführungszeit des LSM-Hooks.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Quantitative Messergebnisse auf dem Zielsystem}
+    \label{tab:performance-ergebnisse}
+    \begin{tabular}{p{0.40\textwidth}p{0.13\textwidth}p{0.17\textwidth}p{0.17\textwidth}}
+        \hline
+        \textbf{Messgröße} & \textbf{$n$} & \textbf{Median} & \textbf{p95} \\
+        \hline
+        Dateiöffnung ohne Runtime & 20\,000 & 3,845~$\mu$s & 4,024~$\mu$s \\
+        Dateiöffnung, Runtime ohne Policy & 20\,000 & 4,389~$\mu$s & 4,621~$\mu$s \\
+        Dateiöffnung, passende Permit-Policy & 20\,000 & 4,412~$\mu$s & 6,629~$\mu$s \\
+        Policyänderung bis neues Deny & 10 & 102,41~ms & 103,51~ms \\
+        Attributänderung bis neues Deny & 10 & 103,34~ms & 114,12~ms \\
+        Policyänderung bis \texttt{EBADF} & 10 & 58,91~ms & 110,65~ms \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Die Reaktionszeit vom atomaren Austausch einer Datei bis zur beobachtbaren neuen Entscheidung
+lag im Median bei 102,41~ms für Policyänderungen und 103,34~ms für Attributänderungen. Dabei wurde
+der Zugriff in Intervallen von 10~ms geprüft. Die Messung enthält somit neben Verarbeitung und
+Aktivierung auch Dateisystembeobachtung, Scheduling und Polling.
+
+Für den Entzug bestehender Zugriffe betrug die Zeit von der Policydateiänderung bis zum
+beobachteten \texttt{EBADF} im Median 58,91~ms. Zusätzlich wurde die Aktivierung durch zwei
+aufeinanderfolgende Abfragen der Policygeneration zeitlich eingegrenzt. Über zehn Wiederholungen
+lagen die unteren Grenzen der Aktivierung-bis-Entzug-Intervalle zwischen 7,02 und 8,45~ms, die
+oberen Grenzen zwischen 9,34 und 10,84~ms. Eine scheinexakte Einzelzeit wird daraus nicht
+abgeleitet. Bei nur zehn Wiederholungen entspricht das angegebene p95 jeweils dem beobachteten
+Maximum und ist keine belastbare Schätzung seltener Ausreißer. Da für OA-03 keine feste
+Latenzgrenze vorgegeben wurde, bedeutet ein bestandener Performance-Test ausschließlich, dass die
+Messung erfolgreich durchgeführt und der Zustandswechsel beobachtet wurde.
+
+\subsubsection{Bewertung der Anforderungen}
+
+Die funktionalen Anforderungen FA-01 bis FA-10 werden innerhalb des in Kapitel~3 definierten
+Prototypumfangs als erfüllt bewertet. Die Tests weisen das Einlesen, Aktualisieren und Validieren
+von Policies, die Kontrolle neuer Dateiöffnungen, dynamische und frei benannte Attribute sowie
+den selektiven Entzug unzulässig gewordener File Descriptors nach. Diese Bewertung umfasst nur
+die getesteten Policyformen, Attributtypen und den Hook \texttt{file\_open}. Insbesondere folgt
+aus FA-06 kein Widerruf bestehender \texttt{mmap()}-Abbildungen, da der bestehende Zugriff dort für
+den Prototyp explizit als geöffneter File Descriptor definiert ist. Die beobachtete
+Entzugslatenz ist außerdem keine Echtzeitgarantie.
+
+OA-01 wird für die untersuchten Eingaben und die Dauer der Testläufe erfüllt. Ungültige Eingaben,
+Kapazitätsüberschreitungen und ein nicht erreichbarer Zielprozess führten in den Abschlussläufen
+weder zum Abbruch der Runtime noch zu einem vom Runner erkannten Kernelproblem. Eine allgemeine
+Stabilitätsgarantie kann daraus nicht abgeleitet werden. OA-02 ist teilweise erfüllt: Die
+Administrationsschnittstelle ermöglicht im kontrollierten Szenario eine Rekonstruktion der
+Entscheidungsgrundlage, stellt aber kein individuelles Auditlog bereit und ordnet eine konkrete
+Dateiöffnung nicht unmittelbar einem ursprünglichen Policynamen zu. OA-03 ist erfüllt, weil der
+zusätzliche Aufwand und die Reaktions- und Entzugslatenz quantitativ untersucht wurden; mangels
+vorgegebenem Grenzwert ist damit keine Aussage verbunden, ob die gemessenen Werte für einen
+bestimmten Produktiveinsatz akzeptabel sind. OA-04 wird durch die archivierten Konfigurationen,
+Szenarioskripte, Testparameter und Rohdaten erfüllt.
+
+Die entwicklungsbezogenen Anforderungen sind nicht allein durch Laufzeittests entscheidbar. Die
+Trennung in eBPF-Programm, gemeinsame Datentypen und Entscheidungslogik, Loader,
+Userspace-PEP und Administrationstool unterstützt EA-01. Frei benannte Attribute und getrennte
+Komponenten bieten Erweiterungspunkte im Sinne von EA-02; neue Attributtypen, Map-Strukturen oder
+LSM-Hooks erfordern jedoch weiterhin Änderungen an mehreren Schnittstellen, weshalb diese
+Anforderung nur teilweise erfüllt ist. EA-03 wird dadurch unterstützt, dass Einlesen,
+Validierung, Aktualisierung, Nachbewertung und Administration im Userspace liegen. Im Kernel
+verbleiben der notwendige LSM-Hook, Map-Lookups und die unmittelbar für eine Dateiöffnung
+erforderliche Auswertung.
+
+Insgesamt zeigen die Ergebnisse, dass der Prototyp die für diese Arbeit ausgewählten
+ASBAC-Prinzipien auf dem untersuchten Linux-System funktional umsetzt: Zugriffsentscheidungen
+reagieren auf Policy- und Attributströme, neue Dateiöffnungen werden im Kernel kontrolliert und
+bereits geöffnete File Descriptors im Userspace nachbewertet. Die Ergebnisse sind ein
+Machbarkeitsnachweis für den definierten Prototyp, kein vollständiger Sicherheits-,
+Race-Freiheits-, Echtzeit- oder Produktionstauglichkeitsnachweis.
 
 \newpage
