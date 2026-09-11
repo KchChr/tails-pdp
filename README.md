@@ -39,28 +39,29 @@ cargo run --bin tails-pdp --release
 
 ## Tests
 
-Run the unprivileged formatting, unit-test, lint, and Linux build checks with:
+Run the complete test and evaluation chain on the dedicated Linux target with:
 
 ```shell
 ./test.sh
 ```
 
-On a dedicated Linux target, run the real verifier, LSM attach, policy rollback, and enforcement
-tests with root privileges:
+The script runs formatting, unit tests, Clippy, and the release build first. It then requests root
+privileges for the verifier, LSM attach, enforcement, performance, capacity, and stability tests.
+The individual privileged runners remain available for targeted repetitions:
 
 ```shell
-sudo ./test-e2e.sh
+sudo ./tests/test-e2e.sh
 ```
 
 Run the additional functional, FD, performance, capacity, and stability scenarios
 on the same dedicated target after building the release binaries:
 
 ```shell
-sudo ./test-evaluation.sh
+sudo ./tests/test-evaluation.sh
 ```
 
 Individual IDs can be appended, for example `E2E-12 PERF-02`. Each scenario has its own Bash file;
-`sudo ./test-e2e.sh` runs E2E-01 through E2E-17. The runner preserves
+`sudo ./tests/test-e2e.sh` runs E2E-01 through E2E-17. The runner preserves
 all results and logs and returns a failure status for unmet expectations. See
 [execution details](tests/evaluation/README.md) and the
 [test evaluation](thesis/Testbewertung.md) for measured results and known failures.

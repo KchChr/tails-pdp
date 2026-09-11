@@ -32,7 +32,7 @@ readonly -a WORKSPACE_PACKAGES=(
     tails-pdp-userspace-pep
 )
 
-# E2E-11 bis E2E-17 werden bereits durch test-e2e.sh ausgeführt. Hier stehen deshalb nur die
+# E2E-11 bis E2E-17 werden bereits durch tests/test-e2e.sh ausgeführt. Hier stehen deshalb nur die
 # übrigen privilegierten Evaluationsszenarien, damit kein Test doppelt läuft.
 readonly -a EVALUATION_SCENARIOS=(
     COMP-04
@@ -102,11 +102,11 @@ run_step "Release-Binaries einschließlich eBPF-Objekt bauen" \
 
 # Führt E2E-01 bis E2E-17 aus. E2E-11 bis E2E-17 verwenden dabei jeweils eine isolierte Runtime.
 run_privileged_step "Alle privilegierten End-to-End-Tests ausführen" \
-    bash "$PROJECT_ROOT/test-e2e.sh"
+    bash "$PROJECT_ROOT/tests/test-e2e.sh"
 
 # Ergänzt die E2E-Suite um reale Map-, Grenzfall-, Performance-, Last- und Stabilitätsprüfungen.
 run_privileged_step "Ergänzende Evaluationsszenarien ausführen" \
-    bash "$PROJECT_ROOT/test-evaluation.sh" "${EVALUATION_SCENARIOS[@]}"
+    bash "$PROJECT_ROOT/tests/test-evaluation.sh" "${EVALUATION_SCENARIOS[@]}"
 
 echo
 echo "Alle automatisierten Tests, Qualitätsprüfungen und Evaluationsszenarien waren erfolgreich."

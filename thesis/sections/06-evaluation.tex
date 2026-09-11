@@ -248,7 +248,7 @@ Gegenstand der folgenden End-to-End-Szenarien.
 
 Die End-to-End-Prüfung wird auf dem in Abschnitt~6.1 beschriebenen Linux-Zielsystem mit
 Root-Rechten ausgeführt. Der zentrale Runner \path{test.sh} fordert diese Berechtigungen nach dem
-Release-Build über \texttt{sudo} an und ruft \path{test-e2e.sh} auf. Dieses Skript bildet den
+Release-Build über \texttt{sudo} an und ruft \path{tests/test-e2e.sh} auf. Dieses Skript bildet den
 gemeinsamen Einstiegspunkt der End-to-End-Stufe und
 ruft für die Test-IDs \texttt{E2E-01} bis \texttt{E2E-17} jeweils eine eigene Bashdatei unter
 \path{tests/e2e/} auf. Vor dem Start bricht die Hauptdatei ab, wenn bereits eine Instanz des
@@ -265,7 +265,7 @@ Wechsel der Policy- oder Attributgeneration. Nach \texttt{E2E-10} wird diese Run
 der gepinnte Testzustand entfernt.
 
 Die Szenarien \texttt{E2E-11} bis \texttt{E2E-17} werden darin anschließend über
-\path{test-evaluation.sh} mit jeweils eigener Runtime und isoliertem Arbeitsverzeichnis
+\path{tests/test-evaluation.sh} mit jeweils eigener Runtime und isoliertem Arbeitsverzeichnis
 ausgeführt. Der zugehörige Runner sperrt parallele Evaluationsläufe, verwaltet ausschließlich die
 von ihm gestarteten Prozesse und verweigert den Start, wenn bekannte gepinnte Maps bereits
 vorhanden sind. Beim Aufräumen entfernt er nur die durch den jeweiligen Lauf erzeugten Maps. Für

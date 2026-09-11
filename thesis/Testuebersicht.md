@@ -31,9 +31,9 @@ Der Testbestand ist in drei Ebenen gegliedert:
 
 Aktuell sind **59 Rust-Tests** in sieben Testmodulen sowie **25 privilegierte
 Szenarien** vorhanden. `./test.sh` ist der zentrale Einstiegspunkt für sämtliche Prüfungen und
-fordert für die Systemtests selbst über `sudo` Root-Rechte an. `test-e2e.sh` führt E2E-01 bis
+fordert für die Systemtests selbst über `sudo` Root-Rechte an. `tests/test-e2e.sh` führt E2E-01 bis
 E2E-17 aus, mit einer Bashdatei je ID unter
-`tests/e2e/`. `test-evaluation.sh` führt die 15 ergänzten Szenarien aus
+`tests/e2e/`. `tests/test-evaluation.sh` führt die 15 ergänzten Szenarien aus
 (einschließlich E2E-11 bis E2E-17; diese werden bei der Gesamtzahl nur einmal
 gezählt). Weitere IDs liegen unter `tests/evaluation/` ebenfalls als Bashdatei.
 Nur ptrace-Koordination und präzise Messungen verwenden je eine Pythondatei
@@ -198,7 +198,7 @@ End-to-End-Szenario mit einem realen Hilfsprozess geprüft.
 
 ## 4. Privilegierte End-to-End-Tests
 
-**Dateien:** `test-e2e.sh`, `tests/e2e/lib.sh` und je Test-ID ein Szenarioskript in `tests/e2e/`
+**Dateien:** `tests/test-e2e.sh`, `tests/e2e/lib.sh` und je Test-ID ein Szenarioskript in `tests/e2e/`
 
 **Art:** System- und End-to-End-Tests  
 **Voraussetzung:** dediziertes Linux-Testsystem mit BPF-LSM, BTF, bpffs und
@@ -241,7 +241,7 @@ ursprüngliche Planungseinschätzung erhalten. Der Status bezeichnet vorhandenen
 Testcode und ist ausdrücklich kein Bestehensnachweis.
 
 COMP-01 bis COMP-03 laufen über `./test.sh`. Alle anderen IDs dieses Abschnitts
-laufen über `sudo ./test-evaluation.sh`, optional gefolgt von einzelnen
+laufen über `sudo ./tests/test-evaluation.sh`, optional gefolgt von einzelnen
 IDs. Details zu Parametern und Beobachtungsgrenzen stehen in
 [`tests/evaluation/README.md`](../tests/evaluation/README.md).
 

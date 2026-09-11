@@ -9,7 +9,7 @@ require_e2e_environment() {
         TARGET_FILE SAFE_FILE BPF_PIN_DIRECTORY RUNTIME_PID \
         TAILS_PDP_BIN ADM_TOOL_BIN E2E_TIMEOUT_SECONDS; do
         if [[ -z "${!variable:-}" ]]; then
-            echo "Fehler: E2E-Variable '$variable' fehlt. Tests über test-e2e.sh starten." >&2
+            echo "Fehler: E2E-Variable '$variable' fehlt. Tests über tests/test-e2e.sh starten." >&2
             exit 1
         fi
     done

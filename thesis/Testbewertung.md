@@ -67,8 +67,8 @@ Ausführung:
 ./test.sh
 # Separat erforderlich, weil die bestehende Clippy-Prüfung vorher abbricht:
 cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool
-sudo ./test-e2e.sh
-sudo python3 tests/evaluation/run.py
+sudo ./tests/test-e2e.sh
+sudo ./tests/test-evaluation.sh
 ```
 
 ## Bewertung der bisherigen 46 Rust-Tests
@@ -217,8 +217,8 @@ verwaltet nur noch Fixture-Lebenszyklus, Bashaufrufe und Ergebnisse.
 
 Die umgestellte Struktur wurde vollständig auf `nixrun` nachgeprüft:
 
-- `sudo ./test-e2e.sh`: alle 17 E2E-Szenarien bestanden.
-- `sudo ./test-evaluation.sh COMP-04 CHAR-01 RACE-01 PERF-01 PERF-02 PERF-03 LOAD-01 STAB-01`:
+- `sudo ./tests/test-e2e.sh`: alle 17 E2E-Szenarien bestanden.
+- `sudo ./tests/test-evaluation.sh COMP-04 CHAR-01 RACE-01 PERF-01 PERF-02 PERF-03 LOAD-01 STAB-01`:
   sieben Szenarien bestanden; LOAD-01 meldet weiterhin den bekannten Runtime-Abbruch.
 - STAB-01: 100 Zyklen in 178 Sekunden. Die zusätzliche Shell-/Prozesskoordination
   verändert die Laufzeit der Suite; dies ist keine neue Messung des reinen

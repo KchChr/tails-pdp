@@ -1,5 +1,4 @@
 \section{Einleitung}
-% Inhalt einfügen.
 
 \subsection{Motivation}
 Die Sicherheit von Linux-Systemen ist ein fundamentales Anliegen in der heutigen IT-Landschaft. 
@@ -33,6 +32,12 @@ Der Prototyp ist auf Dateiöffnungen über den LSM-Hook \texttt{file\_open} und 
 
 
 \subsection{Aufbau der Arbeit}
-% Inhalt einfügen.
+Kapitel~2 führt die für die Arbeit erforderlichen Grundlagen ein. Dazu gehören der Reference-Monitor-Ansatz, Attribute-Based Access Control und Attribute Stream-Based Access Control sowie die für die Umsetzung relevanten Linux-Technologien LSM, eBPF und eBPF-Maps. Zudem wird der eigene Ansatz gegenüber der Publish-Subscribe-Architektur von SAPL und verwandten Konzepten fortdauernder Autorisierung abgegrenzt.
+
+Kapitel~3 leitet aus der Zielsetzung die funktionalen, operativen und entwicklungsbezogenen Anforderungen an den Prototyp ab. Kapitel~4 entwickelt darauf aufbauend die Systemarchitektur und begründet die wesentlichen Entwurfsentscheidungen. Im Mittelpunkt stehen die Aufgabenteilung zwischen Userspace und Kernelspace, die Repräsentation und konsistente Aktualisierung von Policies und Attributen sowie die ergänzende Nachbewertung bereits geöffneter File Descriptors.
+
+Kapitel~5 beschreibt die konkrete Umsetzung des Prototyps. Es erläutert die Struktur des Rust-Workspace, die gemeinsame Map-ABI, die Policy- und Attributloader, den Kernelspace-PEP auf Grundlage des LSM-Hooks \texttt{file\_open}, den Userspace-PEP und das Administrationstool. Darüber hinaus werden Fehlerbehandlung, Build, Deployment und implementierungsbedingte Grenzen dargestellt.
+
+Kapitel~6 evaluiert den Prototyp auf einem dedizierten Linux-Zielsystem. Unit-, Komponenten- und End-to-End-Tests untersuchen das funktionale Verhalten und ausgewählte Fehlerfälle; ergänzende Messungen charakterisieren den Aufwand kontrollierter Dateiöffnungen sowie die Reaktions- und Entzugslatenz. Kapitel~7 beantwortet abschließend die Forschungsfrage, ordnet die Aussagekraft der Ergebnisse ein und zeigt Ansatzpunkte für weiterführende Arbeiten auf.
 
 \newpage

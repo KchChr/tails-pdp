@@ -9,7 +9,7 @@
 
 set -Eeuo pipefail
 
-readonly PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly E2E_SCENARIO_DIR="$PROJECT_ROOT/tests/e2e"
 readonly TAILS_PDP_BIN="${TAILS_PDP_BIN:-$PROJECT_ROOT/target/release/tails-pdp}"
 readonly ADM_TOOL_BIN="${ADM_TOOL_BIN:-$PROJECT_ROOT/target/release/tails-pdp-admintool}"
@@ -35,7 +35,7 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 if [[ "$(uname -s)" != "Linux" ]]; then
-    echo "Fehler: test-e2e.sh benötigt Linux." >&2
+    echo "Fehler: tests/test-e2e.sh benötigt Linux." >&2
     exit 1
 fi
 
@@ -144,6 +144,6 @@ kill -INT "$runtime_pid"
 wait "$runtime_pid"
 runtime_pid=""
 bash "$PROJECT_ROOT/remove_maps.sh" >/dev/null
-bash "$PROJECT_ROOT/test-evaluation.sh" E2E-11 E2E-12 E2E-13 E2E-14 E2E-15 E2E-16 E2E-17
+bash "$PROJECT_ROOT/tests/test-evaluation.sh" E2E-11 E2E-12 E2E-13 E2E-14 E2E-15 E2E-16 E2E-17
 
 echo "Alle 17 privilegierten End-to-End-Tests waren erfolgreich."

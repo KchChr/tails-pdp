@@ -13,14 +13,14 @@ Berechtigungen aus. Für die anschließenden Kernel- und Evaluationsszenarien fo
 aufgerufen werden:
 
 ```bash
-sudo ./test-evaluation.sh
+sudo ./tests/test-evaluation.sh
 # Einzelne IDs sind ebenfalls möglich:
-sudo ./test-evaluation.sh E2E-11 COMP-04 PERF-02
+sudo ./tests/test-evaluation.sh E2E-11 COMP-04 PERF-02
 ```
 
 COMP-01 bis COMP-03 laufen als Rust-Komponententests im ersten Teil von `./test.sh`.
 COMP-04 verwendet echte Maps und benötigt deshalb hier Root.
-`sudo ./test-e2e.sh` führt jetzt E2E-01 bis E2E-17 aus. Die ersten zehn
+`sudo ./tests/test-e2e.sh` führt jetzt E2E-01 bis E2E-17 aus. Die ersten zehn
 verwenden ihre bisherige gemeinsame Fixture, die sieben neuen jeweils eine
 isolierte Runtime. Die zusätzlichen Szenarien sind auch einzeln startbar:
 
@@ -55,7 +55,7 @@ Jedes zusätzliche Szenario startet eine eigene Runtime mit temporären Dateien.
 Vorhandene Runtime-Prozesse oder bekannte gepinnte Maps führen zum Abbruch.
 Die Suite entfernt beim Aufräumen nur ihre bekannten Maps und eigenen Prozesse.
 Testsuiten dürfen nicht parallel gestartet werden. Die Evaluation verwendet eine
-Sperrdatei; das bisherige `test-e2e.sh` kennt diese Sperre nicht.
+Sperrdatei; der Runner `tests/test-e2e.sh` kennt diese Sperre nicht.
 
 Alle Artefakte bleiben unter dem ausgegebenen `/tmp/tails-eval-...` erhalten:
 `report.json`, Runtime- und Kernel-Logs, Hilfsprozessergebnisse und Fehlerdetails.
@@ -63,7 +63,7 @@ Exitstatus 1 bedeutet mindestens einen fehlgeschlagenen Test. Insbesondere
 bekannte Produktfehler werden nicht als bestandene Tests behandelt.
 
 Standard: zehn Wiederholungen pro Latenz-/Race-Test, 100 Stabilitätszyklen.
-Anpassung z.B. `sudo env EVAL_REPEATS=30 EVAL_STAB_CYCLES=500 ./test-evaluation.sh`.
+Anpassung z.B. `sudo env EVAL_REPEATS=30 EVAL_STAB_CYCLES=500 ./tests/test-evaluation.sh`.
 Die Ausgaben dokumentieren die tatsächlich verwendeten Parameter.
 
 PERF-01 misst 20.000 warme `os.open`-Aufrufe je Zustand, inklusive Python- und
