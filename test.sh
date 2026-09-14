@@ -32,7 +32,7 @@ readonly -a WORKSPACE_PACKAGES=(
     tails-pdp-userspace-pep
 )
 
-# E2E-11 bis E2E-17 werden bereits durch tests/test-e2e.sh ausgeführt. Hier stehen deshalb nur die
+# E2E-11 bis E2E-19 werden bereits durch tests/test-e2e.sh ausgeführt. Hier stehen deshalb nur die
 # übrigen privilegierten Evaluationsszenarien, damit kein Test doppelt läuft.
 readonly -a EVALUATION_SCENARIOS=(
     COMP-04
@@ -91,6 +91,10 @@ run_step "Alle automatisierten Unit- und Komponententests ausführen" \
     cargo test --locked "${package_arguments[@]}" --all-targets \
     --config 'target."cfg(all())".runner="env"'
 
+# Prüft die Ablehnung unvollständiger oder durch Restereignisse verfälschter Messungen.
+run_step "PERF-03-Messauswertung prüfen" \
+    env PYTHONDONTWRITEBYTECODE=1 python3 "$PROJECT_ROOT/tests/evaluation/test_perf03.py"
+
 # Clippy prüft Produktions-, Test- und Binärziele. Mit -D warnings wird jede Warnung zum Fehler.
 run_step "Clippy ohne Warnungen ausführen" \
     cargo clippy --locked "${package_arguments[@]}" --all-targets -- -D warnings
@@ -100,7 +104,7 @@ run_step "Clippy ohne Warnungen ausführen" \
 run_step "Release-Binaries einschließlich eBPF-Objekt bauen" \
     cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool
 
-# Führt E2E-01 bis E2E-17 aus. E2E-11 bis E2E-17 verwenden dabei jeweils eine isolierte Runtime.
+# Führt E2E-01 bis E2E-19 aus. E2E-11 bis E2E-19 verwenden dabei jeweils eine isolierte Runtime.
 run_privileged_step "Alle privilegierten End-to-End-Tests ausführen" \
     bash "$PROJECT_ROOT/tests/test-e2e.sh"
 

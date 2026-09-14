@@ -11,6 +11,8 @@ SCENARIOS = {
     "E2E-15": PROJECT / "tests/e2e/E2E-15.sh",
     "E2E-16": PROJECT / "tests/e2e/E2E-16.sh",
     "E2E-17": PROJECT / "tests/e2e/E2E-17.sh",
+    "E2E-18": PROJECT / "tests/e2e/E2E-18.sh",
+    "E2E-19": PROJECT / "tests/e2e/E2E-19.sh",
     "CHAR-01": PROJECT / "tests/evaluation/CHAR-01.sh",
     "RACE-01": PROJECT / "tests/evaluation/RACE-01.sh",
     "PERF-01": PROJECT / "tests/evaluation/PERF-01.sh",

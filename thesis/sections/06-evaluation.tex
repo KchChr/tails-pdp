@@ -510,7 +510,14 @@ Die funktionalen Anforderungen FA-01 bis FA-10 werden innerhalb des in Kapitel~3
 Prototypumfangs als erfüllt bewertet. Die Tests weisen das Einlesen, Aktualisieren und Validieren
 von Policies, die Kontrolle neuer Dateiöffnungen, dynamische und frei benannte Attribute sowie
 den selektiven Entzug unzulässig gewordener File Descriptors nach. Diese Bewertung umfasst nur
-die getesteten Policyformen, Attributtypen und den Hook \texttt{file\_open}. Insbesondere folgt
+die getesteten Policyformen, Attributtypen und den Hook \texttt{file\_open}.
+Bei FA-06 bezieht sich die Erfüllung auf die geforderte Nachbewertung und den gezielten
+Schließversuch einschließlich kontrollierter Fehlerbehandlung. E2E-09 und E2E-16 zeigen den
+erfolgreichen selektiven Entzug nach einer Policyänderung. E2E-17 zeigt, dass ein fehlgeschlagener
+Versuch bei einem nicht erreichbaren Zielprozess protokolliert wird und die Behandlung eines
+anderen Zielprozesses nicht verhindert. Der im Fehlerfall verbleibende offene Deskriptor ist
+damit eine Grenze des Best-Effort-Entzugs, kein erfolgreicher Entzug. Die Bewertung besagt nicht,
+dass jeder unzulässig gewordene Zugriff erfolgreich beendet werden kann. Insbesondere folgt
 aus FA-06 kein Widerruf bestehender \texttt{mmap()}-Abbildungen, da der bestehende Zugriff dort für
 den Prototyp explizit als geöffneter File Descriptor definiert ist. Die beobachtete
 Entzugslatenz ist außerdem keine Echtzeitgarantie.

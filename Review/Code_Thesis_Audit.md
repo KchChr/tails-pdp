@@ -84,6 +84,8 @@ Die offen behandelten Grenzen dup/fork/mmap/FD-Reuse sind echte Grenzen, aber ke
 
 ### C01 – Kommando-Längen- und Identitätsgrenze (P2)
 
+**Bearbeitungsstand:** Die Policyübersetzung begrenzt statische und Stream-Kommando-Filter jetzt auf 15 Nutzbytes; das 16-Byte-Map-Feld bleibt unverändert. Zwei Grenztests prüfen jeweils ASCII und UTF-8 sowie beide Policyarten (15 Byte akzeptiert und nullterminiert, 16 Byte abgelehnt). Kapitel 5 dokumentiert veränderliche Tasknamen und den Unterschied zwischen aktueller Task und Prozessleader. Die Ausführung der neuen Parsertests steht auf Linux aus; der lokale macOS-Versuch scheitert bereits an Linux-spezifischen Aya-Abhängigkeiten. Der ursprüngliche Befund folgt zur Nachvollziehbarkeit.
+
 **Fundstelle:** §5.4.3, S.45; `policy_source.rs:694`, `common/src/lib.rs:266,815`; ctx.command() im Kernel; /proc-Parser `pep.rs:633`.
 
 **Kategorie:** technische Korrektheit/Policysemantik. **Problem:** 16 Inhaltsbytes werden akzeptiert und exakt gespeichert. Linux comm ist jedoch ein 16-Byte-Feld einschließlich Nullabschluss; ein voller 16-Byte-Policyname kann deshalb regulär nicht identisch matchen. Der Taskname ist zudem kein manipulationsgeschützter Executable-Identifier, und der Userspace-Pfad liest den Gruppenleader statt jede Task.
@@ -109,4 +111,3 @@ Die offen behandelten Grenzen dup/fork/mmap/FD-Reuse sind echte Grenzen, aber ke
 ## 6. Evidenz und Grenzen des Audits
 
 Verifiziert wurden statische Pfade und archivierte Resultate. Nicht verifiziert wurden neue Kernel-/ptrace-Ausführungen, tatsächliche Rechte der entfernten VM, Vollständigkeit aller LSM-Aufrufpfade, formale Race-Freiheit und beliebige Signal-/Mehrthreadfälle. Aussagen über mögliche Interleavings sind ausdrücklich technische Analysen und keine erfundenen beobachteten Exploits. Der vorhandene RACE-01-Erfolg bleibt als begrenzte positive Beobachtung gültig.
-

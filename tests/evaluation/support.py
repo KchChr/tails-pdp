@@ -70,7 +70,8 @@ class Runtime:
         assert not subprocess.run(["pgrep", "-x", "tails-pdp"], capture_output=True).stdout, "another runtime is active"
         self.logfile = self.logpath.open("w")
         self.proc = subprocess.Popen([self.runtime_bin], cwd=self.root, stdout=self.logfile,
-            stderr=subprocess.STDOUT, env={**os.environ, "RUST_LOG": "info", "TAILS_PDP_EBPF_DEBUG": "0"})
+            stderr=subprocess.STDOUT, env={**os.environ, "RUST_LOG": "info", "TAILS_PDP_EBPF_DEBUG": "0",
+                "TAILS_PDP_TIMING": "1" if self.root.name == "PERF-03" else "0"})
         self.wait(lambda: "Waiting for Ctrl-C" in self.log(), "runtime attach")
         assert all((PIN / name).exists() for name in MAPS)
         self.wait(lambda: "scan completed" in self.log(), "initial scan")

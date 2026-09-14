@@ -74,6 +74,8 @@ Die Implementierung muss die konzeptionellen Entscheidungen durch konkrete Struk
 
 ### F06 – Kritikpunkt: Ausfall der Runtime und Vertrauensmodell fehlen in der Sicherheitsbilanz
 
+**Bearbeitungsstand:** Durch die nachträgliche Dokumentation in Kapitel 3, §5.9.3 und §7.2 als Beschreibungs- und Abgrenzungsmangel behoben. Vertrauenswürdige Administration und Eingabegrundlagen, Ein-Runtime-Betrieb, das Ende der zusätzlichen Kontrolle bei Runtime-Beendigung sowie der Unterschied zwischen lokalen Fail-closed-Pfaden und fatalen Fehlern sind nun ausdrücklich benannt. Die folgende Befundbeschreibung dokumentiert den ursprünglichen Reviewstand; das technische Lebenszyklusverhalten wurde nicht geändert.
+
 **Fundstelle:** §5.3.3, S.43–44; §5.9.3, S.54–55; §7.2–7.3; tails-pdp/src/main.rs:42,116,130; policy_source.rs:161; Aya b93ee8c programs/links.rs:108,256,313.
 
 **Priorität:** P1.
@@ -99,6 +101,8 @@ Die Implementierung muss die konzeptionellen Entscheidungen durch konkrete Struk
 **Relevanz für die Benotung:** hoch: betrifft tamper resistance und Schutzverfügbarkeit.
 
 ### F13 – Kritikpunkt: Policy-Semantik ohne vollständiges Beispiel schwer prüfbar
+
+**Bearbeitungsstand:** Durch ein vollständiges Policy-/Attributbeispiel mit Entscheidungstabelle und Permit-only-Erklärung in §5.4 sowie die Präzisierung technischer Fail-closed-Pfade in §5.9 als Darstellungsmangel behoben. Das Beispiel verwendet das frei typisierbare Attribut `clearance`, damit der Typabweichungsfall nicht mit der besonderen numerischen Validierung von `defcon` verwechselt wird. Die folgende Beschreibung bezieht sich auf den ursprünglichen Reviewstand.
 
 **Fundstelle:** §5.4, PDF S.44–46; §4.6.11, S.32–33; common/src/lib.rs:776,913; ebpf/.../file_open_stream_policies.rs:136.
 
@@ -180,4 +184,3 @@ Das Kapitel belegt, dass die Architektur tatsächlich realisiert wurde. Die Frag
 3. Runtime-Ausfall und TCB ergänzen (F06).
 4. ptrace-Risiken und Testgrenzen benennen (F14).
 5. Policybeispiel und differenzierte Fail-closed-Tabelle ergänzen (F13).
-

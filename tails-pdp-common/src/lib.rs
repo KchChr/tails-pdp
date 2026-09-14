@@ -4,6 +4,8 @@
 extern crate std;
 
 pub const COMMAND_LEN: usize = 16;
+/// Linux task comm reserves one byte of its fixed-size field for the trailing NUL.
+pub const COMMAND_MAX_BYTES: usize = COMMAND_LEN - 1;
 pub const RESOURCE_LEN: usize = 64;
 pub const SOCKET_IP_LEN: usize = 16;
 pub const ANY_SUBJECT: u32 = u32::MAX;

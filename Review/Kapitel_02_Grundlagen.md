@@ -33,7 +33,7 @@ Das Kapitel muss Reference Monitor, ABAC/ASBAC, logische PDP-/PEP-Rollen und Lin
 
 **Auswirkungen:** Reparierbare Quellenmängel; kein Nachweis erfundener zentraler Literatur.
 
-**Lösung A – empfohlen:** XACML konkret als Standard 2013 oder Erratafassung 2017 zitieren und passende URL/Jahr verwenden; Anderson mit Band II und §4.1.3/S.15 präzisieren; Acronyme in BibTeX schützen.
+**Lösung A – empfohlen:** XACML konkret als Standard 2013 oder Erratafassung 2017 zitieren und passende URL/Jahr verwenden; Anderson mit Abschnitt 3.4 der überprüften NIST-Archivfassung präzisieren; Acronyme in BibTeX schützen.
 
 **Lösung B – Alternative:** Den vorhandenen Stil beibehalten, nur falsches Jahr, veralteten Link und die zentralen Abschnittsfundstellen korrigieren.
 

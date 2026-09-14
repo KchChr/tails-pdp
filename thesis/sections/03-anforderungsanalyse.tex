@@ -3,6 +3,10 @@ In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen be
 Die Anforderungen ergeben sich aus der Zielsetzung, zu untersuchen, wie Attribute Stream-Based Access Control im Linux-Kernel prototypisch umgesetzt werden kann.
 Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit zeigen soll.
 
+Für den Prototyp wird ein vertrauenswürdig administriertes Linux-Zielsystem vorausgesetzt. Der Administrator und der Kernel gehören zur Vertrauensbasis. Der Administrator darf Policies, Attributquellen, eBPF-Maps und Programme verändern sowie die Runtime beenden; Schutz gegen solche administrativen Eingriffe ist nicht Gegenstand der Anforderungen. Die Integrität der Policy- und Attributquellen sowie der bereitgestellten Zeitinformationen wird vorausgesetzt und ist durch die Administration sicherzustellen. Vorgesehen ist der Betrieb einer einzelnen Runtime; eine Absicherung gegen konkurrierende administrative Schreibzugriffe wird nicht gefordert.
+
+Die zusätzliche Zugriffskontrolle des Prototyps wird nur nach erfolgreicher Initialisierung und solange das Hauptprogramm läuft bereitgestellt. Eine Fortsetzung dieses Schutzes nach Beendigung oder Ausfall der Runtime ist nicht Bestandteil des Prototypumfangs.
+
 \subsection{Funktionale Anforderungen}
 
 Funktionale Anforderungen beschreiben, welche fachlichen Funktionen der Prototyp bereitstellen muss. 
@@ -36,12 +40,13 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
 
     \item[FA-06 Überwachung und Enforcement bestehender Dateizugriffe:]
-    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und unmittelbar beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
+    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und versuchen, sie durch Schließen des betroffenen File Descriptors zu beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
     Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter File Descriptor eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
-    Der Userspace-PEP ermittelt den zugehörigen Prozess und File Descriptor, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und schließt den File Descriptor bei einer Verletzung direkt.
-    Eine reine Ausgabe der Verletzung ohne Enforcement ist nicht vorgesehen.
+    Der Userspace-PEP ermittelt den zugehörigen Prozess und File Descriptor, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und führt bei einer erkannten Verletzung einen gezielten Schließversuch im Zielprozess aus.
+    Im Rahmen des Prototyps wird dieser Entzug als Best-Effort-Maßnahme verstanden: Der Schließversuch ist erforderlich, sein Erfolg kann insbesondere bei einem nicht erreichbaren Zielprozess jedoch nicht garantiert werden. Ein fehlgeschlagener Versuch muss protokolliert werden und darf die Behandlung weiterer festgestellter Verletzungen nicht verhindern.
+    Eine reine Ausgabe der Verletzung ohne Schließversuch genügt der Anforderung nicht.
 
-    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, schließt der Userspace-PEP den betroffenen File Descriptor. Andere File Descriptors desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen.
+    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, führt der Userspace-PEP bei der Nachbewertung einen gezielten Schließversuch für den betroffenen File Descriptor aus. In einem kontrollierten Erfolgsfall wird der Deskriptor tatsächlich geschlossen; andere File Descriptors desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen. In einem kontrollierten Fehlerfall mit nicht erreichbarem Zielprozess wird der fehlgeschlagene Versuch protokolliert und die Behandlung weiterer festgestellter Verletzungen fortgesetzt. Ein fehlgeschlagener Schließversuch wird dabei nicht als erfolgreicher Entzug gewertet.
 
     \item[FA-07 Administrationsschnittstelle:]
     Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die zentrale Informationen zum Zustand des Prototyps lesend eingesehen werden können.

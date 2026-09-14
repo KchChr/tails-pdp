@@ -8,13 +8,13 @@ use anyhow::{Context, anyhow, bail};
 use aya::maps::{Array, MapData};
 use log::{error, info};
 use tails_pdp_common::{
-    ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_LEN,
+    ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_MAX_BYTES,
     Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy, MAX_ATTRIBUTE_CONDITIONS,
     POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily, SocketTransport, StreamAttribute,
     StreamOperator, attribute_hash, policy_bank_offset,
 };
 use tails_pdp_userspace_common::{
-    EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array,
+    EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array, timing,
 };
 use tokio::{
     sync::mpsc,
@@ -150,8 +150,25 @@ impl PolicyDirectorySync {
         let mut watcher = fs_watch::watch_directory_recursive(&self.policy_dir)?;
 
         loop {
-            watcher.wait_for_change().await?;
+            // Pending means the watcher has returned to asynchronous waiting,
+            // rather than still being inside the debounce/synchronization phase.
+            {
+                use std::future::Future;
+                let mut change = std::pin::pin!(watcher.wait_for_change());
+                let mut reported_pending = false;
+                std::future::poll_fn(|cx| {
+                    let state = change.as_mut().poll(cx);
+                    if state.is_pending() && !reported_pending {
+                        timing::mark("policy_waiting", 0);
+                        reported_pending = true;
+                    }
+                    state
+                })
+                .await?;
+            }
+            timing::mark("policy_event_received", 0);
             sleep(POLICY_EVENT_DEBOUNCE).await;
+            timing::mark("policy_debounce_completed", 0);
             self.sync_if_changed()?;
         }
     }
@@ -167,7 +184,9 @@ impl PolicyDirectorySync {
         }
 
         match translate_policy_documents(&documents).and_then(|translated| {
+            timing::mark("policy_commit_started", 0);
             let generation = self.maps.commit(&translated)?;
+            timing::mark("policy_commit_completed", generation);
             Ok((translated, generation))
         }) {
             Ok((translated, generation)) => {
@@ -234,9 +253,12 @@ impl PolicyGenerationStore for PinnedPolicyMaps {
     }
 
     fn activate_generation(&mut self, generation: u32) -> anyhow::Result<()> {
+        timing::mark("policy_activation_started", generation);
         self.policy_generation
             .set(0, generation, 0)
-            .context("failed to commit POLICY_GENERATION[0]")
+            .context("failed to commit POLICY_GENERATION[0]")?;
+        timing::mark("policy_activation_completed", generation);
+        Ok(())
     }
 }
 
@@ -605,7 +627,7 @@ fn translate_policy(
                 ensure_no_socket_fields(&parsed)?;
                 let command = parsed.command.as_deref().unwrap_or("");
                 let resource = parsed.file_resource.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
                 ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
                 let policy = FileOpenStaticPolicy::new(
                     parsed.entitlement,
@@ -631,7 +653,7 @@ fn translate_policy(
                 ensure_no_socket_fields(&parsed)?;
                 let command = parsed.command.as_deref().unwrap_or("");
                 let resource = parsed.file_resource.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_LEN, "command", &parsed)?;
+                ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
                 ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
                 let mut policy = FileOpenStreamPolicy::stream(
                     parsed.entitlement,
@@ -1158,6 +1180,42 @@ mod tests {
         document(&format!(
             "policy \"{name}\"\ndeny\n    action == \"file_open\";\n"
         ))
+    }
+
+    #[test]
+    fn accepts_15_byte_commands_with_trailing_nul_for_static_and_stream_policies() {
+        for command in ["abcdefghijklmno", "äöüäöüäx"] {
+            assert_eq!(command.len(), 15);
+            for condition in ["", "system.clearance <= 2;"] {
+                let translated = translate_policy_documents(&[document(&format!(
+                    "policy \"command boundary\"\ndeny\naction == \"file_open\";\ncommand == \"{command}\";\n{condition}\n"
+                ))])
+                .expect("15-byte command must be accepted");
+                let stored = if condition.is_empty() {
+                    translated.file_open_static[0].command
+                } else {
+                    translated.file_open_stream[0].command
+                };
+                assert_eq!(&stored[..15], command.as_bytes());
+                assert_eq!(stored.len(), 16, "map ABI must remain unchanged");
+                assert_eq!(stored[15], 0, "comm requires a trailing NUL");
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_16_byte_commands_for_static_and_stream_policies() {
+        // UTF-8 demonstrates that the limit counts bytes, not characters.
+        for command in ["abcdefghijklmnop", "äöüäöüäö"] {
+            assert_eq!(command.len(), 16);
+            for condition in ["", "system.clearance <= 2;"] {
+                let error = translation_error(&[document(&format!(
+                    "policy \"command boundary\"\ndeny\naction == \"file_open\";\ncommand == \"{command}\";\n{condition}\n"
+                ))]);
+                assert!(error.contains("command longer than 15 bytes"), "{error}");
+                assert!(error.contains("test.policy"), "{error}");
+            }
+        }
     }
 
     struct FakePolicyStore {

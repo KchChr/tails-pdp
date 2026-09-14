@@ -20,8 +20,8 @@ sudo ./tests/test-evaluation.sh E2E-11 COMP-04 PERF-02
 
 COMP-01 bis COMP-03 laufen als Rust-Komponententests im ersten Teil von `./test.sh`.
 COMP-04 verwendet echte Maps und benötigt deshalb hier Root.
-`sudo ./tests/test-e2e.sh` führt jetzt E2E-01 bis E2E-17 aus. Die ersten zehn
-verwenden ihre bisherige gemeinsame Fixture, die sieben neuen jeweils eine
+`sudo ./tests/test-e2e.sh` führt jetzt E2E-01 bis E2E-19 aus. Die ersten zehn
+verwenden ihre bisherige gemeinsame Fixture, die neun weiteren jeweils eine
 isolierte Runtime. Die zusätzlichen Szenarien sind auch einzeln startbar:
 
 ```bash
@@ -37,6 +37,7 @@ sudo bash tests/evaluation/LOAD-01.sh
 | `tests/e2e/E2E-15.sh` | UID-Szenario in Bash; `access.py` führt `setresuid` und `open` aus |
 | `tests/e2e/E2E-16.sh` | Mehrfachentzug in Bash; `fd_probe.py` hält und beobachtet die FDs |
 | `tests/e2e/E2E-17.sh` | Bash-Wrapper für `tests/evaluation/E2E-17.py`; koordiniert zwei Hilfsprozesse und hält den ptrace-Tracer im selben Pythonprozess |
+| `tests/e2e/E2E-18.sh`, `E2E-19.sh` | Bash-Einstiege für `dynamic_fd.py`; realer FD-Entzug allein durch Attributaktivierung bzw. Zeitgrenze |
 | `tests/evaluation/COMP-04.sh`, `LOAD-01.sh`, `STAB-01.sh` | Admin-, Kapazitäts- und Stabilitätsprüfungen direkt in Bash |
 | `tests/evaluation/CHAR-01.sh`, `RACE-01.sh` | Ablauf und Assertions in Bash; FD-/fork-/mmap-Operationen in `fd_probe.py` |
 | `tests/evaluation/PERF-01.sh` bis `PERF-03.sh` | Je ein Bash-Wrapper für die gleichnamige Pythondatei; monotone Zeitmessung ohne Shell-Prozessstart pro Messpunkt |
@@ -62,6 +63,29 @@ Alle Artefakte bleiben unter dem ausgegebenen `/tmp/tails-eval-...` erhalten:
 Exitstatus 1 bedeutet mindestens einen fehlgeschlagenen Test. Insbesondere
 bekannte Produktfehler werden nicht als bestandene Tests behandelt.
 
+E2E-18 installiert zunächst eine noch nicht passende Deny-Policy (`system.defcon <= 2`)
+und öffnet drei geschützte sowie zwei weiterhin zulässige Kontroll-FDs. Anschließend
+wird ausschließlich `defcon` von 5 auf 2 geändert. Der Test verlangt einen Scan mit
+Attributaktivierung als Ursache, eine geänderte Attributgeneration, eine unveränderte
+Policygeneration und den selektiven Entzug aller drei geschützten FDs.
+
+E2E-19 verwendet `environment.time % 4294967296 >= <Zeitgrenze>` mit einer Grenze
+zehn Sekunden in der Zukunft. Nach der Einrichtung bleiben Policy- und Attributdateien
+unverändert; die Systemuhr wird nicht verstellt. Der Test verlangt einen zeitgetriggerten
+Scan, unveränderte Policy-/Attributgenerationen und den selektiven Entzug nach Erreichen
+der Grenze. Eine zu langsame Einrichtung wird ausdrücklich als Fehler gemeldet, damit
+ein bereits beim Öffnen unzulässiger Zugriff nicht als Zeitübergangstest durchgeht.
+Beide Szenarien prüfen vor dem Auslöser die FD-Identitäten und speichern Generationen,
+Auslöser und Probe-Ergebnisse in `detail.json`. Ein Timeout oder geschlossener Kontroll-FD
+lässt den Test fehlschlagen. Die Implementierung der Tests ist noch kein Nachweis ihres
+Bestehens auf dem Zielsystem; dafür sind die tatsächlich erzeugten Laufartefakte nötig.
+
+Gezielter Lauf beider neuen Szenarien mit zuvor gebauten aktuellen Binaries:
+
+```bash
+sudo ./tests/test-evaluation.sh E2E-18 E2E-19
+```
+
 Standard: zehn Wiederholungen pro Latenz-/Race-Test, 100 Stabilitätszyklen.
 Anpassung z.B. `sudo env EVAL_REPEATS=30 EVAL_STAB_CYCLES=500 ./tests/test-evaluation.sh`.
 Die Ausgaben dokumentieren die tatsächlich verwendeten Parameter.
@@ -69,9 +93,25 @@ Die Ausgaben dokumentieren die tatsächlich verwendeten Parameter.
 PERF-01 misst 20.000 warme `os.open`-Aufrufe je Zustand, inklusive Python- und
 Timeraufwand, ohne `close`. Der Vergleich ist ein sequenzieller Mikrobenchmark,
 keine isolierte Messung ausschließlich des Hooks. PERF-02 beobachtet mit 10 ms
-Polling die neue Entscheidung. PERF-03 beobachtet EBADF mit 1 ms Polling und
-begrenzt den Aktivierungszeitpunkt durch Generationsabfragen; es werden
-Latenzintervalle ausgegeben, keine vorgetäuschten exakten Aktivierungszeiten.
+Polling die neue Entscheidung. PERF-03 beobachtet EBADF mit 1 ms Polling. Die neue
+Messfassung bereitet die Policy außerhalb des überwachten Verzeichnisses auf demselben
+Dateisystem vor und misst ab der abschließenden Umbenennung. Vor jedem Versuch müssen
+der Policy-Watcher nachweislich in asynchrones Warten zurückgekehrt und alle begonnenen
+Scans abgeschlossen sein; die Messmarkierungen müssen anschließend 300 ms stabil bleiben.
+Ein vor dem Messstart empfangenes Ereignis, zusätzliche Ereignisphasen oder eine verkürzte
+100-ms-Bündelungsphase lassen die Messung fehlschlagen.
+
+Der Runner aktiviert nur für PERF-03 `TAILS_PDP_TIMING=1`. Aktuelle Binaries sind dafür
+neu zu bauen. Die optionalen Marker verwenden Linux `CLOCK_MONOTONIC`, ebenso wie
+Python `monotonic_ns()`. Erfasst werden Empfang des Änderungsereignisses im Userspace,
+Ende der Bündelungsphase, Beginn und Ende des Map-Systemaufrufs zur Aktivierung sowie
+der von der FD-Probe beobachtete EBADF-Zeitpunkt. Die Aktivierung bleibt ein Intervall;
+der Ereigniszeitpunkt bezeichnet den Empfang, nicht die Erzeugung im Kernel. Marker
+und Protokollierung verursachen zusätzlichen Messaufwand. Deshalb sind neue Ergebnisse
+als instrumentierte Messung auszuweisen und nicht ungekennzeichnet mit den bisherigen
+PERF-03-Werten zu vermischen. `detail.json` enthält alle Phasenzeitpunkte und Generationen.
+Die lokale Auswertung ist mit `python3 tests/evaluation/test_perf03.py` prüfbar; dies
+ersetzt den privilegierten Messlauf nicht.
 Die Rohdaten und Median/p95/p99 werden gespeichert. Bei zehn Wiederholungen
 entsprechen hohe Perzentile praktisch dem Maximum und sind nur deskriptiv.
 

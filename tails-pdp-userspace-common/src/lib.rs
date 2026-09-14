@@ -8,6 +8,7 @@ use aya::{
 use tokio::sync::mpsc;
 
 pub mod fs_watch;
+pub mod timing;
 
 /// A successfully activated state that requires the userspace PEP to re-evaluate open files.
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -144,6 +144,6 @@ kill -INT "$runtime_pid"
 wait "$runtime_pid"
 runtime_pid=""
 bash "$PROJECT_ROOT/remove_maps.sh" >/dev/null
-bash "$PROJECT_ROOT/tests/test-evaluation.sh" E2E-11 E2E-12 E2E-13 E2E-14 E2E-15 E2E-16 E2E-17
+bash "$PROJECT_ROOT/tests/test-evaluation.sh" E2E-11 E2E-12 E2E-13 E2E-14 E2E-15 E2E-16 E2E-17 E2E-18 E2E-19
 
-echo "Alle 17 privilegierten End-to-End-Tests waren erfolgreich."
+echo "Alle 19 privilegierten End-to-End-Tests waren erfolgreich."

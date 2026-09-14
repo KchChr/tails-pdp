@@ -17,7 +17,9 @@ use tails_pdp_common::{
     file_open_stream_legacy_entitlement, file_open_stream_policy_applies_to_request,
     matches_attribute_condition, policy_bank_offset,
 };
-use tails_pdp_userspace_common::{EnforcementTrigger, open_pinned_array, open_pinned_hash_map};
+use tails_pdp_userspace_common::{
+    EnforcementTrigger, open_pinned_array, open_pinned_hash_map, timing,
+};
 use tokio::{sync::mpsc, time};
 
 use crate::fd_revoker::close_remote_fd;
@@ -165,6 +167,7 @@ fn run_scan<C: FdCloser>(
     fd_closer: &mut C,
     triggers: &[EnforcementTrigger],
 ) {
+    timing::mark("scan_started", 0);
     if triggers
         .iter()
         .any(|trigger| matches!(trigger, EnforcementTrigger::TimeConditionChanged { .. }))
@@ -178,6 +181,7 @@ fn run_scan<C: FdCloser>(
             Ok(()) => {}
             Err(error) => {
                 warn!("USERSPACE_PEP time-triggered scan skipped: {error:#}");
+                timing::mark("scan_completed", 0);
                 return;
             }
         }
@@ -197,6 +201,7 @@ fn run_scan<C: FdCloser>(
                 Ok(violations) => violations,
                 Err(error) => {
                     warn!("USERSPACE_PEP scan failed cause=[{trigger_summary}]: {error:#}");
+                    timing::mark("scan_completed", 0);
                     return;
                 }
             };
@@ -221,6 +226,7 @@ fn run_scan<C: FdCloser>(
         }
         Err(error) => warn!("USERSPACE_PEP scan failed cause=[{trigger_summary}]: {error:#}"),
     }
+    timing::mark("scan_completed", 0);
 }
 
 fn trigger_label(trigger: &EnforcementTrigger) -> String {

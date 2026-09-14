@@ -89,7 +89,9 @@ Dabei wird geprüft, ob die Policies syntaktisch und semantisch für den Prototy
 
 Erst wenn diese Verarbeitung erfolgreich abgeschlossen ist, werden die Policies als neue Policy-Generation in den Kernel übertragen. 
 Die Übertragung erfolgt über gepinnte eBPF-Maps, die als gemeinsame Datenstruktur zwischen Userspace und Kernelspace dienen.
-Durch das Generationenmodell wird verhindert, dass der Kernel während einer Zugriffsentscheidung eine nur teilweise aktualisierte Policy-Menge verwendet. 
+Neue Policy-Generationen werden vollständig in der inaktiven Bank vorbereitet und erst anschließend aktiviert.
+Damit verhindert das Verfahren die vorzeitige Aktivierung unvollständig geschriebener Generationen.
+Eine unveränderte Lesesicht über mehrere aufeinanderfolgende Generationenwechsel hinweg ist durch das Zwei-Bank-Verfahren allein jedoch nicht garantiert.
 Schlägt die Verarbeitung oder Übertragung fehl, bleibt die zuletzt gültige Policy-Generation aktiv.
 
 \subsubsection{Datenfluss dynamischer Attribute}
@@ -259,7 +261,7 @@ Das Reference-Monitor-Konzept bildet eine grundlegende theoretische
 Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
 muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
 muss eine vollständige Überprüfung aller Zugriffe auf geschützte Ressourcen gewährleistet sein
-\cite{anderson1972computer}.
+\cite[Abschnitt~3.4]{anderson1972computer}.
 Wright et al. beschreiben, dass LSM-Hooks unmittelbar vor dem Zugriff auf interne Kernelobjekte ausgeführt werden und den Zugriff erlauben oder verweigern können~\cite{wright2002linux}.
 Für den in dieser Arbeit gewählten LSM-Durchsetzungspfad wird die Zugriffskontrollentscheidung daher innerhalb des Kernel-Ausführungspfades getroffen.
 
@@ -274,14 +276,15 @@ Der Kernelspace übernimmt die unmittelbare Entscheidung an den LSM-Hooks.
 Damit wird die Komplexität im Kernel reduziert, während die Zugriffskontrolle weiterhin im sicherheitskritischen Ausführungspfad des Kernels durchgesetzt wird.
 
 
-\subsubsection{Einsatz von eBPF-LSM statt klassischem Kernelmodul}
-Ein klassisches LSM ist Teil des Kernelcodes oder wird als Kernelmodul entwickelt.
-Änderungen an einem solchen Modul erfordern einen erneuten Build- und Ladeprozess.
-Für einen experimentellen Prototyp führt dies zu vergleichsweise langen Entwicklungsiterationen.
+\subsubsection{Einsatz von eBPF-LSM statt eines klassischen LSM}
+Klassische LSM werden im Mainline-Linux in den Kernel eingebaut und können nicht wie gewöhnliche Kernelmodule zur Laufzeit nachgeladen werden~\cite{kernelorgLSM}.
+Änderungen an ihrer Implementierung erfordern daher üblicherweise einen erneuten Kernelbuild und den Start des angepassten Kernels.
+Davon zu unterscheiden sind Änderungen an den Policies eines bestehenden LSM, etwa SELinux, die keinen erneuten Kernelbuild erfordern.
+Für den experimentellen Prototyp ist insbesondere die Möglichkeit relevant, den eigenen Zugriffskontrollcode ohne erneuten Kernelbuild zu ändern.
 
 Gewählt wurde daher die Implementierung als eBPF-LSM.
 Diese Implementierung erlaubt es, eBPF-Programme an LSM-Hooks auszuführen und damit Zugriffskontrollentscheidungen im Kernel-Ausführungspfad zu treffen~\cite{kernelBpfLsm}.
-Die Programme können zur Laufzeit geladen werden und werden vor der Ausführung durch den eBPF-Verifier geprüft~\cite{kernelBpfLsm,kernelBpfVerifier}.
+Bei einem entsprechend konfigurierten Kernel mit aktiviertem BPF-LSM können die Programme zur Laufzeit geladen und an unterstützte LSM-Hooks angehängt werden; vor der Ausführung werden sie durch den eBPF-Verifier geprüft~\cite{kernelBpfLsm,kernelBpfVerifier}.
 
 Ein weiterer Grund für diese Entscheidung ist die Möglichkeit, eBPF-Programme mit Rust zu entwickeln.
 Der Prototyp nutzt dafür Aya.

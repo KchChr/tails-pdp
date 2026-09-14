@@ -67,7 +67,8 @@ else:
         state = [closed(fd) for fd in fds]
         safe_state = [not closed(fd) for fd in safe_fds]
         if all(state) or not all(safe_state) or (root / "stop").exists():
-            result = {"closed": state, "safe_open": safe_state, "observed_ns": time.monotonic_ns()}
+            result = {"closed": state, "safe_open": safe_state,
+                      "observed_ns": time.monotonic_ns(), "observed_unix_ns": time.time_ns()}
             if mapping is not None:
                 result["mmap_readable"] = bool(mapping[:1])
             break
