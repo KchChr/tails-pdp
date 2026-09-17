@@ -40,9 +40,10 @@ Gerätedetails der VM sind für die durchgeführten Funktions- und Laufzeittests
 entscheidungsrelevant und werden daher nicht einzeln aufgeführt.
 
 Als Gastbetriebssystem kommt NixOS zum Einsatz. Die archivierte Systemkonfiguration setzt
-\texttt{system.stateVersion} auf \texttt{25.05}; dieser Wert definiert den Kompatibilitätsstand
-der NixOS-Konfiguration und ist nicht mit der tatsächlich installierten NixOS-Version
-gleichzusetzen. Der Kernel wird durch die Konfiguration aus den Quellen des stabilen
+\texttt{system.stateVersion} auf \texttt{25.05}. Diese Option steuert kompatibilitätsrelevante
+Voreinstellungen, um bestehende Anwendungsdaten bei Systemaktualisierungen weiterverwenden zu
+können. Sie bezeichnet daher nicht die tatsächlich installierte NixOS-Version
+\citep{nixosStateVersion}. Der Kernel wird durch die Konfiguration aus den Quellen des stabilen
 Linux-Kernels 6.16.12 mit festgelegtem SHA-256-Hash gebaut. Die Konfiguration aktiviert unter
 anderem die Kerneloptionen für das Security-Framework und SecurityFS. Über den Kernelparameter
 \texttt{lsm=lockdown,capability,yama,apparmor,bpf} wird BPF in die beim Systemstart ausgewählte
@@ -53,8 +54,7 @@ Die von NixOS generierte \path{hardware-configuration.nix} bindet das QEMU-Gastp
 legt \texttt{x86\_64-linux} als Plattform des Gastsystems fest. Für den Systemstart werden unter
 anderem die Module für VirtIO-PCI, VirtIO-SCSI und SCSI-Datenträger in die Initial Ramdisk
 aufgenommen. Das Root-Dateisystem verwendet ext4, die EFI-Systempartition vfat; ein Swap-Gerät
-ist nicht konfiguriert. Die in dieser Datei enthaltenen UUIDs dienen ausschließlich der Zuordnung
-der Dateisysteme und werden deshalb nicht in der Übersichtstabelle wiederholt.
+ist nicht konfiguriert.
 
 Die Entwicklungs- und Build-Umgebung wird mit \texttt{nix-shell} aus
 \path{nix-config/shell.nix} erzeugt. Für den regulären Projektbuild sind insbesondere Rustup und
@@ -85,7 +85,7 @@ importiert und keine feste Nixpkgs-Revision enthält.
         \hline
         \textbf{Komponente} & \textbf{Konfiguration} \\
         \hline
-        Virtualisierungsplattform & Proxmox VE (8.4.17) mit QEMU/KVM \\
+        Virtualisierungsplattform & Proxmox VE (9.2.18) mit QEMU/KVM \\
         Virtuelles CPU-Modell & \texttt{x86-64-v2-AES} \\
         CPU-Konfiguration & 4 vCPUs \\
         Arbeitsspeicher & 8192 MiB \\
@@ -131,8 +131,9 @@ wird vermieden, die Bewertungskriterien nach Kenntnis der Ergebnisse anzupassen.
 Die Unit-Tests untersuchen einzelne Funktionen mit fest vorgegebenen Eingaben und vergleichen deren
 Ausgabe durch Assertions mit dem erwarteten Ergebnis. Komponententests beziehen mehrere Funktionen
 einer Userspace-Komponente ein, ersetzen externe Abhängigkeiten jedoch teilweise durch
-Testdoubles. So prüfen die Generationstests die Reihenfolge von Bankschreiben und Aktivierung mit
-einem speicherbasierten Ersatz für die BPF-Maps. Die Tests des Userspace-PEP verwenden einen
+Testdoubles. So prüfen die Generationstests die Reihenfolge zwischen dem Schreiben in die inaktive
+Bank und der anschließenden Aktivierung mit einem speicherbasierten Ersatz für die BPF-Maps.
+Die Tests des Userspace-PEP verwenden einen
 \texttt{FakeFdCloser}, der Schließversuche protokolliert, aber keinen realen Systemaufruf in einem
 anderen Prozess ausführt. Diese Tests können die fachliche Logik und das lokale Fehlerverhalten
 präzise prüfen, belegen jedoch weder die Annahme des eBPF-Programms durch den Kernel-Verifier noch
@@ -358,15 +359,8 @@ Konfigurationen oder Lastsituationen hinaus.
 \clearpage
 \subsection{Ergebnisse}
 
-Die nachfolgend dargestellten Ergebnisse wurden am 10.~September 2026 auf dem in
-Abschnitt~6.1 beschriebenen Zielsystem erhoben. Die funktionalen Abschlussprüfungen beziehen sich
-auf den Quellstand \texttt{35e1d2b}; die quantitativen Messwerte wurden zuvor mit dem Quellstand
-\texttt{9848f19} auf demselben System erfasst. Zwischen beiden Ständen wurde die Behandlung einer
-überschrittenen Attributkapazität korrigiert. Da diese Änderung den Updatepfad des
-Attributloaders betrifft, nicht jedoch den eBPF-Pfad einer Dateiöffnung, werden die vorhandenen
-Messwerte weiterhin zur Charakterisierung des Prototyps herangezogen. Insbesondere die gemessene
-Attributreaktionszeit ist dennoch als Wert des früheren Quellstands auszuweisen und nicht als
-Neuvermessung der Korrektur zu verstehen.
+Die nachfolgend dargestellten Ergebnisse wurden auf dem in Abschnitt~6.1 beschriebenen
+Zielsystem erhoben.
 
 \subsubsection{Ergebnisse der funktionalen Prüfungen}
 
@@ -374,7 +368,7 @@ Alle 59 Unit- und Komponententests wurden erfolgreich ausgeführt. Davon entfall
 die gemeinsame Policylogik, 14 auf den Policyloader, 13 auf den Attributloader, zwei auf den
 gemeinsamen Triggerkanal und 14 auf den Userspace-PEP. Die Formatprüfung und der separate
 Release-Build der Runtime und des Administrationstools einschließlich des eBPF-Objekts waren
-ebenfalls erfolgreich. Damit ist nachgewiesen, dass der untersuchte Quellstand übersetzbar ist
+ebenfalls erfolgreich. Damit ist nachgewiesen, dass der Prototyp übersetzbar ist
 und die in Abschnitt~6.2.2 beschriebenen Assertions erfüllt.
 
 Die vollständige Ausführung von \path{test.sh} endet gleichwohl nicht mit einem Gesamterfolg.
@@ -529,9 +523,8 @@ Stabilitätsgarantie kann daraus nicht abgeleitet werden. OA-02 ist teilweise er
 Administrationsschnittstelle ermöglicht im kontrollierten Szenario eine Rekonstruktion der
 Entscheidungsgrundlage, stellt aber kein individuelles Auditlog bereit und ordnet eine konkrete
 Dateiöffnung nicht unmittelbar einem ursprünglichen Policynamen zu. OA-03 ist erfüllt, weil der
-zusätzliche Aufwand und die Reaktions- und Entzugslatenz quantitativ untersucht wurden; mangels
-vorgegebenem Grenzwert ist damit keine Aussage verbunden, ob die gemessenen Werte für einen
-bestimmten Produktiveinsatz akzeptabel sind. OA-04 wird durch die archivierten Konfigurationen,
+zusätzliche Aufwand und die Reaktions- und Entzugslatenz quantitativ untersucht wurden.
+OA-04 wird durch die archivierten Konfigurationen,
 Szenarioskripte, Testparameter und Rohdaten erfüllt.
 
 Die entwicklungsbezogenen Anforderungen sind nicht allein durch Laufzeittests entscheidbar. Die

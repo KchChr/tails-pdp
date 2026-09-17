@@ -96,6 +96,8 @@ Die offen behandelten Grenzen dup/fork/mmap/FD-Reuse sind echte Grenzen, aber ke
 
 ### C02 – Keine automatische Wiederholung jedes erfolglosen Entzugs (P2)
 
+**Bearbeitungsstand:** Als Dokumentationsmangel behoben: Kapitel 5 erklärt die erneute Nachbewertung ausschließlich bei einem neuen Aktivierungs- oder Zeitereignis; Kapitel 7 benennt verbleibende offene FDs als Grenze und begrenzte, erneut identitäts- und policygeprüfte Wiederholungsversuche als Folgearbeit. Das Laufzeitverhalten wurde nicht geändert. Die folgende Befundbeschreibung dokumentiert den ursprünglichen Reviewstand.
+
 **Fundstelle:** `pep.rs:107–136,534`, §5.7.2, S.52. **Kategorie:** Robustheit. **Problem:** Fehler werden protokolliert, dann wird auf ein neues Aktivierungs-/Zeitereignis gewartet. Bei zeitunabhängigen unveränderten Policies kann der nächste Scan ausbleiben; „nächster Scan“ ist keine zugesicherte Wiederholung. **Warum/Auswirkung:** Ein vorübergehend nicht erreichbarer FD bleibt eventuell dauerhaft unbehandelt, obwohl der Attach-Konflikt später verschwindet.
 
 **Lösung A:** Fehler-/Retrysemantik explizit als „erneut nur bei neuem Trigger“ beschreiben. **Lösung B:** Begrenzte, identitätsgeprüfte Retries mit Backoff implementieren und auf dem Zielsystem testen. **Empfehlung:** A vor Abgabe, B Future Work. **Aufwand:** gering für A, hoch für B. **Nutzen:** mittel. **Benotung:** mittel; begrenzt FA-06 zusätzlich, ohne einen allgemeinen zuverlässigen Revoker zu verlangen.

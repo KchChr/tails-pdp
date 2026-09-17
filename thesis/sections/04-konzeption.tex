@@ -43,7 +43,7 @@ begrenzt werden müssen.
 \subsection{Architektur}
 
 Die Architektur des Prototyps ist in zwei zentrale Bereiche unterteilt: den Userspace und den Kernelspace. 
-Diese Trennung orientiert sich an der grundsätzlichen Struktur von Linux-Systemen und ermöglicht es, komplexe Logik zur Policy-Verarbeitung außerhalb des Kernels auszuführen, während sicherheitskritische Zugriffsentscheidungen direkt im Kernel umgesetzt werden.
+Die Gründe für diese Aufteilung werden in Abschnitt~\ref{sec:entscheidung-userspace-kernelspace} erläutert.
 Die im Folgenden verwendeten Bezeichnungen Kernelspace-PEP und Userspace-PEP heben die jeweilige Durchsetzungsfunktion hervor.
 Wie in den Grundlagen erläutert, enthalten beide Pfade zugleich eine integrierte PDP-Funktion, weil sie die anwendbaren Policies lokal auswerten und daraus eine Entscheidung ableiten.
 Ein separater PDP-Prozess und ein Nachrichtenaustausch von Entscheidungsanfragen und Entscheidungen zwischen PDP und PEP sind nicht Bestandteil der Architektur.
@@ -62,8 +62,6 @@ Ein separater PDP-Prozess und ein Nachrichtenaustausch von Entscheidungsanfragen
 Die Kommunikation zwischen Userspace und Kernelspace bildet dabei eine zentrale Schnittstelle des Systems. 
 Sie dient dazu, Policies, Attribute, Zeitinformationen und Generationenstände aus dem Userspace für die Kernel-Auswertung bereitzustellen.
 Zugriffsentscheidungen werden nicht an den Userspace übertragen. Sie verbleiben im jeweiligen Durchsetzungspfad und werden lediglich über dessen Logging sichtbar gemacht.
-Dadurch kann die Policy-Logik im Userspace verbleiben, 
-während der Kernel die unmittelbare Durchsetzung der Zugriffskontrolle bei Dateizugriffen übernimmt.
 Für Zugriffe, die bereits durch einen LSM-Hook erlaubt wurden, erfolgt keine automatische erneute Bewertung durch denselben Hook.
 Diese nachträgliche Überwachung wird durch den Userspace-PEP übernommen.
 
@@ -134,28 +132,19 @@ Der Kernel unterbindet daraufhin den Zugriff.
 
 \subsubsection{Nachträgliche Kontrolle bestehender Zugriffe}
 
-LSM-Hooks prüfen einen Zugriff zu dem Zeitpunkt, an dem das jeweilige Kernelereignis auftritt. 
-Bei streambasierten Policies kann sich die Entscheidungslage jedoch nachträglich ändern, beispielsweise wenn sich die Uhrzeit oder andere Attribute ändern.
-Ein bereits geöffneter Zugriff wird dadurch nicht automatisch erneut durch denselben LSM-Hook geprüft.
-
-Aus diesem Grund enthält der Prototyp zusätzlich einen Userspace-PEP.
 Der Userspace-PEP bewertet aktive Prozesse und deren aktuell verwendete Ressourcen nach erfolgreicher Aktivierung einer entscheidungsrelevanten Policy- oder Attributgeneration sowie an relevanten Zeitgrenzen erneut.
 Dabei prüft er, ob eine bestehende Zugriffssituation mit den derzeit aktiven Policies vereinbar ist. 
 Wird eine Verletzung erkannt, versucht der Userspace-PEP, den konkret betroffenen File Descriptor zu schließen.
 
-Der Userspace-PEP ergänzt damit die kernelbasierte Zugriffskontrolle.
-Während die LSM-Hooks neue Zugriffe unmittelbar prüfen, adressiert der Userspace-PEP das Problem bereits bestehender Zugriffe bei nachträglich geänderten Bedingungen.
-Da er die gepinnten Policies und Attribute selbst auswertet und die ermittelte Entscheidung anschließend durchsetzt, enthält diese Komponente neben der PEP-Funktion auch einen Teil der Entscheidungslogik. Eine vollständig getrennte Kommunikation mit einem eigenständigen PDP wird im Prototyp nicht umgesetzt.
+Die Nachbewertung liest die Entscheidungsgrundlagen aus den gepinnten Maps; sie erhält keine fertigen Entscheidungen vom Kernelspace-PEP.
 
 \subsection{Komponenten}
-Die Architektur des Prototyps setzt sich aus mehreren Komponenten zusammen, die jeweils eine abgegrenzte Aufgabe innerhalb der Zugriffskontrolle übernehmen. 
-Im Folgenden werden die wichtigsten Komponenten beschrieben.
+Die folgenden Komponenten übernehmen die Zuständigkeiten innerhalb der beschriebenen Datenflüsse.
 
 
 \subsubsection{Userspace-Komponenten}
 
 Im Userspace befinden sich die Komponenten, die Policies verwalten, dynamische Attribute bereitstellen und bestehende Zugriffssituationen überwachen. 
-Dadurch verbleiben komplexere Verarbeitungsschritte außerhalb des Kernels.
 
 \paragraph{Policies}
 Policies beschreiben die Zugriffsvorgaben des Systems. 
@@ -168,13 +157,7 @@ Die Policyverwaltung bildet die Schnittstelle zwischen den menschenlesbaren Poli
 Sie überwacht das Verzeichnis \texttt{policies/}, liest die dort abgelegten Policies ein, verarbeitet sie und validiert sie vor der Aktivierung. 
 Nach erfolgreicher Validierung übersetzt der Userspace die Policy-Dateien in kernelgeeignete Map-Einträge.
 
-Da Policies während des Betriebs geändert werden können, muss verhindert werden, dass der Kernel eine nur teilweise aktualisierte Policy-Menge verwendet. 
-Dazu aktiviert die Policyverwaltung Policies als atomare Einheit. 
-Dies wird durch ein Generationensystem gewährleistet: Eine neue Policy-Generation wird zunächst vollständig im Userspace vorbereitet und validiert. 
-Erst danach wird sie in den Kernelspace übertragen und als gültige Generation aktiviert. 
-Schlägt dieser Vorgang fehl, bleibt die zuletzt gültige Generation aktiv.
-
-Die Policyverwaltung umfasst damit gelesene Policy-Dokumente, geparste Policies, kernelgeeignete Map-Einträge, Policy-Generationen sowie aktive und zuletzt gültige Policy-Versionen. 
+Die Policyverwaltung verantwortet außerdem die Vorbereitung und Aktivierung neuer Policy-Generationen. Das zugehörige Verfahren wird in Abschnitt~\ref{sec:entscheidung-policy-generationen} erläutert.
 
 \paragraph{Attributloader}
 Der Attributloader stellt dynamische Kontextinformationen für die Zugriffskontrolle bereit. 
@@ -209,9 +192,7 @@ Es ermöglicht, zentrale Informationen zum Zustand des Systems, über geladene P
 
 \subsection{Datenobjekte}
 
-Neben den aktiven Komponenten besitzt der Prototyp mehrere zentrale Datenobjekte. 
-Diese Datenobjekte beschreiben den Zustand des Systems und bilden die Grundlage für Policy-Verarbeitung, Zugriffsauswertung und Monitoring. 
-Im Folgenden wird zwischen Datenobjekten im Userspace und Datenobjekten im Kernelspace unterschieden.
+Die zentralen Datenobjekte werden nach ihrer Verwendung im Userspace und Kernelspace unterschieden.
 
 \subsubsection{Datenobjekte im Userspace}
 
@@ -220,7 +201,6 @@ Dazu gehören zunächst die Policy-Dateien im Verzeichnis \texttt{policies/}.
 Sie stellen die menschenlesbare Beschreibung der Zugriffsvorgaben dar.
 
 Während der Verarbeitung entstehen daraus weitere Datenobjekte: gelesene Policy-Dokumente, geparste Policies und kernelgeeignete Map-Einträge. 
-Diese Zwischenformen sind notwendig, um die textuellen Policies in eine strukturierte Form zu überführen, die später in eBPF-Maps im Kernelspace übertragen werden kann. 
 Zusätzlich verwaltet der Userspace Policy-Generationen. 
 Eine Policy-Generation beschreibt eine zusammengehörige Menge von Policies, die gemeinsam aktiviert oder verworfen wird.
 
@@ -235,7 +215,7 @@ Diese Informationen stammen aus Betriebssystemquellen wie \texttt{/proc/<PID>/fd
 
 Im Kernelspace liegen die Datenobjekte, die für die unmittelbare Zugriffskontrolle an den LSM-Hooks benötigt werden. 
 Dazu gehören die geladenen statischen Policies und Streampolicies. 
-Sie werden nach erfolgreicher Validierung aus dem Userspace übertragen und in eBPF-Maps abgelegt.
+Sie liegen als feste Einträge in eBPF-Maps vor.
 
 Neben den Policies befinden sich auch dynamische Attribute im Kernelspace. 
 Dazu zählen insbesondere die aktuelle Zeit und externe Zustandswerte, die vom Attributloader bereitgestellt werden. 
@@ -256,7 +236,7 @@ Rahmenbedingungen die grundlegende Gestaltung des Prototyps ab. Für jede Entsch
 Ausgangsproblem, die gewählte Lösung, berücksichtigte Alternativen und die daraus entstehenden
 Konsequenzen dargestellt.
 
-\subsubsection{Trennung von Userspace und Kernelspace}
+\subsubsection{Trennung von Userspace und Kernelspace}\label{sec:entscheidung-userspace-kernelspace}
 Das Reference-Monitor-Konzept bildet eine grundlegende theoretische 
 Basis für die Umsetzung von Zugriffskontrollmechanismen. Nach Anderson 
 muss ein Reference Monitor manipulationssicher und verifizierbar sein. Weiterhin 
@@ -416,7 +396,7 @@ Die Konsequenz ist, dass alle zwischen Userspace und Kernel geteilten Zustände 
 Änderungen an diesen Layouts betreffen beide Seiten und müssen deshalb kontrolliert erfolgen.
 Gleichzeitig entsteht dadurch eine klare Schnittstelle: Der Userspace schreibt validierte Zustände in Maps, der Kernel liest diese Zustände bei der Zugriffskontrolle, und externe Komponenten können über gepinnte Maps lesend auf denselben Zustand zugreifen.
 
-\subsubsection{Generationenmodell für Policy-Aktualisierungen}
+\subsubsection{Generationenmodell für Policy-Aktualisierungen}\label{sec:entscheidung-policy-generationen}
 Policies können während des Betriebs geändert, hinzugefügt oder entfernt werden.
 Dabei darf der Kernel während einer Zugriffentscheidung nicht auf einen teilweise aktualisierten Policy-Zustand zugreifen.
 Problematisch wäre beispielsweise, wenn einzelne Map-Einträge bereits überschrieben wurden, andere Einträge derselben Policy-Menge aber noch zum vorherigen Stand gehören.

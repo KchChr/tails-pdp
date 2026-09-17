@@ -99,6 +99,8 @@ Die Architektur muss aus den Anforderungen begründet werden. Daten- und Kontrol
 
 ### F16 – Kritikpunkt: Konzeption wiederholt dieselbe Begründung zu häufig
 
+**Bearbeitungsstand:** Die empfohlene begrenzte Kürzung wurde umgesetzt. Wiederholte Begründungen in Architektur, Datenfluss, Komponenten- und Datenobjektbeschreibung wurden gestrafft; zwei eindeutige Querverweise führen zu den ausführlichen Entwurfsentscheidungen. Gliederung, Zitate und die ausführliche Alternativenabwägung bleiben erhalten. Eine größere Umstrukturierung oder Entscheidungsmatrix wurde nicht vorgenommen. Die folgende Beschreibung dokumentiert den ursprünglichen Reviewstand.
+
 **Fundstelle:** §4.1–4.6, PDF S.19–36; Wiederholungen zu Userspace-Parsing, festem Layout und kleinem Kernelanteil.
 
 **Priorität:** P3.
@@ -153,4 +155,3 @@ Die hybride Architektur ist die zentrale konstruktive Antwort auf den ersten Tei
 3. Vertrauensmodell/Lebenszyklus aufnehmen (F06).
 4. Aktivierungstrigger in Abbildung 1 sichtbar machen (F12).
 5. Erst danach Wiederholungen kürzen (F16).
-
