@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  18 SEP 2026 15:13
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  18 SEP 2026 18:45
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -739,19 +739,19 @@ Package pdftex.def Info: graphics/architecture.jpg  used on input line 70.
  [21 <./graphics/architecture.jpg>] [22] [23] [24] [25] [26] [27] [28] [29] [30
 ]
 [31] [32] [33] [34]
-Underfull \hbox (badness 1838) in paragraph at lines 618--622
+Underfull \hbox (badness 1838) in paragraph at lines 617--621
 []\T1/ntxtlf/m/n/12 Die Ent-schei-dung lau-tet, En-for-ce-ment durch das Schlie
 -ÿen des be-trof-fe-nen
  []
 
 
-Underfull \hbox (badness 1072) in paragraph at lines 618--622
+Underfull \hbox (badness 1072) in paragraph at lines 617--621
 \T1/ntxtlf/m/n/12 Fi-le De-s-crip-tors um-zu-set-zen. Der Userspace-PEP er-mit-
 telt Prozess-ID und File-
  []
 
 
-Underfull \hbox (badness 1460) in paragraph at lines 618--622
+Underfull \hbox (badness 1460) in paragraph at lines 617--621
 \T1/ntxtlf/m/n/12 Descriptor-Nummer der ver-let-zen-den Zu-griffs-si-tua-ti-on.
  An-schlie-ÿend schlieÿt die
  []
@@ -997,7 +997,7 @@ e/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021
 nts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1
 /public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/n
 ewtx/ztmri.pfb>
-Output written on thesis.pdf (79 pages, 687151 bytes).
+Output written on thesis.pdf (79 pages, 687052 bytes).
 PDF statistics:
  1244 PDF objects out of 1440 (max. 8388607)
  1135 compressed objects within 12 object streams
