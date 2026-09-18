@@ -624,7 +624,7 @@ Wenn ein Prozess mehrere Dateien geöffnet hat, kann nur der File Descriptor ges
 Andere File Descriptors desselben Prozesses bleiben bestehen, sofern sie nicht selbst gegen eine Policy verstoßen.
 Damit passt die Maßnahme zu der Anforderung, nur den betroffenen Zugriff zu beenden.
 
-Eine Alternative wäre, den gesamten Prozess zu terminieren.
+Eine Alternative wäre, den gesamten Prozess zu beenden.
 Dies wäre einfacher umzusetzen, aber deutlich invasiver.
 Eine weitere Alternative wäre, lediglich eine Verletzung zu protokollieren und kein Enforcement vorzunehmen.
 Diese Alternative wird nicht verwendet, weil eine erkannte Verletzung im Prototyp unmittelbar den Entzug des betroffenen Zugriffs auslösen muss.
