@@ -1,0 +1,11 @@
+?? examples/101-file-open-static-deny-tail-test.policy
+?? policies/101-file-open-static-deny-tail-test.policy
+?? policies/12-file-open-stream-permit-modulo.policy
+?? policies/18-file-open-stream-permit-engineer-test.policy
+?? policies/l
+?? shell.nix
+25.05.810656.5b5be50345d4 (Warbler)
+Linux 6.16.12
+initrd=\EFI\nixos\br2ygs4mix72prwjvkzjkjh4apqxdxgh-initrd-linux-6.16.12-initrd.efi init=/nix/store/6w9zscrggjarqv38k1nblqv2kvxk66yb-nixos-system-nixos-25.05.810656.5b5be50345d4/init lsm=lockdown,capability,yama,apparmor,bpf loglevel=4 lsm=landlock,yama,bpf
+capability,landlock,yama,bpfrustc 1.90.0-nightly (adcb3d3b4 2025-07-31)
+cargo 1.90.0-nightly (9b296973b 2025-07-25)

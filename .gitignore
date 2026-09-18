@@ -26,6 +26,7 @@ thesis/*.toc
 
 # Local thesis build output
 out/
+#thesis/drafts/
 
 # Python test helper imports
 __pycache__/

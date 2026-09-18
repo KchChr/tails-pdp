@@ -117,7 +117,7 @@
 \contentsline {subsubsection}{\numberline {6.3.1}Ergebnisse der funktionalen Prüfungen}{69}{subsubsection.6.3.1}%
 \contentsline {subsubsection}{\numberline {6.3.2}Robustheit und Grenzen des Entzugsmechanismus}{70}{subsubsection.6.3.2}%
 \contentsline {subsubsection}{\numberline {6.3.3}Quantitative Ergebnisse}{71}{subsubsection.6.3.3}%
-\contentsline {subsubsection}{\numberline {6.3.4}Bewertung der Anforderungen}{71}{subsubsection.6.3.4}%
+\contentsline {subsubsection}{\numberline {6.3.4}Bewertung der Anforderungen}{72}{subsubsection.6.3.4}%
 \contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{73}{section.7}%
 \contentsline {subsection}{\numberline {7.1}Zusammenfassung und Beantwortung der Forschungsfrage}{73}{subsection.7.1}%
 \contentsline {subsection}{\numberline {7.2}Grenzen der Ergebnisse}{74}{subsection.7.2}%

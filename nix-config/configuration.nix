@@ -33,7 +33,8 @@ in {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  boot.kernelParams = [ "lsm=lockdown,capability,yama,apparmor,bpf" ];
+  # NixOS erzeugt daraus den einzigen lsm=-Bootparameter.
+  security.lsm = lib.mkForce [ "landlock" "yama" "bpf" ];
 
   # OverlayFS für Stage-1 sicherstellen (gegen "No such device")
   boot.initrd.kernelModules = [ "overlay" ];

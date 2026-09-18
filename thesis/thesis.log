@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  14 SEP 2026 14:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  18 SEP 2026 15:13
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -837,124 +837,130 @@ LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
 (Font)              scaled to size 6.6pt on input line 168.
  [44] [45] [46] [47] [48] [49] [50] [51] [52] [53] [54] [55] [56]
 [57] [58] [59]) (./sections/06-evaluation.tex [60] [61] [62]
-Underfull \hbox (badness 4328) in paragraph at lines 161--162
+Underfull \hbox (badness 4328) in paragraph at lines 164--165
 []\T1/ntxtlf/m/n/12 Zusammenwirkende Funk-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 161--162
+Underfull \hbox (badness 10000) in paragraph at lines 164--165
 \T1/ntxtlf/m/n/12 tio-nen ei-ner Userspace-
  []
 
 
-Underfull \hbox (badness 5490) in paragraph at lines 166--166
+Underfull \hbox (badness 5490) in paragraph at lines 169--169
 \T1/ntxtlf/m/n/12 kon-trol-lier-ter Da-tei-öff-nun-
  []
 
 [63] [64]
-Underfull \hbox (badness 10000) in paragraph at lines 295--295
+Overfull \hbox (2.45692pt too wide) in paragraph at lines 252--255
+[]\T1/ntxtlf/m/n/12 Ergänzend prü-fen sechs nicht pri-vi-le-gier-te Python-Test
+s die PERF-03-Messauswertung.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 309--309
 []\T1/ntxtlf/m/n/12 Runtime, Kernel-Verifier,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 297--297
+Underfull \hbox (badness 10000) in paragraph at lines 311--311
 []\T1/ntxtlf/m/n/12 E2E-02 bis
  []
 
 
-Underfull \hbox (badness 6625) in paragraph at lines 297--297
+Underfull \hbox (badness 6625) in paragraph at lines 311--311
 []\T1/ntxtlf/m/n/12 Standardentscheidung, sta-ti-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--300
+Underfull \hbox (badness 10000) in paragraph at lines 314--314
 []\T1/ntxtlf/m/n/12 E2E-05 bis
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--300
+Underfull \hbox (badness 10000) in paragraph at lines 314--314
 []\T1/ntxtlf/m/n/12 System-, Subject- und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--304
+Underfull \hbox (badness 10000) in paragraph at lines 314--318
 \T1/ntxtt/m/n/12 subject.position \T1/ntxtlf/m/n/12 und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 300--304
+Underfull \hbox (badness 10000) in paragraph at lines 314--318
 \T1/ntxtt/m/n/12 resource.classification
  []
 
 
-Underfull \hbox (badness 3108) in paragraph at lines 300--304
+Underfull \hbox (badness 3108) in paragraph at lines 314--318
 \T1/ntxtlf/m/n/12 ver-än-dern die rea-le Zu-griffs-ent-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 306--306
+Underfull \hbox (badness 10000) in paragraph at lines 320--320
 []\T1/ntxtlf/m/n/12 Konjunktion meh-re-rer
  []
 
 
-Underfull \hbox (badness 2799) in paragraph at lines 306--309
+Underfull \hbox (badness 2799) in paragraph at lines 320--323
 []\T1/ntxtlf/m/n/12 Die Deny-Policy greift nur bei
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 306--309
+Underfull \hbox (badness 10000) in paragraph at lines 320--323
 \T1/ntxtlf/m/n/12 gleich-zei-tig pas-sen-den System-,
  []
 
 
-Underfull \hbox (badness 2134) in paragraph at lines 306--309
+Underfull \hbox (badness 2134) in paragraph at lines 320--323
 \T1/ntxtlf/m/n/12 feh-len-de, ty-pfal-sche oder ab-wei-
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 329--329
+[65] [66]
+Underfull \hbox (badness 10000) in paragraph at lines 345--345
 []\T1/ntxtlf/m/n/12 E2E-09 und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 332--332
+Underfull \hbox (badness 10000) in paragraph at lines 348--348
 []\T1/ntxtlf/m/n/12 E2E-10 und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 332--332
+Underfull \hbox (badness 10000) in paragraph at lines 348--348
 []\T1/ntxtlf/m/n/12 Administrationsschnittstelle
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 336--336
+Underfull \hbox (badness 10000) in paragraph at lines 352--352
 []\T1/ntxtlf/m/n/12 Combining-Regel \T1/ntxtlf/m/it/12 deny-
  []
 
 
-Underfull \hbox (badness 1097) in paragraph at lines 339--342
+Underfull \hbox (badness 1097) in paragraph at lines 355--358
 []\T1/ntxtlf/m/n/12 Bei pri-vi-le-gier-tem Effective- und
  []
 
-[65] [66] [67] [68] [69
+
+Underfull \hbox (badness 10000) in paragraph at lines 361--361
+[]\T1/ntxtlf/m/n/12 Attributgetriggerter FD-
+ []
+
+[67] [68] [69
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 429--431
+Underfull \hbox (badness 10000) in paragraph at lines 448--450
 []\T1/ntxtlf/m/n/12 Vollständiger Pfad ein-schlieÿ-lich
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 432--434
-[]\T1/ntxtlf/m/n/12 Bestehender Struk-tur-hin-weis
- []
-
-
-Underfull \hbox (badness 1259) in paragraph at lines 434--435
+Underfull \hbox (badness 1259) in paragraph at lines 454--455
 []\T1/ntxtlf/m/n/12 Userspace-Binaries und eBPF-Objekt
  []
 
 [70]
-Underfull \hbox (badness 6445) in paragraph at lines 484--484
+Underfull \hbox (badness 6445) in paragraph at lines 505--505
 []\T1/ntxtlf/m/n/12 Dateiöffnung, pas-sen-de Permit-
  []
 
@@ -975,13 +981,13 @@ Package rerunfilecheck Info: File `thesis.out' has not changed.
 (rerunfilecheck)             Checksum: C1E6B83BB85AD4293A4A5A67187CC33F;26462.
  ) 
 Here is how much of TeX's memory you used:
- 14473 strings out of 478994
- 202593 string characters out of 5858184
- 525941 words of memory out of 5000000
- 31423 multiletter control sequences out of 15000+600000
+ 14477 strings out of 478994
+ 202690 string characters out of 5858184
+ 525986 words of memory out of 5000000
+ 31426 multiletter control sequences out of 15000+600000
  476870 words of font info for 142 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 71i,10n,74p,1421b,531s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,10n,74p,1421b,529s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/
 local/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/local/
 texlive/2021/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texliv
@@ -991,10 +997,10 @@ e/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021
 nts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1
 /public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/n
 ewtx/ztmri.pfb>
-Output written on thesis.pdf (79 pages, 685199 bytes).
+Output written on thesis.pdf (79 pages, 687151 bytes).
 PDF statistics:
- 1238 PDF objects out of 1440 (max. 8388607)
- 1129 compressed objects within 12 object streams
- 254 named destinations out of 1000 (max. 500000)
+ 1244 PDF objects out of 1440 (max. 8388607)
+ 1135 compressed objects within 12 object streams
+ 255 named destinations out of 1000 (max. 500000)
  947 words of extra memory for PDF output out of 10000 (max. 10000000)
 

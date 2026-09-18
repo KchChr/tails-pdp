@@ -20,7 +20,7 @@ Diese Sichtweise knüpft an grundlegende Begriffe der Informationsschutzmechanis
 
 Ein grundlegendes Konzept für die Durchsetzung von Zugriffskontrolle ist der Reference Monitor.
 Der Reference Monitor ist eine abstrakte Sicherheitskomponente, die jeden Zugriff eines Subjekts auf ein geschütztes Objekt überprüft, bevor dieser Zugriff ausgeführt wird.
-Damit ein Reference Monitor wirksam ist, muss er insbesondere drei Eigenschaften erfüllen: Er muss bei jedem relevanten Zugriff durchlaufen werden, gegen Manipulation geschützt sein und hinreichend klein beziehungsweise nachvollziehbar sein, damit seine Korrektheit überprüft werden kann \citep[Abschnitt~3.4]{anderson1972computer}.
+Damit ein Reference Monitor wirksam ist, muss er insbesondere drei Eigenschaften erfüllen: Er muss bei jedem relevanten Zugriff durchlaufen werden, gegen Manipulation geschützt sein und hinreichend klein beziehungsweise nachvollziehbar sein, damit seine Korrektheit überprüft werden kann \citep[Abschnitt~3.4, S.~17]{anderson1972computer}.
 
 Für Betriebssysteme ist dieses Konzept besonders relevant, da Zugriffe auf Dateien, Prozesse oder andere Systemressourcen letztlich über den Kernel vermittelt werden.
 Wird Zugriffskontrolle erst außerhalb des Kernels umgesetzt, besteht die Gefahr, dass sicherheitsrelevante Operationen nicht vollständig erfasst oder durch alternative Zugriffspfade umgangen werden.
@@ -98,7 +98,7 @@ Die dazwischenliegenden Stufen zur Auswahl und Auswertung statischer und dynamis
 
 Entsprechend rekonstruiert die Userspace-Komponente bestehende Zugriffssituationen aus Prozess- und File-Descriptor-Informationen, wertet sie lokal anhand der aktiven Policies und Attribute aus und versucht bei einer Deny-Entscheidung, den betroffenen File Descriptor zu schließen.
 Auch diese Komponente verbindet somit eine Policy-Entscheidungsfunktion mit einer Durchsetzungsfunktion.
-Die Bezeichnungen \emph{Kernelspace-PEP} und \emph{Userspace-PEP} werden im weiteren Verlauf beibehalten, um die jeweilige Durchsetzungsfunktion hervorzuheben.
+In dieser Arbeit werden die Bezeichnungen \emph{Kernelspace-PEP} und \emph{Userspace-PEP} verwendet, um die jeweilige Durchsetzungsfunktion hervorzuheben.
 Ein eigenständiger, von beiden PEPs getrennter PDP ist nicht Bestandteil des Prototyps.
 
 \subsection{Userspace und Kernelspace in Linux}
@@ -130,7 +130,7 @@ Damit eignen sich LSM-Hooks grundsätzlich als technische Grundlage für einen R
 Für den Prototyp ist der LSM-Hook \texttt{file\_open} maßgeblich. Er wird beim Öffnen einer Datei aufgerufen und deckt damit die in dieser Arbeit betrachtete Operation ab. Seine Entscheidung bezieht sich jedoch ausschließlich auf den aktuellen Öffnungsvorgang. Ändern sich Attribute erst danach, wird ein bereits geöffneter Dateizugriff nicht erneut durch denselben Hook bewertet. Daher ist für solche bestehenden Zugriffssituationen eine ergänzende nachträgliche Überwachung erforderlich.
 
 \subsection{eBPF und eBPF-LSM}
-eBPF ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können. 
+Der extended Berkeley Packet Filter (eBPF) ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können.
 Die Programme werden vor der Ausführung durch den Kernel geprüft und können an verschiedene Ereignisse oder Hook-Typen gebunden werden. 
 Historisch steht BPF für Berkeley Packet Filter. 
 Die heute im Linux-Kernel verwendete erweiterte Form wird meist als eBPF bezeichnet; die Kernel-Dokumentation verwendet für das moderne Subsystem jedoch häufig weiterhin die Bezeichnung BPF. 
@@ -182,9 +182,9 @@ Auch der Zugriff auf Kernelinformationen erfolgt nicht beliebig, sondern über d
 
 
 Zusätzlich bestehen praktische Begrenzungen bei Stack und Programmkomplexität. 
-Die für diese Arbeit am 12. Juni 2026 abgerufene Fassung der BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}.
+Die BPF-Dokumentation nennt für Programme ein Stacklimit von 512 Byte und beschreibt interne Grenzen des Verifiers, darunter die Anzahl der während der Analyse betrachteten Instruktionen und Zustände \citep{kernelBpfDesignQA}.
 Die offizielle Aya-Dokumentation beschreibt eBPF als eingeschränkte Laufzeitumgebung und weist darauf hin, dass eBPF-Programme nur 512 Byte Stack besitzen; bei Programmen, die Tail Calls verwenden, kann der verfügbare Stack auf 256 Byte begrenzt sein \citep{ayaBook}. 
-Der Stack eignet sich damit nur für kleine lokale Hilfsdaten, etwa Schlüsselstrukturen für Map-Zugriffe oder wenige temporäre Werte. 
+Der Stack eignet sich damit nur für kleine lokale Hilfsdaten, etwa Schlüssel für den Zugriff auf Map-Einträge oder wenige temporäre Werte.
 Größere lokale Puffer, dynamisch wachsende Listen oder Zeichenketten können dort nicht sinnvoll abgelegt werden. 
 Ein allgemeiner Heap, wie er in Userspace-Programmen für dynamische Datenstrukturen wie Listen, Strings oder Objekte genutzt wird, steht eBPF-Programmen nicht zur Verfügung. 
 Veränderliche oder größere Zustände müssen daher typischerweise in eBPF-Maps ausgelagert werden.
@@ -217,7 +217,7 @@ Die Entscheidung für Aya betrifft die spätere Implementierung, während die fa
 Dynamische Attribute sind Attributwerte, die sich zur Laufzeit ändern können. 
 Im Unterschied zu statischen Eigenschaften, etwa einem festen Dateipfad, können dynamische Attribute zeitabhängig oder durch externe Ereignisse beeinflusst sein. 
 Beispiele sind Uhrzeit, Systemzustand oder vom Nutzer frei definierte Subjektattribute. 
-Die Idee veränderlicher Attribute knüpft an Usage-Control-Modelle an, in denen Attributmutabilität als ausdrückliches Merkmal betrachtet wird \citep{gouglidis2018usecon}.
+Die Idee veränderlicher Attribute knüpft an Usage-Control-Modelle an, in denen Attributmutabilität als ausdrückliches Merkmal betrachtet wird \citep[S.~52]{gouglidis2018usecon}.
 
 Für den Prototyp bedeutet dies, dass Attribute nicht nur beim Start einmalig geladen werden dürfen. 
 Änderungen müssen vom Userspace erkannt, validiert und in die kernelgeeignete Repräsentation übertragen werden. 
