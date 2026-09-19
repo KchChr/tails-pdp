@@ -1,5 +1,5 @@
 \section{Evaluation}\label{sec:evaluation}
-Ziel der Evaluation ist es, zu untersuchen, ob der implementierte Prototyp die zentralen Prinzipien von Attribute Stream-Based Access Control für Dateiöffnungen unter Linux wie vorgesehen umsetzt. Dazu werden die Verarbeitung von Policies und dynamischen Attributen, die Kontrolle neuer Dateiöffnungen sowie die Nachbewertung bereits bestehender Dateizugriffe überprüft. Zusätzlich werden der Laufzeitaufwand und die technischen Grenzen der prototypischen Umsetzung betrachtet.
+Ziel der Evaluation ist es, zu untersuchen, ob der implementierte Prototyp die zentralen Prinzipien von ASBAC für Dateiöffnungen unter Linux wie vorgesehen umsetzt. Dazu werden die Verarbeitung von Policies und dynamischen Attributen, die Kontrolle neuer Dateiöffnungen sowie die Nachbewertung bereits bestehender Dateizugriffe überprüft. Zusätzlich werden der Laufzeitaufwand und die technischen Grenzen der prototypischen Umsetzung betrachtet.
 
 
 \subsection{Testumgebung}
@@ -249,7 +249,7 @@ Code für die BPF-Zielarchitektur und eine \texttt{no\_std}-Umgebung übersetzt 
 gemeinsame Policylogik wird daher nativ getestet; die tatsächliche Kernelausführung ist
 Gegenstand der folgenden End-to-End-Szenarien.
 
-Ergänzend prüfen sechs nicht privilegierte Python-Tests die PERF-03-Messauswertung. Sie prüfen
+Ergänzend prüfen sechs nicht privilegierte Python-Tests die Laufzeit (PERF-03) Messauswertung. Sie prüfen
 unter anderem die zeitliche Reihenfolge, fehlende oder mehrfache Zeitmarkierungen, eine
 unvollständige Bündelungsphase und noch laufende Scans vor Messbeginn.
 

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  18 SEP 2026 18:45
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  19 SEP 2026 15:44
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -147,13 +147,6 @@ File: pdftex.def 2020/10/05 v1.2a Graphics/color driver for pdftex
 \Gin@req@height=\dimen149
 \Gin@req@width=\dimen150
 )
-(/usr/local/texlive/2021/texmf-dist/tex/latex/xurl/xurl.sty
-Package: xurl 2020/12/30 v 0.09a modify URL breaks
-
-(/usr/local/texlive/2021/texmf-dist/tex/latex/url/url.sty
-\Urlmuskip=\muskip17
-Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
-))
 (/usr/local/texlive/2021/texmf-dist/tex/latex/hyperref/hyperref.sty
 Package: hyperref 2021-02-27 v7.00k Hypertext links for LaTeX
 
@@ -228,6 +221,11 @@ Package hyperref Info: Backreferencing OFF on input line 4212.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
 Package hyperref Info: Bookmarks ON on input line 4445.
 \c@Hy@tempcnt=\count270
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip17
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
 LaTeX Info: Redefining \url on input line 4804.
 \XeTeXLinkMargin=\dimen152
 
@@ -470,22 +468,264 @@ LaTeX Font Info:    Redeclaring math symbol \jmathscr on input line 2647.
 LaTeX Info: Redefining \Bbbk on input line 2780.
 LaTeX Info: Redefining \not on input line 2929.
 )
-(/usr/local/texlive/2021/texmf-dist/tex/latex/natbib/natbib.sty
-Package: natbib 2010/09/13 8.31b (PWD, AO)
-\bibhang=\skip53
-\bibsep=\skip54
-LaTeX Info: Redefining \cite on input line 694.
-\c@NAT@ctr=\count285
+(/usr/local/texlive/2021/texmf-dist/tex/latex/csquotes/csquotes.sty
+Package: csquotes 2021-02-22 v5.2l context-sensitive quotations (JAW)
+\csq@reset=\count285
+\csq@gtype=\count286
+\csq@glevel=\count287
+\csq@qlevel=\count288
+\csq@maxlvl=\count289
+\csq@tshold=\count290
+\csq@ltx@everypar=\toks28
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/csquotes/csquotes.def
+File: csquotes.def 2021-02-22 v5.2l csquotes generic definitions (JAW)
 )
-(/usr/local/texlive/2021/texmf-dist/tex/latex/geometry/geometry.sty
+Package csquotes Info: Trying to load configuration file 'csquotes.cfg'...
+Package csquotes Info: ... configuration file loaded successfully.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/csquotes/csquotes.cfg
+File: csquotes.cfg 
+))
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/biblatex.sty
+Package: biblatex 2020/12/31 v3.16 programmable bibliographies (PK/MW)
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/logreq/logreq.sty
+Package: logreq 2010/08/04 v1.0 xml request logger
+\lrq@indent=\count291
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/logreq/logreq.def
+File: logreq.def 2010/08/04 v1.0 logreq spec v1.0
+))
+\c@tabx@nest=\count292
+\c@listtotal=\count293
+\c@listcount=\count294
+\c@liststart=\count295
+\c@liststop=\count296
+\c@citecount=\count297
+\c@citetotal=\count298
+\c@multicitecount=\count299
+\c@multicitetotal=\count300
+\c@instcount=\count301
+\c@maxnames=\count302
+\c@minnames=\count303
+\c@maxitems=\count304
+\c@minitems=\count305
+\c@citecounter=\count306
+\c@maxcitecounter=\count307
+\c@savedcitecounter=\count308
+\c@uniquelist=\count309
+\c@uniquename=\count310
+\c@refsection=\count311
+\c@refsegment=\count312
+\c@maxextratitle=\count313
+\c@maxextratitleyear=\count314
+\c@maxextraname=\count315
+\c@maxextradate=\count316
+\c@maxextraalpha=\count317
+\c@abbrvpenalty=\count318
+\c@highnamepenalty=\count319
+\c@lownamepenalty=\count320
+\c@maxparens=\count321
+\c@parenlevel=\count322
+\blx@tempcnta=\count323
+\blx@tempcntb=\count324
+\blx@tempcntc=\count325
+\blx@maxsection=\count326
+\blx@maxsegment@0=\count327
+\blx@notetype=\count328
+\blx@parenlevel@text=\count329
+\blx@parenlevel@foot=\count330
+\blx@sectionciteorder@0=\count331
+\blx@entrysetcounter=\count332
+\blx@biblioinstance=\count333
+\labelnumberwidth=\skip53
+\labelalphawidth=\skip54
+\biblabelsep=\skip55
+\bibitemsep=\skip56
+\bibnamesep=\skip57
+\bibinitsep=\skip58
+\bibparsep=\skip59
+\bibhang=\skip60
+\blx@bcfin=\read4
+\blx@bcfout=\write3
+\blx@langwohyphens=\language88
+\c@mincomprange=\count334
+\c@maxcomprange=\count335
+\c@mincompwidth=\count336
+Package biblatex Info: Trying to load biblatex default data model...
+Package biblatex Info: ... file 'blx-dm.def' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/blx-dm.def
+File: blx-dm.def 2020/12/31 v3.16 biblatex localization (PK/MW)
+)
+Package biblatex Info: Trying to load biblatex style data model...
+Package biblatex Info: ... file 'alphabetic.dbx' not found.
+Package biblatex Info: Trying to load biblatex custom data model...
+Package biblatex Info: ... file 'biblatex-dm.cfg' not found.
+\c@afterword=\count337
+\c@savedafterword=\count338
+\c@annotator=\count339
+\c@savedannotator=\count340
+\c@author=\count341
+\c@savedauthor=\count342
+\c@bookauthor=\count343
+\c@savedbookauthor=\count344
+\c@commentator=\count345
+\c@savedcommentator=\count346
+\c@editor=\count347
+\c@savededitor=\count348
+\c@editora=\count349
+\c@savededitora=\count350
+\c@editorb=\count351
+\c@savededitorb=\count352
+\c@editorc=\count353
+\c@savededitorc=\count354
+\c@foreword=\count355
+\c@savedforeword=\count356
+\c@holder=\count357
+\c@savedholder=\count358
+\c@introduction=\count359
+\c@savedintroduction=\count360
+\c@namea=\count361
+\c@savednamea=\count362
+\c@nameb=\count363
+\c@savednameb=\count364
+\c@namec=\count365
+\c@savednamec=\count366
+\c@translator=\count367
+\c@savedtranslator=\count368
+\c@shortauthor=\count369
+\c@savedshortauthor=\count370
+\c@shorteditor=\count371
+\c@savedshorteditor=\count372
+\c@labelname=\count373
+\c@savedlabelname=\count374
+\c@institution=\count375
+\c@savedinstitution=\count376
+\c@lista=\count377
+\c@savedlista=\count378
+\c@listb=\count379
+\c@savedlistb=\count380
+\c@listc=\count381
+\c@savedlistc=\count382
+\c@listd=\count383
+\c@savedlistd=\count384
+\c@liste=\count385
+\c@savedliste=\count386
+\c@listf=\count387
+\c@savedlistf=\count388
+\c@location=\count389
+\c@savedlocation=\count390
+\c@organization=\count391
+\c@savedorganization=\count392
+\c@origlocation=\count393
+\c@savedoriglocation=\count394
+\c@origpublisher=\count395
+\c@savedorigpublisher=\count396
+\c@publisher=\count397
+\c@savedpublisher=\count398
+\c@language=\count399
+\c@savedlanguage=\count400
+\c@origlanguage=\count401
+\c@savedoriglanguage=\count402
+\c@pageref=\count403
+\c@savedpageref=\count404
+\shorthandwidth=\skip61
+\shortjournalwidth=\skip62
+\shortserieswidth=\skip63
+\shorttitlewidth=\skip64
+\shortauthorwidth=\skip65
+\shorteditorwidth=\skip66
+\locallabelnumberwidth=\skip67
+\locallabelalphawidth=\skip68
+\localshorthandwidth=\skip69
+\localshortjournalwidth=\skip70
+\localshortserieswidth=\skip71
+\localshorttitlewidth=\skip72
+\localshortauthorwidth=\skip73
+\localshorteditorwidth=\skip74
+Package biblatex Info: Trying to load compatibility code...
+Package biblatex Info: ... file 'blx-compat.def' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/blx-compat.def
+File: blx-compat.def 2020/12/31 v3.16 biblatex compatibility (PK/MW)
+)
+Package biblatex Info: Trying to load generic definitions...
+Package biblatex Info: ... file 'biblatex.def' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/biblatex.def
+File: biblatex.def 2020/12/31 v3.16 biblatex compatibility (PK/MW)
+\c@textcitecount=\count405
+\c@textcitetotal=\count406
+\c@textcitemaxnames=\count407
+\c@biburlbigbreakpenalty=\count408
+\c@biburlbreakpenalty=\count409
+\c@biburlnumpenalty=\count410
+\c@biburlucpenalty=\count411
+\c@biburllcpenalty=\count412
+\biburlbigskip=\muskip18
+\biburlnumskip=\muskip19
+\biburlucskip=\muskip20
+\biburllcskip=\muskip21
+\c@smartand=\count413
+)
+Package biblatex Info: Trying to load natbib compatibility...
+Package biblatex Info: ... file 'blx-natbib.def' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/blx-natbib.def
+File: blx-natbib.def 2020/12/31 v3.16 biblatex compatibility (PK/MW)
+Package biblatex Info: Delimiter 'nameyeardelim' in context '' already defined,
+ overwriting.
+)
+Package biblatex Info: Trying to load bibliography style 'alphabetic'...
+Package biblatex Info: ... file 'alphabetic.bbx' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/bbx/alphabetic.bbx
+File: alphabetic.bbx 2020/12/31 v3.16 biblatex bibliography style (PK/MW)
+Package biblatex Info: Trying to load bibliography style 'standard'...
+Package biblatex Info: ... file 'standard.bbx' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/bbx/standard.bbx
+File: standard.bbx 2020/12/31 v3.16 biblatex bibliography style (PK/MW)
+\c@bbx:relatedcount=\count414
+\c@bbx:relatedtotal=\count415
+))
+Package biblatex Info: Trying to load citation style 'alphabetic'...
+Package biblatex Info: ... file 'alphabetic.cbx' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/cbx/alphabetic.cbx
+File: alphabetic.cbx 2020/12/31 v3.16 biblatex citation style (PK/MW)
+Package biblatex Info: Redefining '\cite'.
+Package biblatex Info: Redefining '\parencite'.
+Package biblatex Info: Redefining '\footcite'.
+Package biblatex Info: Redefining '\footcitetext'.
+Package biblatex Info: Redefining '\smartcite'.
+Package biblatex Info: Redefining '\textcite'.
+Package biblatex Info: Redefining '\textcites'.
+Package biblatex Info: Redefining '\cites'.
+Package biblatex Info: Redefining '\parencites'.
+Package biblatex Info: Redefining '\smartcites'.
+)
+Package biblatex Info: Trying to load configuration file...
+Package biblatex Info: ... file 'biblatex.cfg' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/biblatex.cfg
+File: biblatex.cfg 
+))
+(/usr/local/texlive/2021/texmf-dist/tex/latex/xurl/xurl.sty
+Package: xurl 2020/12/30 v 0.09a modify URL breaks
+
+xurl: Set penalties for biblatex
+) (/usr/local/texlive/2021/texmf-dist/tex/latex/geometry/geometry.sty
 Package: geometry 2020/01/02 v5.9 Page Geometry
 
 (/usr/local/texlive/2021/texmf-dist/tex/generic/iftex/ifvtex.sty
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 )
-\Gm@cnth=\count286
-\Gm@cntv=\count287
-\c@Gm@tempcnt=\count288
+\Gm@cnth=\count416
+\Gm@cntv=\count417
+\c@Gm@tempcnt=\count418
 \Gm@bindingoffset=\dimen156
 \Gm@wd@mp=\dimen157
 \Gm@odd@mp=\dimen158
@@ -494,74 +734,125 @@ Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 \Gm@layoutheight=\dimen161
 \Gm@layouthoffset=\dimen162
 \Gm@layoutvoffset=\dimen163
-\Gm@dimlist=\toks28
+\Gm@dimlist=\toks29
 )
+(/usr/local/texlive/2021/texmf-dist/tex/latex/parskip/parskip.sty
+Package: parskip 2021-03-14 v2.0h non-zero parskip adjustments
+)
+(/usr/local/texlive/2021/texmf-dist/tex/latex/titlesec/titlesec.sty
+Package: titlesec 2019/10/16 v2.13 Sectioning titles
+\ttl@box=\box49
+\beforetitleunit=\skip75
+\aftertitleunit=\skip76
+\ttl@plus=\dimen164
+\ttl@minus=\dimen165
+\ttl@toksa=\toks30
+\titlewidth=\dimen166
+\titlewidthlast=\dimen167
+\titlewidthfirst=\dimen168
+)
+(/usr/local/texlive/2021/texmf-dist/tex/latex/caption/caption.sty
+Package: caption 2020/10/26 v3.5g Customizing captions (AR)
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/caption/caption3.sty
+Package: caption3 2020/10/21 v2.2e caption3 kernel (AR)
+\captionmargin=\dimen169
+\captionmargin@=\dimen170
+\captionwidth=\dimen171
+\caption@tempdima=\dimen172
+\caption@indent=\dimen173
+\caption@parindent=\dimen174
+\caption@hangindent=\dimen175
+Package caption Info: Standard document class detected.
+)
+\c@caption@flags=\count419
+\c@continuedfloat=\count420
+Package caption Info: hyperref package is loaded.
+)
+(/usr/local/texlive/2021/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty
+Package: fancyhdr 2021/01/28 v4.0.1 Extensive control of page headers and foote
+rs
+\f@nch@headwidth=\skip77
+\f@nch@O@elh=\skip78
+\f@nch@O@erh=\skip79
+\f@nch@O@olh=\skip80
+\f@nch@O@orh=\skip81
+\f@nch@O@elf=\skip82
+\f@nch@O@erf=\skip83
+\f@nch@O@olf=\skip84
+\f@nch@O@orf=\skip85
+)
+Package csquotes Info: Checking for multilingual support...
+Package csquotes Info: ... found 'babel' package.
+Package csquotes Info: Adjusting default style.
+Package csquotes Info: Redefining alias 'default' -> 'german'.
+
 (/usr/local/texlive/2021/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2021-03-18 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count289
-\l__pdf_internal_box=\box49
+\l__color_backend_stack_int=\count421
+\l__pdf_internal_box=\box50
 )
 (./thesis.aux)
 \openout1 = `thesis.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/ntxmi/m/it on input line 26.
+LaTeX Font Info:    Checking defaults for OML/ntxmi/m/it on input line 70.
 LaTeX Font Info:    Trying to load font information for OML+ntxmi on input line
- 26.
+ 70.
  (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/omlntxmi.fd
 File: omlntxmi.fd 2015/08/25 Fontinst v1.933 font definitions for OML/ntxmi.
 )
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for U/ntxexa/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for U/ntxexa/m/n on input line 70.
 LaTeX Font Info:    Trying to load font information for U+ntxexa on input line 
-26.
+70.
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/untxexa.fd
 File: untxexa.fd 2012/04/16 Fontinst v1.933 font definitions for U/ntxexa.
 )
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 26.
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for LMS/ntxsy/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 70.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for LMS/ntxsy/m/n on input line 70.
 LaTeX Font Info:    Trying to load font information for LMS+ntxsy on input line
- 26.
+ 70.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/lmsntxsy.fd
 File: lmsntxsy.fd 2016/07/02 Fontinst v1.933 font definitions for LMS/ntxsy.
 )
-LaTeX Font Info:    ... okay on input line 26.
-LaTeX Font Info:    Checking defaults for LMX/ntxexx/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 70.
+LaTeX Font Info:    Checking defaults for LMX/ntxexx/m/n on input line 70.
 LaTeX Font Info:    Trying to load font information for LMX+ntxexx on input lin
-e 26.
+e 70.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/lmxntxexx.fd
 File: lmxntxexx.fd 2016/07/03 Fontinst v1.933 font definitions for LMX/ntxexx.
 )
-LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    ... okay on input line 70.
 
 (/usr/local/texlive/2021/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count290
-\scratchdimen=\dimen164
-\scratchbox=\box50
-\nofMPsegments=\count291
-\nofMParguments=\count292
-\everyMPshowfont=\toks29
-\MPscratchCnt=\count293
-\MPscratchDim=\dimen165
-\MPnumerator=\count294
-\makeMPintoPDFobject=\count295
-\everyMPtoPDFconversion=\toks30
+\scratchcounter=\count422
+\scratchdimen=\dimen176
+\scratchbox=\box51
+\nofMPsegments=\count423
+\nofMParguments=\count424
+\everyMPshowfont=\toks31
+\MPscratchCnt=\count425
+\MPscratchDim=\dimen177
+\MPnumerator=\count426
+\makeMPintoPDFobject=\count427
+\everyMPtoPDFconversion=\toks32
 ) (/usr/local/texlive/2021/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
@@ -571,7 +862,7 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-Package hyperref Info: Link coloring OFF on input line 26.
+Package hyperref Info: Link coloring OFF on input line 70.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2021-04-02 v2.47 Cross-referencing by name of section
@@ -583,17 +874,51 @@ Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 ty
 Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
-\c@section@level=\count296
+\c@section@level=\count428
 )
-LaTeX Info: Redefining \ref on input line 26.
-LaTeX Info: Redefining \pageref on input line 26.
-LaTeX Info: Redefining \nameref on input line 26.
+LaTeX Info: Redefining \ref on input line 70.
+LaTeX Info: Redefining \pageref on input line 70.
+LaTeX Info: Redefining \nameref on input line 70.
  (./thesis.out) (./thesis.out)
-\@outlinefile=\write3
-\openout3 = `thesis.out'.
+\@outlinefile=\write4
+\openout4 = `thesis.out'.
 
-\c@mv@tabular=\count297
-\c@mv@boldtabular=\count298
+\c@mv@tabular=\count429
+\c@mv@boldtabular=\count430
+Package biblatex Info: Trying to load language 'german'...
+Package biblatex Info: ... file 'german.lbx' found.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/lbx/german.lbx
+File: german.lbx 2020/12/31 v3.16 biblatex localization (PK/MW)
+)
+Package biblatex Info: Input encoding 'utf8' detected.
+Package biblatex Info: Automatic encoding selection.
+(biblatex)             Assuming data encoding 'utf8'.
+Package biblatex Info: Document encoding is UTF8 ....
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/l3kernel/expl3.sty
+Package: expl3 2021-02-18 L3 programming layer (loader) 
+)
+Package biblatex Info: ... and expl3
+(biblatex)             2021-02-18 L3 programming layer (loader) 
+(biblatex)             is new enough (at least 2020/04/06),
+(biblatex)             setting 'casechanger=expl3'.
+
+(/usr/local/texlive/2021/texmf-dist/tex/latex/biblatex/blx-case-expl3.sty
+(/usr/local/texlive/2021/texmf-dist/tex/latex/l3packages/xparse/xparse.sty
+(/usr/local/texlive/2021/texmf-dist/tex/latex/l3packages/xparse/xparse-2020-10-
+01.sty
+(/usr/local/texlive/2021/texmf-dist/tex/latex/l3packages/xparse/xparse-generic.
+tex)))
+Package: blx-case-expl3 2020/12/31 v3.16 expl3 case changing code for biblatex
+)
+\openout3 = `thesis.bcf'.
+
+Package biblatex Info: Trying to load bibliographic data...
+Package biblatex Info: ... file 'thesis.bbl' found.
+ (./thesis.bbl)
+Package biblatex Info: Reference section=0 on input line 70.
+Package biblatex Info: Reference segment=0 on input line 70.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -615,7 +940,7 @@ LaTeX Info: Redefining \nameref on input line 26.
 * \headheight=12.0pt
 * \headsep=25.0pt
 * \topskip=12.0pt
-* \footskip=30.0pt
+* \footskip=49.79231pt
 * \marginparwidth=35.0pt
 * \marginparsep=10.0pt
 * \columnsep=10.0pt
@@ -629,74 +954,87 @@ LaTeX Info: Redefining \nameref on input line 26.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: End \AtBeginDocument code.
+Package hyperref Info: Option `pageanchor' set `false' on input line 71.
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 20.74pt on input line 28.
+(Font)              scaled to size 20.74pt on input line 74.
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 14.4pt on input line 28.
+(Font)              scaled to size 14.4pt on input line 74.
+LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
+(Font)              scaled to size 10.0pt on input line 74.
 LaTeX Font Info:    Trying to load font information for OT1+ntxtlf on input lin
-e 28.
+e 74.
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/ot1ntxtlf.fd
 File: ot1ntxtlf.fd 2015/01/17 v1.0 font definition file for OT1/ntx/tlf
 )
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 14.4pt on input line 28.
+(Font)              scaled to size 10.0pt on input line 74.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.5pt on input line 28.
+(Font)              scaled to size 7.3pt on input line 74.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 7.9pt on input line 28.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 28.
+(Font)              scaled to size 5.5pt on input line 74.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 74.
 
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 28.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 74.
 
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for U+ntxmia on input line 
-28.
+74.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/untxmia.fd
 File: untxmia.fd 2018/04/14 Fontinst v1.933 font definitions for U/ntxmia.
 )
 LaTeX Font Info:    Trying to load font information for U+ntxsym on input line 
-28.
+74.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/untxsym.fd
 File: untxsym.fd 2015/03/20 Fontinst v1.933 font definitions for U/ntxsym.
 )
 LaTeX Font Info:    Trying to load font information for U+ntxsyc on input line 
-28.
+74.
 
 (/usr/local/texlive/2021/texmf-dist/tex/latex/newtx/untxsyc.fd
 File: untxsyc.fd 2012/04/12 Fontinst v1.933 font definitions for U/ntxsyc.
 ) [1
 
 {/usr/local/texlive/2021/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
+Package hyperref Info: Option `pageanchor' set `true' on input line 78.
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 17.28pt on input line 31.
+(Font)              scaled to size 16.0pt on input line 80.
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 17.28pt on input line 31.
+(Font)              scaled to size 16.0pt on input line 80.
  (./thesis.toc
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 12.0pt on input line 2.
+(Font)              scaled to size 12.0pt on input line 4.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 12.0pt on input line 3.
+(Font)              scaled to size 12.0pt on input line 6.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.8pt on input line 3.
+(Font)              scaled to size 8.8pt on input line 6.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 6.6pt on input line 3.
+(Font)              scaled to size 6.6pt on input line 6.
 
-[2] [3])
-\tf@toc=\write4
-\openout4 = `thesis.toc'.
+[1
 
- [4] (./sections/01-einleitung.tex
+] [2])
+\tf@toc=\write5
+\openout5 = `thesis.toc'.
+
+ [3] (./sections/01-einleitung.tex
+LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
+(Font)              scaled to size 14.0pt on input line 3.
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 14.4pt on input line 3.
+(Font)              scaled to size 14.0pt on input line 3.
+ [1
+
+]
 LaTeX Font Info:    Trying to load font information for T1+ntxtt on input line 
 31.
 
@@ -705,23 +1043,23 @@ File: t1ntxtt.fd 2012/04/20 v3.1
 )
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
 (Font)              scaled to size 12.0pt on input line 31.
- [5] [6])
-(./sections/02-grundlagen.tex [7] [8]
+ [2])
+(./sections/02-grundlagen.tex [3] [4]
 LaTeX Font Info:    Font shape `T1/ntxtlf/m/it' will be
 (Font)              scaled to size 12.0pt on input line 63.
- [9] [10] [11] [12] [13] [14] [15])
-(./sections/03-anforderungsanalyse.tex [16]
+ [5] [6] [7] [8] [9] [10] [11] [12])
+(./sections/03-anforderungsanalyse.tex [13]
 Underfull \hbox (badness 10000) in paragraph at lines 43--48
 []\T1/ntxtlf/m/n/12 Der Pro-to-typ
  []
 
-[17] [18]
+[14] [15]
 Underfull \hbox (badness 2521) in paragraph at lines 110--111
 []\T1/ntxtlf/m/n/12 Die Im-ple-men-tie-rung soll mo-du-lar auf-ge-baut sein, so
 -dass
  []
 
-[19]) (./sections/04-konzeption.tex
+[16]) (./sections/04-konzeption.tex [17]
 LaTeX Font Info:    Trying to load font information for TS1+ntxtlf on input lin
 e 52.
 
@@ -730,241 +1068,209 @@ File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 )
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
 (Font)              scaled to size 12.0pt on input line 52.
- [20]
-<graphics/architecture.jpg, id=748, 1606.0pt x 1051.93pt>
+<graphics/architecture.jpg, id=752, 1606.0pt x 1051.93pt>
 File: graphics/architecture.jpg Graphic file (type jpg)
 <use graphics/architecture.jpg>
 Package pdftex.def Info: graphics/architecture.jpg  used on input line 70.
 (pdftex.def)             Requested size: 405.45047pt x 265.56609pt.
- [21 <./graphics/architecture.jpg>] [22] [23] [24] [25] [26] [27] [28] [29] [30
-]
-[31] [32] [33] [34]
-Underfull \hbox (badness 1838) in paragraph at lines 617--621
-[]\T1/ntxtlf/m/n/12 Die Ent-schei-dung lau-tet, En-for-ce-ment durch das Schlie
--ÿen des be-trof-fe-nen
- []
-
-
-Underfull \hbox (badness 1072) in paragraph at lines 617--621
-\T1/ntxtlf/m/n/12 Fi-le De-s-crip-tors um-zu-set-zen. Der Userspace-PEP er-mit-
-telt Prozess-ID und File-
- []
-
-
-Underfull \hbox (badness 1460) in paragraph at lines 617--621
-\T1/ntxtlf/m/n/12 Descriptor-Nummer der ver-let-zen-den Zu-griffs-si-tua-ti-on.
- An-schlie-ÿend schlieÿt die
- []
-
-[35] [36] [37]) (./sections/05-entwurf-und-umsetzung.tex
-LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.95pt on input line 22.
-LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.95pt on input line 23.
-LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.0pt on input line 23.
-LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 6.1pt on input line 23.
+ [18] [19 <./graphics/architecture.jpg>] [20] [21] [22] [23] [24] [25] [26] [27
+] [28]
+[29] [30] [31] [32] [33] [34] [35] [36])
+(./sections/05-entwurf-und-umsetzung.tex
 LaTeX Font Info:    Font shape `T1/ntxtlf/b/n' will be
-(Font)              scaled to size 10.95pt on input line 25.
+(Font)              scaled to size 10.0pt on input line 26.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 10.95pt on input line 27.
+(Font)              scaled to size 10.0pt on input line 28.
 
-Underfull \hbox (badness 1708) in paragraph at lines 42--43
-[]\T1/ntxtlf/m/n/10.95 Enthält die im Ker-nel aus-ge-führ-ten eBPF-LSM-
+Underfull \hbox (badness 1454) in paragraph at lines 35--36
+[]\T1/ntxtlf/m/n/10 Bereitstellung und Ak-tua-li-sie-rung von Zeit-, System-,
  []
 
-[38] [39]
-<graphics/abhaengigkeiten.jpg, id=855, 1060.96375pt x 393.47pt>
+[37] [38] [39]
+<graphics/abhaengigkeiten.jpg, id=866, 1060.96375pt x 393.47pt>
 File: graphics/abhaengigkeiten.jpg Graphic file (type jpg)
 <use graphics/abhaengigkeiten.jpg>
-Package pdftex.def Info: graphics/abhaengigkeiten.jpg  used on input line 82.
+Package pdftex.def Info: graphics/abhaengigkeiten.jpg  used on input line 81.
 (pdftex.def)             Requested size: 405.45047pt x 150.36668pt.
+LaTeX Font Info:    Font shape `T1/ntxtlf/m/it' will be
+(Font)              scaled to size 10.0pt on input line 83.
  [40 <./graphics/abhaengigkeiten.jpg>] [41]
-LaTeX Font Info:    Font shape `T1/ntxtlf/m/n' will be
-(Font)              scaled to size 8.0pt on input line 136.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 8.0pt on input line 136.
+(Font)              scaled to size 7.3pt on input line 136.
+LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
+(Font)              scaled to size 5.5pt on input line 136.
 
-Underfull \hbox (badness 5711) in paragraph at lines 136--137
-\T1/ntxtlf/m/n/10.95 Generation und be-stimmt
+Underfull \hbox (badness 2680) in paragraph at lines 136--137
+[]\T1/ntxtlf/m/n/10 Speichert die ak-ti-ve Policy-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 136--137
-\T1/ntxtlf/m/n/10.95 da-mit die aus-zu-wer-ten-de
+Underfull \hbox (badness 10000) in paragraph at lines 138--138
+[]\T1/ntxtt/m/n/10 FILE_OPEN_STATIC_
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 138--138
+\T1/ntxtt/m/n/10 FileOpenStatic
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 138--139
-[]\T1/ntxtlf/m/n/10.95 Enthält die sta-ti-schen
+[]\T1/ntxtlf/m/n/10 Enthält die sta-ti-schen
  []
 
 
-Underfull \hbox (badness 5133) in paragraph at lines 138--139
-\T1/ntxtt/m/n/10.95 file_open\T1/ntxtlf/m/n/10.95 -Policies bei-der
+Underfull \hbox (badness 10000) in paragraph at lines 138--139
+\T1/ntxtt/m/n/10 file_open\T1/ntxtlf/m/n/10 -Policies bei-der
  []
 
 
-Underfull \hbox (badness 4217) in paragraph at lines 140--141
-[]\T1/ntxtlf/m/n/10.95 Enthält die attribut- und
+Underfull \hbox (badness 10000) in paragraph at lines 140--140
+[]\T1/ntxtt/m/n/10 FILE_OPEN_STREAM_
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 140--141
-\T1/ntxtlf/m/n/10.95 Policies bei-der Policy-
+Underfull \hbox (badness 10000) in paragraph at lines 140--140
+\T1/ntxtt/m/n/10 FileOpenStream
  []
 
 
-Underfull \hbox (badness 1371) in paragraph at lines 142--143
-[]\T1/ntxtlf/m/n/10.95 Stellt den ak-tu-el-len Unix-
+Underfull \hbox (badness 4518) in paragraph at lines 140--141
+\T1/ntxtlf/m/n/10 hän-gi-gen \T1/ntxtt/m/n/10 file_open\T1/ntxtlf/m/n/10 -Polic
+ies
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 146--146
-[]\T1/ntxtlf/m/n/10.95 Hash-
+Underfull \hbox (badness 7649) in paragraph at lines 142--143
+[]\T1/ntxtlf/m/n/10 Stellt den ak-tu-el-len Unix-
+ []
+
+
+Underfull \hbox (badness 1142) in paragraph at lines 142--143
+\T1/ntxtlf/m/n/10 Zeitstempel für zeit-ab-hän-gi-ge
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 146--147
-[]\T1/ntxtlf/m/n/10.95 Enthält die dy-na-mi-schen
+[]\T1/ntxtlf/m/n/10 Enthält die dy-na-mi-schen
  []
 
 [42] [43]
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 8.8pt on input line 168.
+(Font)              scaled to size 8.8pt on input line 166.
 LaTeX Font Info:    Font shape `T1/ntxtt/m/n' will be
-(Font)              scaled to size 6.6pt on input line 168.
+(Font)              scaled to size 6.6pt on input line 166.
  [44] [45] [46] [47] [48] [49] [50] [51] [52] [53] [54] [55] [56]
-[57] [58] [59]) (./sections/06-evaluation.tex [60] [61] [62]
-Underfull \hbox (badness 4328) in paragraph at lines 164--165
-[]\T1/ntxtlf/m/n/12 Zusammenwirkende Funk-
+[57] [58] [59] [60] [61]) (./sections/06-evaluation.tex [62] [63] [64]
+Underfull \hbox (badness 1199) in paragraph at lines 162--164
+[]\T1/ntxtlf/m/n/10 Kein rea-ler Kernel- oder Durch-set-
+ []
+
+
+Underfull \hbox (badness 5189) in paragraph at lines 164--165
+[]\T1/ntxtlf/m/n/10 Zusammenwirkende Funk-tio-nen
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 164--165
-\T1/ntxtlf/m/n/12 tio-nen ei-ner Userspace-
+\T1/ntxtlf/m/n/10 ei-ner Userspace-Komponente,
  []
 
-
-Underfull \hbox (badness 5490) in paragraph at lines 169--169
-\T1/ntxtlf/m/n/12 kon-trol-lier-ter Da-tei-öff-nun-
- []
-
-[63] [64]
-Overfull \hbox (2.45692pt too wide) in paragraph at lines 252--255
-[]\T1/ntxtlf/m/n/12 Ergänzend prü-fen sechs nicht pri-vi-le-gier-te Python-Test
-s die PERF-03-Messauswertung.
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 309--309
-[]\T1/ntxtlf/m/n/12 Runtime, Kernel-Verifier,
+[65] [66] [67]
+Underfull \hbox (badness 7944) in paragraph at lines 309--309
+[]\T1/ntxtlf/m/n/10 Runtime, Kernel-Verifier, LSM-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 311--311
-[]\T1/ntxtlf/m/n/12 E2E-02 bis
+[]\T1/ntxtlf/m/n/10 Standardentscheidung, sta-ti-sche
  []
 
 
-Underfull \hbox (badness 6625) in paragraph at lines 311--311
-[]\T1/ntxtlf/m/n/12 Standardentscheidung, sta-ti-
+Underfull \hbox (badness 2635) in paragraph at lines 311--311
+\T1/ntxtlf/m/n/10 Deny-Policy und ak-tu-el-le UTC-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 314--314
-[]\T1/ntxtlf/m/n/12 E2E-05 bis
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 314--314
-[]\T1/ntxtlf/m/n/12 System-, Subject- und
+Underfull \hbox (badness 1297) in paragraph at lines 314--314
+[]\T1/ntxtlf/m/n/10 System-, Subject- und Resource-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 314--318
-\T1/ntxtt/m/n/12 subject.position \T1/ntxtlf/m/n/12 und
+[]\T1/ntxtlf/m/n/10 Änderungen von \T1/ntxtt/m/n/10 system.defcon\T1/ntxtlf/m/n
+/10 ,
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 314--318
-\T1/ntxtt/m/n/12 resource.classification
+\T1/ntxtt/m/n/10 subject.position \T1/ntxtlf/m/n/10 und
  []
 
 
-Underfull \hbox (badness 3108) in paragraph at lines 314--318
-\T1/ntxtlf/m/n/12 ver-än-dern die rea-le Zu-griffs-ent-
+Underfull \hbox (badness 10000) in paragraph at lines 314--318
+\T1/ntxtt/m/n/10 resource.classification \T1/ntxtlf/m/n/10 ver-än-
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 320--320
-[]\T1/ntxtlf/m/n/12 Konjunktion meh-re-rer
+[]\T1/ntxtlf/m/n/10 Konjunktion meh-re-rer Attribut-
  []
 
-
-Underfull \hbox (badness 2799) in paragraph at lines 320--323
-[]\T1/ntxtlf/m/n/12 Die Deny-Policy greift nur bei
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 320--323
-\T1/ntxtlf/m/n/12 gleich-zei-tig pas-sen-den System-,
- []
-
-
-Underfull \hbox (badness 2134) in paragraph at lines 320--323
-\T1/ntxtlf/m/n/12 feh-len-de, ty-pfal-sche oder ab-wei-
- []
-
-[65] [66]
+[68]
 Underfull \hbox (badness 10000) in paragraph at lines 345--345
-[]\T1/ntxtlf/m/n/12 E2E-09 und
+[]\T1/ntxtlf/m/n/10 E2E-09 und
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 348--348
-[]\T1/ntxtlf/m/n/12 E2E-10 und
+[]\T1/ntxtlf/m/n/10 E2E-10 und
  []
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 348--348
-[]\T1/ntxtlf/m/n/12 Administrationsschnittstelle
+[]\T1/ntxtlf/m/n/10 Administrationsschnittstelle und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 352--352
-[]\T1/ntxtlf/m/n/12 Combining-Regel \T1/ntxtlf/m/it/12 deny-
+Underfull \hbox (badness 1102) in paragraph at lines 348--352
+[]\T1/ntxtlf/m/n/10 Die Aus-ga-be ent-hält ak-ti-ve Ge-ne-ra-ti-on,
  []
 
 
-Underfull \hbox (badness 1097) in paragraph at lines 355--358
-[]\T1/ntxtlf/m/n/12 Bei pri-vi-le-gier-tem Effective- und
+Underfull \hbox (badness 1609) in paragraph at lines 352--355
+[]\T1/ntxtlf/m/n/10 Bei gleich-zei-tig pas-sen-der Permit- und
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 361--361
-[]\T1/ntxtlf/m/n/12 Attributgetriggerter FD-
+Underfull \hbox (badness 10000) in paragraph at lines 355--358
+[]\T1/ntxtlf/m/n/10 Bei pri-vi-le-gier-tem Effective- und
  []
 
-[67] [68] [69
+
+Underfull \hbox (badness 2538) in paragraph at lines 355--358
+\T1/ntxtlf/m/n/10 Filesystem-User wird die Ent-schei-dung
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 358--361
+[]\T1/ntxtlf/m/n/10 Der ge-zielt er-zeug-te \T1/ntxtt/m/n/10 ptrace\T1/ntxtlf/m
+/n/10 -Attach-
+ []
+
+
+Underfull \hbox (badness 1325) in paragraph at lines 358--361
+\T1/ntxtlf/m/n/10 Konflikt wird pro-to-kol-liert, ein an-de-rer
+ []
+
+[69] [70
 
 ]
 Underfull \hbox (badness 10000) in paragraph at lines 448--450
-[]\T1/ntxtlf/m/n/12 Vollständiger Pfad ein-schlieÿ-lich
+[]\T1/ntxtlf/m/n/10 Vollständiger Pfad ein-schlieÿ-lich Kernel-
  []
 
-
-Underfull \hbox (badness 1259) in paragraph at lines 454--455
-[]\T1/ntxtlf/m/n/12 Userspace-Binaries und eBPF-Objekt
- []
-
-[70]
-Underfull \hbox (badness 6445) in paragraph at lines 505--505
-[]\T1/ntxtlf/m/n/12 Dateiöffnung, pas-sen-de Permit-
- []
-
-[71] [72]) (./sections/07-zusammenfassung-und-ausblick.tex [73]
+[71] [72] [73] [74]) (./sections/07-zusammenfassung-und-ausblick.tex [75]
 Underfull \hbox (badness 1406) in paragraph at lines 21--22
 \T1/ntxtlf/m/n/12 Userspace-Scan blockiert die üb-ri-gen Zwei-ge des-sel-ben \T
 1/ntxtt/m/n/12 tokio::select!\T1/ntxtlf/m/n/12 -Tasks.
@@ -976,31 +1282,38 @@ Underfull \hbox (badness 1688) in paragraph at lines 21--22
 ie Ak-tua-li-sie-rung von
  []
 
-[74] [75] [76]) (./thesis.bbl [77] [78]) [79] (./thesis.aux)
+[76] [77] [78])
+LaTeX Font Info:    Font shape `T1/ntxtlf/m/sc' will be
+(Font)              scaled to size 12.0pt on input line 93.
+ [79] [80] [81] (./thesis.aux)
 Package rerunfilecheck Info: File `thesis.out' has not changed.
-(rerunfilecheck)             Checksum: C1E6B83BB85AD4293A4A5A67187CC33F;26462.
+(rerunfilecheck)             Checksum: BF236CBA518C9A4F191D2D0A322E2C07;26945.
+Package logreq Info: Writing requests to 'thesis.run.xml'.
+\openout1 = `thesis.run.xml'.
+
  ) 
 Here is how much of TeX's memory you used:
- 14477 strings out of 478994
- 202690 string characters out of 5858184
- 525986 words of memory out of 5000000
- 31426 multiletter control sequences out of 15000+600000
- 476870 words of font info for 142 fonts, out of 8000000 for 9000
- 1141 hyphenation exceptions out of 8191
- 71i,10n,74p,1421b,529s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/
-local/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/local/
-texlive/2021/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texliv
-e/2021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021
-/texmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021/texmf
--dist/fonts/type1/public/newtx/txsys.pfb></usr/local/texlive/2021/texmf-dist/fo
-nts/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1
-/public/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/n
-ewtx/ztmri.pfb>
-Output written on thesis.pdf (79 pages, 687052 bytes).
+ 23299 strings out of 478994
+ 379037 string characters out of 5858184
+ 1137463 words of memory out of 5000000
+ 40165 multiletter control sequences out of 15000+600000
+ 471172 words of font info for 117 fonts, out of 8000000 for 9000
+ 1143 hyphenation exceptions out of 8191
+ 73i,13n,117p,1421b,2080s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf-pc.enc}{
+/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc}{/usr/loc
+al/texlive/2021/texmf-dist/fonts/enc/dvips/newtx/ntx-ec-tlf.enc}</usr/local/tex
+live/2021/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb></usr/local/texlive/2
+021/texmf-dist/fonts/type1/public/tex-gyre/qtmr.pfb></usr/local/texlive/2021/te
+xmf-dist/fonts/type1/public/txfonts/t1xtt.pfb></usr/local/texlive/2021/texmf-di
+st/fonts/type1/public/newtx/txsys.pfb></usr/local/texlive/2021/texmf-dist/fonts
+/type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/pu
+blic/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/newt
+x/ztmri.pfb>
+Output written on thesis.pdf (85 pages, 698463 bytes).
 PDF statistics:
- 1244 PDF objects out of 1440 (max. 8388607)
- 1135 compressed objects within 12 object streams
- 255 named destinations out of 1000 (max. 500000)
+ 1270 PDF objects out of 1440 (max. 8388607)
+ 1154 compressed objects within 12 object streams
+ 252 named destinations out of 1000 (max. 500000)
  947 words of extra memory for PDF output out of 10000 (max. 10000000)
 

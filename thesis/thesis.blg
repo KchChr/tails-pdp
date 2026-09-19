@@ -1,46 +1,15 @@
-This is BibTeX, Version 0.99d (TeX Live 2021)
-Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
-The top-level auxiliary file: thesis.aux
-The style file: plainnat.bst
-Database file #1: literatur.bib
-You've used 38 entries,
-            2773 wiz_defined-function locations,
-            791 strings with 11018 characters,
-and the built_in function-call counts, 12631 in all, are:
-= -- 1159
-> -- 505
-< -- 38
-+ -- 210
-- -- 153
-* -- 692
-:= -- 1956
-add.period$ -- 155
-call.type$ -- 38
-change.case$ -- 165
-chr.to.int$ -- 19
-cite$ -- 76
-duplicate$ -- 603
-empty$ -- 1233
-format.name$ -- 193
-if$ -- 2709
-int.to.chr$ -- 20
-int.to.str$ -- 1
-missing$ -- 3
-newline$ -- 238
-num.names$ -- 152
-pop$ -- 454
-preamble$ -- 1
-purify$ -- 127
-quote$ -- 0
-skip$ -- 453
-stack$ -- 0
-substring$ -- 119
-swap$ -- 71
-text.length$ -- 3
-text.prefix$ -- 0
-top$ -- 0
-type$ -- 418
-warning$ -- 0
-while$ -- 119
-width$ -- 0
-write$ -- 548
+[0] Config.pm:311> INFO - This is Biber 2.16
+[0] Config.pm:314> INFO - Logfile is 'thesis.blg'
+[71] biber-darwin:340> INFO - === Sat Sep 19, 2026, 14:09:23
+[86] Biber.pm:415> INFO - Reading 'thesis.bcf'
+[182] Biber.pm:952> INFO - Found 38 citekeys in bib section 0
+[195] Biber.pm:4340> INFO - Processing section 0
+[206] Biber.pm:4531> INFO - Looking for bibtex format file 'literatur.bib' for section 0
+[208] bibtex.pm:1689> INFO - LaTeX decoding ...
+[244] bibtex.pm:1494> INFO - Found BibTeX data source 'literatur.bib'
+[419] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[419] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[419] Biber.pm:4168> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'de-DE'
+[419] Biber.pm:4174> INFO - No sort tailoring available for locale 'de-DE'
+[450] bbl.pm:654> INFO - Writing 'thesis.bbl' with encoding 'UTF-8'
+[465] bbl.pm:757> INFO - Output to thesis.bbl

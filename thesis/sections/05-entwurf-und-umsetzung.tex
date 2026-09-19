@@ -18,8 +18,9 @@ Die Userspace-Crates übernehmen dagegen Initialisierung, Policy- und Attributve
 Gemeinsame Datenstrukturen befinden sich in einer separaten Crate, damit Userspace und eBPF-Programm dieselben Map-Layouts verwenden. Tabelle~\ref{tab:rust-workspace-crates} fasst die Aufteilung zusammen.
 
 \begin{table}[htbp]
+    \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
+    \label{tab:rust-workspace-crates}
     \centering
-    \small
     \begin{tabular}{|p{5.3cm}|p{8.4cm}|}
         \hline
         \textbf{Crate} & \textbf{Aufgabe} \\
@@ -35,7 +36,7 @@ Gemeinsame Datenstrukturen befinden sich in einer separaten Crate, damit Userspa
         \hline
         \texttt{tails-pdp-userspace-common} & Gemeinsame Hilfsfunktionen und Zugriff auf die gepinnten eBPF-Maps für Userspace-Komponenten. \\
         \hline
-        \texttt{tails-pdp-userspace-pep} & Überwachung bestehender Dateizugriffe und gezielter Entzug unzulässiger File Descriptors. \\
+        \texttt{tails-pdp-userspace-pep} & Überwachung bestehender Dateizugriffe und gezielter Entzug unzulässiger FDs. \\
         \hline
         \texttt{tails-pdp-common} & Gemeinsam verwendeter Code mit Datenstrukturen und Auswertungslogik, insbesondere Policy-, Attribut- und Map-Strukturen. \\
         \hline
@@ -45,8 +46,6 @@ Gemeinsame Datenstrukturen befinden sich in einer separaten Crate, damit Userspa
         \texttt{tails-pdp-admintool} & Administrationstool zur Anzeige aktiver Policies, Attribute und Generationen aus gepinnten eBPF-Maps. \\
         \hline
     \end{tabular}
-    \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
-    \label{tab:rust-workspace-crates}
 \end{table}
 
 
@@ -127,27 +126,26 @@ Die Objektidentität ist Teil des Map-Schlüssels und damit Teil der ABI. Eine �
 Tabelle~\ref{tab:pinned-map-abi} zeigt die gepinnten Maps, die den dauerhaften Datenaustausch zwischen den Komponenten ermöglichen. Die Policy- und Attributloader schreiben gültige Daten in diese Maps. Das eBPF-Programm liest sie bei der Zugriffsentscheidung; Userspace-PEP und Administrationstool öffnen dieselben Maps bei Bedarf erneut zur Überwachung beziehungsweise Anzeige.
 
 \begin{table}[htbp]
+    \caption{Gepinnte eBPF-Maps als Map-ABI des Prototyps}
+    \label{tab:pinned-map-abi}
     \centering
-    \small
     \begin{tabular}{|p{3.9cm}|p{1.5cm}|p{3.1cm}|p{4.5cm}|}
         \hline
         \textbf{Map} & \textbf{Typ} & \textbf{Schlüssel und Wert} & \textbf{Aufgabe} \\
         \hline
-        {\scriptsize\texttt{POLICY\_GENERATION}} & Array & \texttt{u32} $\rightarrow$ \texttt{u32} & Speichert die aktive Policy-Generation und bestimmt damit die auszuwertende Policy-Bank. \\
+        \path{POLICY_GENERATION} & Array & \texttt{u32} $\rightarrow$ \texttt{u32} & Speichert die aktive Policy-Generation und bestimmt damit die auszuwertende Policy-Bank. \\
         \hline
-        {\scriptsize\texttt{FILE\_OPEN\_STATIC\_POLICIES}} & Array & \texttt{u32} $\rightarrow$\newline {\scriptsize\texttt{FileOpenStaticPolicy}} & Enthält die statischen \texttt{file\_open}-Policies beider Policy-Banken. \\
+        \texttt{FILE\_OPEN\_\allowbreak STATIC\_\allowbreak POLICIES} & Array & \texttt{u32} $\rightarrow$\newline \texttt{FileOpen\allowbreak Static\allowbreak Policy} & Enthält die statischen \texttt{file\_open}-Policies beider Policy-Banken. \\
         \hline
-        {\scriptsize\texttt{FILE\_OPEN\_STREAM\_POLICIES}} & Array & \texttt{u32} $\rightarrow$\newline {\scriptsize\texttt{FileOpenStreamPolicy}} & Enthält die attribut- und zeitabhängigen \texttt{file\_open}-Policies beider Policy-Banken. \\
+        \texttt{FILE\_OPEN\_\allowbreak STREAM\_\allowbreak POLICIES} & Array & \texttt{u32} $\rightarrow$\newline \texttt{FileOpen\allowbreak Stream\allowbreak Policy} & Enthält die attribut- und zeitabhängigen \texttt{file\_open}-Policies beider Policy-Banken. \\
         \hline
-        {\scriptsize\texttt{CURRENT\_TIME}} & Array & \texttt{u32} $\rightarrow$ \texttt{u64} & Stellt den aktuellen Unix-Zeitstempel für zeitabhängige Bedingungen bereit. \\
+        \path{CURRENT_TIME} & Array & \texttt{u32} $\rightarrow$ \texttt{u64} & Stellt den aktuellen Unix-Zeitstempel für zeitabhängige Bedingungen bereit. \\
         \hline
-        {\scriptsize\texttt{ATTRIBUTE\_GENERATION}} & Array & \texttt{u32} $\rightarrow$ \texttt{u32} & Speichert die aktive Attributgeneration und damit die aktive Attributbank. \\
+        \path{ATTRIBUTE_GENERATION} & Array & \texttt{u32} $\rightarrow$ \texttt{u32} & Speichert die aktive Attributgeneration und damit die aktive Attributbank. \\
         \hline
-        {\scriptsize\texttt{ATTRIBUTES}} & Hash-Map & {\scriptsize\texttt{AttributeKey}} $\rightarrow$\newline {\scriptsize\texttt{AttributeValue}} & Enthält die dynamischen System-, Subject- und Ressourcenattribute. \\
+        \path{ATTRIBUTES} & Hash-Map & \path{AttributeKey} $\rightarrow$\newline \path{AttributeValue} & Enthält die dynamischen System-, Subject- und Ressourcenattribute. \\
         \hline
     \end{tabular}
-    \caption{Gepinnte eBPF-Maps als Map-ABI des Prototyps}
-    \label{tab:pinned-map-abi}
 \end{table}
 
 Beim Start legt \texttt{tails-pdp} das Pin-Verzeichnis \path{/sys/fs/bpf/tails-pdp} an und lädt das eBPF-Objekt mit diesem Verzeichnis als Standardpfad für Maps. Gepinnte Maps bleiben im BPF-Dateisystem erreichbar und können deshalb von später gestarteten Userspace-Komponenten über ihren Pfad geöffnet werden. Die nicht gepinnten Maps für Tail Calls, temporäre Entscheidungen und Debug-Konfiguration gehören dagegen ausschließlich zum geladenen eBPF-Objekt und sind nicht Teil der gemeinsamen Map-ABI.
@@ -204,7 +202,7 @@ Für jede dynamische Attributbedingung übernimmt der Loader den beim Parsen erk
 \subsubsection{Generationenwechsel und Rollback}\label{sec:policy-generation}
 Die Policy-Maps enthalten jeweils zwei gleich große Bänke. Die aktive Generation in \texttt{POLICY\_GENERATION[0]} bestimmt, aus welcher Bank das eBPF-Programm die statischen Policies und Streampolicies liest. Beim Laden einer neuen, vollständig validierten Menge erhöht der Loader die Generation und bestimmt daraus die bisher inaktive Bank. Er schreibt zuerst alle neuen Einträge in diese Bank und füllt die verbleibenden Plätze mit deaktivierten Policies. Dadurch bleiben auch entfernte Policy-Dateien nicht als alte Einträge erhalten.
 
-Erst wenn beide Policy-Maps erfolgreich gefüllt wurden, schreibt der Loader die neue Generationsnummer in \texttt{POLICY\_GENERATION[0]}. Dieser einzelne abschließende Schritt schaltet die neue Bank sichtbar. Schlägt vorher ein Schreibvorgang fehl, verweist die Generation weiterhin auf die bisherige vollständige Bank; eine teilweise geschriebene Policy-Menge wird vom eBPF-Programm nicht ausgewertet. Bei einer fehlerhaften Änderung einer bereits laufenden Konfiguration protokolliert der Loader den Fehler und belässt die zuletzt erfolgreiche Generation aktiv. Die Bezeichnung Rollback meint hier somit keinen erneuten Schreibvorgang, sondern das Beibehalten des konsistenten vorherigen Zustands. Bei der ersten Initialisierung ist derselbe Fehler dagegen ein Startfehler, da noch keine vertrauenswürdige Generation für die Aktivierung des Hooks vorliegt.
+Erst wenn beide Policy-Maps erfolgreich gefüllt wurden, schreibt der Loader die neue Generationsnummer in \texttt{POLICY\_GENERATION[0]}. Dieser einzelne abschließende Schritt schaltet die neue Bank sichtbar. Schlägt vorher ein Schreibvorgang fehl, bleibt der Generationenwert unverändert; die unvollständig vorbereitete Generation wird nicht aktiviert. Diese Aktivierungsregel garantiert jedoch keine unveränderten Map-Inhalte für eine Kernel-Auswertung, deren zuvor ausgewählte Bank bei einer weiteren Aktualisierung wiederverwendet wird. Bei einer fehlerhaften Änderung einer bereits laufenden Konfiguration protokolliert der Loader den Fehler und belässt die zuletzt erfolgreiche Generation aktiv. Die Bezeichnung Rollback meint hier somit keinen erneuten Schreibvorgang, sondern das Beibehalten des konsistenten vorherigen Zustands. Bei der ersten Initialisierung ist derselbe Fehler dagegen ein Startfehler, da noch keine vertrauenswürdige Generation für die Aktivierung des Hooks vorliegt.
 
 \subsubsection{Beispiel der Policy- und Attributsemantik}
 Das folgende Beispiel zeigt die Wirkung einer einzelnen Streampolicy. Die reguläre Datei \path{/tmp/protected.txt} muss vor dem Laden der Policy existieren, damit ihre Device- und Inode-Werte aufgelöst werden können. Das vollständige Dokument in \path{policies/example.policy} lautet:
@@ -227,8 +225,9 @@ clearance = 2
 \texttt{clearance} ist hier ein frei benanntes numerisches Systemattribut; der zusätzliche Wert \texttt{defcon} wird von dieser Policy nicht verwendet. Für eine neue Öffnung der angegebenen Datei greift die Deny-Policy, wenn \texttt{clearance} kleiner oder gleich zwei ist. Tabelle~\ref{tab:policy-semantik-beispiel} zeigt die Entscheidungen bei unterschiedlichen erfolgreich aktivierten Attributständen. Vorausgesetzt werden ein technisch fehlerfreier Auswertungspfad und das Fehlen weiterer Deny-Policies. Ein fehlendes Attribut wird durch Weglassen der \texttt{clearance}-Zeile dargestellt; die Attributdatei bleibt bestehen.
 
 \begin{table}[htbp]
+    \caption{Wirkung der Beispielpolicy ohne weitere Deny-Policies}
+    \label{tab:policy-semantik-beispiel}
     \centering
-    \small
     \begin{tabular}{p{0.30\textwidth}p{0.40\textwidth}p{0.18\textwidth}}
         \hline
         \textbf{Attributzustand} & \textbf{Wirkung der Policy} & \textbf{Ergebnis} \\
@@ -239,13 +238,11 @@ clearance = 2
         \texttt{clearance = "low"} & Zeichenkette statt erwarteter Zahl; Bedingung nicht erfüllt & Erlaubt \\
         \hline
     \end{tabular}
-    \caption{Wirkung der Beispielpolicy ohne weitere Deny-Policies}
-    \label{tab:policy-semantik-beispiel}
 \end{table}
 
 Die Erlaubnis in den letzten drei Fällen folgt aus der fachlichen Standardentscheidung: Ohne passende Deny-Policy liefert der Prototyp eine Erlaubnis. Ein fehlendes oder zur Bedingung nicht typkompatibles Attribut erzeugt selbst keine Ablehnung. Der typabweichende Wert im Beispiel ist als Attributwert syntaktisch gültig; er ist von einer ungültigen Attributdatei zu unterscheiden, deren Aktivierung scheitert und die bisherige Generation bestehen lässt.
 
-Wird im Beispieldokument ausschließlich \texttt{deny} durch \texttt{permit} ersetzt, wird die betrachtete Dateiöffnung in allen vier Fällen erlaubt: Bei erfüllter Bedingung liefert die Policy Permit, andernfalls greift weiterhin die Standardentscheidung. Eine alleinige Permit-Policy bildet daher keine Beschränkung auf die Zugriffe, die ihre Bedingung erfüllen. Eine zusätzlich passende Deny-Policy würde die Erlaubnis überstimmen. Das Beispiel beschreibt die Policyentscheidung; ein daraus folgender Entzug bereits geöffneter File Descriptors unterliegt weiterhin den Best-Effort-Grenzen des Userspace-PEP.
+Wird im Beispieldokument ausschließlich \texttt{deny} durch \texttt{permit} ersetzt, wird die betrachtete Dateiöffnung in allen vier Fällen erlaubt: Bei erfüllter Bedingung liefert die Policy Permit, andernfalls greift weiterhin die Standardentscheidung. Eine alleinige Permit-Policy bildet daher keine Beschränkung auf die Zugriffe, die ihre Bedingung erfüllen. Eine zusätzlich passende Deny-Policy würde die Erlaubnis überstimmen. Das Beispiel beschreibt die Policyentscheidung; ein daraus folgender Entzug bereits geöffneter FDs unterliegt weiterhin den Best-Effort-Grenzen des Userspace-PEP.
 
 \subsection{Bereitstellung dynamischer Attribute}\label{sec:attribute-loading}
 Die dynamischen Attribute werden in einem von Policies getrennten Verzeichnis verwaltet und besitzen eine eigene Generation. Dadurch lassen sich beispielsweise \texttt{system.defcon} oder \texttt{subject.position} aktualisieren, ohne Policy-Dateien erneut zu verarbeiten. Wie bei den Policies bleiben die Quelldateien im Userspace lesbar; nur ihre validierte, feste Repräsentation wird in die gepinnten Maps übertragen.
@@ -270,7 +267,7 @@ Die Hashwerte dienen der Abbildung frei wählbarer Texte auf eine Datenstruktur 
 \subsubsection{Aktualisierung der Attributgeneration}
 Nach der anfänglichen Übernahme beobachtet der Attributloader das Verzeichnis \path{attributes/} sowie alle darin enthaltenen Unterverzeichnisse. Er erkennt damit auch Änderungen an Subject- und Ressourcenattributen in tieferen Verzeichnisebenen. Analog zum Policyloader wartet er nach einem Dateisystemereignis 100 Millisekunden und schreibt nur einen gegenüber dem zuletzt angewendeten Bestand veränderten Attributsatz. Die Attribute besitzen zwei Bänke innerhalb der \path{ATTRIBUTES}-Hash-Map. \texttt{ATTRIBUTE\_GENERATION[0]} legt fest, welche davon der Kernelspace-PEP verwendet.
 
-Der anschließende Generationenwechsel entspricht dem Vorgehen des Policyloaders aus Abschnitt~\ref{sec:policy-generation}. Für eine Aktualisierung löscht der Attributloader zunächst alle Einträge der inaktiven Bank. Danach schreibt er die vollständige Menge der neu eingelesenen Attribute mit dem zugehörigen Bankwert in den Schlüssel. Erst nach erfolgreichen Schreibvorgängen wird \texttt{ATTRIBUTE\_GENERATION[0]} auf die nächste Generation gesetzt. Fehler während des Löschens oder Schreibens lassen die bisherige Generation unverändert aktiv; eine nur teilweise geschriebene neue Bank wird nicht gelesen. Das Verfahren erlaubt auch das Entfernen einer Attributdatei, weil die neue vollständige Bank dann keinen entsprechenden Eintrag mehr enthält.
+Der anschließende Generationenwechsel entspricht dem Vorgehen des Policyloaders aus Abschnitt~\ref{sec:policy-generation}. Für eine Aktualisierung löscht der Attributloader zunächst alle Einträge der inaktiven Bank. Danach schreibt er die vollständige Menge der neu eingelesenen Attribute mit dem zugehörigen Bankwert in den Schlüssel. Erst nach erfolgreichen Schreibvorgängen wird \texttt{ATTRIBUTE\_GENERATION[0]} auf die nächste Generation gesetzt. Fehler während des Löschens oder Schreibens lassen die bisherige Generation unverändert aktiv; die unvollständig vorbereitete Attributgeneration wird nicht aktiviert. Für die Lesesicht einer laufenden Kernel-Auswertung gilt dieselbe Einschränkung bei der Wiederverwendung einer Bank wie bei den Policy-Generationen. Das Verfahren erlaubt auch das Entfernen einer Attributdatei, weil die neue vollständige Bank dann keinen entsprechenden Eintrag mehr enthält.
 
 \subsubsection{Bereitstellung der Zeitinformation}
 Zeitabhängige Bedingungen beziehen ihre Werte nicht aus einer \path{.attributes}-Datei. Stattdessen schreibt ein eigener Aktualisierer den aktuellen Unix-Zeitstempel. Der Wert liegt in \path{CURRENT_TIME[0]}. Er wird vor dem Anheften des Hooks gesetzt und während der Laufzeit in einem Intervall von einer Sekunde erneuert. Das eBPF-Programm kann daraus die in der Policy-Sprache vorgesehenen Zeit-, Stunden-, Minuten- und Sekundenbedingungen ableiten, ohne selbst auf die Systemzeit oder externe Schnittstellen zugreifen zu müssen.
@@ -317,7 +314,7 @@ Ein passender Stream-Eintrag ergänzt den Entscheidungszustand um Permit oder De
 \subsubsection{Combining und Durchsetzung}
 Die letzte Stufe liest den in \texttt{DECISIONS} gespeicherten Entscheidungszustand und wendet die im Prototyp festgelegte Combining-Regel \emph{deny-overrides} an. Hat mindestens eine passende Policy eine Ablehnung geliefert, gibt sie den LSM-Fehlerwert \texttt{-EPERM} zurück. \texttt{EPERM} ist der symbolische Linux-Fehlercode für „Operation nicht erlaubt“; BPF-LSM verwendet den negativen Fehlerwert zur Ablehnung \citep{kernelBpfLsm,manErrno}. Andernfalls liefert die Stufe den LSM-Erfolgswert null. Eine Permit-Policy kann damit eine passende Deny-Policy nicht überstimmen; ohne passende Deny-Policy bleibt der Vorgang erlaubt.
 
-Der Rückgabewert gilt unmittelbar für die neue \texttt{file\_open}-Operation. Bei einer Ablehnung erhält der aufrufende Prozess daher keine erfolgreiche Öffnung und folglich keinen neuen File Descriptor. Die Auswertung betrifft ausschließlich den aktuellen Öffnungsvorgang. Bereits zuvor geöffnete Deskriptoren kann der Hook nicht rückwirkend entziehen; diese Lücke adressiert der folgende Userspace-PEP.
+Der Rückgabewert gilt unmittelbar für die neue \texttt{file\_open}-Operation. Bei einer Ablehnung erhält der aufrufende Prozess daher keine erfolgreiche Öffnung und folglich keinen neuen FD. Die Auswertung betrifft ausschließlich den aktuellen Öffnungsvorgang. Bereits zuvor geöffnete Deskriptoren kann der Hook nicht rückwirkend entziehen; diese Lücke adressiert der folgende Userspace-PEP.
 
 \subsection{Implementierung des Userspace-PEP}
 Der Userspace-PEP ergänzt den Kernelspace-PEP für den Fall, dass sich Policies oder Attribute ändern, während ein Prozess eine Datei bereits geöffnet hält.
@@ -328,11 +325,11 @@ Auch hier bezeichnet PEP primär die Durchsetzungsfunktion; Policy-Matching, Att
 \subsubsection{Ermittlung bestehender Dateizugriffe}
 Beim Start öffnet der Userspace-PEP die gepinnten Policy-, Attribut- und Zeit-Maps und wartet anschließend auf interne Aktivierungsereignisse. Policy- und Attributloader senden ein solches Ereignis ausschließlich nach dem vollständigen Schreiben der inaktiven Bank und der erfolgreichen Aktivierung der neuen Generation. Rohereignisse der Verzeichnisbeobachtung bleiben auf die Loader beschränkt. Zusätzlich bestimmt der Userspace-PEP aus der aktiven Stream-Policy-Bank den nächsten Zeitpunkt, an dem eine Zeitbedingung ihren Wahrheitswert ändern kann. Nur eine erfolgreiche Aktivierung oder eine solche Zeitgrenze löst einen \path{/proc}-Durchlauf aus. Für jeden numerischen Prozesseintrag liest er aus \path{/proc/<pid>/status} das Kommando und das erste der vier \texttt{Uid:}-Felder. Dieses Feld bezeichnet die Real UID; die folgenden Felder enthalten effektive, Saved-Set- und Filesystem-UID \citep{manProcPidStatus}. Der Userspace-Pfad verwendet somit dieselbe definierte Subjektidentität wie der Kernelspace-Pfad. Anschließend untersucht er die numerischen Einträge in \path{/proc/<pid>/fd}. Nur Deskriptoren, deren Ziel als reguläre Datei identifiziert werden kann, werden berücksichtigt; Verzeichnisse und nicht auflösbare Einträge bleiben unberücksichtigt.
 
-Die dabei gefundenen File Descriptors gelten als technische Repräsentationen fortdauernder Nutzungssituationen.
+Die dabei gefundenen FDs gelten als technische Repräsentationen fortdauernder Nutzungssituationen.
 Sie werden nicht als Subscriptions registriert oder dauerhaft verwaltet.
 Ein Aktivierungsereignis ist ebenfalls keine individuelle Aktualisierung eines Decision Streams, sondern löst eine erneute Rekonstruktion und lokale Bewertung der zu diesem Zeitpunkt über \path{/proc} sichtbaren Nutzungssituationen aus.
 
-Für jeden berücksichtigten File Descriptor ermittelt der Userspace-PEP wieder Device- und Inode-Wert der geöffneten Datei. Die Umrechnung des Device-Werts entspricht der beim Policyloader und im Kernelspace-PEP verwendeten Darstellung. Zu Beginn eines Scans liest der Userspace-PEP die Nummer der aktiven Policy-Generation, die Nummer der aktiven Attributgeneration und den aktuellen Zeitwert jeweils einmal. Aus der Policy-Generation berechnet er den Offset einer der beiden Policy-Bänke; aus der Attributgeneration bestimmt er eine der beiden Attributbänke. Diese Auswahlwerte werden im \texttt{ScanContext} gespeichert und für alle in diesem Durchlauf betrachteten Deskriptoren wiederverwendet. Während des synchronen Scans können die Loader derselben Runtime keine neue Generation aktivieren. Änderungen an den Quelldateien können weiterhin auftreten, werden von diesen Loadern aber erst nach Rückkehr des Scans verarbeitet. Der Scan ist dennoch keine atomare Momentaufnahme des gesamten Systems: Prozesse und Deskriptoren können sich parallel ändern. Die gespeicherten Auswahlwerte sind außerdem keine Kopie der Map-Inhalte und schützen diese nicht vor Änderungen durch weitere schreibende Prozesse.
+Für jeden berücksichtigten FD ermittelt der Userspace-PEP wieder Device- und Inode-Wert der geöffneten Datei. Die Umrechnung des Device-Werts entspricht der beim Policyloader und im Kernelspace-PEP verwendeten Darstellung. Zu Beginn eines Scans liest der Userspace-PEP die Nummer der aktiven Policy-Generation, die Nummer der aktiven Attributgeneration und den aktuellen Zeitwert jeweils einmal. Aus der Policy-Generation berechnet er den Offset einer der beiden Policy-Bänke; aus der Attributgeneration bestimmt er eine der beiden Attributbänke. Diese Auswahlwerte werden im \texttt{ScanContext} gespeichert und für alle in diesem Durchlauf betrachteten Deskriptoren wiederverwendet. Während des synchronen Scans können die Loader derselben Runtime keine neue Generation aktivieren. Änderungen an den Quelldateien können weiterhin auftreten, werden von diesen Loadern aber erst nach Rückkehr des Scans verarbeitet. Der Scan ist dennoch keine atomare Momentaufnahme des gesamten Systems: Prozesse und Deskriptoren können sich parallel ändern. Die gespeicherten Auswahlwerte sind außerdem keine Kopie der Map-Inhalte und schützen diese nicht vor Änderungen durch weitere schreibende Prozesse.
 
 Der Trigger-Kanal ist auf einen ausstehenden Eintrag begrenzt; mehrere Aktivierungsereignisse können dadurch zusammengefasst werden. Der Userspace-PEP führt innerhalb einer Runtime jeweils nur einen \path{/proc}-Scan aus. Zeitaktualisierung und Scan erfüllen unterschiedliche Aufgaben: Der Zeitaktualisierer soll \texttt{CURRENT\_TIME} sekündlich aktualisieren, löst damit aber selbst keine Nachbewertung aus. Während eines synchronen Scans ist auch dieser Aktualisierer blockiert. Neue Kernelzugriffe werden weiterhin anhand der zuletzt bereitgestellten Map-Werte bewertet. Die Dauer eines Scans kann daher die Übernahme von Policy- und Attributänderungen sowie die Aktualisierung der Zeitinformationen verzögern. Dies betrifft insbesondere das blockierende Warten mit \texttt{waitpid} beim \texttt{ptrace}-Entzug, für das die Implementierung keine explizite Zeitbegrenzung vorsieht. Zusätzlich können Prozesse, Dateien oder Deskriptornummern zwischen dem Lesen von \path{/proc} und der Durchsetzung ihren Zustand verändern. Ereignisgetriggerte Auslösung bedeutet daher weder einen atomaren noch einen garantierten Entzug und ist kein gleichwertiger Ersatz für den unmittelbaren LSM-Hook.
 
@@ -362,7 +359,7 @@ Attributnamen und Zeichenkettenwerte liegen in den Maps nur als 128-Bit-Hash vor
 Dieses Wörterbuch ist ausschließlich eine Anzeigehilfe. Die Zugriffsentscheidung stammt weiterhin aus den gepinnten Maps, und bei fehlendem oder abweichendem Quelldateibestand zeigt das Tool den Hashwert in hexadezimaler Form an. Dadurch wird weder eine nicht vorhandene Umkehrbarkeit vorgetäuscht noch der geladene Map-Zustand mit einem möglicherweise ungültigen Editorstand verwechselt.
 
 \subsubsection{Read-only-Schnittstelle und Fehlerverhalten}
-Die CLI akzeptiert bei Bedarf abweichende Pfade für jede gepinnte Map sowie für die beiden Quellverzeichnisse. Ihre Map-Zugriffe beschränken sich auf Öffnen, Iterieren und Lesen; die Implementierung enthält keinen Pfad zum Setzen oder Entfernen von Map-Einträgen. Ungültige Kommandozeilenargumente, nicht erreichbare Maps oder nicht lesbare Hilfsdateien führen zu einer Fehlermeldung und verändern den laufenden Policy-Zustand nicht. Ob das Tool ohne \texttt{sudo} ausgeführt werden kann, hängt von den Berechtigungen des BPF-Dateisystems und der gepinnten Maps auf dem Zielsystem ab.
+Die Command Line Interface (CLI) akzeptiert bei Bedarf abweichende Pfade für jede gepinnte Map sowie für die beiden Quellverzeichnisse. Ihre Map-Zugriffe beschränken sich auf Öffnen, Iterieren und Lesen; die Implementierung enthält keinen Pfad zum Setzen oder Entfernen von Map-Einträgen. Ungültige Kommandozeilenargumente, nicht erreichbare Maps oder nicht lesbare Hilfsdateien führen zu einer Fehlermeldung und verändern den laufenden Policy-Zustand nicht. Ob das Tool ohne \texttt{sudo} ausgeführt werden kann, hängt von den Berechtigungen des BPF-Dateisystems und der gepinnten Maps auf dem Zielsystem ab.
 
 \subsection{Fehlerbehandlung und Konsistenzsicherung}
 Die Fehlerbehandlung unterscheidet zwischen Fehlern vor der Aktivierung, fehlerhaften Laufzeitupdates und Fehlern während der Durchsetzung. Ziel ist nicht, jeden Fehler durch eine Erlaubnis zu übergehen, sondern nur konsistente Map-Zustände an den Kernelspace-PEP zu übergeben und technische Fehler sichtbar zu machen.
@@ -384,7 +381,7 @@ Dabei sind behandelte Updatefehler von fatalen Laufzeitfehlern zu unterscheiden.
 
 Innerhalb des Kernelspace-PEP führen fehlende erforderliche Kontrollwerte, etwa Generations- oder Zeitwerte, nicht lesbare Kernelobjekte, nicht schreibbare temporäre Entscheidungswerte und eine unvollständige Tail-Call-Kette in den dafür vorgesehenen Fehlerpfaden zu einer Ablehnung. Eine zuvor von einer anderen BPF-LSM-Komponente getroffene Ablehnung wird ebenfalls erhalten. Diese fail-closed-Behandlung betrifft technische Fehler im Durchsetzungspfad. Sie gilt nicht pauschal für fehlende fachliche Attributwerte: Fehlt ein von einer Streampolicy benötigtes Attribut oder passt sein Typ nicht zur Bedingung, greift diese Policy nicht. Ohne eine andere passende Deny-Policy bleibt die Anfrage entsprechend der fachlichen Standardentscheidung erlaubt, wie Tabelle~\ref{tab:policy-semantik-beispiel} verdeutlicht.
 
-Der Userspace-PEP protokolliert fehlgeschlagene Scans und Schließversuche; ein fehlgeschlagener Entzug verhindert nicht die Behandlung weiterer festgestellter Verletzungen. Fehlgeschlagene Schließversuche lösen jedoch keine eigenständige Wiederholung aus. Eine erneute Nachbewertung erfolgt erst bei einer weiteren Policy- oder Attributaktivierung beziehungsweise einer relevanten Zeitgrenze. Bleibt ein solches Ereignis aus, kann ein zuvor nicht entziehbarer File Descriptor weiterhin geöffnet bleiben, auch wenn der Grund für den fehlgeschlagenen Versuch inzwischen entfallen ist. Dieses Verhalten gehört zu den Grenzen des Best-Effort-Entzugs. Das Administrationstool arbeitet ausschließlich lesend und kann daher bei einem Fehler keinen Policy-Zustand beschädigen. Optionales eBPF-Debug-Logging ist standardmäßig deaktiviert; bei Aktivierung können jedoch UID, Kommando sowie Ressourcenidentitäten in Kernel-Trace-Ausgaben erscheinen und müssen auf Mehrbenutzersystemen entsprechend geschützt werden.
+Der Userspace-PEP protokolliert fehlgeschlagene Scans und Schließversuche; ein fehlgeschlagener Entzug verhindert nicht die Behandlung weiterer festgestellter Verletzungen. Fehlgeschlagene Schließversuche lösen jedoch keine eigenständige Wiederholung aus. Eine erneute Nachbewertung erfolgt erst bei einer weiteren Policy- oder Attributaktivierung beziehungsweise einer relevanten Zeitgrenze. Bleibt ein solches Ereignis aus, kann ein zuvor nicht entziehbarer FD weiterhin geöffnet bleiben, auch wenn der Grund für den fehlgeschlagenen Versuch inzwischen entfallen ist. Dieses Verhalten gehört zu den Grenzen des Best-Effort-Entzugs. Das Administrationstool arbeitet ausschließlich lesend und kann daher bei einem Fehler keinen Policy-Zustand beschädigen. Optionales eBPF-Debug-Logging ist standardmäßig deaktiviert; bei Aktivierung können jedoch UID, Kommando sowie Ressourcenidentitäten in Kernel-Trace-Ausgaben erscheinen und müssen auf Mehrbenutzersystemen entsprechend geschützt werden.
 
 \subsection{Build und Deployment auf dem Zielsystem}
 Das Zielsystem des Prototyps ist ein \texttt{x86\_64}-Linux-System mit Linux-Kernel 6.16.12. Der Kernel stellt BPF-LSM, BTF unter \path{/sys/kernel/btf/vmlinux} und ein eingehängtes BPF-Dateisystem bereit. Andere Prozessorarchitekturen und ältere Kernelversionen liegen außerhalb des betrachteten Implementierungsumfangs. Der Build erzeugt einerseits die Userspace-Programme für dieses Zielsystem und andererseits das eBPF-Objekt, das der Kernel nach erfolgreicher Verifier-Prüfung ausführt. Das Repository enthält dafür Cargo-Konfigurationen sowie ein Startskript für den Zielbetrieb.

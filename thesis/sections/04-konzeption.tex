@@ -53,7 +53,7 @@ Ein separater PDP-Prozess und ein Nachrichtenaustausch von Entscheidungsanfragen
     Dieser unterteilt sich in das Hauptprogramm, einen Attributloader, einen Userspace-PEP sowie die Policyverwaltung.
     Das Hauptprogramm lädt das Kernelprogramm und startet dieses. Der Attributloader lädt Streamingattribute in den Kernelspace. 
     Die Policyverwaltung liest die textuellen Policy-Dateien, parst diese und übersetzt sie in kernelgeeignete Map-Einträge.
-    Der Userspace-PEP rekonstruiert nach entscheidungsrelevanten Ereignissen bestehende Dateizugriffe, bewertet sie erneut und versucht, erkannte Policy-Verletzungen durch das Schließen des betroffenen File Descriptors durchzusetzen.
+    Der Userspace-PEP rekonstruiert nach entscheidungsrelevanten Ereignissen bestehende Dateizugriffe, bewertet sie erneut und versucht, erkannte Policy-Verletzungen durch das Schließen des betroffenen FDs durchzusetzen.
     
     \item \textbf{Kernelspace:} Im Kernelspace wird ein eBPF-Programm an einen LSM-Hook angebunden.
     Dieser Kernelspace-PEP greift bei neuen Dateiöffnungen in die sicherheitsrelevante Operation ein und trifft Zugriffsentscheidungen auf Basis der vom Userspace bereitgestellten Policies.
@@ -134,7 +134,7 @@ Der Kernel unterbindet daraufhin den Zugriff.
 
 Der Userspace-PEP bewertet aktive Prozesse und deren aktuell verwendete Ressourcen nach erfolgreicher Aktivierung einer entscheidungsrelevanten Policy- oder Attributgeneration sowie an relevanten Zeitgrenzen erneut.
 Dabei prüft er, ob eine bestehende Zugriffssituation mit den derzeit aktiven Policies vereinbar ist. 
-Wird eine Verletzung erkannt, versucht der Userspace-PEP, den konkret betroffenen File Descriptor zu schließen.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den konkret betroffenen FD zu schließen.
 
 Die Nachbewertung liest die Entscheidungsgrundlagen aus den gepinnten Maps; sie erhält keine fertigen Entscheidungen vom Kernelspace-PEP.
 
@@ -172,9 +172,9 @@ Seine Aufgabe besteht darin, die Entscheidungsgrundlage aktuell zu halten.
 
 \paragraph{Userspace-PEP}
 Der Userspace-PEP bewertet laufende Prozesse und deren verwendete Ressourcen nur nach erfolgreichen entscheidungsrelevanten Aktivierungen oder zu Zeitpunkten, an denen sich das Ergebnis einer aktiven zeitabhängigen Policybedingung ändern kann.
-Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene File Descriptors.
+Dazu nutzt er den Prozess- und Ressourcenstatus des Betriebssystems, beispielsweise Informationen über offene FDs.
 Diese Informationen werden gegen die aktuell aktiven Policies geprüft. 
-Wird eine Verletzung erkannt, versucht der Userspace-PEP, den betroffenen File Descriptor zu schließen.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den betroffenen FD zu schließen.
 
 \subsubsection{Kernelspace-Komponenten}
 
@@ -208,7 +208,7 @@ Weitere Datenobjekte im Userspace sind dynamische Attribute wie Zeitinformatione
 Diese Werte werden vom Attributloader aktualisiert und in den Kernelspace übertragen.
 
 Für den Userspace-PEP sind außerdem Prozess- und Ressourceninformationen relevant.
-Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene File Descriptors und geöffnete Dateien. 
+Dazu zählen laufende Prozesse, Benutzer-IDs, Prozessnamen, offene FDs und geöffnete Dateien.
 Diese Informationen stammen aus Betriebssystemquellen wie \texttt{/proc/<PID>/fd} und werden verwendet, um bestehende Zugriffssituationen gegen die aktiven Policies zu prüfen.
 
 \subsubsection{Datenobjekte im Kernelspace}
@@ -286,13 +286,13 @@ Diese Einschränkungen beeinflussen unter anderem die Aufteilung der eBPF-Progra
 Für den Prototyp musste ein LSM-Hook ausgewählt werden, an dem sich die unmittelbare Zugriffskontrolle und die spätere Überwachung bestehender Zugriffssituationen nachvollziehbar untersuchen lassen.
 Die Wahl fiel auf den Hook \texttt{file\_open}.
 Dieser Hook wird beim Öffnen einer Datei ausgelöst und passt damit unmittelbar zu der Anforderung, Dateiöffnungen zu kontrollieren.
-Gleichzeitig entsteht nach einer erfolgreichen Dateiöffnung ein File Descriptor, über den der Zugriff weiterbestehen kann.
+Gleichzeitig entsteht nach einer erfolgreichen Dateiöffnung ein FD, über den der Zugriff weiterbestehen kann.
 Damit eignet sich \texttt{file\_open} besonders für den Prototyp, weil sowohl die ursprüngliche Entscheidung im Kernel als auch die spätere Überwachung bestehender Dateizugriffe untersucht werden können.
 
 Ein weiterer Grund für diese Auswahl ist die einfache Testbarkeit mit Linux-eigenen Bordmitteln.
 Dateiöffnungen lassen sich ohne zusätzliche Spezialsoftware mit Werkzeugen wie \texttt{cat}, \texttt{tail}, Shell-Umleitungen oder kleinen Testdateien auslösen.
-Andauernde Zugriffssituationen können über geöffnete File Descriptors beobachtet werden.
-Dafür stellt Linux mit \texttt{/proc/<PID>/fd} eine Schnittstelle bereit, über die geöffnete File Descriptors eines Prozesses nachvollzogen werden können~\citep{manProcPidFd}.
+Andauernde Zugriffssituationen können über geöffnete FDs beobachtet werden.
+Dafür stellt Linux mit \texttt{/proc/<PID>/fd} eine Schnittstelle bereit, über die geöffnete FDs eines Prozesses nachvollzogen werden können~\citep{manProcPidFd}.
 Damit genügt der Hook den Anforderungen des Prototyps, ohne dass eine zusätzliche Testinfrastruktur notwendig wird.
 
 Als Alternative wäre beispielsweise ein Hook wie \texttt{socket\_bind} möglich gewesen.
@@ -404,9 +404,10 @@ In diesem Fall könnte eine Zugriffentscheidung auf einer widersprüchlichen Mis
 Die Entscheidung lautet daher, Policy-Aktualisierungen über ein Generationenmodell umzusetzen.
 Als Bank wird im Folgenden einer von zwei logisch getrennten Speicherbereichen innerhalb derselben
 Map bezeichnet. Eine Bank ist somit weder ein eigener eBPF-Map-Typ noch eine separate Map. Jede
-Bank kann einen vollständigen Policy- beziehungsweise Attributstand aufnehmen. Zu einem Zeitpunkt
-wird nur eine Bank aktiv ausgewertet, während die andere Bank für die nächste Generation
-vorbereitet werden kann.
+Bank kann einen vollständigen Policy- beziehungsweise Attributstand aufnehmen.
+Der aktuelle Generationenwert kennzeichnet eine Bank als aktiv.
+Die andere Bank kann für die nächste Generation vorbereitet werden.
+Eine bereits laufende Auswertung kann jedoch noch auf die zuvor ausgewählte Bank zugreifen.
 Die Policy-Maps werden in zwei Bänke aufgeteilt.
 Eine Bank enthält die aktuell aktive Policy-Generation, während die andere Bank als inaktive Bank für die nächste Generation vorbereitet wird.
 Bei einer Änderung schreibt der Userspace zunächst alle vorbereiteten Policy-Einträge in die inaktive Bank.
@@ -426,7 +427,8 @@ Beides wäre für einen laufenden Prototyp unnötig invasiv und würde den Betri
 
 Die Konsequenz des Generationenmodells ist ein zusätzlicher Verwaltungsaufwand.
 Die Maps müssen Platz für mehrere Bänke bereitstellen, und Userspace sowie Kernelspace müssen denselben Mechanismus zur Berechnung der aktiven Bank verwenden.
-Dafür erhält der Prototyp eine einfache Umschaltlogik, bei der der Kernel entweder die alte oder die neue Generation auswertet, aber keine bewusst gemischte Policy-Menge.
+Die Umschaltlogik stellt sicher, dass eine neue Generation erst nach vollständiger Vorbereitung aktiviert wird.
+Eine unveränderte Lesesicht während einer laufenden Kernel-Auswertung garantiert das Zwei-Bank-Verfahren allein jedoch nicht: Bei weiteren Aktualisierungen kann die von dieser Auswertung verwendete Bank erneut beschrieben werden.
 
 \subsubsection{Trennung statischer Policies und Streampolicies}
 Im Prototyp existieren Policies, deren Entscheidung allein von den Eigenschaften der aktuellen Anfrage abhängt, und Policies, die zusätzlich dynamische Zustände berücksichtigen.
@@ -573,18 +575,18 @@ Dafür wird die Auswertung im Kernel deutlich einfacher und näher an der tatsä
 
 \subsubsection{Nachträgliche Überwachung durch den Userspace-PEP}
 Der LSM-Hook \texttt{file\_open} bewertet eine Dateiöffnung zu dem Zeitpunkt, an dem die Datei geöffnet wird.
-Wenn der Zugriff erlaubt wurde, kann der Prozess die Datei anschließend über den erhaltenen File Descriptor weiter verwenden.
+Wenn der Zugriff erlaubt wurde, kann der Prozess die Datei anschließend über den erhaltenen FD weiter verwenden.
 Ändern sich danach dynamische Attribute oder Policies, wird dieser bereits bestehende Zugriff nicht automatisch erneut durch denselben Hook geprüft.
 Für ASBAC ist genau dieser Fall relevant, weil eine zunächst zulässige Zugriffssituation durch spätere Attributänderungen unzulässig werden kann.
 
 Die Entscheidung lautet daher, die unmittelbare Hook-Entscheidung durch einen Userspace-PEP zu ergänzen.
-Der Userspace-PEP liest Informationen über laufende Prozesse und offene File Descriptors aus dem System, wenn eine erfolgreiche entscheidungsrelevante Aktivierung oder eine relevante Zeitgrenze dies auslöst.
+Der Userspace-PEP liest Informationen über laufende Prozesse und offene FDs aus dem System, wenn eine erfolgreiche entscheidungsrelevante Aktivierung oder eine relevante Zeitgrenze dies auslöst.
 Anschließend bewertet er diese bestehenden Dateizugriffe gegen die aktuell aktiven Policies und Attribute.
 Dazu verwendet er dieselben vorbereiteten Policy- und Attributzustände, die auch dem Kernel über die gepinnten Maps zur Verfügung stehen.
-Wird eine Verletzung erkannt, versucht der Userspace-PEP, den zugeordneten File Descriptor zu schließen.
+Wird eine Verletzung erkannt, versucht der Userspace-PEP, den zugeordneten FD zu schließen.
 Die Bezeichnung als PEP beschreibt seine Durchsetzungsfunktion.
 Da im Prototyp kein separater PDP-Prozess für die Nachbewertung existiert, liest der Userspace-PEP die gepinnten Policies und Attribute selbst und führt die erforderliche Entscheidungsauswertung als integrierte PDP-Funktion lokal aus.
-Ein gefundener File Descriptor repräsentiert dabei eine fortdauernde Nutzungssituation, jedoch keine registrierte ASBAC-Subscription.
+Ein gefundener FD repräsentiert dabei eine fortdauernde Nutzungssituation, jedoch keine registrierte ASBAC-Subscription.
 
 Diese Entscheidung ergänzt die Grenzen des LSM-Hooks um eine nachträgliche Prüfung.
 Der Kernel bleibt für neue Dateiöffnungen der unmittelbare Durchsetzungspunkt.
@@ -601,9 +603,9 @@ Dann würde der Prototyp jedoch einen wesentlichen Teil der ASBAC-Fragestellung 
 Die Konsequenz ist, dass neben der kernelbasierten Zugriffskontrolle eine zusätzliche Userspace-Komponente erforderlich ist.
 Diese Komponente arbeitet ereignisgetrieben und nicht als Ersatz für den LSM-Hook. Die
 Neubewertung und der Entzugsversuch bilden keine atomare Operation: Zwischen dem Einlesen der
-Prozessinformationen, der Policy-Auswertung und dem Schließen des File Descriptors kann sich dessen
+Prozessinformationen, der Policy-Auswertung und dem Schließen des FDs kann sich dessen
 Zuordnung verändern. Zudem beendet das Schließen eines einzelnen Descriptors weder bereits
-laufende E/A-Operationen noch Zugriffe über duplizierte oder vererbte File Descriptors oder
+laufende E/A-Operationen noch Zugriffe über duplizierte oder vererbte FDs oder
 bestehende Speicherabbildungen (vgl. Abschnitt~\ref{sec:fd-monitoring-foundations}). Der
 Userspace-PEP kann einen erkannten Verstoß daher nur nachträglich und bestmöglich behandeln; ein
 vollständiger oder verzögerungsfreier Entzug ist nicht garantiert.
@@ -611,17 +613,17 @@ Sie erweitert den Prototyp um die Fähigkeit, bestehende Dateizugriffe nach Änd
 
 \subsubsection{Enforcement durch Schließen von File Descriptors}
 Wenn der Userspace-PEP eine bestehende Policy-Verletzung erkennt, muss der Prototyp den unzulässig gewordenen Zugriff beenden können.
-Bei Dateizugriffen wird der fortdauernde Zugriff über einen File Descriptor repräsentiert.
-Dieser File Descriptor ist daher der konkrete Ansatzpunkt, um genau den betroffenen Zugriff zu entziehen.
+Bei Dateizugriffen wird der fortdauernde Zugriff über einen FD repräsentiert.
+Dieser FD ist daher der konkrete Ansatzpunkt, um genau den betroffenen Zugriff zu entziehen.
 
-Die Entscheidung lautet, Enforcement durch das Schließen des betroffenen File Descriptors umzusetzen.
+Die Entscheidung lautet, Enforcement durch das Schließen des betroffenen FDs umzusetzen.
 Der Userspace-PEP ermittelt Prozess-ID und File-Descriptor-Nummer der verletzenden Zugriffssituation.
-Anschließend schließt die Enforcement-Komponente genau diesen File Descriptor im betroffenen Prozess.
-Im aktuellen Prototyp geschieht dies auf x86\_64-Linux über \texttt{ptrace}, indem im Zielprozess ein \texttt{close}-Systemaufruf für den ausgewählten File Descriptor ausgeführt wird.
+Anschließend schließt die Enforcement-Komponente genau diesen FD im betroffenen Prozess.
+Im aktuellen Prototyp geschieht dies auf x86\_64-Linux über \texttt{ptrace}, indem im Zielprozess ein \texttt{close}-Systemaufruf für den ausgewählten FD ausgeführt wird.
 
 Diese Entscheidung ist feingranularer als ein Prozessabbruch.
-Wenn ein Prozess mehrere Dateien geöffnet hat, kann nur der File Descriptor geschlossen werden, der zu dem unzulässig gewordenen Zugriff gehört.
-Andere File Descriptors desselben Prozesses bleiben bestehen, sofern sie nicht selbst gegen eine Policy verstoßen.
+Wenn ein Prozess mehrere Dateien geöffnet hat, kann nur der FD geschlossen werden, der zu dem unzulässig gewordenen Zugriff gehört.
+Andere FDs desselben Prozesses bleiben bestehen, sofern sie nicht selbst gegen eine Policy verstoßen.
 Damit passt die Maßnahme zu der Anforderung, nur den betroffenen Zugriff zu beenden.
 
 Eine Alternative wäre, den gesamten Prozess zu beenden.
@@ -631,7 +633,7 @@ Diese Alternative wird nicht verwendet, weil eine erkannte Verletzung im Prototy
 
 Die Konsequenz ist, dass das Enforcement betriebssystem- und architekturabhängig wird.
 Der aktuelle Ansatz ist auf x86\_64-Linux ausgelegt und benötigt ausreichende Berechtigungen für den Eingriff in fremde Prozesse.
-Zudem ist das Schließen fremder File Descriptors ein invasiver Eingriff, der sorgfältig auf den tatsächlich betroffenen FD begrenzt werden muss.
+Zudem ist das Schließen fremder FDs ein invasiver Eingriff, der sorgfältig auf den tatsächlich betroffenen FD begrenzt werden muss.
 Für den Prototyp ist diese Einschränkung akzeptabel, weil sie eine gezielte Behandlung bestehender Dateizugriffe ermöglicht.
 
 \subsubsection{Administration und Diagnose über ein separates Tool}

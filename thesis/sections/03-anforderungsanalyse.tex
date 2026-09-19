@@ -1,6 +1,6 @@
 \section{Anforderungsanalyse}
 In diesem Kapitel werden die Anforderungen an den zu entwickelnden Prototypen beschrieben. 
-Die Anforderungen ergeben sich aus der Zielsetzung, zu untersuchen, wie Attribute Stream-Based Access Control im Linux-Kernel prototypisch umgesetzt werden kann.
+Die Anforderungen ergeben sich aus der Zielsetzung, zu untersuchen, wie ASBAC im Linux-Kernel prototypisch umgesetzt werden kann.
 Sie beschreiben das Verhalten, das der Prototyp im Rahmen der Arbeit zeigen soll.
 
 Für den Prototyp wird ein vertrauenswürdig administriertes Linux-Zielsystem vorausgesetzt. Der Administrator und der Kernel gehören zur Vertrauensbasis. Der Administrator darf Policies, Attributquellen, eBPF-Maps und Programme verändern sowie die Runtime beenden; Schutz gegen solche administrativen Eingriffe ist nicht Gegenstand der Anforderungen. Die Integrität der Policy- und Attributquellen sowie der bereitgestellten Zeitinformationen wird vorausgesetzt und ist durch die Administration sicherzustellen. Vorgesehen ist der Betrieb einer einzelnen Runtime; eine Absicherung gegen konkurrierende administrative Schreibzugriffe wird nicht gefordert.
@@ -25,7 +25,7 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \textit{Akzeptanzkriterium:} Wird eine Policy geändert, hinzugefügt oder entfernt, wird diese Änderung vom System verarbeitet.
 
     \item[FA-03 Zugriffskontrolle bei Dateiöffnungen:]
-    Der Prototyp muss Dateiöffnungen über den Linux-Security-Module-Hook \texttt{file\_open} abfangen können.
+    Der Prototyp muss Dateiöffnungen über den LSM-Hook \texttt{file\_open} abfangen können.
     
     \textit{Akzeptanzkriterium:} Das Öffnen einer durch eine Policy erfassten Datei wird durch den LSM-Hook \texttt{file\_open} kontrolliert.
 
@@ -40,13 +40,13 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
 
     \item[FA-06 Überwachung und Enforcement bestehender Dateizugriffe:]
-    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und versuchen, sie durch Schließen des betroffenen File Descriptors zu beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
-    Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter File Descriptor eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
-    Der Userspace-PEP ermittelt den zugehörigen Prozess und File Descriptor, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und führt bei einer erkannten Verletzung einen gezielten Schließversuch im Zielprozess aus.
+    Der Prototyp muss bereits bestehende Dateizugriffe überwachen und versuchen, sie durch Schließen des betroffenen FDs zu beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
+    Als bestehender Zugriff gilt im Rahmen des Prototyps ein geöffneter FD eines laufenden Prozesses auf eine durch eine Policy erfasste Datei.
+    Der Userspace-PEP ermittelt den zugehörigen Prozess und FD, bewertet den Zugriff anhand der aktuellen Policy- und Attributlage und führt bei einer erkannten Verletzung einen gezielten Schließversuch im Zielprozess aus.
     Im Rahmen des Prototyps wird dieser Entzug als Best-Effort-Maßnahme verstanden: Der Schließversuch ist erforderlich, sein Erfolg kann insbesondere bei einem nicht erreichbaren Zielprozess jedoch nicht garantiert werden. Ein fehlgeschlagener Versuch muss protokolliert werden und darf die Behandlung weiterer festgestellter Verletzungen nicht verhindern.
     Eine reine Ausgabe der Verletzung ohne Schließversuch genügt der Anforderung nicht.
 
-    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, führt der Userspace-PEP bei der Nachbewertung einen gezielten Schließversuch für den betroffenen File Descriptor aus. In einem kontrollierten Erfolgsfall wird der Deskriptor tatsächlich geschlossen; andere File Descriptors desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen. In einem kontrollierten Fehlerfall mit nicht erreichbarem Zielprozess wird der fehlgeschlagene Versuch protokolliert und die Behandlung weiterer festgestellter Verletzungen fortgesetzt. Ein fehlgeschlagener Schließversuch wird dabei nicht als erfolgreicher Entzug gewertet.
+    \textit{Akzeptanzkriterium:} Öffnet ein Prozess eine Datei zunächst zulässig und wird dieser Zugriff anschließend durch eine Policy- oder Attributänderung unzulässig, führt der Userspace-PEP bei der Nachbewertung einen gezielten Schließversuch für den betroffenen FD aus. In einem kontrollierten Erfolgsfall wird der Deskriptor tatsächlich geschlossen; andere FDs desselben Prozesses bleiben geöffnet, sofern sie nicht selbst eine Policy verletzen. In einem kontrollierten Fehlerfall mit nicht erreichbarem Zielprozess wird der fehlgeschlagene Versuch protokolliert und die Behandlung weiterer festgestellter Verletzungen fortgesetzt. Ein fehlgeschlagener Schließversuch wird dabei nicht als erfolgreicher Entzug gewertet.
 
     \item[FA-07 Administrationsschnittstelle:]
     Der Prototyp soll eine einfache Administrationsschnittstelle bereitstellen, über die zentrale Informationen zum Zustand des Prototyps lesend eingesehen werden können.
@@ -67,7 +67,7 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
 
     \item[FA-10 Beliebige Attributnamen:]
     In Policies muss es für den Nutzer möglich sein, Attributnamen frei zu vergeben, ohne dass diese vorher im Prototyp fest definiert sein müssen.
-    Zulässige Attributnamen dürfen nicht leer sein und bestehen aus ASCII-Buchstaben (\texttt{A-Z}, \texttt{a-z}), Ziffern (\texttt{0-9}), Unterstrich (\texttt{\_}) und Bindestrich (\texttt{-}).
+    Zulässige Attributnamen dürfen nicht leer sein und bestehen aus American Standard Code for Information Interchange (ASCII)-Buchstaben (\texttt{A-Z}, \texttt{a-z}), Ziffern (\texttt{0-9}), Unterstrich (\texttt{\_}) und Bindestrich (\texttt{-}).
     
     \textit{Akzeptanzkriterium:} Eine Policy mit einem gültigen, zuvor nicht bekannten Attributnamen, beispielsweise \texttt{subject.position == \textquotedbl{}engineer\textquotedbl{}}, wird erfolgreich verarbeitet. Eine Policy mit einem Attributnamen außerhalb des zulässigen Zeichensatzes wird abgelehnt.
 
@@ -80,7 +80,7 @@ Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation si
 
 \begin{description}
     \item[OA-01 Stabilität:]
-    Der Prototyp darf die Stabilität des Linux-Kernels nicht unnötig gefährden.
+    Der Prototyp darf die Stabilität des Linux-Kernels nicht gefährden.
     
     \textit{Akzeptanzkriterium:} Fehlerhafte oder ungültige Eingaben aus dem Userspace führen nicht zu einem Kernel-Absturz.
 
@@ -92,12 +92,12 @@ Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation si
     \item[OA-03 Performance:]
     Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
     
-    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet.
+    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet und bewertet.
 
     \item[OA-04 Reproduzierbarkeit:]
     Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
     
-    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen werden können.
+    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen und wiederholt< werden können.
 \end{description}
 
 \subsection{Entwicklungsbezogene Anforderungen}
