@@ -8,31 +8,30 @@ Die Thesis wurde nicht verändert. Zeilennummern beziehen sich auf den geprüfte
 
 ## Einordnung
 
-Die sieben Hauptkapitel entsprechen grundsätzlich der empfohlenen Argumentationsfolge. Anforderungen besitzen überwiegend Akzeptanzkriterien, die Evaluation greift sie wieder auf, und der Schluss grenzt die Ergebnisse ausdrücklich ein. Von den bisherigen zwölf Befunden sind fünf erledigt und sieben noch offen. Eine weitere Layoutabweichung kommt als F13 hinzu. Damit verbleiben **acht offene Punkte**, darunter zwei Aufgaben für die finale Abgabe. **Empfehlungen des Leitfadens werden dabei nicht als zwingende Vorschriften behandelt.**
+Die sieben Hauptkapitel entsprechen grundsätzlich der empfohlenen Argumentationsfolge. Anforderungen besitzen überwiegend Akzeptanzkriterien, die Evaluation greift sie wieder auf, und der Schluss grenzt die Ergebnisse ausdrücklich ein. Nach Berücksichtigung der Rückmeldung zu F01 und der angepassten Draft-Konfiguration zu F03 verbleiben **sechs aktuell bearbeitbare Punkte** (F04, F06, F07, F08, F11, F13). Fünf Befunde sind erledigt; F01 wartet auf das Prüfungsamt, F03 ist für den PDF-Export umgesetzt und verbleibt nur als finale Abgabeprüfung. **Empfehlungen des Leitfadens werden dabei nicht als zwingende Vorschriften behandelt.**
 
 Prioritäten: **hoch** = vor der Abgabe bzw. Ergebnisfreigabe klären; **mittel** = inhaltlich oder strukturell überarbeiten; **niedrig** = formale Angleichung nach Festlegung der Formatvorlage. Die Priorität beschreibt den Überarbeitungsbedarf, nicht den Verbindlichkeitsgrad der Regel.
 
-## 1. Abgabelücken und bedingte Vorgabenkonflikte
+## 1. Zurückgestellte Abgabeaufgaben
 
-### F01 – Erklärung zur selbstständigen Anfertigung fehlt im eingebundenen Dokument
+### F01 – Erklärung wird vom Prüfungsamt bereitgestellt
 
-**Status: offen für die finale Abgabe.** Die Erklärung wurde vorbereitet, ist im aktuellen Dokument aber nicht eingebunden. Der frühere Erledigungsvermerk trifft auf den jetzt geprüften Stand nicht mehr zu.
+**Status: wartet auf Zusendung durch das Prüfungsamt; derzeit kein Handlungsbedarf.**
 
-- **Priorität:** hoch vor Abgabe.
-- **Regel:** A01, Vorgabe; Leitfaden S. 10.
+- **Regel:** A01, Vorgabe für die Abgabe; Leitfaden S. 10.
 - **Fundstelle:** [thesis.tex:95](/Users/ck/Code/tails-pdp/thesis/thesis.tex:95), [08-selbststaendigkeitserklaerung.tex](/Users/ck/Code/tails-pdp/thesis/sections/08-selbststaendigkeitserklaerung.tex).
-- **Befund:** Die Datei mit dem vorgegebenen Erklärungstext sowie Feldern für Ort, Datum und Unterschrift existiert. Ihre `\input`-Zeile ist jedoch auskommentiert; die vorhandene PDF endet mit dem Literaturverzeichnis.
-- **Konflikt:** Der Leitfaden verlangt die ausgefüllte und individuell unterschriebene Erklärung bei Abgabe. Die derzeitige PDF allein enthält diesen Bestandteil nicht.
-- **Korrektur:** Die vorbereitete Erklärung für die finale Abgabe einbinden und individuell unterschreiben oder nach den Prüfungsamtsvorgaben separat beifügen. Eine möglicherweise separat vorhandene Erklärung wurde nicht geprüft; der Befund behauptet nicht, dass sie außerhalb der Thesis fehlt.
+- **Einordnung:** Laut Rückmeldung des Nutzers wird die maßgebliche Erklärung vom Prüfungsamt übersandt und kann derzeit noch nicht ausgefüllt werden. Die vorbereitete LaTeX-Datei ist auskommentiert. Das wird im jetzigen Arbeitsstand nicht als zu behebender Textmangel gewertet.
+- **Späterer Schritt:** Nach Erhalt die Erklärung des Prüfungsamts ausfüllen, individuell unterschreiben und entsprechend dessen Vorgaben zur Abgabe beifügen. Die vorbereitete eigene Fassung muss dafür nicht vorab eingebunden werden.
 
-### F03 – Dateinamen entsprechen noch nicht der vorgesehenen Abgabebenennung
+### F03 – PDF-Benennung im Draft-Export umgesetzt
 
-- **Priorität:** hoch vor Übergabe, für Arbeitsstände unkritisch.
-- **Regel:** A05, Vorgabe; Leitfaden S. 12–13.
-- **Fundstelle:** [thesis.tex](/Users/ck/Code/tails-pdp/thesis/thesis.tex) und [thesis.pdf](/Users/ck/Code/tails-pdp/thesis/thesis.pdf).
-- **Befund:** Hauptdatei und PDF heißen `thesis.tex` und `thesis.pdf`. Der Name des Studierenden fehlt in beiden Dateinamen; im PDF-Dateinamen fehlt außerdem der Arbeitstitel.
-- **Konflikt:** Der Leitfaden fordert die identifizierbare Benennung der übergebenen Dateien. Für einen internen Build oder einen Zeitstempel-Draft ist daraus kein eigenständiger Verstoß abzuleiten.
-- **Korrektur:** Für die finale Übergabe einen Namen wie `thesis_koch_attribute_stream_based_access_control_im_linux_kernel.pdf` vorsehen und auch die übergebene TeX-Hauptdatei entsprechend benennen. Build-Konfigurationen bei einer tatsächlichen Umbenennung mitführen.
+**Status: für den PDF-Export umgesetzt; finale Abgabebenennung später prüfen.**
+
+- **Regel:** A05, Vorgabe für die finale Übergabe; Leitfaden S. 12–13.
+- **Fundstelle:** [draft.run.xml:3](/Users/ck/Code/tails-pdp/.run/draft.run.xml:3).
+- **Befund:** Die Run-Konfiguration kopiert die kompilierte PDF nach `drafts/YYYYMMDD_HHMMSS_Christian_Koch_9227725_ASBAC_im_Linuxkernel_draft.pdf`. Der Export enthält damit den Namen und eine Kurzform des Arbeitstitels. Ein entsprechend benannter Draft liegt bereits vor.
+- **Einordnung:** Der frühere pauschale Hinweis auf die fehlende identifizierbare PDF-Benennung ist damit überholt. Die internen Arbeitsnamen `thesis.tex` und `thesis.pdf` sind kein aktueller Regelkonflikt.
+- **Späterer Schritt:** Bei der finalen Übergabe den endgültigen PDF-Dateinamen mit dem Arbeitstitel abgleichen und auch die übergebene TeX-Hauptdatei mit dem Namen versehen. Die Draft-Konfiguration benennt diese Quelldatei nicht um. Hierfür ist jetzt keine Änderung der Arbeitsdateien erforderlich.
 
 ## 2. Inhaltliche und strukturelle Konflikte
 
@@ -141,7 +140,7 @@ Die folgenden Korrekturen sind im aktuellen Stand vorhanden. Die früheren Fehle
 | 4 | F06 | Konzeption und Umsetzung von wiederholten Implementierungsdetails entlasten. | Empfohlene strukturelle Überarbeitung |
 | 5 | F11 | Zwei fehlende Textverweise ergänzen; erste Nennung von „Abbildung“/„Tabelle“ entsprechend der Vorlage formatieren. | Layoutorientierung |
 | 6 | F13 | Architekturgrafik und Crate-Tabelle vor dem jeweils folgenden Abschnitt platzieren. | Layoutorientierung; neu |
-| 7 | F01 | Erklärung in die finale Abgabe aufnehmen und unterschreiben. | Abgabevorgabe; vorbereitet, derzeit nicht eingebunden |
-| 8 | F03 | Finale PDF und übergebene TeX-Hauptdatei regelkonform benennen. | Abgabevorgabe; Arbeitsnamen unkritisch |
+
+**Zurückgestellt:** F01 kann erst nach Zusendung der Erklärung durch das Prüfungsamt abgeschlossen werden. F03 ist im Draft-PDF-Export umgesetzt; die endgültigen PDF- und TeX-Abgabenamen werden erst zur Übergabe geprüft. Beide Punkte gehören derzeit nicht zur Liste der zu überarbeitenden Thesis-Stellen.
 
 Die externen Nachweise und Abstimmungspunkte aus Abschnitt 5 bleiben zusätzlich zu klären. Sie werden nicht als nachgewiesene Verstöße oder als erledigt gewertet.
