@@ -267,8 +267,7 @@ Diese Implementierung erlaubt es, eBPF-Programme an LSM-Hooks auszuführen und d
 Bei einem entsprechend konfigurierten Kernel mit aktiviertem BPF-LSM können die Programme zur Laufzeit geladen und an unterstützte LSM-Hooks angehängt werden; vor der Ausführung werden sie durch den eBPF-Verifier geprüft~\cite{kernelBpfLsm,kernelBpfVerifier}.
 
 Ein weiterer Grund für diese Entscheidung ist die Möglichkeit, eBPF-Programme mit Rust zu entwickeln.
-Der Prototyp nutzt dafür Aya.
-Aya ist eine Rust-Bibliothek für die Entwicklung von eBPF-Programmen und stellt damit eine Alternative zu einer C-basierten Implementierung dar~\cite{ayaBook}.
+Der Prototyp nutzt dafür Aya (siehe Abschnitt~\ref{sec:aya}).
 Dadurch können Userspace- und eBPF-Anteile innerhalb desselben Rust-Workspaces entwickelt werden.
 Zusätzlich können gemeinsame Datenstrukturen und Teile der Policy-Auswertungslogik in einer
 gemeinsamen Rust-Kompilationseinheit (Crate) abgebildet werden.
@@ -353,7 +352,7 @@ Damit unterstützt sie zugleich die Nachvollziehbarkeit der Durchsetzungskompone
 Eine Alternative wäre gewesen, die Policy-Funktionalität noch stärker zu reduzieren, beispielsweise nur statische Datei-Policies ohne dynamische Attribute oder nur einzelne fest eingebaute Bedingungen zu unterstützen.
 Diese Variante hätte den Kernelteil weiter vereinfacht, würde aber den fachlichen Anspruch der Arbeit verfehlen.
 Gerade die Einbeziehung dynamischer Attribute und die nachträgliche Veränderbarkeit der Entscheidungslage sind für ASBAC wesentlich.
-Eine andere Alternative wäre eine mächtigere Policy-Auswertung direkt im Kernel.
+Eine weitere Alternative wäre eine mächtigere Policy-Auswertung direkt im Kernel.
 Diese würde zwar mehr Ausdrucksstärke bieten, wäre aber mit den eBPF-Beschränkungen und dem Ziel einer kleinen, überprüfbaren Durchsetzungskomponente schlechter vereinbar.
 
 Die Konsequenz ist ein bewusst begrenztes Policy-Modell im Kernel.
@@ -525,8 +524,8 @@ Die statische und die streambasierte Auswertung halten fest, ob während ihres j
 Das Combining-Programm liest diesen Zustand und entscheidet daraus, ob der Hook den Zugriff erlaubt oder verweigert.
 Im aktuellen Prototyp wird eine vereinfachte, an \textit{Deny-overrides} angelehnte Strategie
 verwendet: Sobald eine Deny-Entscheidung vorliegt, wird der Zugriff verweigert; andernfalls wird er
-erlaubt. Die XACML-Ergebnisse \textit{Indeterminate} und \textit{NotApplicable} werden dabei nicht
-als eigene Ergebnisse abgebildet.
+erlaubt. Die XACML-Termini \textit{Indeterminate} und \textit{NotApplicable} werden dabei nicht
+übernommen.
 
 Diese Aufteilung trennt Policy-Matching und finale Konfliktauflösung.
 Die einzelnen Auswertungspfade müssen nicht selbst die vollständige globale Entscheidung treffen, sondern liefern nur ihre Zwischenergebnisse.

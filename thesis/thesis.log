@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  19 SEP 2026 15:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2021.10.7)  20 SEP 2026 21:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1293,10 +1293,10 @@ Package logreq Info: Writing requests to 'thesis.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 23299 strings out of 478994
- 379037 string characters out of 5858184
- 1137463 words of memory out of 5000000
- 40165 multiletter control sequences out of 15000+600000
+ 23300 strings out of 478994
+ 379046 string characters out of 5858184
+ 1137528 words of memory out of 5000000
+ 40166 multiletter control sequences out of 15000+600000
  471172 words of font info for 117 fonts, out of 8000000 for 9000
  1143 hyphenation exceptions out of 8191
  73i,13n,117p,1421b,2080s stack positions out of 5000i,500n,10000p,200000b,80000s
@@ -1310,7 +1310,7 @@ st/fonts/type1/public/newtx/txsys.pfb></usr/local/texlive/2021/texmf-dist/fonts
 /type1/public/newtx/ztmb.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/pu
 blic/newtx/ztmr.pfb></usr/local/texlive/2021/texmf-dist/fonts/type1/public/newt
 x/ztmri.pfb>
-Output written on thesis.pdf (85 pages, 698463 bytes).
+Output written on thesis.pdf (85 pages, 698350 bytes).
 PDF statistics:
  1270 PDF objects out of 1440 (max. 8388607)
  1154 compressed objects within 12 object streams

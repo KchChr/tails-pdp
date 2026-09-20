@@ -197,7 +197,7 @@ Ein eBPF-Programm besitzt zudem keine gewöhnliche \texttt{main}-Funktion, sonde
 Da eBPF-Programme häufig direkt Kernel-Speicher oder Hook-Kontextdaten lesen, ist außerdem ein relevanter Teil des Codes als \texttt{unsafe} zu behandeln \citep{ayaBook}.
 Für die Arbeit bedeutet dies, dass komplexe Policy-Logik möglichst im Userspace vorbereitet werden sollte, während das eBPF-Programm nur eine kompakte, vorher strukturierte Repräsentation auswertet.
 
-\subsection{Aya als Rust-Framework für eBPF}
+\subsection{Aya als Rust-Framework für eBPF}\label{sec:aya}
 Aya ist ein Rust-Framework zur Entwicklung von eBPF-Anwendungen. 
 Die offizielle Aya-Dokumentation beschreibt Aya als Möglichkeit, eBPF-Programme mit Rust zu entwickeln und dabei Cargo, Rust-Strukturen sowie gemeinsame Codeanteile zwischen Userspace und eBPF-Programm zu nutzen \citep{ayaBook}. 
 Neben Rust-basierten Frameworks existieren etablierte eBPF-Werkzeuge mit C- sowie Hochsprachen-Schnittstellen.
