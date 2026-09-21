@@ -263,4 +263,16 @@ Steuerung eines Zielprozesses, unterliegt jedoch Berechtigungsprüfungen und arb
 einzelner Threads \citep{manPtrace}. Ein FD-basierter Entzug aus dem Userspace kann deshalb nur als
 nachträglicher, bestmöglicher Entzugsversuch verstanden werden.
 
+
+
+\subsection{NixOS}
+
+NixOS ist eine Linux-Distribution, deren Systemzustand deklarativ beschrieben wird.
+Kernel, Systemdienste, Pakete und weitere Einstellungen werden aus Nix-Konfigurationen
+erzeugt~\citep{nixosManual}. Dadurch können System- und Entwicklungsumgebung gemeinsam mit
+dem Quellcode dokumentiert werden.
+
+Für die Evaluation wird NixOS als Gastbetriebssystem in einer QEMU/KVM-VM eingesetzt.
+
+
 \newpage

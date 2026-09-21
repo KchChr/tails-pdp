@@ -8,15 +8,15 @@ Die Evaluation erfolgt in einer ausschließlich für die Untersuchung verwendete
 Maschine. Dadurch lassen sich die für das Laden der eBPF-Programme erforderlichen privilegierten
 Operationen ausführen, ohne ein Produktivsystem zu beeinflussen. Während der privilegierten
 End-to-End-Tests läuft keine weitere Instanz des Prototyps, da die Tests vorübergehend die
-gepinnten BPF-Maps unter \path{/sys/fs/bpf/tails-pdp} verwenden. Die VM-Konfiguration, die
+gepinnten BPF-Maps unter \mbox{\path{/sys/fs/bpf/tails-pdp}} verwenden. Die VM-Konfiguration, die
 NixOS-Systemkonfiguration und die Definition der Entwicklungsumgebung werden gemeinsam mit dem
 Quellcode archiviert. Die Dateien \path{nix-config/configuration.nix},
 \path{nix-config/hardware-configuration.nix} und \path{nix-config/shell.nix} dokumentieren die
 für die Evaluation relevanten System-, Hardwareerkennungs- und Werkzeugvoraussetzungen.
 
 Für die Kernel- und Durchsetzungstests muss BPF in der aktiven LSM-Reihenfolge enthalten sein.
-Darüber hinaus werden BTF-Informationen unter \path{/sys/kernel/btf/vmlinux} und ein unter
-\path{/sys/fs/bpf} eingehängtes BPF-Dateisystem vorausgesetzt. Das Laden und Anheften der
+Darüber hinaus werden BTF-Informationen unter \mbox{\path{/sys/kernel/btf/vmlinux}} und ein unter
+\mbox{\path{/sys/fs/bpf}}  eingehängtes BPF-Dateisystem vorausgesetzt. Das Laden und Anheften der
 eBPF-Programme, der Zugriff auf die gepinnten Maps und der \texttt{ptrace}-basierte Entzug eines
 File Descriptors benötigen erhöhte Berechtigungen. Root-Berechtigung und BTF-Verfügbarkeit werden
 vom Testskript explizit geprüft; die Verfügbarkeit von BPF-LSM und BPF-Dateisystem wird durch den

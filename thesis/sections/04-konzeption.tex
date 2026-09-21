@@ -625,8 +625,6 @@ Wenn ein Prozess mehrere Dateien geöffnet hat, kann nur der FD geschlossen werd
 Andere FDs desselben Prozesses bleiben bestehen, sofern sie nicht selbst gegen eine Policy verstoßen.
 Damit passt die Maßnahme zu der Anforderung, nur den betroffenen Zugriff zu beenden.
 
-Eine Alternative wäre, den gesamten Prozess zu beenden.
-Dies wäre einfacher umzusetzen, aber deutlich invasiver.
 Eine weitere Alternative wäre, lediglich eine Verletzung zu protokollieren und kein Enforcement vorzunehmen.
 Diese Alternative wird nicht verwendet, weil eine erkannte Verletzung im Prototyp unmittelbar den Entzug des betroffenen Zugriffs auslösen muss.
 
@@ -650,7 +648,7 @@ Der Loader bleibt für das Verarbeiten und Schreiben gültiger Zustände zustän
 Das Administrationswerkzeug dient dagegen der Sichtbarkeit des aktuellen Zustands.
 Es arbeitet bewusst lesend, damit es den Kernelzustand nicht unbeabsichtigt verändert und nicht in Konkurrenz zum Policy-Sync tritt.
 
-Eine Alternative wäre die direkte Nutzung allgemeiner Werkzeuge wie \texttt{bpftool}.
+Eine Möglichkeit wäre die direkte Nutzung allgemeiner Werkzeuge wie \texttt{bpftool}.
 Damit lassen sich Maps zwar grundsätzlich inspizieren, die Ausgabe ist jedoch stärker an der binären Map-Struktur orientiert und für die fachliche Bewertung weniger komfortabel.
 Eine weitere Alternative wäre, Diagnose direkt in das Hauptprogramm oder den Userspace-PEP einzubauen.
 Dies würde jedoch Zuständigkeiten vermischen und die Beobachtung des Zustands stärker an einen laufenden Prozess binden.
