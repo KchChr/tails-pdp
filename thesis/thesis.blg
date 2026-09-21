@@ -1,15 +1,15 @@
 [0] Config.pm:311> INFO - This is Biber 2.16
 [0] Config.pm:314> INFO - Logfile is 'thesis.blg'
-[54] biber-darwin:340> INFO - === Mon Sep 21, 2026, 19:49:50
-[66] Biber.pm:415> INFO - Reading 'thesis.bcf'
-[144] Biber.pm:952> INFO - Found 39 citekeys in bib section 0
-[157] Biber.pm:4340> INFO - Processing section 0
+[58] biber-darwin:340> INFO - === Mon Sep 21, 2026, 20:12:01
+[70] Biber.pm:415> INFO - Reading 'thesis.bcf'
+[145] Biber.pm:952> INFO - Found 39 citekeys in bib section 0
+[158] Biber.pm:4340> INFO - Processing section 0
 [166] Biber.pm:4531> INFO - Looking for bibtex format file 'literatur.bib' for section 0
 [168] bibtex.pm:1689> INFO - LaTeX decoding ...
 [202] bibtex.pm:1494> INFO - Found BibTeX data source 'literatur.bib'
-[366] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
-[366] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
-[366] Biber.pm:4168> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'de-DE'
-[366] Biber.pm:4174> INFO - No sort tailoring available for locale 'de-DE'
-[392] bbl.pm:654> INFO - Writing 'thesis.bbl' with encoding 'UTF-8'
-[407] bbl.pm:757> INFO - Output to thesis.bbl
+[358] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[358] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[358] Biber.pm:4168> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'de-DE'
+[358] Biber.pm:4174> INFO - No sort tailoring available for locale 'de-DE'
+[386] bbl.pm:654> INFO - Writing 'thesis.bbl' with encoding 'UTF-8'
+[401] bbl.pm:757> INFO - Output to thesis.bbl

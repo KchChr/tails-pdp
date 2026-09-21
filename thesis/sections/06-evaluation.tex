@@ -61,9 +61,7 @@ aufgenommen. Das Root-Dateisystem verwendet ext4, die EFI-Systempartition vfat.
 Die Entwicklungs- und Build-Umgebung wird mit \texttt{nix-shell} aus
 \path{nix-config/shell.nix} erzeugt. Für den regulären Projektbuild sind insbesondere Rustup und
 Cargo, LLVM~21 einschließlich seiner Laufzeitbibliothek sowie \texttt{bpf-linker} erforderlich.
-Der Shell-Hook wählt die Rust-Nightly-Toolchain \texttt{nightly-2025-08-01} einschließlich
-\texttt{rust-src}, \texttt{rustfmt} und Clippy aus. Aya führt den Build der eBPF-Crate für das
-Ziel \texttt{bpfel-unknown-none} aus. Das Build-Skript dieser Crate setzt die Verfügbarkeit des
+Aya führt den Build der eBPF-Crate für das Ziel \texttt{bpfel-unknown-none} aus. Das Build-Skript dieser Crate setzt die Verfügbarkeit des
 \texttt{bpf-linker} voraus; die Shell-Konfiguration sieht dafür Version 0.9.15 mit
 LLVM-21-Unterstützung vor. Die Rust-Abhängigkeiten werden durch \path{Cargo.lock} festgelegt; der
 verwendete Stand enthält Aya 0.13.2 und \texttt{aya-ebpf} 0.1.2.
@@ -81,8 +79,8 @@ importiert und keine feste Nixpkgs-Revision enthält.
 
 \begin{table}[htbp]
     \centering
-    \caption{Hard- und Softwarekonfiguration der Testumgebung}
-    \label{tab:testumgebung}
+
+
     \begin{tabular}{p{0.36\textwidth}p{0.55\textwidth}}
         \hline
         \textbf{Komponente} & \textbf{Konfiguration} \\
@@ -106,6 +104,8 @@ importiert und keine feste Nixpkgs-Revision enthält.
         Aya / \texttt{aya-ebpf} & 0.13.2 / 0.1.2 gemäß \path{Cargo.lock} \\
         \hline
     \end{tabular}
+    \caption{Hard- und Softwarekonfiguration der Testumgebung}
+    \label{tab:testumgebung}
 \end{table}
 
 Da die Evaluation innerhalb einer virtuellen Maschine erfolgt, können insbesondere Zeitmessungen
@@ -153,8 +153,8 @@ Tabelle~\ref{tab:teststufen} fasst die Teststufen und ihre Aussagegrenzen zusamm
 
 \begin{table}[htbp]
     \centering
-    \caption{Teststufen der Evaluation}
-    \label{tab:teststufen}
+
+
     \begin{tabular}{p{0.22\textwidth}p{0.32\textwidth}p{0.37\textwidth}}
         \hline
         \textbf{Teststufe} & \textbf{Gegenstand} & \textbf{Aussagegrenze} \\
@@ -170,10 +170,12 @@ Tabelle~\ref{tab:teststufen} fasst die Teststufen und ihre Aussagegrenzen zusamm
         allgemeine Echtzeit- oder Skalierbarkeitsgarantie \\
         \hline
     \end{tabular}
+    \caption{Teststufen der Evaluation}
+    \label{tab:teststufen}
 \end{table}
 
 Für die abschließende Zuordnung zu den Anforderungen werden die Bewertungen \emph{erfüllt},
-\emph{teilweise erfüllt} und \emph{nicht erfüllt} verwendet. Eine
+\emph{teilweise~erfüllt} und \emph{nicht~erfüllt} verwendet. Eine
 Anforderung gilt als erfüllt, wenn ihr Akzeptanzkriterium unter den dokumentierten Bedingungen
 vollständig beobachtet wird. Als teilweise erfüllt wird sie bewertet, wenn das vorgesehene
 Grundverhalten nachweisbar ist, aber relevante Einschränkungen oder nicht abgedeckte Fälle
@@ -214,7 +216,7 @@ Schreib- und Aktivierungsfehler müssen die zuvor aktive Generation unverändert
 werden nicht mehr belegte Einträge einer neu vorbereiteten Bank deaktiviert.
 
 Die 13 Tests des Attributloaders prüfen das Parsen der unterstützten Zahlen-, Boolean- und
-Stringwerte sowie die Validierung von Attributnamen und des zulässigen DEFCON-Wertebereichs.
+Stringwerte sowie die Validierung von Attributnamen und des zulässigen Defcon-Wertebereichs.
 Ergänzend werden ein vollständiges Verzeichnis mit System-, Subject- und Resource-Attributen sowie
 die transaktionale Aktivierung einer neuen Attributbank mit simulierten Lösch-, Schreib- und
 Aktivierungsfehlern untersucht. Weitere Fehlerfälle decken die Kapazitätsprüfung vor der ersten
@@ -226,8 +228,8 @@ koalesziert werden und ein geschlossener Kanal als Fehler gemeldet wird.
 
 Die 14 Tests des Userspace-PEP prüfen die Auswertung von Prozess- und
 File-Descriptor-Informationen sowie die Steuerung der Nachbewertung. Dazu gehören das Filtern
-numerischer Einträge unter \path{/proc}, die Auswahl der Real UID aus
-\path{/proc/<pid>/status}, die Erkennung regulärer Dateien und die gezielte Zuordnung eines
+numerischer Einträge unter \path{/proc}, die Auswahl der Real-UID aus
+\mbox{\path{/proc/<pid>/status}}, die Erkennung regulärer Dateien und die gezielte Zuordnung eines
 Verstoßes zu Prozess und File Descriptor. Mit dem \texttt{FakeFdCloser} wird geprüft, dass ein
 File Descriptor innerhalb eines Scans höchstens einmal behandelt wird, unterschiedliche
 Deskriptoren unabhängig bleiben und ein fehlgeschlagener Schließversuch die Bearbeitung weiterer
@@ -259,7 +261,7 @@ Die End-to-End-Prüfung wird auf dem in Abschnitt~6.1 beschriebenen Linux-Zielsy
 Root-Rechten ausgeführt. Der zentrale Runner \path{test.sh} fordert diese Berechtigungen nach dem
 Release-Build über \texttt{sudo} an und ruft \path{tests/test-e2e.sh} auf. Dieses Skript bildet den
 gemeinsamen Einstiegspunkt der End-to-End-Stufe und
-ruft für die Test-IDs \texttt{E2E-01} bis \texttt{E2E-19} jeweils eine eigene Bashdatei unter
+ruft für die Test-IDs \texttt{E2E-01} bis \texttt{E2E-19} (siehe Tabelle~\ref{tab:e2e-basis}) jeweils eine eigene Bashdatei unter
 \path{tests/e2e/} auf. Vor dem Start bricht die Hauptdatei ab, wenn bereits eine Instanz des
 Prototyps läuft; anschließend entfernt sie die bekannten Test-Maps unter
 \path{/sys/fs/bpf/tails-pdp}. Deshalb darf die Suite ausschließlich auf dem dedizierten Testsystem
@@ -300,9 +302,9 @@ Ergebnisse werden getrennt in Abschnitt~6.3 berichtet.
 
 \begin{table}[htbp]
     \centering
-    \caption{Grundlegende End-to-End-Szenarien}
-    \label{tab:e2e-basis}
-    \begin{tabular}{p{0.16\textwidth}p{0.34\textwidth}p{0.41\textwidth}}
+
+
+    \begin{tabular}{>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.34\textwidth}p{0.41\textwidth}}
         \hline
         \textbf{Test-ID} & \textbf{Gegenstand} & \textbf{Bestehenskriterium} \\
         \hline
@@ -324,8 +326,9 @@ Ergebnisse werden getrennt in Abschnitt~6.3 berichtet.
         die sichtbare Generation oder die zuvor gültige Entscheidung zu verändern. \\
         \hline
     \end{tabular}
+    \caption{Grundlegende End-to-End-Szenarien}
+    \label{tab:e2e-basis}
 \end{table}
-
 Die weiteren Szenarien in Tabelle~\ref{tab:e2e-enforcement} konzentrieren sich auf die
 Combining-Regel, bestehende File Descriptors, die Administrationsschnittstelle und kontrollierte
 Fehlerfälle. Beim nachträglichen Entzug hält ein Hilfsprozess mehrere Deskriptoren geöffnet und
@@ -336,9 +339,7 @@ ungültiger Dateideskriptor) zeigt dabei an, dass der geprüfte Deskriptor nicht
 
 \begin{table}[htbp]
     \centering
-    \caption{End-to-End-Szenarien für Enforcement und Fehlerverhalten}
-    \label{tab:e2e-enforcement}
-    \begin{tabular}{p{0.16\textwidth}p{0.34\textwidth}p{0.41\textwidth}}
+    \begin{tabular}{>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.34\textwidth}p{0.41\textwidth}}
         \hline
         \textbf{Test-ID} & \textbf{Gegenstand} & \textbf{Bestehenskriterium} \\
         \hline
@@ -353,17 +354,19 @@ ungültiger Dateideskriptor) zeigt dabei an, dass der geprüfte Deskriptor nicht
         Deny-Policy wird der Zugriff unabhängig von der lexikalischen Policyreihenfolge verweigert;
         nach Entfernen des Deny wird er erlaubt. \\
         E2E-15 & Real und Effective UID & Bei privilegiertem Effective- und Filesystem-User wird
-        die Entscheidung anhand der gesetzten Real UID getroffen; eine andere Real UID bildet die
+        die Entscheidung anhand der gesetzten Real-UID getroffen; eine andere Real-UID bildet die
         Negativkontrolle. \\
         E2E-17 & Nicht erreichbarer Zielprozess beim FD-Entzug & Der gezielt erzeugte
         \texttt{ptrace}-Attach-Konflikt wird protokolliert, ein anderer Zielprozess wird dennoch
         verarbeitet und weitere Policyaktivierungen sowie Kernelentscheidungen bleiben möglich. \\
         E2E-18 & Attributgetriggerter FD-Entzug & Eine reine Attributänderung schließt drei
-        unzulässige FDs; zwei erlaubte bleiben offen. Die Policygeneration bleibt unverändert. \\
-        E2E-19 & Zeitgetriggerter FD-Entzug & Eine Zeitgrenze schließt drei unzulässige FDs;
+        unzulässige FD; zwei erlaubte bleiben offen. Die Policygeneration bleibt unverändert. \\
+        E2E-19 & Zeitgetriggerter FD-Entzug & Eine Zeitgrenze schließt drei unzulässige FD;
         zwei erlaubte bleiben offen. Policy- und Attributgeneration bleiben unverändert. \\
         \hline
     \end{tabular}
+    \caption{End-to-End-Szenarien für Enforcement und Fehlerverhalten}
+    \label{tab:e2e-enforcement}
 \end{table}
 
 Ein Szenario gilt nur dann als bestanden, wenn sein Skript ohne fehlgeschlagene Assertion endet,
@@ -393,7 +396,7 @@ Release-Build der Runtime und des Administrationstools einschließlich des eBPF-
 ebenfalls erfolgreich. Damit ist nachgewiesen, dass der Prototyp übersetzbar ist
 und die in Abschnitt~6.2.2 beschriebenen Assertions erfüllt.
 
-Die vollständige Ausführung von \path{test.sh} wurde mit Exitstatus null abgeschlossen.
+Die vollständige Ausführung von \path{test.sh} wurde mit Exitstatus \texttt{0} abgeschlossen.
 Clippy prüfte Produktions-, Test- und Binärziele mit als Fehler behandelten Warnungen erfolgreich.
 Auch die sechs ergänzenden Python-Tests zur Auswertung der PERF-03-Zeitmarkierungen bestanden.
 Alle acht ergänzenden Evaluationsszenarien für Map-Zugriff, Deskriptorgrenzen, Race-Verhalten,
@@ -409,13 +412,13 @@ System-, Subject- und Resource-Attributen wurden in beide Entscheidungsrichtunge
 Auch die Konjunktion mehrerer Attribut-Namespaces und die Combining-Regel
 \emph{deny-overrides} zeigten das erwartete Verhalten.
 
-Ungültige Policy- und Attributstände ersetzten die jeweils letzte gültige Generation nicht.
+Ungültige Policy- und Attributstände ersetzten nicht die jeweils letzte gültige Generation.
 Nach der Korrektur des Attributloaders wurde auch eine Überschreitung der realen Map-Kapazität
 kontrolliert abgelehnt: Je 512 Attribute pro vollständig belegter Bank wurden akzeptiert, ein
 Update auf 513 Attribute bei weiterhin 512 Einträgen der aktiven Bank dagegen vor einer
 Veränderung der Maps zurückgewiesen. Generation und aktive Attributwerte blieben unverändert;
 anschließende gültige Updates wurden ohne Neustart der Runtime verarbeitet. Für Policies wurden
-je 16 statische und 16 Stream-Policies akzeptiert und der jeweils 17. Eintrag kontrolliert
+je 16 statische und 16 Streampolicies akzeptiert und der jeweils 17. Eintrag kontrolliert
 abgelehnt. Damit wurde nicht nur das Verhalten an den vorgesehenen Grenzen, sondern auch die
 Wiederherstellung des regulären Updatebetriebs nach einer Ablehnung beobachtet.
 
@@ -437,9 +440,8 @@ ursprüngliche Policyname wird jedoch nicht ausgegeben.
 
 \begin{table}[htbp]
     \centering
-    \caption{Zusammenfassung der funktionalen Testergebnisse}
-    \label{tab:funktionale-ergebnisse}
-    \begin{tabular}{p{0.28\textwidth}p{0.18\textwidth}p{0.45\textwidth}}
+
+    \begin{tabular}{>{\raggedright\arraybackslash}p{0.28\textwidth}>{\raggedright\arraybackslash}p{0.18\textwidth}p{0.45\textwidth}}
         \hline
         \textbf{Prüfung} & \textbf{Ergebnis} & \textbf{Einordnung} \\
         \hline
@@ -456,6 +458,8 @@ ursprüngliche Policyname wird jedoch nicht ausgegeben.
         erfolgreichen Folgeupdates \\
         \hline
     \end{tabular}
+    \caption{Zusammenfassung der funktionalen Testergebnisse}
+    \label{tab:funktionale-ergebnisse}
 \end{table}
 
 \subsubsection{Robustheit und Grenzen des Entzugsmechanismus}
@@ -508,6 +512,8 @@ daher nicht ausschließlich die Ausführungszeit des LSM-Hooks.
         Policyänderung bis \texttt{EBADF} & 10 & 110,43~ms & 112,24~ms \\
         \hline
     \end{tabular}
+    \caption{Quantitative Messergebnisse auf dem Zielsystem}
+    \label{tab:performance-ergebnisse}
 \end{table}
 
 Die Reaktionszeit vom atomaren Austausch einer Datei bis zur beobachtbaren neuen Entscheidung
@@ -523,11 +529,14 @@ Scans über 300~ms einen unveränderten Ruhezustand zeigen. Zeitmarkierungen pr�
 Dateiereignis erst nach Messbeginn empfangen und die vollständige 100-ms-Bündelungsphase
 abgewartet wurde. Zwei weitere Zeitmarkierungen unmittelbar vor und nach dem Map-Systemaufruf
 zur Aktivierung grenzen deren Zeitpunkt ein. Die Messung enthält den Aufwand dieser
-Instrumentierung; der Entzug wird durch FD-Prüfungen im Abstand von 1~ms beobachtet.
+Instrumentierung; der Entzug wird durch File Descriptor-Prüfungen im Abstand von 1~ms beobachtet.
 Über zehn Wiederholungen lagen die unteren Grenzen der Aktivierung-bis-Entzug-Intervalle
 zwischen 8,09 und 10,22~ms, die oberen Grenzen zwischen 8,10 und 10,25~ms. Eine scheinexakte
-Einzelzeit wird daraus nicht abgeleitet. Bei nur zehn Wiederholungen entspricht das angegebene p95 jeweils dem beobachteten
-Maximum und ist keine belastbare Schätzung seltener Ausreißer. Da für OA-03 keine feste
+Einzelzeit wird daraus nicht abgeleitet. Das 95.~Perzentil (p95) bezeichnet
+den Wert, den mindestens 95\,\% der Messwerte nicht überschreiten.
+Bei zehn Wiederholungen entspricht es nach der verwendeten Berechnung
+bereits dem höchsten Messwert. Das angegebene p95 ist deshalb keine
+belastbare Schätzung seltener hoher Latenzen. Da für OA-03 keine feste
 Latenzgrenze vorgegeben wurde, bedeutet ein bestandener Performance-Test ausschließlich, dass die
 Messung erfolgreich durchgeführt und der Zustandswechsel beobachtet wurde.
 
