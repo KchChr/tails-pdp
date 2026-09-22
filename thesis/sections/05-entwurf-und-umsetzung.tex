@@ -18,8 +18,7 @@ Die Userspace-Crates übernehmen dagegen Initialisierung, Policy- und Attributve
 Gemeinsame Datenstrukturen befinden sich in einer separaten Crate, damit Userspace und eBPF-Programm dieselben Map-Layouts verwenden. Tabelle~\ref{tab:rust-workspace-crates} fasst die Aufteilung zusammen.
 
 \begin{table}[htbp]
-    \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
-    \label{tab:rust-workspace-crates}
+
     \centering
     \begin{tabular}{|p{5.3cm}|p{8.4cm}|}
         \hline
@@ -46,6 +45,8 @@ Gemeinsame Datenstrukturen befinden sich in einer separaten Crate, damit Userspa
         \texttt{tails-pdp-admintool} & Administrationstool zur Anzeige aktiver Policies, Attribute und Generationen aus gepinnten eBPF-Maps. \\
         \hline
     \end{tabular}
+    \caption{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten}
+    \label{tab:rust-workspace-crates}
 \end{table}
 
 
@@ -73,17 +74,22 @@ Die regulären internen Abhängigkeiten sind wie folgt aufgebaut:
     \item \path{tails-pdp-common} und \path{tails-pdp-userspace-common} besitzen keine weiteren internen Crate-Abhängigkeiten.
 \end{itemize}
 
-\newpage
+
 Die gemeinsamen Crates trennen die Datenrepräsentation von der Infrastruktur im Userspace. \path{tails-pdp-common} enthält die von eBPF-Programm und Userspace verwendeten Datenstrukturen, während \path{tails-pdp-userspace-common} ausschließlich Funktionen zum Öffnen und Verwenden gepinnter Maps im Userspace bereitstellt. Abbildung~\ref{fig:crate-abhaengigkeiten} fasst die daraus entstehenden Abhängigkeiten zusammen.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{graphics/abhaengigkeiten}
-    \caption{Interne Abhängigkeiten der Rust-Crates. Durchgezogene Pfeile kennzeichnen reguläre Cargo-Abhängigkeiten, der gestrichelte Pfeil die Build-Abhängigkeit zur Erzeugung des eingebetteten eBPF-Artefakts. Pfeile zeigen von der abhängigen Crate zur verwendeten Crate. Externe Abhängigkeiten sind nicht dargestellt.
-}
+    \caption{Interne Abhängigkeiten der Rust-Crates}
     \label{fig:crate-abhaengigkeiten}
+    \caption*{%
+        Durchgezogene Pfeile kennzeichnen reguläre Cargo-Abhängigkeiten,
+        der gestrichelte Pfeil die Build-Abhängigkeit zur Erzeugung des
+        eingebetteten eBPF-Artefakts. Pfeile zeigen von der abhängigen
+        Crate zur verwendeten Crate. Externe Abhängigkeiten sind
+        nicht dargestellt.
+    }
 \end{figure}
-
 
 
 
@@ -126,8 +132,7 @@ Die Objektidentität ist Teil des Map-Schlüssels und damit Teil der ABI. Eine �
 Tabelle~\ref{tab:pinned-map-abi} zeigt die gepinnten Maps, die den dauerhaften Datenaustausch zwischen den Komponenten ermöglichen. Die Policy- und Attributloader schreiben gültige Daten in diese Maps. Das eBPF-Programm liest sie bei der Zugriffsentscheidung; Userspace-PEP und Administrationstool öffnen dieselben Maps bei Bedarf erneut zur Überwachung beziehungsweise Anzeige.
 
 \begin{table}[htbp]
-    \caption{Gepinnte eBPF-Maps als Map-ABI des Prototyps}
-    \label{tab:pinned-map-abi}
+
     \centering
     \begin{tabular}{|p{3.9cm}|p{1.5cm}|p{3.1cm}|p{4.5cm}|}
         \hline
@@ -146,6 +151,8 @@ Tabelle~\ref{tab:pinned-map-abi} zeigt die gepinnten Maps, die den dauerhaften D
         \path{ATTRIBUTES} & Hash-Map & \path{AttributeKey} $\rightarrow$\newline \path{AttributeValue} & Enthält die dynamischen System-, Subject- und Ressourcenattribute. \\
         \hline
     \end{tabular}
+    \caption{Gepinnte eBPF-Maps als Map-ABI des Prototyps}
+    \label{tab:pinned-map-abi}
 \end{table}
 
 Beim Start legt \texttt{tails-pdp} das Pin-Verzeichnis \path{/sys/fs/bpf/tails-pdp} an und lädt das eBPF-Objekt mit diesem Verzeichnis als Standardpfad für Maps. Gepinnte Maps bleiben im BPF-Dateisystem erreichbar und können deshalb von später gestarteten Userspace-Komponenten über ihren Pfad geöffnet werden. Die nicht gepinnten Maps für Tail Calls, temporäre Entscheidungen und Debug-Konfiguration gehören dagegen ausschließlich zum geladenen eBPF-Objekt und sind nicht Teil der gemeinsamen Map-ABI.
@@ -225,8 +232,6 @@ clearance = 2
 \texttt{clearance} ist hier ein frei benanntes numerisches Systemattribut. Für eine neue Öffnung der angegebenen Datei greift die Deny-Policy, wenn \texttt{clearance} kleiner oder gleich zwei ist. Tabelle~\ref{tab:policy-semantik-beispiel} zeigt die Entscheidungen bei unterschiedlichen erfolgreich aktivierten Attributständen. Vorausgesetzt werden ein technisch fehlerfreier Auswertungspfad und das Fehlen weiterer Deny-Policies. Ein fehlendes Attribut wird durch Weglassen der \texttt{clearance}-Zeile dargestellt; die Attributdatei bleibt bestehen.
 
 \begin{table}[htbp]
-    \caption{Wirkung der Beispielpolicy ohne weitere Deny-Policies}
-    \label{tab:policy-semantik-beispiel}
     \centering
     \begin{tabular}{p{0.30\textwidth}p{0.40\textwidth}p{0.18\textwidth}}
         \hline
@@ -238,6 +243,8 @@ clearance = 2
         \texttt{clearance = "low"} & Zeichenkette statt erwarteter Zahl; Bedingung nicht erfüllt & Erlaubt \\
         \hline
     \end{tabular}
+    \caption{Wirkung der Beispielpolicy ohne weitere Deny-Policies}
+    \label{tab:policy-semantik-beispiel}
 \end{table}
 
 Die Erlaubnis in den letzten drei Fällen folgt aus der fachlichen Standardentscheidung: Ohne passende Deny-Policy liefert der Prototyp eine Erlaubnis. Ein fehlendes oder zur Bedingung nicht typkompatibles Attribut erzeugt selbst keine Ablehnung. Der typabweichende Wert im Beispiel ist als Attributwert syntaktisch gültig; er ist von einer ungültigen Attributdatei zu unterscheiden, deren Aktivierung scheitert und die bisherige Generation bestehen lässt.

@@ -24,6 +24,8 @@
 \@writefile{lot}{\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax }
 \abx@aux@refcontext{nyt/global//global/global}
 \babel@aux{german}{}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{Tabellenverzeichnis}{iv}{section*.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{Abbildungsverzeichnis}{v}{section*.2}\protected@file@percent }
 \abx@aux@cite{kernelorgLSM}
 \abx@aux@segm{0}{0}{kernelorgLSM}
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{\numberline {1}Einleitung}{1}{section.1}\protected@file@percent }
@@ -59,7 +61,7 @@
 \abx@aux@cite{wright2002linux}
 \abx@aux@segm{0}{0}{wright2002linux}
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Userspace und Kernelspace in Linux}{7}{subsection.2.5}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Linux Security Modules und Linux Security Module-Hooks}{7}{subsection.2.6}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}LSM und Linux LSM-Hooks}{7}{subsection.2.6}\protected@file@percent }
 \abx@aux@cite{kernelBpfDesignQA}
 \abx@aux@segm{0}{0}{kernelBpfDesignQA}
 \abx@aux@cite{kernelBpfLsm}
@@ -72,7 +74,7 @@
 \abx@aux@segm{0}{0}{manBpf}
 \abx@aux@cite{manBpf}
 \abx@aux@segm{0}{0}{manBpf}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}extended Berkeley Packet Filter und extended Berkeley Packet Filter-Linux Security Module}{8}{subsection.2.7}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}eBPF und eBPF-LSM}{8}{subsection.2.7}\protected@file@percent }
 \abx@aux@cite{ebpfPinning}
 \abx@aux@segm{0}{0}{ebpfPinning}
 \abx@aux@cite{kernelBpfVerifier}
@@ -133,9 +135,9 @@
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Policy-Datenfluss}{18}{subsubsection.4.3.1}\protected@file@percent }
 \abx@aux@cite{manInotify}
 \abx@aux@segm{0}{0}{manInotify}
-\@writefile{lof}{\defcounter {refsection}{0}\relax }\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Konzeptionelle Architektur des Prototyps\relax }}{19}{figure.caption.1}\protected@file@percent }
+\@writefile{lof}{\defcounter {refsection}{0}\relax }\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Konzeptionelle Architektur des Prototyps\relax }}{19}{figure.caption.3}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:konzeption-architektur}{{1}{19}{Konzeptionelle Architektur des Prototyps\relax }{figure.caption.1}{}}
+\newlabel{fig:konzeption-architektur}{{1}{19}{Konzeptionelle Architektur des Prototyps\relax }{figure.caption.3}{}}
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}Datenfluss dynamischer Attribute}{19}{subsubsection.4.3.2}\protected@file@percent }
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}Zugriffsentscheidungen im Kernel}{20}{subsubsection.4.3.3}\protected@file@percent }
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.4}Nachträgliche Kontrolle bestehender Zugriffe}{20}{subsubsection.4.3.4}\protected@file@percent }
@@ -192,40 +194,40 @@
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Implementierungsstruktur}{37}{subsection.5.1}\protected@file@percent }
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Aufteilung des Rust-Workspaces}{37}{subsubsection.5.1.1}\protected@file@percent }
 \@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}Abhängigkeiten zwischen den Crates}{37}{subsubsection.5.1.2}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten\relax }}{38}{table.caption.2}\protected@file@percent }
-\newlabel{tab:rust-workspace-crates}{{1}{38}{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten\relax }{table.caption.2}{}}
-\@writefile{lof}{\defcounter {refsection}{0}\relax }\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Interne Abhängigkeiten der Rust-Crates. Durchgezogene Pfeile kennzeichnen reguläre Cargo-Abhängigkeiten, der gestrichelte Pfeil die Build-Abhängigkeit zur Erzeugung des eingebetteten eBPF-Artefakts. Pfeile zeigen von der abhängigen Crate zur verwendeten Crate. Externe Abhängigkeiten sind nicht dargestellt. \relax }}{40}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:crate-abhaengigkeiten}{{2}{40}{Interne Abhängigkeiten der Rust-Crates. Durchgezogene Pfeile kennzeichnen reguläre Cargo-Abhängigkeiten, der gestrichelte Pfeil die Build-Abhängigkeit zur Erzeugung des eingebetteten eBPF-Artefakts. Pfeile zeigen von der abhängigen Crate zur verwendeten Crate. Externe Abhängigkeiten sind nicht dargestellt. \relax }{figure.caption.3}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{40}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{40}{subsubsection.5.2.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Repräsentation dynamischer Attribute}{41}{subsubsection.5.2.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Objektidentitäten im Map-Schlüssel}{42}{subsubsection.5.2.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.4}Aufbau und Pinning der eBPF-Maps}{42}{subsubsection.5.2.4}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Gepinnte eBPF-Maps als Map-ABI des Prototyps\relax }}{43}{table.caption.4}\protected@file@percent }
-\newlabel{tab:pinned-map-abi}{{2}{43}{Gepinnte eBPF-Maps als Map-ABI des Prototyps\relax }{table.caption.4}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Initialisierung und Laufzeitsteuerung}{43}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Laden und Prüfen des eBPF-Programms}{43}{subsubsection.5.3.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}Initialisierung der Maps und Tail Calls}{44}{subsubsection.5.3.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}Start der Userspace-Komponenten}{45}{subsubsection.5.3.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{45}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}Einlesen der Policydateien}{45}{subsubsection.5.4.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}Syntaktische Verarbeitung}{46}{subsubsection.5.4.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{46}{subsubsection.5.4.3}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten\relax }}{38}{table.caption.4}\protected@file@percent }
+\newlabel{tab:rust-workspace-crates}{{1}{38}{Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten\relax }{table.caption.4}{}}
+\@writefile{lof}{\defcounter {refsection}{0}\relax }\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Interne Abhängigkeiten der Rust-Crates\relax }}{39}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:crate-abhaengigkeiten}{{2}{39}{Interne Abhängigkeiten der Rust-Crates\relax }{figure.caption.5}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Gemeinsame Datenstrukturen und Map-ABI}{39}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Kernelgeeignete Policy-Strukturen}{39}{subsubsection.5.2.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Repräsentation dynamischer Attribute}{40}{subsubsection.5.2.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Objektidentitäten im Map-Schlüssel}{41}{subsubsection.5.2.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.4}Aufbau und Pinning der eBPF-Maps}{41}{subsubsection.5.2.4}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Gepinnte eBPF-Maps als Map-ABI des Prototyps\relax }}{42}{table.caption.6}\protected@file@percent }
+\newlabel{tab:pinned-map-abi}{{2}{42}{Gepinnte eBPF-Maps als Map-ABI des Prototyps\relax }{table.caption.6}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Initialisierung und Laufzeitsteuerung}{42}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Laden und Prüfen des eBPF-Programms}{42}{subsubsection.5.3.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}Initialisierung der Maps und Tail Calls}{43}{subsubsection.5.3.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}Start der Userspace-Komponenten}{44}{subsubsection.5.3.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Verarbeitung und Laden von Policies}{44}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}Einlesen der Policydateien}{44}{subsubsection.5.4.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}Syntaktische Verarbeitung}{45}{subsubsection.5.4.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Semantische Validierung}{45}{subsubsection.5.4.3}\protected@file@percent }
 \abx@aux@cite{manProcPidComm}
 \abx@aux@segm{0}{0}{manProcPidComm}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}Übersetzung in Map-Einträge}{47}{subsubsection.5.4.4}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{48}{subsubsection.5.4.5}\protected@file@percent }
-\newlabel{sec:policy-generation}{{5.4.5}{48}{Generationenwechsel und Rollback}{subsubsection.5.4.5}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.6}Beispiel der Policy- und Attributsemantik}{48}{subsubsection.5.4.6}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Wirkung der Beispielpolicy ohne weitere Deny-Policies\relax }}{49}{table.caption.5}\protected@file@percent }
-\newlabel{tab:policy-semantik-beispiel}{{3}{49}{Wirkung der Beispielpolicy ohne weitere Deny-Policies\relax }{table.caption.5}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Bereitstellung dynamischer Attribute}{49}{subsection.5.5}\protected@file@percent }
-\newlabel{sec:attribute-loading}{{5.5}{49}{Bereitstellung dynamischer Attribute}{subsection.5.5}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{49}{subsubsection.5.5.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{50}{subsubsection.5.5.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{50}{subsubsection.5.5.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{51}{subsubsection.5.5.4}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{51}{subsubsection.5.5.5}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}Übersetzung in Map-Einträge}{46}{subsubsection.5.4.4}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.5}Generationenwechsel und Rollback}{47}{subsubsection.5.4.5}\protected@file@percent }
+\newlabel{sec:policy-generation}{{5.4.5}{47}{Generationenwechsel und Rollback}{subsubsection.5.4.5}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.6}Beispiel der Policy- und Attributsemantik}{47}{subsubsection.5.4.6}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Wirkung der Beispielpolicy ohne weitere Deny-Policies\relax }}{48}{table.caption.7}\protected@file@percent }
+\newlabel{tab:policy-semantik-beispiel}{{3}{48}{Wirkung der Beispielpolicy ohne weitere Deny-Policies\relax }{table.caption.7}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Bereitstellung dynamischer Attribute}{48}{subsection.5.5}\protected@file@percent }
+\newlabel{sec:attribute-loading}{{5.5}{48}{Bereitstellung dynamischer Attribute}{subsection.5.5}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.1}Aufbau des Attributverzeichnisses}{48}{subsubsection.5.5.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.2}Parsen und Validieren der Attribute}{49}{subsubsection.5.5.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.3}Attributschlüssel und Hashwerte}{49}{subsubsection.5.5.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.4}Aktualisierung der Attributgeneration}{50}{subsubsection.5.5.4}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.5}Bereitstellung der Zeitinformation}{50}{subsubsection.5.5.5}\protected@file@percent }
 \abx@aux@cite{linuxLsmHookDefs}
 \abx@aux@segm{0}{0}{linuxLsmHookDefs}
 \abx@aux@cite{ayaEbpfContextSource}
@@ -236,73 +238,73 @@
 \abx@aux@segm{0}{0}{kernelCredentials}
 \abx@aux@cite{kernelBpfLsm}
 \abx@aux@segm{0}{0}{kernelBpfLsm}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{52}{subsection.5.6}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{52}{subsubsection.5.6.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{53}{subsubsection.5.6.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{53}{subsubsection.5.6.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Implementierung des Kernelspace-PEP}{51}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.1}Verarbeitung des file\_open-Hooks}{51}{subsubsection.5.6.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.2}Tail-Call-Kette}{52}{subsubsection.5.6.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.3}Auswertung statischer Policies}{52}{subsubsection.5.6.3}\protected@file@percent }
 \abx@aux@cite{kernelBpfLsm}
 \abx@aux@segm{0}{0}{kernelBpfLsm}
 \abx@aux@cite{manErrno}
 \abx@aux@segm{0}{0}{manErrno}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{54}{subsubsection.5.6.4}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{54}{subsubsection.5.6.5}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{54}{subsection.5.7}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.4}Auswertung von Streampolicies}{53}{subsubsection.5.6.4}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.5}Combining und Durchsetzung}{53}{subsubsection.5.6.5}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Implementierung des Userspace-PEP}{53}{subsection.5.7}\protected@file@percent }
 \abx@aux@cite{manProcPidStatus}
 \abx@aux@segm{0}{0}{manProcPidStatus}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{55}{subsubsection.5.7.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.2}Erneute Policy-Auswertung}{56}{subsubsection.5.7.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{57}{subsubsection.5.7.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{57}{subsection.5.8}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.1}Auswahl und Ausgabe des aktiven Zustands}{57}{subsubsection.5.8.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.2}Darstellung nicht umkehrbarer Hashwerte}{58}{subsubsection.5.8.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.3}Read-only-Schnittstelle und Fehlerverhalten}{58}{subsubsection.5.8.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{58}{subsection.5.9}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}Startfehler und Map-Kompatibilität}{58}{subsubsection.5.9.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}Konsistente Aktualisierung von Policies und Attributen}{59}{subsubsection.5.9.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.3}Fail-closed und laufzeitbezogene Fehler}{59}{subsubsection.5.9.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.1}Ermittlung bestehender Dateizugriffe}{54}{subsubsection.5.7.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.2}Erneute Policy-Auswertung}{55}{subsubsection.5.7.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.3}Entzug des betroffenen File Descriptors}{56}{subsubsection.5.7.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}Implementierung des Administrationstools}{56}{subsection.5.8}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.1}Auswahl und Ausgabe des aktiven Zustands}{56}{subsubsection.5.8.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.2}Darstellung nicht umkehrbarer Hashwerte}{57}{subsubsection.5.8.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.3}Read-only-Schnittstelle und Fehlerverhalten}{57}{subsubsection.5.8.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}Fehlerbehandlung und Konsistenzsicherung}{57}{subsection.5.9}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}Startfehler und Map-Kompatibilität}{57}{subsubsection.5.9.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}Konsistente Aktualisierung von Policies und Attributen}{58}{subsubsection.5.9.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.3}Fail-closed und laufzeitbezogene Fehler}{58}{subsubsection.5.9.3}\protected@file@percent }
 \abx@aux@cite{ayaBook}
 \abx@aux@segm{0}{0}{ayaBook}
 \abx@aux@cite{rustPlatformSupport}
 \abx@aux@segm{0}{0}{rustPlatformSupport}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{60}{subsection.5.10}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.1}Build-Prozess und Build-Artefakte}{60}{subsubsection.5.10.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem}{61}{subsubsection.5.10.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.3}Implementierungsbedingte Grenzen}{61}{subsubsection.5.10.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{\numberline {6}Evaluation}{63}{section.6}\protected@file@percent }
-\newlabel{sec:evaluation}{{6}{63}{Evaluation}{section.6}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Testumgebung}{63}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}Hard- und Softwareumgebung}{63}{subsubsection.6.1.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {5.10}Build und Deployment auf dem Zielsystem}{59}{subsection.5.10}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.1}Build-Prozess und Build-Artefakte}{59}{subsubsection.5.10.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.2}Start auf dem Zielsystem}{60}{subsubsection.5.10.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.3}Implementierungsbedingte Grenzen}{60}{subsubsection.5.10.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{\numberline {6}Evaluation}{62}{section.6}\protected@file@percent }
+\newlabel{sec:evaluation}{{6}{62}{Evaluation}{section.6}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Testumgebung}{62}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}Hard- und Softwareumgebung}{62}{subsubsection.6.1.1}\protected@file@percent }
 \abx@aux@cite{nixosStateVersion}
 \abx@aux@segm{0}{0}{nixosStateVersion}
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Hard- und Softwarekonfiguration der Testumgebung\relax }}{65}{table.caption.6}\protected@file@percent }
-\newlabel{tab:testumgebung}{{4}{65}{Hard- und Softwarekonfiguration der Testumgebung\relax }{table.caption.6}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Teststrategie und Testszenarien}{65}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}Teststufen und Bewertungskriterien}{65}{subsubsection.6.2.1}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Teststufen der Evaluation\relax }}{66}{table.caption.7}\protected@file@percent }
-\newlabel{tab:teststufen}{{5}{66}{Teststufen der Evaluation\relax }{table.caption.7}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}Unit- und Komponententests}{66}{subsubsection.6.2.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Privilegierte End-to-End-Tests}{68}{subsubsection.6.2.3}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Hard- und Softwarekonfiguration der Testumgebung\relax }}{64}{table.caption.8}\protected@file@percent }
+\newlabel{tab:testumgebung}{{4}{64}{Hard- und Softwarekonfiguration der Testumgebung\relax }{table.caption.8}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Teststrategie und Testszenarien}{64}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}Teststufen und Bewertungskriterien}{64}{subsubsection.6.2.1}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Teststufen der Evaluation\relax }}{65}{table.caption.9}\protected@file@percent }
+\newlabel{tab:teststufen}{{5}{65}{Teststufen der Evaluation\relax }{table.caption.9}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}Unit- und Komponententests}{65}{subsubsection.6.2.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Privilegierte End-to-End-Tests}{67}{subsubsection.6.2.3}\protected@file@percent }
 \abx@aux@cite{manErrno}
 \abx@aux@segm{0}{0}{manErrno}
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Grundlegende End-to-End-Szenarien\relax }}{69}{table.caption.8}\protected@file@percent }
-\newlabel{tab:e2e-basis}{{6}{69}{Grundlegende End-to-End-Szenarien\relax }{table.caption.8}{}}
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces End-to-End-Szenarien für Enforcement und Fehlerverhalten\relax }}{70}{table.caption.9}\protected@file@percent }
-\newlabel{tab:e2e-enforcement}{{7}{70}{End-to-End-Szenarien für Enforcement und Fehlerverhalten\relax }{table.caption.9}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Ergebnisse}{71}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}Ergebnisse der funktionalen Prüfungen}{71}{subsubsection.6.3.1}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Zusammenfassung der funktionalen Testergebnisse\relax }}{72}{table.caption.10}\protected@file@percent }
-\newlabel{tab:funktionale-ergebnisse}{{8}{72}{Zusammenfassung der funktionalen Testergebnisse\relax }{table.caption.10}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}Robustheit und Grenzen des Entzugsmechanismus}{72}{subsubsection.6.3.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.3}Quantitative Ergebnisse}{73}{subsubsection.6.3.3}\protected@file@percent }
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{73}{table.caption.11}\protected@file@percent }
-\newlabel{tab:performance-ergebnisse}{{9}{73}{Quantitative Messergebnisse auf dem Zielsystem\relax }{table.caption.11}{}}
-\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{73}{table.caption.11}\protected@file@percent }
-\newlabel{tab:performance-ergebnisse}{{10}{73}{Quantitative Messergebnisse auf dem Zielsystem\relax }{table.caption.11}{}}
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.4}Bewertung der Anforderungen}{74}{subsubsection.6.3.4}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{76}{section.7}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Zusammenfassung und Beantwortung der Forschungsfrage}{76}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Grenzen der Ergebnisse}{77}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Ausblick}{78}{subsection.7.3}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Grundlegende End-to-End-Szenarien\relax }}{68}{table.caption.10}\protected@file@percent }
+\newlabel{tab:e2e-basis}{{6}{68}{Grundlegende End-to-End-Szenarien\relax }{table.caption.10}{}}
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces End-to-End-Szenarien für Enforcement und Fehlerverhalten\relax }}{69}{table.caption.11}\protected@file@percent }
+\newlabel{tab:e2e-enforcement}{{7}{69}{End-to-End-Szenarien für Enforcement und Fehlerverhalten\relax }{table.caption.11}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Ergebnisse}{70}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}Ergebnisse der funktionalen Prüfungen}{70}{subsubsection.6.3.1}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Zusammenfassung der funktionalen Testergebnisse\relax }}{71}{table.caption.12}\protected@file@percent }
+\newlabel{tab:funktionale-ergebnisse}{{8}{71}{Zusammenfassung der funktionalen Testergebnisse\relax }{table.caption.12}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}Robustheit und Grenzen des Entzugsmechanismus}{71}{subsubsection.6.3.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.3}Quantitative Ergebnisse}{72}{subsubsection.6.3.3}\protected@file@percent }
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{72}{table.caption.13}\protected@file@percent }
+\newlabel{tab:performance-ergebnisse}{{9}{72}{Quantitative Messergebnisse auf dem Zielsystem\relax }{table.caption.13}{}}
+\@writefile{lot}{\defcounter {refsection}{0}\relax }\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{72}{table.caption.13}\protected@file@percent }
+\newlabel{tab:performance-ergebnisse}{{10}{72}{Quantitative Messergebnisse auf dem Zielsystem\relax }{table.caption.13}{}}
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.4}Bewertung der Anforderungen}{73}{subsubsection.6.3.4}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {section}{\numberline {7}Zusammenfassung und Ausblick}{75}{section.7}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Zusammenfassung und Beantwortung der Forschungsfrage}{75}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Grenzen der Ergebnisse}{76}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\defcounter {refsection}{0}\relax }\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Ausblick}{77}{subsection.7.3}\protected@file@percent }
 \abx@aux@read@bbl@mdfivesum{D4B6AB6898F941F02E0C37A24260D437}
 \abx@aux@refcontextdefaultsdone
 \abx@aux@defaultrefcontext{0}{anderson1972computer}{nyt/global//global/global}
@@ -344,4 +346,4 @@
 \abx@aux@defaultrefcontext{0}{cargoBuildScripts}{nyt/global//global/global}
 \abx@aux@defaultrefcontext{0}{rustPlatformSupport}{nyt/global//global/global}
 \abx@aux@defaultrefcontext{0}{wright2002linux}{nyt/global//global/global}
-\gdef \@abspage@last{86}
+\gdef \@abspage@last{87}

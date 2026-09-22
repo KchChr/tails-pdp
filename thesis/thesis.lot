@@ -1,0 +1,22 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\babel@toc {german}{}
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {1}{\ignorespaces Aufteilung des Rust-Workspaces in Crates und Verantwortlichkeiten\relax }}{38}{table.caption.4}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {2}{\ignorespaces Gepinnte eBPF-Maps als Map-ABI des Prototyps\relax }}{42}{table.caption.6}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {3}{\ignorespaces Wirkung der Beispielpolicy ohne weitere Deny-Policies\relax }}{48}{table.caption.7}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {4}{\ignorespaces Hard- und Softwarekonfiguration der Testumgebung\relax }}{64}{table.caption.8}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {5}{\ignorespaces Teststufen der Evaluation\relax }}{65}{table.caption.9}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {6}{\ignorespaces Grundlegende End-to-End-Szenarien\relax }}{68}{table.caption.10}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {7}{\ignorespaces End-to-End-Szenarien für Enforcement und Fehlerverhalten\relax }}{69}{table.caption.11}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {8}{\ignorespaces Zusammenfassung der funktionalen Testergebnisse\relax }}{71}{table.caption.12}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {9}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{72}{table.caption.13}%
+\defcounter {refsection}{0}\relax 
+\contentsline {table}{\numberline {10}{\ignorespaces Quantitative Messergebnisse auf dem Zielsystem\relax }}{72}{table.caption.13}%

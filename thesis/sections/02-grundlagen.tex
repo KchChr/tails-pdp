@@ -118,8 +118,8 @@ Der Userspace liest Policies und Attribute ein, validiert sie und übersetzt sie
 Der Kernelspace übernimmt dagegen die Entscheidung an den relevanten Zugriffspunkten. 
 Diese Aufteilung reduziert die Komplexität im Kernel, ohne die Durchsetzung vollständig aus dem sicherheitsrelevanten Ausführungspfad herauszulösen.
 
-\subsection{Linux Security Modules und Linux Security Module-Hooks}
-LSM stellen ein Framework bereit, über das Sicherheitsmodule an sicherheitsrelevanten Stellen des Kernels Entscheidungen treffen können.
+\subsection{LSM und Linux LSM-Hooks}
+Linux Security Modules (LSM) stellen ein Framework bereit, über das Sicherheitsmodule an sicherheitsrelevanten Stellen des Kernels Entscheidungen treffen können.
 Die Kernel-Dokumentation beschreibt LSM als Schnittstelle für Sicherheitsmodule wie SELinux, Smack, AppArmor oder TOMOYO \citep{kernelorgLSM}. 
 Aus technischer Sicht werden dafür Hooks verwendet, die an bestimmten Punkten im Kernel-Ausführungspfad aufgerufen werden.
 
@@ -129,8 +129,8 @@ Damit eignen sich LSM-Hooks grundsätzlich als technische Grundlage für einen R
 
 Für den Prototyp ist der LSM-Hook \texttt{file\_open} maßgeblich. Er wird beim Öffnen einer Datei aufgerufen und deckt damit die in dieser Arbeit betrachtete Operation ab. Seine Entscheidung bezieht sich jedoch ausschließlich auf den aktuellen Öffnungsvorgang. Ändern sich Attribute erst danach, wird ein bereits geöffneter Dateizugriff nicht erneut durch denselben Hook bewertet. Daher ist für solche bestehenden Zugriffssituationen eine ergänzende nachträgliche Überwachung erforderlich.
 
-\subsection{extended Berkeley Packet Filter und extended Berkeley Packet Filter-Linux Security Module}
-Der eBPF ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können.
+\subsection{eBPF und eBPF-LSM}
+Der extended Berkeley Packet Filter (eBPF) ist ein Mechanismus, mit dem Programme in einer eingeschränkten Ausführungsumgebung im Linux-Kernel ausgeführt werden können.
 Die Programme werden vor der Ausführung durch den Kernel geprüft und können an verschiedene Ereignisse oder Hook-Typen gebunden werden. 
 Historisch steht BPF für Berkeley Packet Filter. 
 Die heute im Linux-Kernel verwendete erweiterte Form wird meist als eBPF bezeichnet; die Kernel-Dokumentation verwendet für das moderne Subsystem jedoch häufig weiterhin die Bezeichnung BPF. 
