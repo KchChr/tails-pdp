@@ -1,0 +1,6 @@
+policy "deny test systemattributes"
+deny
+    action == "file_open";
+    subject.uid == 1000;
+    subject.access-level >= 3;
+    resource.path == "/home/hntr/test.txt";
