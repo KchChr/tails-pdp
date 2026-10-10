@@ -1,0 +1,25 @@
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-iy7a07nk/CHAR-01/policies generation=1 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=1 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-iy7a07nk/CHAR-01/attributes'
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=1 count=1
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=1 activated; userspace PEP re-evaluation coalesced
+[INFO  tails_pdp] Watching policy directory '/tmp/tails-eval-iy7a07nk/CHAR-01/policies'
+[INFO  tails_pdp] Waiting for Ctrl-C...
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-iy7a07nk/CHAR-01/attributes'
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:1] policy_generation=1 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-iy7a07nk/CHAR-01/policies generation=2 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=2 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:2] policy_generation=2 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205048 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205048 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205048 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205048 fd=8 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205048 fd=9 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205052 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205052 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205052 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205052 fd=8 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=205052 fd=9 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=1 violations=10 revocation_attempts=10
+[INFO  tails_pdp] Exiting...

@@ -1,0 +1,67 @@
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-oma1c72v/E2E-12/policies generation=1 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=1 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-oma1c72v/E2E-12/attributes'
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=1 count=1
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=1 activated; userspace PEP re-evaluation coalesced
+[INFO  tails_pdp] Watching policy directory '/tmp/tails-eval-oma1c72v/E2E-12/policies'
+[INFO  tails_pdp] Waiting for Ctrl-C...
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-oma1c72v/E2E-12/attributes'
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:1] policy_generation=1 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=2 count=1
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=2 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:2] policy_generation=1 attribute_generation=2
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=2 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=3 count=2
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=3 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:3] policy_generation=1 attribute_generation=3
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=3 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=4 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=4 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:4] policy_generation=1 attribute_generation=4
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=4 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-oma1c72v/E2E-12/policies generation=2 file_open_static=0 file_open_stream=1
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=2 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:2] policy_generation=2 attribute_generation=4
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=4 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=5 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=5 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:5] policy_generation=2 attribute_generation=5
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=5 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=6 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=6 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:6] policy_generation=2 attribute_generation=6
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=6 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=7 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=7 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:7] policy_generation=2 attribute_generation=7
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=7 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=8 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=8 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:8] policy_generation=2 attribute_generation=8
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=8 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=9 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=9 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:9] policy_generation=2 attribute_generation=9
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=9 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=10 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=10 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:10] policy_generation=2 attribute_generation=10
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=10 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=11 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=11 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:11] policy_generation=2 attribute_generation=11
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=11 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=12 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=12 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:12] policy_generation=2 attribute_generation=12
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=12 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=13 count=2
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=13 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:13] policy_generation=2 attribute_generation=13
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=13 violations=0 revocation_attempts=0
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=14 count=3
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=14 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[attributes:14] policy_generation=2 attribute_generation=14
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=14 violations=0 revocation_attempts=0
+[INFO  tails_pdp] Exiting...

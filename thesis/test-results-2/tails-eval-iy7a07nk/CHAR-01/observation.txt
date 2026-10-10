@@ -1,0 +1,1 @@
+dup-/fork-FDs entzogen; mmap in Eltern- und Kindprozess weiterhin lesbar.

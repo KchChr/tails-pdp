@@ -58,7 +58,16 @@ Die Suite entfernt beim Aufräumen nur ihre bekannten Maps und eigenen Prozesse.
 Testsuiten dürfen nicht parallel gestartet werden. Die Evaluation verwendet eine
 Sperrdatei; der Runner `tests/test-e2e.sh` kennt diese Sperre nicht.
 
-Alle Artefakte bleiben unter dem ausgegebenen `/tmp/tails-eval-...` erhalten:
+Bei `./test.sh` werden der vollständige Konsolenmitschnitt, Schritt- und Gesamtexitstatus sowie
+Quellstand und Systemangaben unter `test-results/<UTC-Zeitstempel>-<eindeutiger Suffix>/`
+im Repository gespeichert. Die gemeinsame E2E-Umgebung wird unter `e2e-shared/` archiviert,
+die isolierten Szenarioläufe unter `evaluation/tails-eval-.../`. Auch fehlgeschlagene Läufe
+bleiben erhalten. Diese generierten Verzeichnisse sind von Git ausgeschlossen.
+
+Während der Ausführung bleiben die kurzen Fixture-Pfade unter `/tmp`, damit längere
+Repository-Pfade nicht die Policy-Pfadgrenze überschreiten oder die Messungen verändern.
+Beim direkten Aufruf der einzelnen Runner bleiben die Artefakte wie bisher unter
+dem ausgegebenen `/tmp/tails-eval-...` erhalten:
 `report.json`, Runtime- und Kernel-Logs, Hilfsprozessergebnisse und Fehlerdetails.
 Exitstatus 1 bedeutet mindestens einen fehlgeschlagenen Test. Insbesondere
 bekannte Produktfehler werden nicht als bestandene Tests behandelt.

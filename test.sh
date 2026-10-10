@@ -15,6 +15,43 @@ set -Eeuo pipefail
 readonly PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd -- "$PROJECT_ROOT"
 
+# Ein eigener Laufordner verhindert das Überschreiben früherer Nachweise. Der äußere
+# Prozess wartet auf tee, damit der Mitschnitt vor der Rückgabe vollständig geschrieben ist.
+if [[ "${TAILS_PDP_TEST_LOGGED:-0}" != 1 ]]; then
+    mkdir -p "$PROJECT_ROOT/test-results"
+    TAILS_PDP_TEST_RESULTS_DIR="$(mktemp -d "$PROJECT_ROOT/test-results/$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+    export TAILS_PDP_TEST_RESULTS_DIR
+    {
+        printf 'Started (UTC): %s\n' "$(date -u +%FT%TZ)"
+        printf 'Commit: %s\n' "$(git rev-parse HEAD)"
+        printf 'System: %s\n' "$(uname -a)"
+        printf '\nWorking tree:\n'
+        git status --short
+    } >"$TAILS_PDP_TEST_RESULTS_DIR/metadata.txt"
+    git diff HEAD -- >"$TAILS_PDP_TEST_RESULTS_DIR/source.diff"
+    printf 'step\texit_status\n' >"$TAILS_PDP_TEST_RESULTS_DIR/steps.tsv"
+
+    set +e
+    TAILS_PDP_TEST_LOGGED=1 bash "$PROJECT_ROOT/test.sh" "$@" 2>&1 \
+        | tee "$TAILS_PDP_TEST_RESULTS_DIR/console.log"
+    pipeline_status=("${PIPESTATUS[@]}")
+    set -e
+    status="${pipeline_status[0]}"
+    # Auch ein nicht schreibbarer Mitschnitt darf keinen erfolgreichen Nachweis liefern.
+    if [[ "$status" -eq 0 && "${pipeline_status[1]}" -ne 0 ]]; then
+        status="${pipeline_status[1]}"
+    fi
+    printf '%s\n' "$status" >"$TAILS_PDP_TEST_RESULTS_DIR/exit-status.txt"
+    {
+        printf '\nExitstatus: %s\n' "$status"
+        printf 'Ergebnisse und Konsolenmitschnitt: %s\n' "$TAILS_PDP_TEST_RESULTS_DIR"
+    } | tee -a "$TAILS_PDP_TEST_RESULTS_DIR/console.log"
+    printf 'Finished (UTC): %s\n' "$(date -u +%FT%TZ)" >>"$TAILS_PDP_TEST_RESULTS_DIR/metadata.txt"
+    exit "$status"
+fi
+
+printf 'Ergebnisverzeichnis: %s\n' "$TAILS_PDP_TEST_RESULTS_DIR"
+
 # Aya und die Userspace-Komponenten verwenden Linux-spezifische APIs. Die vollständige Suite ist
 # deshalb bewusst ein Zielsystem-Test und nicht nativ unter macOS ausführbar.
 if [[ "$(uname -s)" != "Linux" ]]; then
@@ -58,7 +95,10 @@ run_step() {
 
     echo
     echo "==> $description"
-    "$@"
+    local status=0
+    "$@" || status=$?
+    printf '%s\t%s\n' "$description" "$status" >>"$TAILS_PDP_TEST_RESULTS_DIR/steps.tsv"
+    return "$status"
 }
 
 run_privileged_step() {
@@ -69,7 +109,7 @@ run_privileged_step() {
         run_step "$description" "$@"
     else
         run_step "$description" \
-            sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,EVAL_TIMEOUT,EVAL_REPEATS,EVAL_STAB_CYCLES \
+            sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,EVAL_TIMEOUT,EVAL_REPEATS,EVAL_STAB_CYCLES,TAILS_PDP_TEST_RESULTS_DIR \
             "$@"
     fi
 }

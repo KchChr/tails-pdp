@@ -20,9 +20,9 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \textit{Akzeptanzkriterium:} Eine im Policy-Verzeichnis abgelegte Policy wird erkannt und für die weitere Verarbeitung bereitgestellt.
 
     \item[FA-02 Policy-Verwaltung:]
-    Der Prototyp muss Änderungen an Policies erkennen und aktualisierte Policies in die Zugriffskontrolle übernehmen können.
+    Der Prototyp muss über das vorgesehene Veröffentlichungsverfahren bereitgestellte Policyänderungen sowie das Entfernen aktiver Policy-Dateien erkennen und in die Zugriffskontrolle übernehmen können.
     
-    \textit{Akzeptanzkriterium:} Wird eine Policy geändert, hinzugefügt oder entfernt, wird diese Änderung vom System verarbeitet.
+    \textit{Akzeptanzkriterium:} Wird eine neue oder geänderte Policy über das vorgesehene Verfahren veröffentlicht oder eine aktive Policy-Datei entfernt, wird diese Änderung vom System verarbeitet. Direktes Überschreiben aktiver Dateien während des Betriebs ist kein unterstützter Aktualisierungsweg. Vor dem Start kann der anfängliche Dateibestand regulär vorbereitet werden.
 
     \item[FA-03 Zugriffskontrolle bei Dateiöffnungen:]
     Der Prototyp muss Dateiöffnungen über den LSM-Hook \texttt{file\_open} abfangen können.
@@ -37,7 +37,7 @@ Im Kontext dieser Arbeit betreffen sie insbesondere das Einlesen und Verarbeiten
     \item[FA-05 Unterstützung dynamischer Attribute:]
     Der Prototyp muss dynamische Attribute, beispielsweise Zeitinformationen oder externe Zustandsinformationen, in Zugriffsentscheidungen einbeziehen können.
     
-    \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen.
+    \textit{Akzeptanzkriterium:} Eine Änderung eines dynamischen Attributs kann zu einer veränderten Zugriffsentscheidung führen. Für dateibasierte Attribute werden Änderungen über das vorgesehene Veröffentlichungsverfahren sowie das Entfernen aktiver Attributdateien verarbeitet; direktes Überschreiben aktiver Dateien während des Betriebs ist kein unterstützter Aktualisierungsweg.
 
     \item[FA-06 Überwachung und Enforcement bestehender Dateizugriffe:]
     Der Prototyp muss bereits bestehende Dateizugriffe überwachen und versuchen, sie durch Schließen des betroffenen FDs zu beenden, wenn sie durch entscheidungsrelevante Policy- oder Attributänderungen unzulässig werden.
@@ -97,7 +97,7 @@ Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation si
     \item[OA-04 Reproduzierbarkeit:]
     Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.
     
-    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen und wiederholt< werden können.
+    \textit{Akzeptanzkriterium:} Testumgebung, Policies und Testszenarien werden so beschrieben, dass die Ergebnisse nachvollzogen und wiederholt werden können.
 \end{description}
 
 \subsection{Entwicklungsbezogene Anforderungen}

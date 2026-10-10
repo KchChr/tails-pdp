@@ -1,0 +1,5 @@
+generation policy=3 policy_bank_offset=16 attribute=2 attribute_bank=0
+
+ATTRIBUTES:
+system.defcon = 2
+

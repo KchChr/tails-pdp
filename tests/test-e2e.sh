@@ -31,7 +31,7 @@ readonly SCENARIOS=(
 # Root wird für BPF-LSM, gepinnte Maps und ptrace-basiertes FD-Enforcement
 # benötigt. Beim erneuten Aufruf bleiben nur unterstützte Variablen erhalten.
 if [[ "${EUID}" -ne 0 ]]; then
-    exec sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS "$0" "$@"
+    exec sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,TAILS_PDP_TEST_RESULTS_DIR "$0" "$@"
 fi
 
 if [[ "$(uname -s)" != "Linux" ]]; then
@@ -99,6 +99,18 @@ cleanup() {
 
     # Gepinnte Test-Maps dürfen nachfolgende Läufe nicht beeinflussen.
     bash "$PROJECT_ROOT/remove_maps.sh" >/dev/null 2>&1 || true
+
+    if [[ -n "${TAILS_PDP_TEST_RESULTS_DIR:-}" ]]; then
+        local archive="$TAILS_PDP_TEST_RESULTS_DIR/e2e-shared"
+        if cp -a -- "$TEST_ROOT" "$archive"; then
+            if [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]]; then
+                chown -R -- "$SUDO_UID:$SUDO_GID" "$archive" || status=1
+            fi
+        else
+            echo "Fehler: E2E-Diagnoseartefakte konnten nicht archiviert werden." >&2
+            status=1
+        fi
+    fi
 
     if [[ "$status" -eq 0 ]]; then
         rm -rf -- "$TEST_ROOT"

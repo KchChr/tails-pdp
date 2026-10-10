@@ -1,0 +1,5 @@
+policy "static-7"
+permit
+ action == "file_open";
+ resource.path == "/tmp/tails-eval-iy7a07nk/LOAD-01/target";
+

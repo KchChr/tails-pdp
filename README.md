@@ -47,6 +47,16 @@ Run the complete test and evaluation chain on the dedicated Linux target with:
 
 The script runs formatting, unit tests, Clippy, and the release build first. It then requests root
 privileges for the verifier, LSM attach, enforcement, performance, capacity, and stability tests.
+Each invocation creates `test-results/<UTC timestamp>-<unique suffix>/` in the repository:
+
+- `console.log`: combined standard output and standard error from the complete chain.
+- `steps.tsv` and `exit-status.txt`: executed steps and their exit statuses, including failures.
+- `metadata.txt` and `source.diff`: timestamps, commit, system, working-tree status and tracked changes.
+- `e2e-shared/` and `evaluation/`: E2E fixtures, runtime logs, scenario reports and raw measurements.
+
+Results remain available after a failed run. Fixture paths stay under `/tmp` during execution and
+are copied afterwards, preserving the path lengths used by the tests. Generated `test-results/`
+directories are ignored by Git; select the relevant evidence separately for the thesis archive.
 The individual privileged runners remain available for targeted repetitions:
 
 ```shell
@@ -61,7 +71,7 @@ sudo ./tests/test-evaluation.sh
 ```
 
 Individual IDs can be appended, for example `E2E-12 PERF-02`. Each scenario has its own Bash file;
-`sudo ./tests/test-e2e.sh` runs E2E-01 through E2E-17. The runner preserves
+`sudo ./tests/test-e2e.sh` runs E2E-01 through E2E-19. The runner preserves
 all results and logs and returns a failure status for unmet expectations. See
 [execution details](tests/evaluation/README.md) and the
 [test evaluation](thesis/Testbewertung.md) for measured results and known failures.

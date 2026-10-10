@@ -33,4 +33,5 @@ __pycache__/
 
 # Temporary previews and editor backup copies
 /tmp/
+/test-results/
 *.bak

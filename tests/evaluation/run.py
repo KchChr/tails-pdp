@@ -36,6 +36,8 @@ def main():
     # Refuse to delete pre-existing state. Only maps created by this run are removed.
     assert not any((PIN / name).exists() for name in MAPS), "pinned maps already exist; inspect/clean them first"
     root = Path(tempfile.mkdtemp(prefix="tails-eval-", dir="/tmp"))
+    if os.environ.get("EVAL_ARTIFACT_PATH_FILE"):
+        Path(os.environ["EVAL_ARTIFACT_PATH_FILE"]).write_text(str(root) + "\n")
     print(f"Artifacts: {root}", flush=True)
     report = {"runner": "bash-scenarios", "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT, text=True).strip(),
         "kernel": platform.uname()._asdict(), "python": sys.version, "repeats": REPEATS,
