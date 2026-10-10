@@ -1,0 +1,11 @@
+generation policy=2 policy_bank_offset=0 attribute=2 attribute_bank=0
+
+FILE_OPEN_STATIC_POLICIES:
+
+FILE_OPEN_STREAM_POLICIES:
+[0] enabled=1 entitlement=Deny subject=any command="" resource="/tmp/tails-eval-1qatkm5o/E2E-14/target" device=8388610 inode=2363499 legacy_condition=none
+    attribute_condition=system.defcon LessThanOrEqual 2
+
+ATTRIBUTES:
+system.defcon = 2
+

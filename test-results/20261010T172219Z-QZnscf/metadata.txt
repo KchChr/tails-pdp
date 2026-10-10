@@ -1,0 +1,11 @@
+Started (UTC): 2026-10-10T17:22:19Z
+Commit: a9fd6c0198e18e22faf3dc6fcf51830ec5bff98b
+System: Linux nixos 6.16.12 #1-NixOS SMP PREEMPT_DYNAMIC Sun Oct 12 11:01:05 UTC 2025 x86_64 GNU/Linux
+
+Working tree:
+ M attributes/subjects/1000.attributes
+ M attributes/system.attributes
+?? examples/101-file-open-static-deny-tail-test.policy
+?? policies/100-test.policy
+?? policies/l
+Finished (UTC): 2026-10-10T17:23:32Z

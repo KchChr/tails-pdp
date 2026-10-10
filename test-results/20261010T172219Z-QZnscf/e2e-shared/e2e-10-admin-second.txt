@@ -1,0 +1,10 @@
+generation policy=16 policy_bank_offset=0 attribute=11 attribute_bank=1
+
+FILE_OPEN_STATIC_POLICIES:
+[0] enabled=1 entitlement=Deny subject=any command="" resource="/tmp/tails-pdp-e2e.8bX3VG/protected.txt" device=8388610 inode=2363441
+
+FILE_OPEN_STREAM_POLICIES:
+
+ATTRIBUTES:
+system.defcon = 5
+

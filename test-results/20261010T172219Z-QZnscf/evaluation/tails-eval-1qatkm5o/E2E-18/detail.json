@@ -1,0 +1,25 @@
+{
+  "trigger": "attribute-only",
+  "generations_before": [
+    2,
+    1
+  ],
+  "generations_after": [
+    2,
+    2
+  ],
+  "attribute_change_ns": 2608317225110341,
+  "probe": {
+    "closed": [
+      true,
+      true,
+      true
+    ],
+    "safe_open": [
+      true,
+      true
+    ],
+    "observed_ns": 2608317233851061,
+    "observed_unix_ns": 1791652954216494287
+  }
+}

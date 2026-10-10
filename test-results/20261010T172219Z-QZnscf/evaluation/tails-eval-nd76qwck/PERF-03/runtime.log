@@ -1,0 +1,286 @@
+PDP_TIMING event=policy_activation_started ns=2608336327633791 generation=1
+PDP_TIMING event=policy_activation_completed ns=2608336327675016 generation=1
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=1 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=1 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-nd76qwck/PERF-03/attributes'
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=1 count=1
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=1 activated; userspace PEP re-evaluation coalesced
+[INFO  tails_pdp] Watching policy directory '/tmp/tails-eval-nd76qwck/PERF-03/policies'
+[INFO  tails_pdp] Waiting for Ctrl-C...
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-nd76qwck/PERF-03/attributes'
+PDP_TIMING event=policy_waiting ns=2608336330102343 generation=0
+PDP_TIMING event=scan_started ns=2608336330173408 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:1] policy_generation=1 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608336337279471 generation=0
+PDP_TIMING event=policy_event_received ns=2608336756139889 generation=0
+PDP_TIMING event=policy_commit_started ns=2608336756237453 generation=0
+PDP_TIMING event=policy_activation_started ns=2608336756307928 generation=2
+PDP_TIMING event=policy_activation_completed ns=2608336756317980 generation=2
+PDP_TIMING event=policy_commit_completed ns=2608336756326037 generation=2
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=2 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=2 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608336756346026 generation=0
+PDP_TIMING event=scan_started ns=2608336756356109 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:2] policy_generation=2 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218514 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218514 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218514 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608336765011557 generation=0
+PDP_TIMING event=policy_event_received ns=2608336777683138 generation=0
+PDP_TIMING event=policy_commit_started ns=2608336777727601 generation=0
+PDP_TIMING event=policy_activation_started ns=2608336777778702 generation=3
+PDP_TIMING event=policy_activation_completed ns=2608336777789127 generation=3
+PDP_TIMING event=policy_commit_completed ns=2608336777798056 generation=3
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=3 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=3 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608336777836790 generation=0
+PDP_TIMING event=scan_started ns=2608336777847571 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:3] policy_generation=3 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=3 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608336785598650 generation=0
+PDP_TIMING event=policy_event_received ns=2608337131072994 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337131188510 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337131264775 generation=4
+PDP_TIMING event=policy_activation_completed ns=2608337131275328 generation=4
+PDP_TIMING event=policy_commit_completed ns=2608337131283878 generation=4
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=4 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=4 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337131303925 generation=0
+PDP_TIMING event=scan_started ns=2608337131314142 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:4] policy_generation=4 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218519 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218519 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218519 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=4 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608337140024797 generation=0
+PDP_TIMING event=policy_event_received ns=2608337152315108 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337152385715 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337152458633 generation=5
+PDP_TIMING event=policy_activation_completed ns=2608337152475178 generation=5
+PDP_TIMING event=policy_commit_completed ns=2608337152487738 generation=5
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=5 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=5 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337152516018 generation=0
+PDP_TIMING event=scan_started ns=2608337152529728 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:5] policy_generation=5 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=5 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608337160608822 generation=0
+PDP_TIMING event=policy_event_received ns=2608337502920615 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337502994007 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337503094000 generation=6
+PDP_TIMING event=policy_activation_completed ns=2608337503118896 generation=6
+PDP_TIMING event=policy_commit_completed ns=2608337503127252 generation=6
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=6 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=6 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337503146322 generation=0
+PDP_TIMING event=scan_started ns=2608337503157060 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:6] policy_generation=6 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218524 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218524 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218524 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=6 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608337511925584 generation=0
+PDP_TIMING event=policy_event_received ns=2608337524268148 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337524314008 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337524367211 generation=7
+PDP_TIMING event=policy_activation_completed ns=2608337524377722 generation=7
+PDP_TIMING event=policy_commit_completed ns=2608337524392987 generation=7
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=7 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=7 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337524415069 generation=0
+PDP_TIMING event=scan_started ns=2608337524432425 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:7] policy_generation=7 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=7 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608337533650830 generation=0
+PDP_TIMING event=policy_event_received ns=2608337881853741 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337881945607 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337882061717 generation=8
+PDP_TIMING event=policy_activation_completed ns=2608337882078910 generation=8
+PDP_TIMING event=policy_commit_completed ns=2608337882087009 generation=8
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=8 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=8 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337882123248 generation=0
+PDP_TIMING event=scan_started ns=2608337882134099 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:8] policy_generation=8 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218529 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218529 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218529 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=8 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608337890974338 generation=0
+PDP_TIMING event=policy_event_received ns=2608337903361261 generation=0
+PDP_TIMING event=policy_commit_started ns=2608337903423740 generation=0
+PDP_TIMING event=policy_activation_started ns=2608337903476306 generation=9
+PDP_TIMING event=policy_activation_completed ns=2608337903486480 generation=9
+PDP_TIMING event=policy_commit_completed ns=2608337903494693 generation=9
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=9 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=9 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608337903515071 generation=0
+PDP_TIMING event=scan_started ns=2608337903544431 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:9] policy_generation=9 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=9 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608337911315171 generation=0
+PDP_TIMING event=policy_event_received ns=2608338259376687 generation=0
+PDP_TIMING event=policy_commit_started ns=2608338259469074 generation=0
+PDP_TIMING event=policy_activation_started ns=2608338259527956 generation=10
+PDP_TIMING event=policy_activation_completed ns=2608338259539086 generation=10
+PDP_TIMING event=policy_commit_completed ns=2608338259547677 generation=10
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=10 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=10 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608338259568595 generation=0
+PDP_TIMING event=scan_started ns=2608338259578880 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:10] policy_generation=10 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218534 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218534 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218534 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=10 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608338268090256 generation=0
+PDP_TIMING event=policy_event_received ns=2608338276315007 generation=0
+PDP_TIMING event=policy_commit_started ns=2608338276358195 generation=0
+PDP_TIMING event=policy_activation_started ns=2608338276410283 generation=11
+PDP_TIMING event=policy_activation_completed ns=2608338276420581 generation=11
+PDP_TIMING event=policy_commit_completed ns=2608338276428928 generation=11
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=11 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=11 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608338276448640 generation=0
+PDP_TIMING event=scan_started ns=2608338276476528 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:11] policy_generation=11 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=11 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608338284252296 generation=0
+PDP_TIMING event=policy_event_received ns=2608338628376471 generation=0
+PDP_TIMING event=policy_commit_started ns=2608338633079119 generation=0
+PDP_TIMING event=policy_activation_started ns=2608338633152306 generation=12
+PDP_TIMING event=policy_activation_completed ns=2608338633162613 generation=12
+PDP_TIMING event=policy_commit_completed ns=2608338633170943 generation=12
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=12 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=12 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608338633192714 generation=0
+PDP_TIMING event=scan_started ns=2608338633203495 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:12] policy_generation=12 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218539 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218539 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218539 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=12 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608338642126592 generation=0
+PDP_TIMING event=policy_event_received ns=2608338652603950 generation=0
+PDP_TIMING event=policy_commit_started ns=2608338652651325 generation=0
+PDP_TIMING event=policy_activation_started ns=2608338652703547 generation=13
+PDP_TIMING event=policy_activation_completed ns=2608338652714184 generation=13
+PDP_TIMING event=policy_commit_completed ns=2608338652722643 generation=13
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=13 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=13 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608338652743439 generation=0
+PDP_TIMING event=scan_started ns=2608338652753886 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:13] policy_generation=13 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=13 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608338660404030 generation=0
+PDP_TIMING event=policy_event_received ns=2608339005759228 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339005864253 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339005923698 generation=14
+PDP_TIMING event=policy_activation_completed ns=2608339005934295 generation=14
+PDP_TIMING event=policy_commit_completed ns=2608339005942749 generation=14
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=14 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=14 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339005980739 generation=0
+PDP_TIMING event=scan_started ns=2608339005993245 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:14] policy_generation=14 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218544 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218544 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218544 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=14 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608339015295291 generation=0
+PDP_TIMING event=policy_event_received ns=2608339027160341 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339027207475 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339027260595 generation=15
+PDP_TIMING event=policy_activation_completed ns=2608339027271295 generation=15
+PDP_TIMING event=policy_commit_completed ns=2608339027279540 generation=15
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=15 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=15 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339027318559 generation=0
+PDP_TIMING event=scan_started ns=2608339027329542 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:15] policy_generation=15 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=15 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608339035669974 generation=0
+PDP_TIMING event=policy_event_received ns=2608339380228724 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339380347909 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339380419203 generation=16
+PDP_TIMING event=policy_activation_completed ns=2608339380433672 generation=16
+PDP_TIMING event=policy_commit_completed ns=2608339380444501 generation=16
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=16 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=16 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339380479531 generation=0
+PDP_TIMING event=scan_started ns=2608339380493210 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:16] policy_generation=16 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218549 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218549 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218549 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=16 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608339388990128 generation=0
+PDP_TIMING event=policy_event_received ns=2608339397561359 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339397616292 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339397687185 generation=17
+PDP_TIMING event=policy_activation_completed ns=2608339397703134 generation=17
+PDP_TIMING event=policy_commit_completed ns=2608339397716348 generation=17
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=17 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=17 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339397743746 generation=0
+PDP_TIMING event=scan_started ns=2608339397757676 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:17] policy_generation=17 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=17 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608339405852381 generation=0
+PDP_TIMING event=policy_event_received ns=2608339751963052 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339752101895 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339752175219 generation=18
+PDP_TIMING event=policy_activation_completed ns=2608339752186580 generation=18
+PDP_TIMING event=policy_commit_completed ns=2608339752195196 generation=18
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=18 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=18 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339752215802 generation=0
+PDP_TIMING event=scan_started ns=2608339752226424 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:18] policy_generation=18 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218554 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218554 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218554 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=18 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608339760984347 generation=0
+PDP_TIMING event=policy_event_received ns=2608339773651623 generation=0
+PDP_TIMING event=policy_commit_started ns=2608339773710275 generation=0
+PDP_TIMING event=policy_activation_started ns=2608339773784932 generation=19
+PDP_TIMING event=policy_activation_completed ns=2608339773801471 generation=19
+PDP_TIMING event=policy_commit_completed ns=2608339773814492 generation=19
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=19 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=19 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608339773842519 generation=0
+PDP_TIMING event=scan_started ns=2608339773856566 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:19] policy_generation=19 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=19 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608339781721412 generation=0
+PDP_TIMING event=policy_event_received ns=2608340124539813 generation=0
+PDP_TIMING event=policy_commit_started ns=2608340124626583 generation=0
+PDP_TIMING event=policy_activation_started ns=2608340124698301 generation=20
+PDP_TIMING event=policy_activation_completed ns=2608340124708280 generation=20
+PDP_TIMING event=policy_commit_completed ns=2608340124716482 generation=20
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=20 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=20 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608340124745613 generation=0
+PDP_TIMING event=scan_started ns=2608340124755368 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:20] policy_generation=20 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218559 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218559 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218559 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=20 attribute_generation=1 violations=3 revocation_attempts=3
+PDP_TIMING event=scan_completed ns=2608340134101907 generation=0
+PDP_TIMING event=policy_event_received ns=2608340146276913 generation=0
+PDP_TIMING event=policy_commit_started ns=2608340146325620 generation=0
+PDP_TIMING event=policy_activation_started ns=2608340146378629 generation=21
+PDP_TIMING event=policy_activation_completed ns=2608340146389461 generation=21
+PDP_TIMING event=policy_commit_completed ns=2608340146397956 generation=21
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/PERF-03/policies generation=21 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=21 activated; queued userspace PEP re-evaluation
+PDP_TIMING event=policy_waiting ns=2608340146423886 generation=0
+PDP_TIMING event=scan_started ns=2608340146459516 generation=0
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:21] policy_generation=21 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=21 attribute_generation=1 violations=0 revocation_attempts=0
+PDP_TIMING event=scan_completed ns=2608340154900235 generation=0
+[INFO  tails_pdp] Exiting...

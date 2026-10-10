@@ -1,0 +1,25 @@
+{
+  "trigger": "time-only",
+  "boundary_unix_seconds": 1791652965,
+  "generations_before": [
+    2,
+    1
+  ],
+  "generations_after": [
+    2,
+    1
+  ],
+  "probe": {
+    "closed": [
+      true,
+      true,
+      true
+    ],
+    "safe_open": [
+      true,
+      true
+    ],
+    "observed_ns": 2608328396060650,
+    "observed_unix_ns": 1791652965378703604
+  }
+}

@@ -1,0 +1,6 @@
+before=34 4
+after_rejection=34 4
+recovered=34 5
+accepted_per_bank=512
+rejected_new_bank=513
+enforcement=deny-allow-deny

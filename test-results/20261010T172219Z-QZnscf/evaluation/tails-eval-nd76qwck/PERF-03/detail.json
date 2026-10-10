@@ -1,0 +1,380 @@
+{
+  "unit": "ns",
+  "clock": "Linux CLOCK_MONOTONIC",
+  "file_change_to_EBADF": {
+    "n": 10,
+    "median": 9396599.5,
+    "p95": 14239709,
+    "p99": 14239709,
+    "min": 9072657,
+    "max": 14239709,
+    "samples": [
+      9238550,
+      9357636,
+      9209975,
+      9435563,
+      9072657,
+      14239709,
+      10071743,
+      9321251,
+      9442719,
+      9980216
+    ]
+  },
+  "activation_to_EBADF_bounds": [
+    {
+      "lower_ns": 8747158,
+      "upper_ns": 8757210,
+      "activation_bracket_ns": 10052
+    },
+    {
+      "lower_ns": 8967143,
+      "upper_ns": 8977696,
+      "activation_bracket_ns": 10553
+    },
+    {
+      "lower_ns": 8853204,
+      "upper_ns": 8878100,
+      "activation_bracket_ns": 24896
+    },
+    {
+      "lower_ns": 8969521,
+      "upper_ns": 8986714,
+      "activation_bracket_ns": 17193
+    },
+    {
+      "lower_ns": 8716731,
+      "upper_ns": 8727861,
+      "activation_bracket_ns": 11130
+    },
+    {
+      "lower_ns": 8999287,
+      "upper_ns": 9009594,
+      "activation_bracket_ns": 10307
+    },
+    {
+      "lower_ns": 9648374,
+      "upper_ns": 9658971,
+      "activation_bracket_ns": 10597
+    },
+    {
+      "lower_ns": 8812927,
+      "upper_ns": 8827396,
+      "activation_bracket_ns": 14469
+    },
+    {
+      "lower_ns": 9101821,
+      "upper_ns": 9113182,
+      "activation_bracket_ns": 11361
+    },
+    {
+      "lower_ns": 9528858,
+      "upper_ns": 9538837,
+      "activation_bracket_ns": 9979
+    }
+  ],
+  "phases": [
+    {
+      "quiet_policy_wait_ns": 2608336330102343,
+      "rename_start_ns": 2608336755826588,
+      "rename_completed_ns": 2608336755909302,
+      "event_received_ns": 2608336756139889,
+      "activation_started_ns": 2608336756307928,
+      "activation_completed_ns": 2608336756317980,
+      "observed_EBADF_ns": 2608336765065138,
+      "generations_before": [
+        1,
+        1
+      ],
+      "generations_after": [
+        2,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608336765065138,
+        "observed_unix_ns": 1791652973747707826
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608336777836790,
+      "rename_start_ns": 2608337130884835,
+      "rename_completed_ns": 2608337130962895,
+      "event_received_ns": 2608337131072994,
+      "activation_started_ns": 2608337131264775,
+      "activation_completed_ns": 2608337131275328,
+      "observed_EBADF_ns": 2608337140242471,
+      "generations_before": [
+        3,
+        1
+      ],
+      "generations_after": [
+        4,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608337140242471,
+        "observed_unix_ns": 1791652974122885208
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608337152516018,
+      "rename_start_ns": 2608337502762125,
+      "rename_completed_ns": 2608337502826551,
+      "event_received_ns": 2608337502920615,
+      "activation_started_ns": 2608337503094000,
+      "activation_completed_ns": 2608337503118896,
+      "observed_EBADF_ns": 2608337511972100,
+      "generations_before": [
+        5,
+        1
+      ],
+      "generations_after": [
+        6,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608337511972100,
+        "observed_unix_ns": 1791652974494615173
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608337524415069,
+      "rename_start_ns": 2608337881612868,
+      "rename_completed_ns": 2608337881692924,
+      "event_received_ns": 2608337881853741,
+      "activation_started_ns": 2608337882061717,
+      "activation_completed_ns": 2608337882078910,
+      "observed_EBADF_ns": 2608337891048431,
+      "generations_before": [
+        7,
+        1
+      ],
+      "generations_after": [
+        8,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608337891048431,
+        "observed_unix_ns": 1791652974873691490
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608337903515071,
+      "rename_start_ns": 2608338259183160,
+      "rename_completed_ns": 2608338259256071,
+      "event_received_ns": 2608338259376687,
+      "activation_started_ns": 2608338259527956,
+      "activation_completed_ns": 2608338259539086,
+      "observed_EBADF_ns": 2608338268255817,
+      "generations_before": [
+        9,
+        1
+      ],
+      "generations_after": [
+        10,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608338268255817,
+        "observed_unix_ns": 1791652975250898513
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608338276448640,
+      "rename_start_ns": 2608338627922191,
+      "rename_completed_ns": 2608338628106108,
+      "event_received_ns": 2608338628376471,
+      "activation_started_ns": 2608338633152306,
+      "activation_completed_ns": 2608338633162613,
+      "observed_EBADF_ns": 2608338642161900,
+      "generations_before": [
+        11,
+        1
+      ],
+      "generations_after": [
+        12,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608338642161900,
+        "observed_unix_ns": 1791652975624804725
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608338652743439,
+      "rename_start_ns": 2608339005510926,
+      "rename_completed_ns": 2608339005606641,
+      "event_received_ns": 2608339005759228,
+      "activation_started_ns": 2608339005923698,
+      "activation_completed_ns": 2608339005934295,
+      "observed_EBADF_ns": 2608339015582669,
+      "generations_before": [
+        13,
+        1
+      ],
+      "generations_after": [
+        14,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608339015582669,
+        "observed_unix_ns": 1791652975998225628
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608339027318559,
+      "rename_start_ns": 2608339379925348,
+      "rename_completed_ns": 2608339380102033,
+      "event_received_ns": 2608339380228724,
+      "activation_started_ns": 2608339380419203,
+      "activation_completed_ns": 2608339380433672,
+      "observed_EBADF_ns": 2608339389246599,
+      "generations_before": [
+        15,
+        1
+      ],
+      "generations_after": [
+        16,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608339389246599,
+        "observed_unix_ns": 1791652976371889547
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608339397743746,
+      "rename_start_ns": 2608339751845682,
+      "rename_completed_ns": 2608339751911294,
+      "event_received_ns": 2608339751963052,
+      "activation_started_ns": 2608339752175219,
+      "activation_completed_ns": 2608339752186580,
+      "observed_EBADF_ns": 2608339761288401,
+      "generations_before": [
+        17,
+        1
+      ],
+      "generations_after": [
+        18,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608339761288401,
+        "observed_unix_ns": 1791652976743931124
+      }
+    },
+    {
+      "quiet_policy_wait_ns": 2608339773842519,
+      "rename_start_ns": 2608340124256922,
+      "rename_completed_ns": 2608340124360214,
+      "event_received_ns": 2608340124539813,
+      "activation_started_ns": 2608340124698301,
+      "activation_completed_ns": 2608340124708280,
+      "observed_EBADF_ns": 2608340134237138,
+      "generations_before": [
+        19,
+        1
+      ],
+      "generations_after": [
+        20,
+        1
+      ],
+      "probe": {
+        "closed": [
+          true,
+          true,
+          true
+        ],
+        "safe_open": [
+          true,
+          true
+        ],
+        "observed_ns": 2608340134237138,
+        "observed_unix_ns": 1791652977116880094
+      }
+    }
+  ],
+  "publication": "atomic-rename-no-debounce",
+  "note": "instrumented isolated rename; staging outside watched tree; Pending watcher and completed scans stable for 300ms; first event follows measurement start; event timestamp is userspace receipt, activation bracket surrounds map syscall, EBADF is observed by 1ms FD polling; instrumentation overhead included"
+}

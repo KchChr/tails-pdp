@@ -1,0 +1,9 @@
+step	exit_status
+Formatierung prüfen	0
+Atomare Konfigurationsveröffentlichung prüfen	0
+Alle automatisierten Unit- und Komponententests ausführen	0
+PERF-03-Messauswertung prüfen	0
+Clippy ohne Warnungen ausführen	0
+Release-Binaries einschließlich eBPF-Objekt bauen	0
+Alle privilegierten End-to-End-Tests ausführen	0
+Ergänzende Evaluationsszenarien ausführen	0

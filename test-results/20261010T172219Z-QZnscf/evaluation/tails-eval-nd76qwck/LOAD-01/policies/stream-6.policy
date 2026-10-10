@@ -1,0 +1,5 @@
+policy "stream-6"
+permit
+ action == "file_open";
+ resource.path == "/tmp/tails-eval-nd76qwck/LOAD-01/target";
+system.defcon <= 2;

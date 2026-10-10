@@ -1,0 +1,128 @@
+{
+  "runner": "bash-scenarios",
+  "commit": "a9fd6c0198e18e22faf3dc6fcf51830ec5bff98b",
+  "kernel": {
+    "system": "Linux",
+    "node": "nixos",
+    "release": "6.16.12",
+    "version": "#1-NixOS SMP PREEMPT_DYNAMIC Sun Oct 12 11:01:05 UTC 2025",
+    "machine": "x86_64",
+    "processor": ""
+  },
+  "python": "3.12.11 (main, Jun  3 2025, 15:41:47) [GCC 14.3.0]",
+  "repeats": 10,
+  "stability_cycles": 100,
+  "results": {
+    "E2E-11": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-12": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-13": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-14": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-15": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-16": {
+      "status": "PASS",
+      "detail": null
+    },
+    "E2E-17": {
+      "status": "PASS",
+      "detail": {
+        "blocked": {
+          "closed": [
+            false,
+            false,
+            false
+          ],
+          "safe_open": [
+            true,
+            true
+          ],
+          "observed_ns": 2608315804432173,
+          "observed_unix_ns": 1791652952787075789
+        },
+        "healthy": {
+          "closed": [
+            true,
+            true,
+            true
+          ],
+          "safe_open": [
+            true,
+            true
+          ],
+          "observed_ns": 2608315796947146,
+          "observed_unix_ns": 1791652952779590091
+        }
+      }
+    },
+    "E2E-18": {
+      "status": "PASS",
+      "detail": {
+        "trigger": "attribute-only",
+        "generations_before": [
+          2,
+          1
+        ],
+        "generations_after": [
+          2,
+          2
+        ],
+        "attribute_change_ns": 2608317225110341,
+        "probe": {
+          "closed": [
+            true,
+            true,
+            true
+          ],
+          "safe_open": [
+            true,
+            true
+          ],
+          "observed_ns": 2608317233851061,
+          "observed_unix_ns": 1791652954216494287
+        }
+      }
+    },
+    "E2E-19": {
+      "status": "PASS",
+      "detail": {
+        "trigger": "time-only",
+        "boundary_unix_seconds": 1791652965,
+        "generations_before": [
+          2,
+          1
+        ],
+        "generations_after": [
+          2,
+          1
+        ],
+        "probe": {
+          "closed": [
+            true,
+            true,
+            true
+          ],
+          "safe_open": [
+            true,
+            true
+          ],
+          "observed_ns": 2608328396060650,
+          "observed_unix_ns": 1791652965378703604
+        }
+      }
+    }
+  }
+}

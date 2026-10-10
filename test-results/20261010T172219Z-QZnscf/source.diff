@@ -1,0 +1,21 @@
+diff --git a/attributes/subjects/1000.attributes b/attributes/subjects/1000.attributes
+index 6b75a73..8191210 100644
+--- a/attributes/subjects/1000.attributes
++++ b/attributes/subjects/1000.attributes
+@@ -1,6 +1,6 @@
+ # Attributes for UID 1000. Policies refer to these as subject.<name>.
+ position = "engineer"
+ department = "platform"
+-access-level = 3
++access-level = 2
+ on_call = true
+ 
+diff --git a/attributes/system.attributes b/attributes/system.attributes
+index 26668f4..c6ba142 100644
+--- a/attributes/system.attributes
++++ b/attributes/system.attributes
+@@ -1,2 +1,3 @@
+ # System-Attributes. Policies refer to these as system.<name>.
+-defcon = 5
++defcon = 3
++someothercon = "test"

@@ -1,0 +1,5 @@
+policy "test"
+deny
+ action == "file_open";
+ resource.path == "/tmp/tails-eval-1qatkm5o/E2E-13/target";
+system.defcon <= 2;

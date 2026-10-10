@@ -1,0 +1,2 @@
+cycles=100
+duration_seconds=31

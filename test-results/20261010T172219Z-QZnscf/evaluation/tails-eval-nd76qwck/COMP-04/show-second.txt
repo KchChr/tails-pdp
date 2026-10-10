@@ -1,0 +1,42 @@
+generation policy=3 policy_bank_offset=16 attribute=2 attribute_bank=0
+
+FILE_OPEN_STATIC_POLICIES:
+[0] enabled=1 entitlement=Deny subject=any command="" resource="/tmp/tails-eval-nd76qwck/COMP-04/target" device=8388610 inode=2363440
+[1] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[2] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[3] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[4] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[5] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[6] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[7] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[8] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[9] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[10] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[11] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[12] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[13] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[14] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+[15] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0
+
+FILE_OPEN_STREAM_POLICIES:
+[0] enabled=1 entitlement=Deny subject=any command="" resource="/tmp/tails-eval-nd76qwck/COMP-04/target" device=8388610 inode=2363440 legacy_condition=none
+    attribute_condition=system.defcon LessThanOrEqual 2
+[1] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[2] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[3] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[4] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[5] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[6] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[7] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[8] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[9] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[10] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[11] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[12] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[13] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[14] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+[15] enabled=0 entitlement=Permit subject=any command="" resource="" device=0 inode=0 legacy_condition=none
+
+ATTRIBUTES:
+system.defcon = 2
+

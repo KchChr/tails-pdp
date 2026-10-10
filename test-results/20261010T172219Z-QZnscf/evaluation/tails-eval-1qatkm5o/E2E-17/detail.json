@@ -1,0 +1,28 @@
+{
+  "blocked": {
+    "closed": [
+      false,
+      false,
+      false
+    ],
+    "safe_open": [
+      true,
+      true
+    ],
+    "observed_ns": 2608315804432173,
+    "observed_unix_ns": 1791652952787075789
+  },
+  "healthy": {
+    "closed": [
+      true,
+      true,
+      true
+    ],
+    "safe_open": [
+      true,
+      true
+    ],
+    "observed_ns": 2608315796947146,
+    "observed_unix_ns": 1791652952779590091
+  }
+}

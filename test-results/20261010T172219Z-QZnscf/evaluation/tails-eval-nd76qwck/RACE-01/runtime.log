@@ -1,0 +1,94 @@
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=1 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=1 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-nd76qwck/RACE-01/attributes'
+[INFO  tails_pdp_attribute_loader::stream_attributes] Stream attributes committed generation=1 count=1
+[INFO  tails_pdp_attribute_loader::stream_attributes] ATTRIBUTES generation=1 activated; userspace PEP re-evaluation coalesced
+[INFO  tails_pdp] Watching policy directory '/tmp/tails-eval-nd76qwck/RACE-01/policies'
+[INFO  tails_pdp] Waiting for Ctrl-C...
+[INFO  tails_pdp_attribute_loader::stream_attributes] Watching stream attributes '/tmp/tails-eval-nd76qwck/RACE-01/attributes'
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:1] policy_generation=1 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=1 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=2 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=2 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:2] policy_generation=2 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218237 fd=3 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218237 fd=4 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP closed pid=218237 fd=5 for File policy Static[0]
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=2 attribute_generation=1 violations=3 revocation_attempts=3
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=3 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=3 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:3] policy_generation=3 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=3 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=4 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=4 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:4] policy_generation=4 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=4 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=5 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=5 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:5] policy_generation=5 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=5 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=6 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=6 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:6] policy_generation=6 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=6 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=7 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=7 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:7] policy_generation=7 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=7 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=8 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=8 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:8] policy_generation=8 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=8 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=9 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=9 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:9] policy_generation=9 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=9 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=10 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=10 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:10] policy_generation=10 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=10 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=11 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=11 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:11] policy_generation=11 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=11 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=12 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=12 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:12] policy_generation=12 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=12 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=13 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=13 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:13] policy_generation=13 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=13 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=14 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=14 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:14] policy_generation=14 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=14 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=15 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=15 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:15] policy_generation=15 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=15 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=16 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=16 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:16] policy_generation=16 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=16 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=17 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=17 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:17] policy_generation=17 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=17 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=18 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=18 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:18] policy_generation=18 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=18 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=19 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=19 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:19] policy_generation=19 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=19 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=20 file_open_static=1 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=20 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:20] policy_generation=20 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=20 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY sync ok dir=/tmp/tails-eval-nd76qwck/RACE-01/policies generation=21 file_open_static=0 file_open_stream=0
+[INFO  tails_pdp_policy_loader::policy_source] POLICY generation=21 activated; queued userspace PEP re-evaluation
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan started cause=[policy:21] policy_generation=21 attribute_generation=1
+[INFO  tails_pdp_userspace_pep::pep] USERSPACE_PEP scan completed policy_generation=21 attribute_generation=1 violations=0 revocation_attempts=0
+[INFO  tails_pdp] Exiting...
