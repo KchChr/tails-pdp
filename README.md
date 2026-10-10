@@ -89,7 +89,7 @@ Policies are no longer loaded through `tails-pdp-admintool`.
 The active source of truth is the repository-local `policies/` directory. The userspace loader:
 
 - loads all `.policy` files from `./policies` on startup
-- rescans the directory every second
+- watches atomic publications and removals with inotify, without a debounce timer
 - translates the full directory contents into kernel-compatible map entries on change
 - fully reconciles the two pinned `file_open` policy maps after successful validation
 - keeps the last successfully applied policy generation if a changed file cannot be parsed or
@@ -195,20 +195,24 @@ permit
 Example workflow:
 
 ```shell
-cp examples/10-file-open-static-deny-cat-test.policy policies/
-cp examples/13-file-open-stream-deny-before-08.policy policies/
-cp examples/14-file-open-stream-deny-after-16.policy policies/
+bash scripts/publish-config.sh examples/10-file-open-static-deny-cat-test.policy policies/10-file-open-static-deny-cat-test.policy
+bash scripts/publish-config.sh examples/13-file-open-stream-deny-before-08.policy policies/13-file-open-stream-deny-before-08.policy
+bash scripts/publish-config.sh examples/14-file-open-stream-deny-after-16.policy policies/14-file-open-stream-deny-after-16.policy
 ```
 
-After at most one second, the loader detects the change and rewrites the pinned maps.
+After publication, the loader validates the new directory contents and activates the
+prepared map generation asynchronously. Check the runtime log or `show-active` before
+relying on the new decision; no fixed activation deadline is guaranteed.
 
 Example DEFCON workflow:
 
 ```shell
-cp examples/15-file-open-stream-deny-defcon-le-2.policy policies/
-printf 'defcon = 5\n' > attributes/system.attributes
+bash scripts/publish-config.sh examples/15-file-open-stream-deny-defcon-le-2.policy policies/15-file-open-stream-deny-defcon-le-2.policy
+printf 'defcon = 5\n' > /tmp/tails-pdp-prepared.attributes
+bash scripts/publish-config.sh /tmp/tails-pdp-prepared.attributes attributes/system.attributes
 cat /home/hntr/test.txt
-printf 'defcon = 2\n' > attributes/system.attributes
+printf 'defcon = 2\n' > /tmp/tails-pdp-prepared.attributes
+bash scripts/publish-config.sh /tmp/tails-pdp-prepared.attributes attributes/system.attributes
 cat /home/hntr/test.txt
 ```
 
@@ -218,12 +222,34 @@ The policy also contains `command == "cat"`, so another program name would not m
 Example structured attribute workflow:
 
 ```shell
-cp examples/25-file-open-stream-deny-engineer-defcon-le-3.policy policies/
+bash scripts/publish-config.sh examples/25-file-open-stream-deny-engineer-defcon-le-3.policy policies/25-file-open-stream-deny-engineer-defcon-le-3.policy
 mkdir -p attributes/subjects
-printf 'defcon = 3\n' > attributes/system.attributes
-printf 'position = "engineer"\n' > attributes/subjects/1000.attributes
+printf 'defcon = 3\n' > /tmp/tails-pdp-prepared.attributes
+bash scripts/publish-config.sh /tmp/tails-pdp-prepared.attributes attributes/system.attributes
+printf 'position = "engineer"\n' > /tmp/tails-pdp-prepared.attributes
+bash scripts/publish-config.sh /tmp/tails-pdp-prepared.attributes attributes/subjects/1000.attributes
 cat /home/hntr/test.txt
 ```
+
+## Publishing configuration changes
+
+While the runtime is running, prepare each complete policy or attribute file separately
+and publish it using `bash scripts/publish-config.sh SOURCE DESTINATION`.
+The helper creates a unique temporary file on the destination filesystem, closes it,
+and atomically replaces the destination. Policy/attribute formats are unchanged.
+There is no 100-ms debounce delay. Direct writes to active files are unsupported and
+do not constitute publication events; ordinary editors must save through a prepared copy.
+Deletion of an active file remains supported. A publication is asynchronous: check the
+runtime log or `show-active` to confirm validation and activation. Invalid input retains
+the previous generation. Prepare sources completely before publication and stop writing
+them while the helper reads them.
+
+Renames publish individual files only. A sequence of policy/attribute publications can
+activate intermediate valid configurations and trigger several FD scans. Kernel map
+banks still control activation of prepared generations. There is no cross-file or
+policy/attribute transaction. The helper preserves existing destination permission bits,
+but the new file is owned by the publishing process. It refuses symlink destinations
+and does not guarantee power-loss durability.
 
 ## Examples
 

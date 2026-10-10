@@ -104,11 +104,13 @@ Minute und Sekunde ab. Dadurch verwenden beide Ausführungspfade dieselbe Zeitba
 Konvertierungslogik.
 
 Externe Attribute werden dagegen ereignisgesteuert aktualisiert. Der Attributloader überwacht das
-Verzeichnis \texttt{attributes/} rekursiv. Da ein Änderungsvorgang mehrere unmittelbar
-aufeinanderfolgende \texttt{inotify}-Ereignisse erzeugen kann \citep{manInotify}, wartet der Loader
-nach dem ersten Ereignis 100 Millisekunden, bevor er den Gesamtbestand erneut einliest und
-validiert. Diese prototypspezifisch gewählte Bündelungsverzögerung reduziert redundante
-Verarbeitungsvorgänge und die Wahrscheinlichkeit, einen vorübergehenden Zwischenstand einzulesen.
+Verzeichnis \texttt{attributes/} rekursiv. Änderungen werden als vollständig vorbereitete Dateien
+veröffentlicht: Eine temporäre Datei mit nicht geladener Endung wird nach Abschluss des Schreibens
+im selben Dateisystem atomar auf den aktiven Dateipfad umbenannt \citep{manRename}. Der Watcher reagiert auf die
+Veröffentlichung beziehungsweise Entfernung aktiver Dateien und verarbeitet den Gesamtbestand
+ohne feste Bündelungswartezeit. Temporäre Schreibvorgänge lösen keine Neuladung aus.
+Direktes Überschreiben aktiver Dateien ist kein unterstützter Aktualisierungsweg.
+Einzelne Veröffentlichungen bilden keine gemeinsame Transaktion über mehrere Dateien.
 Erst nach erfolgreicher Validierung und Übernahme wird die neue Attributgeneration aktiviert. Ohne
 Dateisystemereignis findet keine periodische Neuladung dieser Dateien statt.
 
@@ -284,9 +286,23 @@ Diese Einschränkungen beeinflussen unter anderem die Aufteilung der eBPF-Progra
 \subsubsection{Auswahl des LSM-Hooks}
 Für den Prototyp musste ein LSM-Hook ausgewählt werden, an dem sich die unmittelbare Zugriffskontrolle und die spätere Überwachung bestehender Zugriffssituationen nachvollziehbar untersuchen lassen.
 Die Wahl fiel auf den Hook \texttt{file\_open}.
-Dieser Hook wird beim Öffnen einer Datei ausgelöst und passt damit unmittelbar zu der Anforderung, Dateiöffnungen zu kontrollieren.
-Gleichzeitig entsteht nach einer erfolgreichen Dateiöffnung ein FD, über den der Zugriff weiterbestehen kann.
-Damit eignet sich \texttt{file\_open} besonders für den Prototyp, weil sowohl die ursprüngliche Entscheidung im Kernel als auch die spätere Überwachung bestehender Dateizugriffe untersucht werden können.
+Dieser Hook wird im regulären Öffnungspfad über \texttt{security\_file\_open} aufgerufen und passt damit unmittelbar zu der Anforderung, Dateiöffnungen zu kontrollieren.
+Eine ablehnende Entscheidung bricht den Öffnungsvorgang ab, sodass dem aufrufenden Prozess kein FD für diese Öffnung zurückgegeben wird.
+Der Kernel reserviert zwar zuvor eine FD-Nummer, gibt diese bei einem Fehler aber wieder frei; die Zuordnung zur geöffneten Datei durch \texttt{fd\_install} erfolgt erst nach erfolgreichem Öffnen~\citep{linuxFileOpenSource,linuxFileSecuritySource}.
+Für den aufrufenden Prozess liefert \texttt{open} bei einem Fehler den Wert \texttt{-1} statt eines FDs zurück~\citep{manOpen}.
+
+Eine unmittelbare Alternative für die Kontrolle von Dateizugriffen ist der Hook \texttt{file\_permission}.
+Dieser wird über \texttt{security\_file\_permission} vor Lese- und Schreiboperationen auf einer bereits geöffneten Datei aufgerufen und ermöglicht insbesondere eine erneute Rechteprüfung nach Policy-Änderungen~\citep{linuxFileSecuritySource}.
+Würde die Policy ausschließlich an diesem Hook durchgesetzt, könnte die reguläre Dateiöffnung zunächst erfolgreich sein und einen FD zurückgeben, sofern die übrigen Berechtigungsprüfungen den Vorgang erlauben.
+Eine ablehnende Entscheidung würde dann die nachfolgende, vom Hook erfasste Lese- oder Schreiboperation verhindern; der bereits geöffnete FD würde dadurch nicht geschlossen~\citep{linuxFileOpenSource,linuxFileReadWriteSource}.
+Der Unterschied liegt somit zwischen der Verhinderung einer erfolgreichen Dateiöffnung und der erneuten Autorisierung einzelner Operationen über einen bestehenden FD.
+
+Für den Prototyp wird \texttt{file\_open} gewählt, weil bereits der Aufbau der betrachteten Zugriffssituation verhindert werden soll, wenn die Policy ihn nicht erlaubt.
+Nach einer erlaubten Öffnung kann der entstandene FD dagegen als Ansatzpunkt für die spätere Überwachung dienen.
+Wird seine weitere Nutzung durch eine Policy- oder Attributänderung unzulässig, veranlasst der Userspace-PEP das Schließen des betroffenen FDs.
+Bei erfolgreichem Schließen steht diese Referenz auf die Datei für neue Operationen nicht mehr zur Verfügung~\citep{manClose}.
+Damit werden die anfängliche Zulassung im Kernel und der nachträgliche Entzug im Userspace an derselben, über einen FD repräsentierten Zugriffssituation untersucht.
+Diese Aufteilung ersetzt keine synchrone Policy-Prüfung vor jeder Lese- oder Schreiboperation: Zwischen einer Änderung und dem nachträglichen Schließen verbleibt ein Zeitfenster.
 
 Ein weiterer Grund für diese Auswahl ist die einfache Testbarkeit mit Linux-eigenen Bordmitteln.
 Dateiöffnungen lassen sich ohne zusätzliche Spezialsoftware mit Werkzeugen wie \texttt{cat}, \texttt{tail}, Shell-Umleitungen oder kleinen Testdateien auslösen.

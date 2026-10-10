@@ -44,12 +44,10 @@ def one(entries, name, generation=None):
 
 def phase_timestamps(entries, generation, start, observed):
     event = one(entries, "policy_event_received")
-    debounce = one(entries, "policy_debounce_completed")
     activate_start = one(entries, "policy_activation_started", generation)
     activate_end = one(entries, "policy_activation_completed", generation)
-    assert start <= event <= debounce <= activate_start <= activate_end <= observed
-    assert debounce - event >= 100_000_000, "update did not receive a full debounce phase"
-    return event, debounce, activate_start, activate_end
+    assert start <= event <= activate_start <= activate_end <= observed
+    return event, activate_start, activate_end
 
 
 def perf_revoke(r):
@@ -77,7 +75,7 @@ def perf_revoke(r):
         assert after[0] != before[0] and after[1] == before[1], "unexpected generations"
         entries = markers(r)[len(quiet):]
         observed = result["observed_ns"]
-        event, debounce, activate_start, activate_end = phase_timestamps(
+        event, activate_start, activate_end = phase_timestamps(
             entries, after[0], start, observed)
         samples.append(observed - start)
         activation_bounds.append({"lower_ns": observed - activate_end,
@@ -85,14 +83,14 @@ def perf_revoke(r):
             "activation_bracket_ns": activate_end - activate_start})
         phases.append({"quiet_policy_wait_ns": [e[1] for e in quiet if e[0] == "policy_waiting"][-1],
             "rename_start_ns": start, "rename_completed_ns": rename_done,
-            "event_received_ns": event, "debounce_completed_ns": debounce,
+            "event_received_ns": event,
             "activation_started_ns": activate_start, "activation_completed_ns": activate_end,
             "observed_EBADF_ns": observed, "generations_before": before,
             "generations_after": after, "probe": result})
         r.remove()
     return {"unit": "ns", "clock": "Linux CLOCK_MONOTONIC",
         "file_change_to_EBADF": stats(samples), "activation_to_EBADF_bounds": activation_bounds,
-        "phases": phases, "note": "instrumented isolated rename; staging outside watched tree; "
+        "phases": phases, "publication": "atomic-rename-no-debounce", "note": "instrumented isolated rename; staging outside watched tree; "
         "Pending watcher and completed scans stable for 300ms; first event follows measurement start; "
         "event timestamp is userspace receipt, activation bracket surrounds map syscall, "
         "EBADF is observed by 1ms FD polling; instrumentation overhead included"}

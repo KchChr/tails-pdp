@@ -98,13 +98,13 @@ Messfassung bereitet die Policy außerhalb des überwachten Verzeichnisses auf d
 Dateisystem vor und misst ab der abschließenden Umbenennung. Vor jedem Versuch müssen
 der Policy-Watcher nachweislich in asynchrones Warten zurückgekehrt und alle begonnenen
 Scans abgeschlossen sein; die Messmarkierungen müssen anschließend 300 ms stabil bleiben.
-Ein vor dem Messstart empfangenes Ereignis, zusätzliche Ereignisphasen oder eine verkürzte
-100-ms-Bündelungsphase lassen die Messung fehlschlagen.
+Ein vor dem Messstart empfangenes Ereignis, zusätzliche Ereignisphasen oder eine ungültige
+zeitliche Reihenfolge lassen die Messung fehlschlagen. Eine Debounce-Phase existiert nicht mehr.
 
 Der Runner aktiviert nur für PERF-03 `TAILS_PDP_TIMING=1`. Aktuelle Binaries sind dafür
 neu zu bauen. Die optionalen Marker verwenden Linux `CLOCK_MONOTONIC`, ebenso wie
 Python `monotonic_ns()`. Erfasst werden Empfang des Änderungsereignisses im Userspace,
-Ende der Bündelungsphase, Beginn und Ende des Map-Systemaufrufs zur Aktivierung sowie
+Beginn und Ende des Map-Systemaufrufs zur Aktivierung sowie
 der von der FD-Probe beobachtete EBADF-Zeitpunkt. Die Aktivierung bleibt ein Intervall;
 der Ereigniszeitpunkt bezeichnet den Empfang, nicht die Erzeugung im Kernel. Marker
 und Protokollierung verursachen zusätzlichen Messaufwand. Deshalb sind neue Ergebnisse
@@ -134,3 +134,13 @@ RACE-01 wechselt wiederholt die Ressource hinter derselben FD-Nummer während
 Policywechseln. Ein beobachteter falscher Entzug schlägt fehl; ein bestandener
 Lauf beweist keine Race-Freiheit. E2E-17 erzeugt einen echten Attach-Fehler durch
 einen bereits vorhandenen Tracer, ohne globale ptrace-Schutzregeln zu ändern.
+
+### Revision: atomic publication without debounce
+
+The policy and attribute loaders now act on atomic publication events without a 100-ms
+wait. PERF-03 records `publication: atomic-rename-no-debounce`; its timing checks no longer
+require a debounce marker. Historical reports retain their original timing records.
+Rebuild and rerun PERF-02/PERF-03 on the dedicated Linux target before quoting updated
+latencies. Do not reuse the old 100-ms-debounce measurements as current performance.
+Local checks: `bash tests/test-publish-config.sh` and
+`PYTHONPATH=tests/evaluation python3 -B -m unittest discover -s tests/evaluation -p test_perf03.py`.

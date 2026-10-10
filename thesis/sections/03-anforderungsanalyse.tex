@@ -89,10 +89,10 @@ Sie beziehen sich auf Eigenschaften, die für Nutzung, Betrieb und Evaluation si
     
     \textit{Akzeptanzkriterium:} Für zentrale Zugriffsentscheidungen ist erkennbar, welche Policy oder welcher Zustand die Entscheidung beeinflusst hat.
 
-    \item[OA-03 Performance:]
-    Die zusätzlichen Prüfungen durch den Prototyp sollen den kontrollierten Zugriff nicht unverhältnismäßig verlangsamen.
+    \item[OA-03 Performancecharakterisierung:]
+    Der zusätzliche Laufzeitaufwand der Zugriffskontrolle sowie die Reaktionszeiten auf Änderungen der Entscheidungsgrundlagen müssen unter dokumentierten Versuchsbedingungen quantitativ ermittelt werden.
     
-    \textit{Akzeptanzkriterium:} Die Auswirkungen auf die Ausführungszeit werden in der Evaluation betrachtet und bewertet.
+    \textit{Akzeptanzkriterium:} Die Evaluation vergleicht die Dauer von Dateiöffnungen ohne aktiven Prototyp, mit aktivem Prototyp ohne Policy und mit passender Permit-Policy. Für diese Zustände werden Median und p95 sowie der absolute und relative Mehraufwand gegenüber der Baseline angegeben. Zusätzlich werden die Reaktionszeiten nach Policy- und Attributänderungen sowie die Entzugslatenz bestehender File Descriptors gemessen. Messintervalle, Wiederholungszahlen und Grenzen der Aussagekraft werden dokumentiert.
 
     \item[OA-04 Reproduzierbarkeit:]
     Die Evaluation des Prototyps soll unter dokumentierten Bedingungen wiederholbar sein.

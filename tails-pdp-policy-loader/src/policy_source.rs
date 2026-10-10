@@ -16,14 +16,10 @@ use tails_pdp_common::{
 use tails_pdp_userspace_common::{
     EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array, timing,
 };
-use tokio::{
-    sync::mpsc,
-    time::{Duration, sleep},
-};
+use tokio::sync::mpsc;
 
 const POLICY_DIRECTORY_NAME: &str = "policies";
 const POLICY_FILE_EXTENSION: &str = "policy";
-const POLICY_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 type FileOpenStaticPolicyMap = Array<MapData, FileOpenStaticPolicy>;
 type FileOpenStreamPolicyMap = Array<MapData, FileOpenStreamPolicy>;
@@ -147,11 +143,11 @@ impl PolicyDirectorySync {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
-        let mut watcher = fs_watch::watch_directory_recursive(&self.policy_dir)?;
+        let mut watcher = fs_watch::watch_directory_recursive(&self.policy_dir, "policy")?;
 
         loop {
             // Pending means the watcher has returned to asynchronous waiting,
-            // rather than still being inside the debounce/synchronization phase.
+            // rather than still being inside the synchronization phase.
             {
                 use std::future::Future;
                 let mut change = std::pin::pin!(watcher.wait_for_change());
@@ -167,14 +163,23 @@ impl PolicyDirectorySync {
                 .await?;
             }
             timing::mark("policy_event_received", 0);
-            sleep(POLICY_EVENT_DEBOUNCE).await;
-            timing::mark("policy_debounce_completed", 0);
             self.sync_if_changed()?;
         }
     }
 
     fn sync_if_changed(&mut self) -> anyhow::Result<()> {
-        let documents = read_policy_documents(&self.policy_dir)?;
+        let documents = match read_policy_documents(&self.policy_dir) {
+            Ok(documents) => documents,
+            Err(error) => {
+                // A file may disappear during a whole-directory reconciliation.
+                // Retain the active generation and allow the next queued event to retry.
+                error!(
+                    "POLICY read failed for '{}'; previous generation remains active: {error:#}",
+                    self.policy_dir.display()
+                );
+                return Ok(());
+            }
+        };
         if !documents_need_sync(
             self.last_applied_documents.as_deref(),
             self.last_failed_documents.as_deref(),

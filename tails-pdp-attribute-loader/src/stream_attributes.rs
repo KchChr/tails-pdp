@@ -14,17 +14,13 @@ use tails_pdp_common::{
 use tails_pdp_userspace_common::{
     EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array, open_pinned_hash_map,
 };
-use tokio::{
-    sync::mpsc,
-    time::{Duration, sleep},
-};
+use tokio::sync::mpsc;
 
 const STREAM_ATTRIBUTES_DIRECTORY_NAME: &str = "attributes";
 const ATTRIBUTE_FILE_EXTENSION: &str = "attributes";
 const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.attributes";
 const SUBJECT_ATTRIBUTES_DIRECTORY_NAME: &str = "subjects";
 const RESOURCE_ATTRIBUTES_DIRECTORY_NAME: &str = "resources";
-const STREAM_ATTRIBUTE_EVENT_DEBOUNCE: Duration = Duration::from_millis(100);
 
 pub type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
 pub type AttributeGenerationMap = Array<MapData, u32>;
@@ -73,14 +69,13 @@ pub async fn run_attribute_updater(
     enforcement_triggers: mpsc::Sender<EnforcementTrigger>,
 ) -> anyhow::Result<()> {
     let directory = ensure_attribute_directory()?;
-    let mut watcher = fs_watch::watch_directory_recursive(&directory)?;
+    let mut watcher = fs_watch::watch_directory_recursive(&directory, "attributes")?;
     // The main program performs and announces the initial successful activation before this
     // watcher starts. Remembering that state avoids a second, unchanged initial generation.
     let mut last_applied = Some(read_attribute_directory(&directory)?);
 
     loop {
         watcher.wait_for_change().await?;
-        sleep(STREAM_ATTRIBUTE_EVENT_DEBOUNCE).await;
         apply_attribute_directory(
             &directory,
             attribute_maps,

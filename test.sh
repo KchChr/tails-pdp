@@ -83,6 +83,9 @@ fi
 run_step "Formatierung prüfen" \
     cargo fmt --all -- --check
 
+run_step "Atomare Konfigurationsveröffentlichung prüfen" \
+    bash "$PROJECT_ROOT/tests/test-publish-config.sh"
+
 # `.cargo/config.toml` konfiguriert global `sudo -E` als Runner. Unit-Tests benötigen keine
 # Privilegien und sollen keine root-eigenen Build-Artefakte erzeugen, daher wird der Runner hier
 # bewusst durch `env` ersetzt. --locked verhindert außerdem, dass ein Testlauf Cargo.lock oder die

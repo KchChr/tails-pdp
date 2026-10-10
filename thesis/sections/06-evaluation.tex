@@ -1,6 +1,11 @@
 \section{Evaluation}\label{sec:evaluation}
 Ziel der Evaluation ist es, zu untersuchen, ob der implementierte Prototyp die zentralen Prinzipien von ASBAC für Dateiöffnungen unter Linux wie vorgesehen umsetzt. Dazu werden die Verarbeitung von Policies und dynamischen Attributen, die Kontrolle neuer Dateiöffnungen sowie die Nachbewertung bereits bestehender Dateizugriffe überprüft. Zusätzlich werden der Laufzeitaufwand und die technischen Grenzen der prototypischen Umsetzung betrachtet.
 
+Die berichteten Zielsystemergebnisse beziehen sich auf den Stand vor der Umstellung auf
+atomare Konfigurationsveröffentlichung ohne Debounce. Für den geänderten Quellstand sind
+die Linux-Funktionsprüfungen und Latenzmessungen noch zu wiederholen; die vorhandenen Nachweise
+werden nicht als Ergebnisse dieser Änderung ausgegeben.
+
 
 \subsection{Testumgebung}
 
@@ -249,7 +254,7 @@ Gegenstand der folgenden End-to-End-Szenarien.
 
 Ergänzend prüfen sechs nicht privilegierte Python-Tests die Laufzeit (PERF-03) Messauswertung. Sie prüfen
 unter anderem die zeitliche Reihenfolge, fehlende oder mehrfache Zeitmarkierungen, eine
-unvollständige Bündelungsphase und noch laufende Scans vor Messbeginn.
+im damaligen Messstand eine unvollständige Bündelungsphase und noch laufende Scans vor Messbeginn.
 
 \subsubsection{Privilegierte End-to-End-Tests}
 
@@ -483,12 +488,20 @@ ein Zeitfenster, in dem der Zielprozess die Deskriptornummer wiederverwenden kan
 
 \subsubsection{Quantitative Ergebnisse}
 
+Die nachfolgenden Messwerte stammen aus dem evaluierten Stand mit einer 100-ms-Bündelungswartezeit.
+Der inzwischen angepasste Quellstand verarbeitet atomare Veröffentlichungen ohne diese Wartezeit.
+Für diesen Stand sind erneute Linux-Funktionsprüfungen und insbesondere PERF-02-/PERF-03-Messungen
+noch ausstehend. Die bisherigen Rohdaten bleiben als Nachweis des früheren Stands erhalten;
+sie belegen keine Latenz des geänderten Veröffentlichungsverfahrens.
+
 Tabelle~\ref{tab:performance-ergebnisse} enthält die zentralen Messwerte. Bei PERF-01 wurden je
 20\,000 Dateiöffnungen mit warmem Cache gemessen. Jeder der drei Messzustände wurde zuvor
 mit 1000 ungemessenen Öffnungs- und Schließvorgängen vorbereitet. Der Median stieg von
 3,512~$\mu$s ohne aktiven Prototyp auf 3,985~$\mu$s mit aktivem Prototyp ohne Policy und auf
 4,014~$\mu$s bei passender Permit-Policy. Dies entspricht einem medianen Mehraufwand von
-13,5 beziehungsweise 14,3~Prozent. Die Messung umfasst \texttt{os.open()} sowie den Aufwand der
+0,473 beziehungsweise 0,502~$\mu$s, entsprechend 13,5 beziehungsweise 14,3~Prozent.
+Die p95-Werte steigen gegenüber der Baseline um 0,434 beziehungsweise 0,525~$\mu$s,
+entsprechend 11,8 beziehungsweise 14,3~Prozent. Die Messung umfasst \texttt{os.open()} sowie den Aufwand der
 Python-Laufzeit und des Timers; \texttt{close()} liegt außerhalb des Messintervalls. Sie isoliert
 daher nicht ausschließlich die Ausführungszeit des LSM-Hooks.
 
@@ -521,7 +534,7 @@ Für den Entzug bestehender Zugriffe betrug die Zeit von der Policydateiänderun
 beobachteten \texttt{EBADF} im Median 110,43~ms. PERF-03 bereitet die Policydatei außerhalb
 des überwachten Verzeichnisses vor und beginnt die Messung unmittelbar vor ihrer atomaren
 Umbenennung in das Policyverzeichnis. Zuvor müssen der wartende Policy-Watcher und abgeschlossene
-Scans über 300~ms einen unveränderten Ruhezustand zeigen. Zeitmarkierungen prüfen, dass das
+Scans über 300~ms einen unveränderten Ruhezustand zeigen. Im damaligen Messstand prüfen Zeitmarkierungen, dass das
 Dateiereignis erst nach Messbeginn empfangen und die vollständige 100-ms-Bündelungsphase
 abgewartet wurde. Zwei weitere Zeitmarkierungen unmittelbar vor und nach dem Map-Systemaufruf
 zur Aktivierung grenzen deren Zeitpunkt ein. Die Messung enthält den Aufwand dieser
@@ -532,9 +545,10 @@ Einzelzeit wird daraus nicht abgeleitet. Das 95.~Perzentil (p95) bezeichnet
 den Wert, den mindestens 95\,\% der Messwerte nicht überschreiten.
 Bei zehn Wiederholungen entspricht es nach der verwendeten Berechnung
 bereits dem höchsten Messwert. Das angegebene p95 ist deshalb keine
-belastbare Schätzung seltener hoher Latenzen. Da für OA-03 keine feste
-Latenzgrenze vorgegeben wurde, bedeutet ein bestandener Performance-Test ausschließlich, dass die
-Messung erfolgreich durchgeführt und der Zustandswechsel beobachtet wurde.
+belastbare Schätzung seltener hoher Latenzen. OA-03 fordert eine dokumentierte
+Performancecharakterisierung. Ein bestandener Performance-Test bedeutet daher, dass die
+Messung erfolgreich durchgeführt und der Zustandswechsel beobachtet wurde; er weist weder
+die Einhaltung einer festen Latenzgrenze noch die Eignung für einen bestimmten produktiven Einsatz nach.
 
 \subsubsection{Bewertung der Anforderungen}
 
@@ -563,8 +577,11 @@ weder zum Abbruch der Runtime noch zu einem vom Runner erkannten Kernelproblem. 
 Stabilitätsgarantie kann daraus nicht abgeleitet werden. OA-02 ist teilweise erfüllt: Die
 Administrationsschnittstelle ermöglicht im kontrollierten Szenario eine Rekonstruktion der
 Entscheidungsgrundlage, stellt aber kein individuelles Auditlog bereit und ordnet eine konkrete
-Dateiöffnung nicht unmittelbar einem ursprünglichen Policynamen zu. OA-03 ist erfüllt, weil der
-zusätzliche Aufwand und die Reaktions- und Entzugslatenz quantitativ untersucht wurden.
+Dateiöffnung nicht unmittelbar einem ursprünglichen Policynamen zu. OA-03 ist als Anforderung
+zur Performancecharakterisierung für den evaluierten Stand erfüllt: Für die drei Dateiöffnungszustände werden Median
+und p95 sowie der absolute und relative Mehraufwand gegenüber der Baseline angegeben.
+Die Reaktionszeiten nach Policy- und Attributänderungen und die Entzugslatenz wurden gemessen;
+Versuchsbedingungen, Messintervalle, Wiederholungszahlen und Aussagegrenzen sind dokumentiert.
 OA-04 wird durch die archivierten Konfigurationen,
 Szenarioskripte, Testparameter und Rohdaten erfüllt.
 

@@ -13,3 +13,6 @@ tokio = { workspace = true, features = ["net", "sync"] }
 
 [lib]
 path = "src/lib.rs"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "time"] }

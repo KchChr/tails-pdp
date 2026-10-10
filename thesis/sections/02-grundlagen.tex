@@ -60,7 +60,8 @@ Der PDP bezieht die für die Entscheidung benötigten Datenströme ein und kann 
 Die fortlaufende Neubewertung steht inhaltlich in der Nähe von Usage Control.
 Unter Usage Control werden Zugriffskontrollmodelle verstanden, die eine Nutzung nicht nur zum Zeitpunkt der initialen Autorisierung betrachten, sondern auch Bedingungen während der laufenden Nutzung einbeziehen.
 Usage Control erweitert klassische Zugriffskontrolle unter anderem um die Veränderbarkeit von Attributen und die Fortdauer von Entscheidungen während einer Nutzung.
-Gouglidis et al. beschreiben diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} \citep{gouglidis2018usecon}.
+Park und Sandhu verankern diese Eigenschaften als Mutabilität und Kontinuität im UCON-Modell, das Autorisierungen, Verpflichtungen und Bedingungen integriert \citep{park2004ucon}.
+Gouglidis et al. greifen diese Konzepte als \emph{attribute mutability} und \emph{continuity of decision} bei der formalen Untersuchung von UseCON auf \citep{gouglidis2018usecon}.
 Usage Control dient in dieser Arbeit als verwandtes theoretisches Konzept, ersetzt jedoch nicht die Definition von ASBAC.
 
 Der in dieser Arbeit entwickelte Prototyp übernimmt nicht die vollständige Publish-Subscribe-Architektur von SAPL.
@@ -273,6 +274,40 @@ erzeugt~\citep{nixosManual}. Dadurch können System- und Entwicklungsumgebung ge
 dem Quellcode dokumentiert werden.
 
 Für die Evaluation wird NixOS als Gastbetriebssystem in einer QEMU/KVM-VM eingesetzt.
+
+\subsection{Verwandte Arbeiten und Abgrenzung des eigenen Ansatzes}\label{sec:verwandte-arbeiten}
+
+Fortdauernde Autorisierung und veränderliche Entscheidungsgrundlagen sind bereits durch Usage-Control-Modelle und ASBAC beschrieben.
+Das UCON-Modell berücksichtigt die Veränderbarkeit von Attributen und die Prüfung von Berechtigungen während einer Nutzung \citep{park2004ucon}.
+SAPL realisiert für ASBAC eine Publish-Subscribe-Architektur, in der der PDP veränderte Autorisierungsentscheidungen an den PEP übermittelt \citep{heutelbeck2021asbac,saplIntroduction30}.
+Die fortlaufende Neubewertung einer Autorisierung ist daher keine neue Modellidee dieser Arbeit.
+
+Auch die Durchsetzung dynamischer Dateinutzungskontrolle im Betriebssystemkernel ist Gegenstand bestehender Arbeiten.
+Teigão et al. implementieren einen UCON-orientierten Prototyp im OpenBSD-4.1-Kernel.
+Ein Parser überführt textuelle Regeln in eine interne Repräsentation; die laufenden Prüfungen erfolgen insbesondere bei Lese- und Schreiboperationen.
+Bei veränderten Bedingungen können weitere Operationen mit einem Berechtigungsfehler verweigert werden \citep[Abschnitte~7.1--7.3, S.~1349--1350]{teigao2011usagekernel}.
+Diese Vorarbeit zeigt bereits die grundsätzliche Machbarkeit dynamischer Dateikontrolle im Kernel, verwendet jedoch Kerneländerungen statt eBPF-LSM und prüft die laufende Nutzung an den jeweiligen Operationen.
+
+Etablierte Linux-Sicherheitsmodule berücksichtigen ebenfalls Zugriffe nach dem Öffnen einer Datei.
+Im untersuchten Linux-Kernel v6.12 vergleicht SELinux in \texttt{selinux\_file\_permission} unter anderem die beim Öffnen gespeicherte Policysequenz mit dem aktuellen Stand und veranlasst gegebenenfalls eine erneute Berechtigungsprüfung \citep{linuxSelinuxRevalidation612}.
+Eine bereits geöffnete Datei ist damit nicht grundsätzlich von späteren Zugriffskontrollen ausgenommen.
+AppArmor setzt dagegen anwendungsbezogene Profile mit pfadbasierten Dateiregeln durch \citep{kerneldocAppArmor}.
+Seine Profilverwaltungsdokumentation weist darauf hin, dass beim Ersetzen eines Profils bereits geöffnete Ressourcen weiterhin zugänglich bleiben können \citep{apparmorManagingProfiles}.
+Der Kernelcode enthält zugleich eine Revalidierung bestehender Dateiobjekte, etwa wenn der aktuelle Sicherheitskontext nicht durch die zwischengespeicherten Berechtigungen abgedeckt ist \citep{linuxApparmorRevalidation612}.
+Profilaktualisierung, erneute Operationsprüfung und aktives Schließen eines Deskriptors sind deshalb unterschiedliche Mechanismen; aus einer Profilaktualisierung folgt kein allgemeiner selektiver FD-Entzug.
+
+KubeArmor und Tetragon zeigen die praktische Umsetzung deklarativer Sicherheitsregeln mit Linux-Kernelmechanismen und eBPF.
+Der BPF-LSM-Enforcer von KubeArmor übersetzt Policies in Map-Einträge, die an LSM-Hooks für unmittelbare Durchsetzungsentscheidungen ausgewertet werden \citep{kubearmorRuntimeEnforcer}.
+Die Verwaltung von Policies im Userspace und deren Auswertung anhand von BPF-Maps im Kernel sind somit bereits etablierte technische Ansätze.
+Tetragon dokumentiert die Durchsetzung durch das Überschreiben geeigneter Funktionsrückgabewerte und durch Prozesssignale; seine Dateizugriffskontrolle berücksichtigt insbesondere \texttt{security\_file\_permission} für Lese- und Schreibzugriffe \citep{tetragonEnforcement,tetragonFilenameAccess}.
+Die Verweigerung einer weiteren Operation und die Beendigung eines Prozesses unterscheiden sich in ihrer Wirkung vom selektiven Schließen eines einzelnen FD.
+
+Die vorliegende Arbeit untersucht vor diesem Hintergrund die Übertragung ausgewählter ASBAC-Eigenschaften auf einen begrenzten eBPF-LSM-Prototyp für Linux-Dateiöffnungen.
+Ihr Beitrag umfasst die Bereitstellung dynamischer Entscheidungsgrundlagen, die Abstimmung von Kernel- und Userspace-Auswertung sowie die ereignisabhängige Nachbewertung bestehender File Descriptors mit einem selektiven Schließversuch.
+Die konkrete Verbindung dieser Mechanismen wird in Kapitel~4 konzipiert und in Kapitel~6 evaluiert.
+Dabei wird insbesondere untersucht, welche Einschränkungen aus der Rekonstruktion bestehender Zugriffe und dem nachträglichen Eingriff in den Zielprozess entstehen.
+Die verbleibende Fragestellung betrifft damit die technische Integration und ihre Grenzen, nicht die erstmalige Einführung fortdauernder Autorisierung oder dynamischer Kernelzugriffskontrolle.
+Der Prototyp übernimmt keine vollständige ASBAC-Subscription-Architektur und gewährleistet keinen vollständigen oder atomaren Entzug sämtlicher Nutzungsformen.
 
 
 \newpage

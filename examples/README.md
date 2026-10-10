@@ -1,6 +1,8 @@
 This directory contains SAPL-inspired example policies for `tails-pdp`.
 
-These files are not loaded automatically. To activate a policy, copy it into `../policies/`.
+These files are not loaded automatically. From the repository root, publish a policy with
+`bash scripts/publish-config.sh examples/NAME.policy policies/NAME.policy`.
+Do not copy directly onto an active file while the runtime is running.
 
 Each `.policy` file contains exactly one simple policy. More complex behavior is expressed by using
 multiple files, for example one policy for `hour < 8` and another for `hour >= 16`.

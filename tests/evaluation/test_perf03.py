@@ -12,20 +12,19 @@ spec.loader.exec_module(perf)
 class TimingEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.entries = [("policy_event_received", 20, 0),
-                        ("policy_debounce_completed", 100_000_020, 0),
                         ("policy_activation_started", 100_000_030, 7),
                         ("policy_activation_completed", 100_000_040, 7)]
 
     def test_complete_isolated_measurement(self):
         self.assertEqual(perf.phase_timestamps(self.entries, 7, 10, 100_000_050),
-                         (20, 100_000_020, 100_000_030, 100_000_040))
+                         (20, 100_000_030, 100_000_040))
 
     def test_event_before_measurement_is_rejected(self):
         with self.assertRaises(AssertionError):
             perf.phase_timestamps(self.entries, 7, 21, 100_000_050)
 
-    def test_partial_debounce_is_rejected(self):
-        self.entries[1] = ("policy_debounce_completed", 99_000_020, 0)
+    def test_activation_before_event_is_rejected(self):
+        self.entries[1] = ("policy_activation_started", 19, 7)
         with self.assertRaises(AssertionError):
             perf.phase_timestamps(self.entries, 7, 10, 100_000_050)
 
