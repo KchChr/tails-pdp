@@ -1,0 +1,9 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/aya-rs/aya"]
+git = "https://github.com/aya-rs/aya"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
