@@ -10,8 +10,8 @@ use log::{error, info};
 use tails_pdp_common::{
     ANY_SUBJECT, AttributeCondition, AttributeNamespace, AttributeValueKind, COMMAND_MAX_BYTES,
     Entitlement, FileOpenStaticPolicy, FileOpenStreamPolicy, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, SocketFamily, SocketTransport, StreamAttribute,
-    StreamOperator, attribute_hash, policy_bank_offset,
+    POLICY_BANK_SIZE, PolicyAction, RESOURCE_LEN, StreamAttribute, StreamOperator, attribute_hash,
+    policy_bank_offset,
 };
 use tails_pdp_userspace_common::{
     EnforcementTrigger, fs_watch, notify_enforcement, open_pinned_array, timing,
@@ -63,14 +63,9 @@ struct ParsedPolicy {
     source_path: PathBuf,
     name: String,
     entitlement: Entitlement,
-    action: PolicyAction,
     subject: u32,
     command: Option<String>,
     file_resource: Option<String>,
-    socket_family: SocketFamily,
-    socket_transport: SocketTransport,
-    socket_resource: Option<String>,
-    socket_port: u16,
     stream_conditions: Vec<ParsedStreamCondition>,
 }
 
@@ -482,10 +477,6 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     let mut subject = None;
     let mut command = None;
     let mut file_resource = None;
-    let mut socket_family = None;
-    let mut socket_transport = None;
-    let mut socket_resource = None;
-    let mut socket_port = None;
     let mut stream_conditions = Vec::new();
 
     for (line_no, line) in lines {
@@ -541,50 +532,6 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             continue;
         }
 
-        if let Some(parsed_family) = parse_socket_family_statement(statement)? {
-            set_once(
-                &mut socket_family,
-                parsed_family,
-                &document.relative_path,
-                line_no,
-                "resource.family",
-            )?;
-            continue;
-        }
-
-        if let Some(parsed_transport) = parse_socket_transport_statement(statement)? {
-            set_once(
-                &mut socket_transport,
-                parsed_transport,
-                &document.relative_path,
-                line_no,
-                "resource.transport",
-            )?;
-            continue;
-        }
-
-        if let Some(parsed_ip) = parse_string_equality(statement, "resource.ip")? {
-            set_once(
-                &mut socket_resource,
-                parsed_ip,
-                &document.relative_path,
-                line_no,
-                "resource.ip",
-            )?;
-            continue;
-        }
-
-        if let Some(parsed_port) = parse_port_statement(statement)? {
-            set_once(
-                &mut socket_port,
-                parsed_port,
-                &document.relative_path,
-                line_no,
-                "resource.port",
-            )?;
-            continue;
-        }
-
         if let Some(parsed_stream_condition) = parse_stream_condition(statement)? {
             stream_conditions.push(parsed_stream_condition);
             continue;
@@ -598,7 +545,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         );
     }
 
-    let action = action.ok_or_else(|| {
+    action.ok_or_else(|| {
         anyhow!(
             "{}: policy '{}' is missing 'action == ...'",
             document.relative_path.display(),
@@ -610,14 +557,9 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         source_path: document.relative_path.clone(),
         name,
         entitlement,
-        action,
         subject: subject.unwrap_or(ANY_SUBJECT),
         command,
         file_resource,
-        socket_family: socket_family.unwrap_or(SocketFamily::Any),
-        socket_transport: socket_transport.unwrap_or(SocketTransport::Any),
-        socket_resource,
-        socket_port: socket_port.unwrap_or(0),
         stream_conditions,
     })
 }
@@ -627,19 +569,12 @@ fn translate_policy(
     parsed: ParsedPolicy,
 ) -> anyhow::Result<()> {
     if parsed.stream_conditions.is_empty() {
-        match parsed.action {
-            PolicyAction::FileOpen => {
-                ensure_no_socket_fields(&parsed)?;
-                let command = parsed.command.as_deref().unwrap_or("");
-                let resource = parsed.file_resource.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
-                ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
-                let policy = FileOpenStaticPolicy::new(
-                    parsed.entitlement,
-                    parsed.subject,
-                    command,
-                    resource,
-                )
+        let command = parsed.command.as_deref().unwrap_or("");
+        let resource = parsed.file_resource.as_deref().unwrap_or("");
+        ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
+        ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
+        let policy =
+            FileOpenStaticPolicy::new(parsed.entitlement, parsed.subject, command, resource)
                 .resolve_resource_identity()
                 .with_context(|| {
                     format!(
@@ -647,25 +582,15 @@ fn translate_policy(
                         parsed.source_path.display()
                     )
                 })?;
-                translated.file_open_static.push(policy);
-            }
-            PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
-        }
+        translated.file_open_static.push(policy);
     } else {
         let (legacy_condition, attribute_conditions) = split_stream_conditions(&parsed)?;
-        match parsed.action {
-            PolicyAction::FileOpen => {
-                ensure_no_socket_fields(&parsed)?;
-                let command = parsed.command.as_deref().unwrap_or("");
-                let resource = parsed.file_resource.as_deref().unwrap_or("");
-                ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
-                ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
-                let mut policy = FileOpenStreamPolicy::stream(
-                    parsed.entitlement,
-                    parsed.subject,
-                    command,
-                    resource,
-                )
+        let command = parsed.command.as_deref().unwrap_or("");
+        let resource = parsed.file_resource.as_deref().unwrap_or("");
+        ensure_string_len(command, COMMAND_MAX_BYTES, "command", &parsed)?;
+        ensure_string_len(resource, RESOURCE_LEN, "resource.path", &parsed)?;
+        let mut policy =
+            FileOpenStreamPolicy::stream(parsed.entitlement, parsed.subject, command, resource)
                 .resolve_resource_identity()
                 .with_context(|| {
                     format!(
@@ -673,12 +598,9 @@ fn translate_policy(
                         parsed.source_path.display()
                     )
                 })?;
-                apply_legacy_stream_condition_file_open(&mut policy, legacy_condition);
-                apply_attribute_conditions_file_open(&mut policy, &attribute_conditions);
-                translated.file_open_stream.push(policy);
-            }
-            PolicyAction::SocketBind => bail_socket_bind_disabled(&parsed)?,
-        }
+        apply_legacy_stream_condition_file_open(&mut policy, legacy_condition);
+        apply_attribute_conditions_file_open(&mut policy, &attribute_conditions);
+        translated.file_open_stream.push(policy);
     }
 
     ensure_policy_capacity(
@@ -710,14 +632,6 @@ fn ensure_policy_capacity(
     Ok(())
 }
 
-fn bail_socket_bind_disabled(policy: &ParsedPolicy) -> anyhow::Result<()> {
-    bail!(
-        "policy '{}' in '{}' uses action socket_bind, but socket_bind support is currently disabled",
-        policy.name,
-        policy.source_path.display()
-    )
-}
-
 fn ensure_string_len(
     value: &str,
     max_len: usize,
@@ -731,21 +645,6 @@ fn ensure_string_len(
             policy.source_path.display(),
             label,
             max_len
-        );
-    }
-    Ok(())
-}
-
-fn ensure_no_socket_fields(policy: &ParsedPolicy) -> anyhow::Result<()> {
-    if policy.socket_family != SocketFamily::Any
-        || policy.socket_transport != SocketTransport::Any
-        || policy.socket_resource.is_some()
-        || policy.socket_port != 0
-    {
-        bail!(
-            "policy '{}' in '{}' uses socket_bind-only fields with action file_open",
-            policy.name,
-            policy.source_path.display()
         );
     }
     Ok(())
@@ -773,7 +672,7 @@ fn parse_action_statement(statement: &str) -> anyhow::Result<Option<PolicyAction
     };
     match value.as_str() {
         "file_open" | "file-open" => Ok(Some(PolicyAction::FileOpen)),
-        "socket_bind" | "socket-bind" => Ok(Some(PolicyAction::SocketBind)),
+        "socket_bind" | "socket-bind" => bail!("socket_bind is not supported"),
         other => bail!("unsupported action '{other}'"),
     }
 }
@@ -784,39 +683,6 @@ fn parse_subject_statement(statement: &str) -> anyhow::Result<Option<u32>> {
     };
     Ok(Some(raw.parse().map_err(|error| {
         anyhow!("invalid subject.uid '{raw}': {error}")
-    })?))
-}
-
-fn parse_socket_family_statement(statement: &str) -> anyhow::Result<Option<SocketFamily>> {
-    let Some(value) = parse_string_equality(statement, "resource.family")? else {
-        return Ok(None);
-    };
-    match value.as_str() {
-        "any" => Ok(Some(SocketFamily::Any)),
-        "inet" => Ok(Some(SocketFamily::Inet)),
-        "inet6" => Ok(Some(SocketFamily::Inet6)),
-        other => bail!("unsupported resource.family '{other}'"),
-    }
-}
-
-fn parse_socket_transport_statement(statement: &str) -> anyhow::Result<Option<SocketTransport>> {
-    let Some(value) = parse_string_equality(statement, "resource.transport")? else {
-        return Ok(None);
-    };
-    match value.as_str() {
-        "any" => Ok(Some(SocketTransport::Any)),
-        "tcp" => Ok(Some(SocketTransport::Tcp)),
-        "udp" => Ok(Some(SocketTransport::Udp)),
-        other => bail!("unsupported resource.transport '{other}'"),
-    }
-}
-
-fn parse_port_statement(statement: &str) -> anyhow::Result<Option<u16>> {
-    let Some(raw) = parse_equality_rhs(statement, "resource.port") else {
-        return Ok(None);
-    };
-    Ok(Some(raw.parse().map_err(|error| {
-        anyhow!("invalid resource.port '{raw}': {error}")
     })?))
 }
 
@@ -1351,11 +1217,30 @@ mod tests {
     }
 
     #[test]
-    fn rejects_disabled_socket_bind_action() {
-        let error = translation_error(&[document(
-            "policy \"socket\"\ndeny\n    action == \"socket_bind\";\n",
-        )]);
-        assert!(error.contains("socket_bind support is currently disabled"));
+    fn rejects_unsupported_socket_bind_action() {
+        for action in ["socket_bind", "socket-bind"] {
+            for condition in ["", "    system.defcon <= 3;\n"] {
+                let error = translation_error(&[document(&format!(
+                    "policy \"socket\"\ndeny\n    action == \"{action}\";\n{condition}",
+                ))]);
+                assert!(error.contains("socket_bind is not supported"));
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_socket_fields_in_file_open_policies() {
+        for statement in [
+            "resource.family == \"any\"",
+            "resource.transport == \"tcp\"",
+            "resource.ip == \"127.0.0.1\"",
+            "resource.port == 0",
+        ] {
+            let error = translation_error(&[document(&format!(
+                "policy \"file\"\ndeny\n    action == \"file_open\";\n    {statement};\n",
+            ))]);
+            assert!(error.contains("unsupported statement"));
+        }
     }
 
     #[test]

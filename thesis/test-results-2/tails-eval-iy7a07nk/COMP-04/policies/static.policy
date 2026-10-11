@@ -1,5 +1,0 @@
-policy "static"
-deny
- action == "file_open";
- resource.path == "/tmp/tails-eval-iy7a07nk/COMP-04/target";
-

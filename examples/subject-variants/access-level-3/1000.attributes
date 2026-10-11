@@ -1,0 +1,6 @@
+# Attributes for UID 1000. Policies refer to these as subject.<name>.
+position = "engineer"
+department = "platform"
+access-level = 3
+on_call = true
+

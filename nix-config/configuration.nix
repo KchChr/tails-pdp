@@ -66,7 +66,7 @@ in {
   };
 
   # Benutzer
-  users.users.root.initialPassword = "173bcx";
+  users.users.root.initialPassword = "password";
   users.users.hntr = {
     isNormalUser = true;
     description = "Admin user";

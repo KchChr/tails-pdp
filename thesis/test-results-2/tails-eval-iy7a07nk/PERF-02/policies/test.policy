@@ -1,5 +1,0 @@
-policy "test"
-deny
- action == "file_open";
- resource.path == "/tmp/tails-eval-iy7a07nk/PERF-02/target";
-system.defcon <= 2;

@@ -7,7 +7,6 @@ pub const COMMAND_LEN: usize = 16;
 /// Linux task comm reserves one byte of its fixed-size field for the trailing NUL.
 pub const COMMAND_MAX_BYTES: usize = COMMAND_LEN - 1;
 pub const RESOURCE_LEN: usize = 64;
-pub const SOCKET_IP_LEN: usize = 16;
 pub const ANY_SUBJECT: u32 = u32::MAX;
 
 pub const MAX_POLICIES: u32 = 16;
@@ -30,8 +29,6 @@ pub const LSM_DENY: i32 = -1;
 
 pub const FILE_OPEN_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 pub const FILE_OPEN_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
-pub const SOCKET_BIND_STATIC_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
-pub const SOCKET_BIND_STREAM_POLICY_MAX_ENTRIES: u32 = POLICY_MAP_MAX_ENTRIES;
 
 pub const fn policy_bank_offset(generation: u32) -> u32 {
     (generation % POLICY_BANK_COUNT) * POLICY_BANK_SIZE
@@ -61,7 +58,6 @@ impl Entitlement {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PolicyAction {
     FileOpen = 1,
-    SocketBind = 2,
 }
 
 #[repr(u8)]
@@ -81,22 +77,6 @@ pub enum StreamOperator {
     Equal = 3,
     GreaterThanOrEqual = 4,
     GreaterThan = 5,
-}
-
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum SocketFamily {
-    Any = 0,
-    Inet = 2,
-    Inet6 = 10,
-}
-
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum SocketTransport {
-    Any = 0,
-    Tcp = 1,
-    Udp = 2,
 }
 
 #[repr(u8)]
@@ -286,17 +266,6 @@ pub fn resource_name(name: &str) -> [u8; RESOURCE_LEN] {
     fixed_name(name)
 }
 
-const fn bytes_are_zero<const N: usize>(value: &[u8; N]) -> bool {
-    let mut index = 0;
-    while index < N {
-        if value[index] != 0 {
-            return false;
-        }
-        index += 1;
-    }
-    true
-}
-
 #[cfg(feature = "user")]
 fn fixed_string_len(bytes: &[u8]) -> usize {
     bytes
@@ -310,36 +279,6 @@ pub fn encode_kernel_dev_t(device: u64) -> u64 {
     let major = libc::major(device) as u64;
     let minor = libc::minor(device) as u64;
     (major << 20) | minor
-}
-
-#[cfg(feature = "user")]
-fn parse_socket_ip(resource: &[u8; RESOURCE_LEN]) -> std::io::Result<[u8; SOCKET_IP_LEN]> {
-    use std::{io, net::IpAddr, str::FromStr};
-
-    let len = fixed_string_len(resource);
-    if len == 0 {
-        return Ok([0; SOCKET_IP_LEN]);
-    }
-
-    let address = core::str::from_utf8(&resource[..len]).map_err(|error| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            std::format!("socket address is not valid UTF-8: {error}"),
-        )
-    })?;
-    match IpAddr::from_str(address).map_err(|error| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            std::format!("invalid socket IP address '{address}': {error}"),
-        )
-    })? {
-        IpAddr::V4(ip) => {
-            let mut socket_ip = [0; SOCKET_IP_LEN];
-            socket_ip[..4].copy_from_slice(&ip.octets());
-            Ok(socket_ip)
-        }
-        IpAddr::V6(ip) => Ok(ip.octets()),
-    }
 }
 
 #[repr(C)]
@@ -534,208 +473,6 @@ impl FileOpenStreamPolicy {
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct SocketBindStaticPolicy {
-    pub entitlement: Entitlement,
-    pub action: PolicyAction,
-    pub enabled: u8,
-    pub socket_family: SocketFamily,
-    pub socket_transport: SocketTransport,
-    pub _pad: [u8; 3],
-    pub subject: u32,
-    pub command: [u8; COMMAND_LEN],
-    pub socket_port: u16,
-    pub _pad2: [u8; 6],
-    pub resource: [u8; RESOURCE_LEN],
-    pub socket_ip: [u8; SOCKET_IP_LEN],
-}
-
-impl SocketBindStaticPolicy {
-    pub const fn disabled() -> Self {
-        Self {
-            entitlement: Entitlement::Permit,
-            action: PolicyAction::SocketBind,
-            enabled: 0,
-            socket_family: SocketFamily::Any,
-            socket_transport: SocketTransport::Any,
-            _pad: [0; 3],
-            subject: ANY_SUBJECT,
-            command: [0; COMMAND_LEN],
-            socket_port: 0,
-            _pad2: [0; 6],
-            resource: [0; RESOURCE_LEN],
-            socket_ip: [0; SOCKET_IP_LEN],
-        }
-    }
-
-    pub fn new(
-        entitlement: Entitlement,
-        subject: u32,
-        command: &str,
-        family: SocketFamily,
-        transport: SocketTransport,
-        port: u16,
-        resource: &str,
-    ) -> Self {
-        Self {
-            entitlement,
-            action: PolicyAction::SocketBind,
-            enabled: 1,
-            socket_family: family,
-            socket_transport: transport,
-            _pad: [0; 3],
-            subject,
-            command: command_name(command),
-            socket_port: port,
-            _pad2: [0; 6],
-            resource: resource_name(resource),
-            socket_ip: [0; SOCKET_IP_LEN],
-        }
-    }
-
-    pub const fn matches_any_socket_ip(&self) -> bool {
-        bytes_are_zero(&self.socket_ip)
-    }
-
-    #[cfg(feature = "user")]
-    pub fn resolve_resource_identity(mut self) -> std::io::Result<Self> {
-        self.socket_ip = parse_socket_ip(&self.resource)?;
-        Ok(self)
-    }
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct SocketBindStreamPolicy {
-    pub entitlement: Entitlement,
-    pub action: PolicyAction,
-    pub attribute: StreamAttribute,
-    pub operator: StreamOperator,
-    pub enabled: u8,
-    pub socket_family: SocketFamily,
-    pub socket_transport: SocketTransport,
-    pub stream_condition_enabled: u8,
-    pub attribute_condition_count: u8,
-    pub _pad: [u8; 7],
-    pub subject: u32,
-    pub command: [u8; COMMAND_LEN],
-    pub socket_port: u16,
-    pub _pad2: [u8; 6],
-    pub resource: [u8; RESOURCE_LEN],
-    pub socket_ip: [u8; SOCKET_IP_LEN],
-    pub modulo: u64,
-    pub value: u64,
-    pub attribute_conditions: [AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],
-}
-
-impl SocketBindStreamPolicy {
-    pub const fn disabled() -> Self {
-        Self {
-            entitlement: Entitlement::Permit,
-            action: PolicyAction::SocketBind,
-            attribute: StreamAttribute::Time,
-            operator: StreamOperator::LessThan,
-            enabled: 0,
-            socket_family: SocketFamily::Any,
-            socket_transport: SocketTransport::Any,
-            stream_condition_enabled: 0,
-            attribute_condition_count: 0,
-            _pad: [0; 7],
-            subject: ANY_SUBJECT,
-            command: [0; COMMAND_LEN],
-            socket_port: 0,
-            _pad2: [0; 6],
-            resource: [0; RESOURCE_LEN],
-            socket_ip: [0; SOCKET_IP_LEN],
-            modulo: 0,
-            value: 0,
-            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
-        }
-    }
-
-    pub fn stream(
-        entitlement: Entitlement,
-        subject: u32,
-        command: &str,
-        family: SocketFamily,
-        transport: SocketTransport,
-        port: u16,
-        resource: &str,
-    ) -> Self {
-        Self {
-            entitlement,
-            action: PolicyAction::SocketBind,
-            attribute: StreamAttribute::Time,
-            operator: StreamOperator::LessThan,
-            enabled: 1,
-            socket_family: family,
-            socket_transport: transport,
-            stream_condition_enabled: 0,
-            attribute_condition_count: 0,
-            _pad: [0; 7],
-            subject,
-            command: command_name(command),
-            socket_port: port,
-            _pad2: [0; 6],
-            resource: resource_name(resource),
-            socket_ip: [0; SOCKET_IP_LEN],
-            modulo: 0,
-            value: 0,
-            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
-        }
-    }
-
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "preserve the public constructor and keep its arguments aligned with the fixed map record"
-    )]
-    pub fn time(
-        entitlement: Entitlement,
-        subject: u32,
-        command: &str,
-        family: SocketFamily,
-        transport: SocketTransport,
-        port: u16,
-        resource: &str,
-        operator: StreamOperator,
-        modulo: u64,
-        value: u64,
-    ) -> Self {
-        Self {
-            entitlement,
-            action: PolicyAction::SocketBind,
-            attribute: StreamAttribute::Time,
-            operator,
-            enabled: 1,
-            socket_family: family,
-            socket_transport: transport,
-            stream_condition_enabled: 1,
-            attribute_condition_count: 0,
-            _pad: [0; 7],
-            subject,
-            command: command_name(command),
-            socket_port: port,
-            _pad2: [0; 6],
-            resource: resource_name(resource),
-            socket_ip: [0; SOCKET_IP_LEN],
-            modulo,
-            value,
-            attribute_conditions: [AttributeCondition::disabled(); MAX_ATTRIBUTE_CONDITIONS],
-        }
-    }
-
-    pub const fn matches_any_socket_ip(&self) -> bool {
-        bytes_are_zero(&self.socket_ip)
-    }
-
-    #[cfg(feature = "user")]
-    pub fn resolve_resource_identity(mut self) -> std::io::Result<Self> {
-        self.socket_ip = parse_socket_ip(&self.resource)?;
-        Ok(self)
-    }
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct DecisionState {
     pub deny: u32,
@@ -790,16 +527,6 @@ pub struct FileOpenRequest {
     pub resource_inode: u64,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct SocketBindRequest {
-    pub subject: u32,
-    pub command: [u8; COMMAND_LEN],
-    pub socket_family: SocketFamily,
-    pub socket_transport: SocketTransport,
-    pub socket_port: u16,
-    pub socket_ip: [u8; SOCKET_IP_LEN],
-}
-
 pub fn matches_stream_operator(operator: StreamOperator, left: u64, right: u64) -> bool {
     match operator {
         StreamOperator::LessThan => left < right,
@@ -826,41 +553,6 @@ fn matches_file_resource(
 ) -> bool {
     (policy_device == 0 && policy_inode == 0)
         || (policy_device == resource_device && policy_inode == resource_inode)
-}
-
-fn matches_socket_ip(
-    policy_ip: &[u8; SOCKET_IP_LEN],
-    current_family: SocketFamily,
-    current_ip: &[u8; SOCKET_IP_LEN],
-) -> bool {
-    if bytes_are_zero(policy_ip) {
-        return true;
-    }
-
-    match current_family {
-        SocketFamily::Inet => policy_ip[..4] == current_ip[..4],
-        SocketFamily::Inet6 => *policy_ip == *current_ip,
-        SocketFamily::Any => false,
-    }
-}
-
-fn matches_socket_resource(
-    policy_family: SocketFamily,
-    policy_transport: SocketTransport,
-    policy_port: u16,
-    policy_ip: &[u8; SOCKET_IP_LEN],
-    request: &SocketBindRequest,
-) -> bool {
-    let family_matches =
-        policy_family == SocketFamily::Any || policy_family == request.socket_family;
-    let transport_matches =
-        policy_transport == SocketTransport::Any || policy_transport == request.socket_transport;
-    let port_matches = policy_port == 0 || policy_port == request.socket_port;
-
-    family_matches
-        && transport_matches
-        && port_matches
-        && matches_socket_ip(policy_ip, request.socket_family, &request.socket_ip)
 }
 
 struct StreamEvaluation {
@@ -1023,88 +715,6 @@ pub fn evaluate_file_open_stream_policy(
     file_open_stream_legacy_entitlement(current_time, policy)
 }
 
-pub fn evaluate_socket_bind_static_policy(
-    request: &SocketBindRequest,
-    policy: &SocketBindStaticPolicy,
-) -> Option<Entitlement> {
-    if policy.enabled == 0 || policy.action != PolicyAction::SocketBind {
-        return None;
-    }
-    if !matches_subject(policy.subject, request.subject) {
-        return None;
-    }
-    if !matches_bytes(&policy.command, &request.command) {
-        return None;
-    }
-    if !matches_socket_resource(
-        policy.socket_family,
-        policy.socket_transport,
-        policy.socket_port,
-        &policy.socket_ip,
-        request,
-    ) {
-        return None;
-    }
-    Some(policy.entitlement)
-}
-
-pub fn socket_bind_stream_policy_applies_to_request(
-    request: &SocketBindRequest,
-    policy: &SocketBindStreamPolicy,
-) -> bool {
-    if policy.enabled == 0 || policy.action != PolicyAction::SocketBind {
-        return false;
-    }
-    if !matches_subject(policy.subject, request.subject) {
-        return false;
-    }
-    if !matches_bytes(&policy.command, &request.command) {
-        return false;
-    }
-    if !matches_socket_resource(
-        policy.socket_family,
-        policy.socket_transport,
-        policy.socket_port,
-        &policy.socket_ip,
-        request,
-    ) {
-        return false;
-    }
-    true
-}
-
-pub fn socket_bind_stream_legacy_entitlement(
-    current_time: PolicyTime,
-    policy: &SocketBindStreamPolicy,
-) -> Option<Entitlement> {
-    if policy.stream_condition_enabled == 0 {
-        return Some(policy.entitlement);
-    }
-
-    let evaluation = StreamEvaluation {
-        attribute: policy.attribute,
-        operator: policy.operator,
-        modulo: policy.modulo,
-        value: policy.value,
-        current_time,
-    };
-    stream_entitlement(policy.entitlement, &evaluation)
-}
-
-pub fn evaluate_socket_bind_stream_policy(
-    request: &SocketBindRequest,
-    current_time: PolicyTime,
-    policy: &SocketBindStreamPolicy,
-) -> Option<Entitlement> {
-    if !socket_bind_stream_policy_applies_to_request(request, policy) {
-        return None;
-    }
-    if policy.attribute_condition_count != 0 {
-        return None;
-    }
-    socket_bind_stream_legacy_entitlement(current_time, policy)
-}
-
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for AttributeHash {}
 
@@ -1123,12 +733,6 @@ unsafe impl aya::Pod for FileOpenStaticPolicy {}
 #[cfg(feature = "user")]
 unsafe impl aya::Pod for FileOpenStreamPolicy {}
 
-#[cfg(feature = "user")]
-unsafe impl aya::Pod for SocketBindStaticPolicy {}
-
-#[cfg(feature = "user")]
-unsafe impl aya::Pod for SocketBindStreamPolicy {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1139,17 +743,6 @@ mod tests {
             command: command_name("cat"),
             resource_device: 0,
             resource_inode: 0,
-        }
-    }
-
-    fn socket_bind_request() -> SocketBindRequest {
-        SocketBindRequest {
-            subject: 1000,
-            command: command_name("python3"),
-            socket_family: SocketFamily::Inet,
-            socket_transport: SocketTransport::Tcp,
-            socket_port: 8080,
-            socket_ip: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         }
     }
 
@@ -1493,41 +1086,6 @@ mod tests {
         };
         let not_applicable = evaluate_file_open_stream_policy(
             &allowed_request,
-            PolicyTime::from_unix_seconds(1),
-            &policy,
-        );
-
-        assert_eq!(denied, Some(Entitlement::Deny));
-        assert_eq!(not_applicable, None);
-    }
-
-    #[test]
-    fn socket_bind_stream_policy_respects_command_filter() {
-        let policy = SocketBindStreamPolicy::time(
-            Entitlement::Deny,
-            1000,
-            "python3",
-            SocketFamily::Inet,
-            SocketTransport::Tcp,
-            8080,
-            "0.0.0.0",
-            StreamOperator::LessThanOrEqual,
-            10,
-            2,
-        );
-
-        let denied = evaluate_socket_bind_stream_policy(
-            &socket_bind_request(),
-            PolicyTime::from_unix_seconds(1),
-            &policy,
-        );
-
-        let different_command_request = SocketBindRequest {
-            command: command_name("nc"),
-            ..socket_bind_request()
-        };
-        let not_applicable = evaluate_socket_bind_stream_policy(
-            &different_command_request,
             PolicyTime::from_unix_seconds(1),
             &policy,
         );

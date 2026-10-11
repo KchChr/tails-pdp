@@ -11,9 +11,13 @@ Stream policies may use the same static hook filters as static policies, for exa
 `subject.uid` or `resource.path`, plus stream conditions such as `environment.utc.hour`,
 `system.<attribute>`, `subject.<attribute>` or `resource.<attribute>`.
 
-Numbering convention:
+Example identifiers (all examples use `file_open`):
 
-- `10-*` to `19-*`: `file_open` policies
+- `10-*` to `19-*`: static and stream examples, including time and attribute conditions
+- `25-*`: combined subject-role and DEFCON condition
+- `101-*`: static denial of `tail` for UID 1000 on `/home/hntr/test.txt`
+
+The numbers identify examples; they do not set evaluation order or priority.
 
 DEFCON examples use `system.defcon`. The current DEFCON value is read from
 `../attributes/system.attributes` and must be an integer from `1` to `5`.

@@ -1,5 +1,0 @@
-policy "stream-15"
-permit
- action == "file_open";
- resource.path == "/tmp/tails-eval-iy7a07nk/LOAD-01/target";
-system.defcon <= 2;

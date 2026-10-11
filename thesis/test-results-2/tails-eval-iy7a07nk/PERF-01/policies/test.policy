@@ -1,5 +1,0 @@
-policy "test"
-permit
- action == "file_open";
- resource.path == "/tmp/tails-eval-iy7a07nk/PERF-01/target";
-

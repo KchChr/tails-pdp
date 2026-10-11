@@ -1,5 +1,0 @@
-policy "test"
-deny
- action == "file_open";
- resource.path == "/tmp/tails-eval-oma1c72v/E2E-15/target";
-subject.uid == 60001;

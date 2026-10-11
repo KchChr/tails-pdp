@@ -1,3 +1,2 @@
 # System-Attributes. Policies refer to these as system.<name>.
 defcon = 3
-someothercon = "test"

@@ -26,23 +26,25 @@ program.
 The repository contains a simple helper script for the target machine:
 
 ```shell
-./run.sh
+./scripts/run.sh
 ```
 
 This currently does:
 
 ```shell
-git pull
-cargo build --bin tails-pdp-admintool --release
-cargo run --bin tails-pdp --release
+cargo build --locked --bin tails-pdp-admintool --release
+cargo run --locked --bin tails-pdp --release
 ```
+
+The helper runs from the repository root regardless of the calling directory. Update the
+checkout separately with `git pull` when needed.
 
 ## Tests
 
 Run the complete test and evaluation chain on the dedicated Linux target with:
 
 ```shell
-./test.sh
+./scripts/test.sh
 ```
 
 The script runs formatting, unit tests, Clippy, and the release build first. It then requests root
@@ -55,26 +57,27 @@ Each invocation creates `test-results/<UTC timestamp>-<unique suffix>/` in the r
 - `e2e-shared/` and `evaluation/`: E2E fixtures, runtime logs, scenario reports and raw measurements.
 
 Results remain available after a failed run. Fixture paths stay under `/tmp` during execution and
-are copied afterwards, preserving the path lengths used by the tests. Generated `test-results/`
-directories are ignored by Git; select the relevant evidence separately for the thesis archive.
+are copied afterwards, preserving the path lengths used by the tests. Retain the complete run
+directory when using its results as evidence for the thesis.
 The individual privileged runners remain available for targeted repetitions:
 
 ```shell
-sudo ./tests/test-e2e.sh
+sudo ./scripts/tests/test-e2e.sh
 ```
 
 Run the additional functional, FD, performance, capacity, and stability scenarios
 on the same dedicated target after building the release binaries:
 
 ```shell
-sudo ./tests/test-evaluation.sh
+sudo ./scripts/tests/test-evaluation.sh
 ```
 
 Individual IDs can be appended, for example `E2E-12 PERF-02`. Each scenario has its own Bash file;
-`sudo ./tests/test-e2e.sh` runs E2E-01 through E2E-19. The runner preserves
+`sudo ./scripts/tests/test-e2e.sh` runs E2E-01 through E2E-19. The runner preserves
 all results and logs and returns a failure status for unmet expectations. See
-[execution details](tests/evaluation/README.md) and the
-[test evaluation](thesis/Testbewertung.md) for measured results and known failures.
+[execution details](scripts/tests/evaluation/README.md) and the
+[archived evaluation run](eval-tails-pdp/README.md) for the preserved run and its checksums, and the
+[test evaluation](../thesis/Testbewertung.md) for measured results and known failures.
 
 The end-to-end test temporarily owns `/sys/fs/bpf/tails-pdp` and therefore refuses to run while
 another `tails-pdp` process is active. It must not be used on a production host.
@@ -82,14 +85,7 @@ another `tails-pdp` process is active. It must not be used on a production host.
 If pinned map layouts changed, remove the stale maps once before restarting:
 
 ```shell
-sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STATIC_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/FILE_OPEN_STREAM_POLICIES
-sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME
-# Legacy pin from versions before the single-time-map migration:
-sudo rm -f /sys/fs/bpf/tails-pdp/CURRENT_TIME_ISO8601
-sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTES
-sudo rm -f /sys/fs/bpf/tails-pdp/ATTRIBUTE_GENERATION
-sudo rm -f /sys/fs/bpf/tails-pdp/POLICY_GENERATION
+sudo ./scripts/remove-maps.sh
 ```
 
 ## Admin Tool
@@ -175,7 +171,7 @@ using its device and inode identity.
 Attribute updates are validated against the pinned map's actual capacity before
 replacing the inactive bank. A rejected update keeps the active generation and
 the runtime running; a later file change can retry. Initial loading errors still
-prevent startup. See the [LOAD-01 fix and regression tests](thesis/LOAD-01-Korrektur.md).
+prevent startup. See the [LOAD-01 fix and regression tests](../thesis/LOAD-01-Korrektur.md).
 
 Not supported:
 

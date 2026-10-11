@@ -29,8 +29,6 @@ pkgs.mkShell {
     export AYA_RUSTC_LLVM_PATH="${llvm.libllvm}/lib/libLLVM-21.so"
     export LD_LIBRARY_PATH="${pkgs.zlib.out}/lib:''${LD_LIBRARY_PATH:-}"
 
-    # Nightly und die für Build sowie Prüfkette benötigten Komponenten pinnen.
-    #NIGHTLY="nightly-2025-08-01"
     NIGHTLY="stable"
     if command -v rustup >/dev/null; then
       rustup toolchain install "$NIGHTLY" \
