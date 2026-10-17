@@ -1,3 +1,8 @@
+//! Lesen/Schreiben der CPU-lokalen Entscheidungsflags zwischen Tail-Call-Stufen.
+//!
+//! Mapzugriffsfehler werden als fehlender Zustand zurückgegeben; die Aufrufer
+//! behandeln unvollständige Durchsetzung als Ablehnung.
+
 pub(crate) use tails_pdp_common::DecisionState;
 
 use crate::maps::{

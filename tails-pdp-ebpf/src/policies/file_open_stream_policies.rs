@@ -1,3 +1,10 @@
+//! Auswertung aktiver Stream-Policies mit Requestfilter, Attributabfrage und Zeit.
+//!
+//! Die Stufe verbindet fehlende/typfalsche Attribute mit Nichtübereinstimmung der
+//! Policy. Eine passende Deny-Regel hat in der anschließenden Kombination Vorrang.
+//! Policy-/Attributgenerationen werden separat gelesen; es besteht keine gemeinsame
+//! Mehrmap-Transaktion mit sämtlichen Userspace-Operationen.
+
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     AttributeKey, COMMAND_LEN, Entitlement, FileOpenRequest, LSM_DENY, MAX_ATTRIBUTE_CONDITIONS,
@@ -15,6 +22,10 @@ use crate::{
     policies::decision::{DecisionMapExt, DecisionState},
 };
 
+/// Bewertet die ausgewählte Policygeneration für UID, Command und Fileidentität.
+///
+/// Gibt gesammelte Entitlements zurück; der Aufrufer sorgt für gültige Map-/Requestdaten
+/// und die Weitergabe zur abschließenden Deny-Overrides-Kombination.
 pub(crate) fn evaluate_policies(
     current_subject: u32,
     current_command: &[u8; COMMAND_LEN],
@@ -86,6 +97,10 @@ pub(crate) fn evaluate_policies(
     state
 }
 
+/// Prüft nur die gezählte Teilmenge der festen Bedingungsslots gegen die ausgewählte Bank.
+///
+/// UID und Gerät/Inode bilden den namensraumabhängigen Schlüssel. Fehlende Werte
+/// oder Typ-/Operatorabweichungen lassen die Policy nicht passen.
 fn attribute_conditions_match(
     condition_count: u8,
     conditions: &[tails_pdp_common::AttributeCondition; MAX_ATTRIBUTE_CONDITIONS],

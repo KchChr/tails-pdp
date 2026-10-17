@@ -1,3 +1,5 @@
+//! Dateiattribute validieren, Identitäten auflösen und eine vorbereitete Bank aktivieren.
+
 use std::{
     env, fs,
     os::unix::fs::MetadataExt,
@@ -22,9 +24,12 @@ const SYSTEM_ATTRIBUTES_FILE_NAME: &str = "system.attributes";
 const SUBJECT_ATTRIBUTES_DIRECTORY_NAME: &str = "subjects";
 const RESOURCE_ATTRIBUTES_DIRECTORY_NAME: &str = "resources";
 
+/// Gepinnte strukturierte Attribut-HashMap mit den gemeinsamen binären Schlüssel-/Werttypen.
 pub type AttributeMap = AyaHashMap<MapData, AttributeKey, AttributeValue>;
+/// Array mit der aktiven Attributgeneration in Slot 0.
 pub type AttributeGenerationMap = Array<MapData, u32>;
 
+/// Besitzt Attribut- und Generationsmap für einen generationenbasierten Bankwechsel.
 pub struct AttributeMaps {
     attributes: AttributeMap,
     generation: AttributeGenerationMap,
@@ -39,12 +44,22 @@ struct ParsedAttribute {
     value: AttributeValue,
 }
 
+/// Bestimmt `attributes/` relativ zum aktuellen Arbeitsverzeichnis.
+///
+/// # Errors
+///
+/// Fehler der Arbeitsverzeichnisermittlung werden zurückgegeben.
 pub fn default_stream_attributes_directory() -> anyhow::Result<PathBuf> {
     Ok(env::current_dir()
         .context("failed to determine current working directory")?
         .join(STREAM_ATTRIBUTES_DIRECTORY_NAME))
 }
 
+/// Öffnet die vorhandenen Pins `ATTRIBUTES` und `ATTRIBUTE_GENERATION`.
+///
+/// # Errors
+///
+/// Fehlende Pins, unpassende Maptypen und unzureichende Zugriffsrechte liefern Fehler.
 pub fn open_attribute_maps() -> anyhow::Result<AttributeMaps> {
     let attributes = open_pinned_hash_map("ATTRIBUTES")?;
     let generation = open_pinned_array("ATTRIBUTE_GENERATION")?;
@@ -54,6 +69,15 @@ pub fn open_attribute_maps() -> anyhow::Result<AttributeMaps> {
     })
 }
 
+/// Lädt den vollständigen initialen Attributstand und aktiviert dessen Bank.
+///
+/// `attribute_maps` wird beschrieben; `enforcement_triggers` erhält nach Aktivierung
+/// eine Benachrichtigung. Fehlende Verzeichnisse und eine initiale DEFCON-Datei werden angelegt.
+///
+/// # Errors
+///
+/// Ungültige Daten, Dateizugriffs-/Kapazitäts-/Mapfehler oder ein geschlossener
+/// Triggerkanal werden zurückgegeben. Ein Benachrichtigungsfehler kann nach Aktivierung auftreten.
 pub fn write_current_attributes(
     attribute_maps: &mut AttributeMaps,
     enforcement_triggers: &mpsc::Sender<EnforcementTrigger>,
@@ -64,6 +88,15 @@ pub fn write_current_attributes(
     notify_attribute_activation(enforcement_triggers, generation)
 }
 
+/// Beobachtet rekursiv Attributveröffentlichungen und entfernt bzw. ersetzt geänderte Werte.
+///
+/// Übernimmt `attribute_maps` als exklusiv geliehene Maps und besitzt den Trigger-Sender.
+/// Ungültige laufende Updates lassen den aktiven Stand erhalten und werden protokolliert.
+///
+/// # Errors
+///
+/// Watcher-/Einrichtungsfehler und ein nach Aktivierung geschlossener Triggerkanal
+/// beenden die Aufgabe. Parse-/Kapazitäts-/Commitfehler eines Updates werden abgefangen.
 pub async fn run_attribute_updater(
     attribute_maps: &mut AttributeMaps,
     enforcement_triggers: mpsc::Sender<EnforcementTrigger>,
@@ -159,6 +192,10 @@ fn apply_attribute_directory(
     Ok(())
 }
 
+/// Liest globale, UID- und rekursive Ressourcenattribute in eine eindeutige sortierte Darstellung.
+///
+/// Ressourcen werden auf Gerät/Inode aufgelöst; doppelte Schlüssel und ungültige
+/// Namen/Werte werden vor dem Commit abgelehnt.
 fn read_attribute_directory(directory: &Path) -> anyhow::Result<Vec<ParsedAttribute>> {
     let mut attributes = Vec::new();
     let system_path = directory.join(SYSTEM_ATTRIBUTES_FILE_NAME);
@@ -473,6 +510,11 @@ impl AttributeStore for AttributeMaps {
     }
 }
 
+/// Bereitet ausschließlich die inaktive Bank vor und aktiviert sie erst nach vollständigem Schreiben.
+///
+/// Vor dem Löschen wird gegen tatsächliche Mapkapazität minus beibehaltene Einträge
+/// geprüft. Fehler vor Aktivierung erhalten die aktive Generation; Teilreste in der
+/// inaktiven Bank können beim nächsten Versuch ersetzt werden.
 fn commit_attributes(
     attribute_maps: &mut impl AttributeStore,
     attributes: &[ParsedAttribute],

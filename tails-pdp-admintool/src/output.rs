@@ -1,3 +1,8 @@
+//! Textdarstellung gelesener Mapwerte und ergänzender Namen aus den Quelldateien.
+//!
+//! Hashwerte ohne verfügbaren Originalnamen bleiben als Hashdarstellung sichtbar.
+//! Die Ausgabe ist keine atomare Aufzeichnung aller parallel wechselnden Maps.
+
 use std::collections::HashMap;
 
 use anyhow::Context;

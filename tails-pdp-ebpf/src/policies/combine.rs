@@ -1,3 +1,8 @@
+//! Letzte Tail-Call-Stufe: Deny-Overrides in Linux-LSM-Rückgabewerte übersetzen.
+//!
+//! Mindestens ein Deny oder ein fehlender Entscheidungszustand lehnt ab. Ohne
+//! passendes Deny ist der Returnwert 0; andere Sicherheitsmechanismen bleiben wirksam.
+
 use aya_ebpf::{macros::lsm, programs::LsmContext};
 use tails_pdp_common::LSM_DENY;
 

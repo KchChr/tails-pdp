@@ -1,3 +1,8 @@
+//! Auswertung der aktiven statischen Policybank anhand UID, Command und Gerät/Inode.
+//!
+//! Die gelesene Policygeneration wird im Entscheidungszustand für die Folgestufe
+//! mitgeführt. Fehlgeschlagene Request-/Mapzugriffe oder Tail-Calls lehnen ab.
+
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::{
     COMMAND_LEN, Entitlement, FileOpenRequest, LSM_DENY, POLICY_BANK_SIZE,
@@ -10,6 +15,10 @@ use crate::{
     policies::decision::{DecisionMapExt, DecisionState, active_policy_generation},
 };
 
+/// Bewertet die ausgewählte Policygeneration für UID, Command und Fileidentität.
+///
+/// Gibt gesammelte Entitlements zurück; der Aufrufer sorgt für gültige Map-/Requestdaten
+/// und die Weitergabe zur abschließenden Deny-Overrides-Kombination.
 pub(crate) fn evaluate_policies(
     current_subject: u32,
     current_command: &[u8; COMMAND_LEN],

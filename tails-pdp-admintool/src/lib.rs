@@ -1,3 +1,10 @@
+//! Lesende Kommandozeile für die aktiven File-Open-Maps und strukturierte Attribute.
+//!
+//! [`run`] verarbeitet `show`, `show-active`, `show-policies` und `show-attributes`.
+//! Quelldateien liefern ergänzende Namen für Hashwerte; die Mapdaten bleiben die
+//! angezeigte aktive Wahrheit. Das Tool veröffentlicht und verändert keine Policies.
+//! Passende Linux-Map-Leserechte sind erforderlich. Pins allein beweisen keine aktive Runtime.
+
 mod cli;
 mod maps;
 mod output;
@@ -254,6 +261,16 @@ fn print_usage() {
     println!("  --attributes-dir <PFAD>   Quelle fuer Hash-Namen, Standard: attributes");
 }
 
+/// Verarbeitet Prozessargumente und zeigt die ausgewählten gepinnten Maps lesend an.
+///
+/// Quellverzeichnisse liefern ein ergänzendes Hashwörterbuch; sie konfigurieren nicht
+/// die Runtime. `--help` zeigt die Hilfe ohne Mapzugriff.
+///
+/// # Errors
+///
+/// Dateizugriffs-, Mapzugriffs- und Ausgabefehler werden zurückgegeben.
+/// Ungültige CLI-Argumente beenden den Prozess mit Exitstatus 2.
+/// Die Ausgabe ist eine Diagnose des gelesenen Zustands, kein Request-Auditjournal.
 pub fn run() -> anyhow::Result<()> {
     let args: Vec<_> = env::args_os().collect();
     if args.len() == 1

@@ -11,7 +11,7 @@
 - Quellenkopien, `../thesis/test-results/`, PDFs, Bilder, Archive, `target/`, `out/`
   und `tmp/` bei allgemeinen Suchen auslassen. Bei Bedarf ausdrücklich einbeziehen;
   Testrohdaten möglichst nach Szenario bzw. JSON-Feld auswerten.
-- Requirements-Notizen liegen in `../thesis/requirements-types-rules.md`.
+- Requirements-Notizen liegen in `../thesis/ruleset/requirements-types-rules.md`.
 - Toolausgaben kurz halten: relevante Treffer und Fehler ausgeben, große Logs
   in Dateien speichern und gezielt auswerten.
 - Änderungen passend prüfen. `./scripts/test.sh` benötigt Linux; privilegierte

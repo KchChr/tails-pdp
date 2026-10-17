@@ -1,3 +1,5 @@
+//! Aktive Generationen und relevante Zeitgrenzen steuern selektive FD-Nachbewertung.
+
 use std::{
     collections::HashSet,
     ffi::OsString,
@@ -106,6 +108,17 @@ struct ScanContext {
     policy_bank_offset: u32,
 }
 
+/// Bewertet offene FDs bei Aktivierungstriggern und relevanten Zeitgrenzen erneut.
+///
+/// Besitzt den Receiver `enforcement_triggers`, bündelt ausstehende Ereignisse
+/// und liest aktive Maps für einen gemeinsamen Scan-Kontext. Es gibt keinen
+/// periodischen Vollscan ohne Anlass. FD-Entzugsfehler werden im Scan protokolliert.
+///
+/// # Errors
+///
+/// Initiale Mapzugriffsfehler, Zeitgrenzenberechnungsfehler und ein geschlossener
+/// Triggerkanal beenden die Aufgabe. Remote-FD-Entzug benötigt x86_64-Linux
+/// und ptrace-Rechte; einzelne erfolgreiche Scans garantieren keine Race-Freiheit.
 pub async fn run_userspace_pep(
     mut enforcement_triggers: mpsc::Receiver<EnforcementTrigger>,
 ) -> anyhow::Result<()> {
@@ -162,6 +175,11 @@ async fn wait_for_trigger(
     }
 }
 
+/// Ermittelt Policyverletzungen und versucht jeden verletzenden PID-/FD-Schlüssel einmal zu schließen.
+///
+/// Ein gemeinsamer Scan-Kontext verhindert wechselnde Eingaben pro einzelner
+/// Auswertung. Prozesse und FD-Identitäten können sich außerhalb dieses Kontextes
+/// weiter verändern. Fehler werden protokolliert und sind kein globales Scanrollback.
 fn run_scan<C: FdCloser>(
     policies: &mut PolicyMaps,
     fd_closer: &mut C,
@@ -259,6 +277,10 @@ fn open_policy_maps() -> anyhow::Result<PolicyMaps> {
     })
 }
 
+/// Liest Policy-/Attributgeneration und gemeinsame Zeitbasis für genau einen Scan.
+///
+/// Alle FDs dieses Scans verwenden diesen Kontext; ein paralleler Generationswechsel
+/// und die Wiederverwendung einer Bank sind dadurch nicht global atomar ausgeschlossen.
 fn read_scan_context(policies: &mut PolicyMaps) -> anyhow::Result<ScanContext> {
     let generation = policies
         .policy_generation
@@ -307,6 +329,10 @@ fn collect_policy_violations(
 
 /// Returns the earliest future Unix second where one active time condition can change truth value.
 /// Attribute-only policies do not require a timer and are re-evaluated on attribute activation.
+/// Bestimmt aus aktiven Stream-Policies die nächste relevante Zeitgrenze.
+///
+/// UID-/Ressourcenfilter ändern die zeitliche Grenze nicht; der spätere Scan prüft
+/// die tatsächlichen Requests. Ohne relevante Zeitregel wird nur auf Trigger gewartet.
 fn next_time_boundary(policies: &mut PolicyMaps) -> anyhow::Result<Option<u64>> {
     let generation = policies
         .policy_generation
@@ -537,6 +563,10 @@ fn file_violation(process_fd: &ProcessFd, policy_kind: PolicyKind, policy_index:
     }
 }
 
+/// Versucht selektiven FD-Entzug und merkt erfolgreiche PID-/FD-Paare im aktuellen Scan.
+///
+/// Fehlgeschlagene Entzüge werden protokolliert. Diese Operation prüft nicht atomar,
+/// ob ein konkurrierender Prozess dieselbe FD-Nummer bereits wiederverwendet hat.
 fn enforce_violation<C: FdCloser>(
     violation: &Violation,
     revoked_in_scan: &mut HashSet<FdKey>,

@@ -1,3 +1,8 @@
+//! Verifiergeeignete Requestgewinnung aus LSM-Kontext und Kernel-Dateitypen.
+//!
+//! Pfadnamen werden nicht im Hook verglichen; die Fileidentität besteht aus Gerät
+//! und Inode. Fehler beim Kernelzugriff ergeben keinen gültigen Request.
+
 use core::ptr::addr_of;
 
 use aya_ebpf::{helpers::bpf_probe_read_kernel, programs::LsmContext};
@@ -14,6 +19,10 @@ pub(crate) struct FileOpenResource {
 ///
 /// A failed kernel read is kept distinct from the valid wildcard identity `(0, 0)` so callers can
 /// fail closed instead of accidentally matching a wildcard policy.
+/// Liest File, Inode und Superblock aus `ctx` und liefert die Kernel-Dateiidentität.
+///
+/// `None` bedeutet fehlgeschlagenen Kernelzugriff; Aufrufer dürfen daraus keine
+/// Permit-Entscheidung ableiten.
 pub(crate) fn read_file_open_resource(ctx: &LsmContext) -> Option<FileOpenResource> {
     let file_ptr: *const vmlinux::file = ctx.arg(0);
     if file_ptr.is_null() {

@@ -1,5 +1,20 @@
+//! Interner selektiver Remote-FD-Entzug mit ptrace unter x86_64-Linux.
+//!
+//! Es werden temporär Instruktionsbytes und Register des Zielthreads verändert.
+//! Die Wiederherstellung wird auch nach einem fehlgeschlagenen injizierten close versucht;
+//! Wiederherstellungsfehler sind echte Fehler, keine garantierte Rückabwicklung.
+//! Ein paralleler FD-Wechsel und andere Threads sind nicht global angehalten.
+
 use anyhow::{Context, bail};
 
+/// Versucht `fd` in Prozess `pid` durch einen injizierten close-Systemaufruf zu schließen.
+///
+/// # Errors
+///
+/// Negative FDs, geschützte PIDs (0, 1, eigener Prozess), fehlende ptrace-Rechte,
+/// Attach-/Stop-/Register-/Instruktions-/Systemaufruf-/Restorefehler liefern Fehler.
+/// Außerhalb von x86_64-Linux ist die Operation nicht implementiert.
+/// Ein numerischer FD ist keine stabile Identität; Wiederverwendung bleibt ein Race.
 pub fn close_remote_fd(pid: u32, fd: i32) -> anyhow::Result<()> {
     close_remote_fd_impl(pid, fd)
 }
@@ -45,6 +60,10 @@ impl TracedProcess {
         })
     }
 
+    /// Sichert Register und Instruktion, injiziert close und versucht anschließend beide Zustände wiederherzustellen.
+    ///
+    /// Restoreversuche werden unabhängig vom Systemaufrufergebnis ausgeführt. Ein
+    /// Restorefehler wird zurückgegeben; fehlerfreie Wiederherstellung wird nicht zugesichert.
     fn close_fd(&mut self, fd: i32) -> anyhow::Result<()> {
         let original_regs = ptrace_getregs(self.pid).context("PTRACE_GETREGS failed")?;
         let original_word =

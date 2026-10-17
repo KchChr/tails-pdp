@@ -1,6 +1,14 @@
+//! Messmarkierungen für Empfang, Aktivierung und FD-Nachbewertung; kein Auditjournal.
+
 //! Opt-in measurement markers. Linux CLOCK_MONOTONIC matches Python monotonic_ns.
 use std::sync::OnceLock;
 
+/// Schreibt unter Linux bei `TAILS_PDP_TIMING=1` einen Monotonzeitmarker auf stderr.
+///
+/// `event` bezeichnet die Phase, `generation` ordnet den Zustand zu. Die Einstellung
+/// wird beim ersten Aufruf gecacht. Deaktiviert oder außerhalb von Linux ist der
+/// Aufruf wirkungslos; Zeitermittlungsfehler werden ignoriert. Marker verursachen
+/// Messaufwand und sind mit Python-`monotonic_ns` auf demselben System vergleichbar.
 pub fn mark(event: &str, generation: u32) {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     if !*ENABLED.get_or_init(|| std::env::var("TAILS_PDP_TIMING").as_deref() == Ok("1")) {

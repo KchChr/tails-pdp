@@ -1,3 +1,9 @@
+//! Kernelmaps und fest abgestimmte Tail-Call-/Entscheidungsindizes.
+//!
+//! Policy-/Attributdaten, Generationen und Zeit sind gepinnt; Jump-Table, Debugschalter
+//! und CPU-lokaler Entscheidungszustand gehören zum geladenen Objekt. Gemeinsame
+//! Wertlayouts und Kapazitäten müssen mit Loadern und Administration übereinstimmen.
+
 use aya_ebpf::{
     macros::map,
     maps::{Array, HashMap, PerCpuArray, ProgramArray},

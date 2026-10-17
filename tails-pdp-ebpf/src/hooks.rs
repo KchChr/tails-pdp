@@ -1,9 +1,15 @@
+//! File-Open-Einstieg: bestehende negative BPF-LSM-Entscheidung erhalten und
+//! statische Auswertung per Tail-Call starten. Fehlt die Kette, wird mit EPERM abgelehnt.
+
 use aya_ebpf::{EbpfContext, macros::lsm, programs::LsmContext};
 use tails_pdp_common::LSM_DENY;
 
 use crate::maps::{FILE_OPEN_JUMP_TABLE, TAIL_IDX_FILE_OPEN_STATIC};
 
 #[lsm(hook = "file_open")]
+/// Bewahrt `ctx`-Vorgängerfehler und startet die statische Tail-Call-Stufe.
+///
+/// Bei Rückkehr eines fehlgeschlagenen Tail-Calls wird die Dateiöffnung abgelehnt.
 pub fn file_open(ctx: LsmContext) -> i32 {
     // BPF LSM appends the previous program's return value after the hook's declared arguments.
     // Preserve an earlier denial instead of overriding another security module.

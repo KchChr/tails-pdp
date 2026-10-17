@@ -1,3 +1,10 @@
+//! Rekursives asynchrones Inotify-Watching ohne festen Debounce-Timer.
+//!
+//! Nur Veröffentlichungs-/Entfernungsereignisse relevanter Dateiendungen werden gemeldet;
+//! Schreibereignisse temporärer Dateien sind keine Aktivierung. Die Loader lesen danach
+//! den vollständigen Bestand erneut. Neue/entfernte Unterverzeichnisse und Queue-Überläufe
+//! werden behandelt. Auf anderen Betriebssystemen liefern die Einstiegspunkte Fehler.
+
 use std::path::Path;
 
 #[cfg(target_os = "linux")]
@@ -25,6 +32,7 @@ mod imp {
         | libc::IN_MOVE_SELF
         | libc::IN_ONLYDIR;
 
+    /// Besitzt den Inotify-Deskriptor, registrierte Verzeichnisse und den Dateiendungsfilter.
     pub struct DirectoryWatcher {
         fd: AsyncFd<OwnedFd>,
         recursive: bool,
@@ -34,6 +42,16 @@ mod imp {
     }
 
     impl DirectoryWatcher {
+        /// Erzeugt einen Watcher auf `path`; `recursive` registriert auch Unterverzeichnisse.
+        ///
+        /// `extension` ist die relevante Dateiendung ohne Punkt, etwa `policy`.
+        ///
+        /// # Errors
+        ///
+        /// Fehler von Inotify, Verzeichniszugriff und Tokio-Registrierung werden zurückgegeben.
+        /// Unter Linux ist eine aktive Tokio-Runtime mit I/O-Treiber erforderlich;
+        /// Tokio kann ohne Runtime-Kontext beim Registrieren einen Panic auslösen.
+        /// Auf Nicht-Linux-Plattformen ist der Watcher nicht implementiert.
         pub fn new(path: &Path, recursive: bool, extension: &str) -> anyhow::Result<Self> {
             let raw_fd = unsafe { libc::inotify_init1(libc::IN_NONBLOCK | libc::IN_CLOEXEC) };
             if raw_fd == -1 {
@@ -55,6 +73,15 @@ mod imp {
             Ok(watcher)
         }
 
+        /// Wartet auf eine relevante Veröffentlichung/Löschung bzw. erforderliche Neusynchronisierung.
+        ///
+        /// Mehrere Ereignisse können gemeinsam gelesen werden; es wird kein Dateidiff geliefert.
+        /// Der Aufrufer liest den vollständigen Zustand nach Rückkehr.
+        ///
+        /// # Errors
+        ///
+        /// Inotify-Lese-/Registrierungs-/Verzeichnisfehler werden zurückgegeben;
+        /// auf Nicht-Linux-Plattformen ist der Aufruf nicht implementiert.
         pub async fn wait_for_change(&mut self) -> anyhow::Result<()> {
             loop {
                 let mut guard = self.fd.readable_mut().await?;
@@ -275,13 +302,33 @@ mod imp {
 mod imp {
     use std::path::Path;
 
+    /// Besitzt den Inotify-Deskriptor, registrierte Verzeichnisse und den Dateiendungsfilter.
     pub struct DirectoryWatcher;
 
     impl DirectoryWatcher {
+        /// Erzeugt einen Watcher auf `path`; `recursive` registriert auch Unterverzeichnisse.
+        ///
+        /// `extension` ist die relevante Dateiendung ohne Punkt, etwa `policy`.
+        ///
+        /// # Errors
+        ///
+        /// Fehler von Inotify, Verzeichniszugriff und Tokio-Registrierung werden zurückgegeben.
+        /// Unter Linux ist eine aktive Tokio-Runtime mit I/O-Treiber erforderlich;
+        /// Tokio kann ohne Runtime-Kontext beim Registrieren einen Panic auslösen.
+        /// Auf Nicht-Linux-Plattformen ist der Watcher nicht implementiert.
         pub fn new(_path: &Path, _recursive: bool, _extension: &str) -> anyhow::Result<Self> {
             anyhow::bail!("inotify directory watching is only available on Linux")
         }
 
+        /// Wartet auf eine relevante Veröffentlichung/Löschung bzw. erforderliche Neusynchronisierung.
+        ///
+        /// Mehrere Ereignisse können gemeinsam gelesen werden; es wird kein Dateidiff geliefert.
+        /// Der Aufrufer liest den vollständigen Zustand nach Rückkehr.
+        ///
+        /// # Errors
+        ///
+        /// Inotify-Lese-/Registrierungs-/Verzeichnisfehler werden zurückgegeben;
+        /// auf Nicht-Linux-Plattformen ist der Aufruf nicht implementiert.
         pub async fn wait_for_change(&mut self) -> anyhow::Result<()> {
             anyhow::bail!("inotify directory watching is only available on Linux")
         }
@@ -290,6 +337,11 @@ mod imp {
 
 pub use imp::DirectoryWatcher;
 
+/// Erzeugt einen rekursiven Watcher auf `path` für `extension` ohne führenden Punkt.
+///
+/// # Errors
+///
+/// Es gelten die Fehler- und Tokio-Runtime-Voraussetzungen von [`DirectoryWatcher::new`].
 pub fn watch_directory_recursive(path: &Path, extension: &str) -> anyhow::Result<DirectoryWatcher> {
     DirectoryWatcher::new(path, true, extension)
 }

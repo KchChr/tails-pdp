@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> {} }:
 let
   llvm = pkgs.llvmPackages_21;
+  projectRoot = builtins.toString ../.;
 in
 pkgs.mkShell {
   buildInputs = [
@@ -50,7 +51,10 @@ pkgs.mkShell {
 
 
     tails-pdp-admintool() {
-      sudo /home/hntr/tails-pdp/target/release/tails-pdp-admintool "$@"
+      (
+        cd "${projectRoot}" || return
+        sudo ./target/release/tails-pdp-admintool "$@"
+      )
     }
 
 

@@ -1,3 +1,5 @@
+//! Öffnet die ausgewählten BPF-Pins lesend mit den gemeinsamen Map-Werttypen.
+
 use std::path::PathBuf;
 
 use anyhow::Context;

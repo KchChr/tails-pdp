@@ -1,3 +1,8 @@
+//! Runtime-Einstieg: Maplayout prüfen, BPF/BTF laden, Tail-Calls belegen, initiale
+//! Konfiguration aktivieren und erst danach den LSM-Einstieg anheften. Die vier
+//! asynchronen Dienste teilen den Prozesslebenszyklus; Rückkehr/Fehler oder Strg+C
+//! beendet die Runtime. Das Arbeitsverzeichnis bestimmt Policy-/Attributpfade.
+
 use std::{env, fs};
 
 use anyhow::Context;

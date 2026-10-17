@@ -1,3 +1,9 @@
+//! Kernel-Binary mit File-Open-LSM-Hook und verifierbegrenzter Tail-Call-Kette.
+//!
+//! Gemeinsame ABI-Typen stammen aus `tails-pdp-common`; generierte Kerneltypen aus
+//! `vmlinux` werden zur Requestgewinnung verwendet. Das Objekt wird durch Aya gebaut
+//! und in die Userspace-Runtime eingebettet. Es ist kein separat gestarteter Prozess.
+
 #![no_std]
 #![no_main]
 #![allow(unsafe_op_in_unsafe_fn)]

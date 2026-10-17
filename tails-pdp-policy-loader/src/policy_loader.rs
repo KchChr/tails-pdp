@@ -1,3 +1,5 @@
+//! Kompatibilitätsprüfung der vorhandenen BPF-Pins vor dem Laden des Kernelobjekts.
+
 use std::{mem::size_of, path::Path};
 
 use anyhow::{Context, bail};
@@ -51,6 +53,16 @@ fn verify_pinned_map_layout(
     );
 }
 
+/// Prüft Schlüsselgröße, Wertgröße und Kapazität aller bekannten vorhandenen Pins.
+///
+/// Fehlende Pins sind zulässig und werden anschließend durch den eBPF-Loader angelegt.
+/// Die Prüfung verändert oder entfernt keine Map.
+///
+/// # Errors
+///
+/// Nicht lesbare Mapmetadaten und inkompatible Größen/Kapazitäten liefern einen
+/// Fehler mit erwartetem und tatsächlichem Layout. Alte Pins müssen nach Beenden
+/// der Runtime bewusst bereinigt werden.
 pub fn verify_pinned_map_layouts() -> anyhow::Result<()> {
     verify_pinned_map_layout(
         "FILE_OPEN_STATIC_POLICIES",

@@ -1,5 +1,10 @@
 # tails-pdp
 
+## Documentation
+
+See the [documentation overview](docs/README.md) for the installation and programming
+manuals, the Rustdoc reference, and the commands to generate and check API documentation.
+
 ## Prerequisites
 
 1. stable rust toolchains: `rustup toolchain install stable`
@@ -15,7 +20,7 @@
 Use `cargo build`, `cargo check`, etc. as normal. Run your program with:
 
 ```shell
-cargo run --release
+cargo run --locked --release --bin tails-pdp
 ```
 
 Cargo build scripts are used to automatically build the eBPF correctly and include it in the
@@ -294,14 +299,18 @@ Show only active policies:
 
 Notes:
 
-- `show` and `show-active` do not require `sudo`
+- commands require sufficient read permissions for the pinned maps; the examples use `sudo`
 - the admin tool opens the pinned maps read-only
 - static and stream policies use `FILE_OPEN_STATIC_POLICIES` and
   `FILE_OPEN_STREAM_POLICIES`
-- for file policies, `--resource` is given as a path in userspace; when the policy is loaded, the
-  loader resolves that path to `device + inode`, and the kernel matches on those values
-- stream attributes accepted by the admin tool are `time`, `hour`, `minute`, and `second`; DEFCON is
-  represented as the structured system attribute `system.defcon`
+- policies and attributes are configured through `.policy` and `.attributes` files, published
+  with `scripts/publish-config.sh`; the admin tool does not write or activate them
+- `resource.path` in a policy is resolved by the loader to `device + inode`; the kernel
+  matches the file identity rather than the path string
+- time conditions use `environment.time` or `environment.utc.hour`, `.minute`, and `.second`;
+  DEFCON is represented as the structured system attribute `system.defcon`
+- `--policy-dir` and `--attributes-dir` select source directories for names shown by the admin
+  tool; they do not change the runtime's configuration directories
 
 ## Userspace PEP
 

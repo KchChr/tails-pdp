@@ -1,3 +1,8 @@
+//! Validierung vollständiger Policybestände und Aktivierung einer vorbereiteten Bank.
+//!
+//! Der unterstützte Parserausschnitt wird vor Mapzugriff in binäre File-Open-Regeln
+//! übersetzt. Ein fehlerhafter Bestand wird nicht als Teilmenge aktiviert.
+
 use std::{
     collections::HashSet,
     env, fs,
@@ -85,6 +90,10 @@ trait PolicyGenerationStore {
     fn activate_generation(&mut self, generation: u32) -> anyhow::Result<()>;
 }
 
+/// Synchronisiert den vollständigen Policydateibestand mit einer aktiven Kernelgeneration.
+///
+/// Speichert zuletzt angewendete und fehlgeschlagene Inhalte, um identische
+/// Verzeichnisereignisse nicht erneut anzuwenden. Die Maps werden über vorhandene Pins geöffnet.
 pub struct PolicyDirectorySync {
     policy_dir: PathBuf,
     maps: PinnedPolicyMaps,
@@ -94,6 +103,14 @@ pub struct PolicyDirectorySync {
 }
 
 impl PolicyDirectorySync {
+    /// Öffnet gepinnte Policymaps und legt `policies/` relativ zum Arbeitsverzeichnis an.
+    ///
+    /// `enforcement_triggers` erhält erst nach erfolgreicher Aktivierung einen Trigger.
+    ///
+    /// # Errors
+    ///
+    /// Fehler der Arbeitsverzeichnisermittlung, Verzeichniserstellung oder Mapöffnung
+    /// werden zurückgegeben. Eine initiale Synchronisierung erfolgt hier noch nicht.
     pub fn new(enforcement_triggers: mpsc::Sender<EnforcementTrigger>) -> anyhow::Result<Self> {
         let policy_dir = default_policy_directory()?;
         fs::create_dir_all(&policy_dir).with_context(|| {
@@ -112,10 +129,20 @@ impl PolicyDirectorySync {
         })
     }
 
+    /// Liefert das vom Objekt verwendete absolute Policyverzeichnis.
     pub fn directory(&self) -> &Path {
         &self.policy_dir
     }
 
+    /// Validiert, übersetzt und aktiviert den vollständigen initialen Dateibestand.
+    ///
+    /// Ein leerer Bestand ist zulässig. Nichtleere Ressourcenpfade werden in Gerät/Inode
+    /// aufgelöst. Nach Bankaktivierung wird der PEP benachrichtigt.
+    ///
+    /// # Errors
+    ///
+    /// Datei-/Syntax-/Kapazitäts-/Mapfehler verhindern einen erfolgreichen Erststart.
+    /// Ein geschlossener Triggerkanal ist auch nach erfolgreicher Aktivierung ein Fehler.
     pub fn sync_initial(&mut self) -> anyhow::Result<()> {
         let documents = read_policy_documents(&self.policy_dir)?;
         let translated = translate_policy_documents(&documents).with_context(|| {
@@ -137,6 +164,15 @@ impl PolicyDirectorySync {
         Ok(())
     }
 
+    /// Beobachtet rekursiv Veröffentlichungen und Löschungen und synchronisiert geänderte Inhalte.
+    ///
+    /// Konsumiert das Objekt und wartet ohne festen Debounce-Timer. Ungültige neue
+    /// Dateiinhalte werden protokolliert; die letzte gültige Generation bleibt aktiv.
+    ///
+    /// # Errors
+    ///
+    /// Watcher-/Dateilesefehler und ein geschlossener Triggerkanal werden zurückgegeben.
+    /// Die Runtime beendet ihre gemeinsame Aufgabensteuerung, wenn diese Aufgabe zurückkehrt.
     pub async fn run(mut self) -> anyhow::Result<()> {
         let mut watcher = fs_watch::watch_directory_recursive(&self.policy_dir, "policy")?;
 
@@ -262,6 +298,10 @@ impl PolicyGenerationStore for PinnedPolicyMaps {
     }
 }
 
+/// Schreibt beide Policyarten vollständig in die nächste inaktive Bank und aktiviert sie danach.
+///
+/// Generationen werden mit Wrapping erhöht. Schreibfehler vor Aktivierung lassen
+/// die aktive Generation erhalten; Benachrichtigung erfolgt separat nach dem Commit.
 fn commit_policy_generation<S: PolicyGenerationStore>(
     store: &mut S,
     translated: &TranslatedPolicies,
@@ -310,6 +350,11 @@ impl PinnedPolicyMaps {
     }
 }
 
+/// Bestimmt `policies/` relativ zum aktuellen Arbeitsverzeichnis.
+///
+/// # Errors
+///
+/// Liefert einen Fehler, wenn das Arbeitsverzeichnis nicht ermittelt werden kann.
 pub fn default_policy_directory() -> anyhow::Result<PathBuf> {
     Ok(env::current_dir()
         .context("failed to determine current working directory")?
@@ -431,6 +476,10 @@ fn translate_policy_documents(documents: &[PolicyDocument]) -> anyhow::Result<Tr
     Ok(translated)
 }
 
+/// Liest genau Name, Entitlement und semikolonbeendete Konjunktionen eines Dokuments.
+///
+/// Fehlende/doppelte Pflichtfelder, unsupported Aktionen und unbekannte Statements
+/// werden abgelehnt. Die spätere Übersetzung prüft Ressourcen und Gesamtkapazitäten.
 fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPolicy> {
     let mut lines = document
         .source
@@ -564,6 +613,10 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     })
 }
 
+/// Übersetzt eine bereits geparste File-Open-Regel, prüft Byte-/Mapgrenzen und löst Dateiidentitäten auf.
+///
+/// Zeit-/Attributregeln werden in Stream-Slots geschrieben. Der Parser hat unsupported
+/// Aktionen vorher abgelehnt; diese Funktion aktiviert noch keine Kernelgeneration.
 fn translate_policy(
     translated: &mut TranslatedPolicies,
     parsed: ParsedPolicy,
@@ -956,6 +1009,9 @@ fn stream_value(condition: ParsedStreamCondition) -> u64 {
     }
 }
 
+/// Trennt höchstens eine Zeitbedingung und höchstens vier strukturierte Bedingungen.
+///
+/// Mehrdeutige zusätzliche Zeitbedingungen und überschrittene Slotgrenzen liefern Fehler.
 fn split_stream_conditions(
     policy: &ParsedPolicy,
 ) -> anyhow::Result<(Option<ParsedStreamCondition>, Vec<AttributeCondition>)> {
