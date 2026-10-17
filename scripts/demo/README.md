@@ -61,6 +61,15 @@ Blick auf vorherige Ausgaben; gegebenenfalls mit Escape den tmux-Kopiermodus
 verlassen. Das Abkoppeln vom Demo-tmux beendet die Demo und räumt auf. Eine
 bereits vorhandene tmux-Sitzung bleibt erhalten.
 
+Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
+**erwartetes Verhalten** und **worauf in der Ausgabe zu achten ist**. Während
+der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
+Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
+Begriffe wie FD, Generation und `allow`/`deny` werden im Ablauf erklärt.
+Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
+kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
+der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
+
 ```bash
 ./scripts/demo.sh --auto
 ```

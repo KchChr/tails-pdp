@@ -46,6 +46,8 @@ if [[ "${1:-}" == --isolated-worker ]]; then
     shift
     [[ $# -eq 1 && $EUID -eq 0 ]] || exit 2
     # This branch is called by the launcher with an explicit environment.
+    # The documented demo chapters and their audience-facing explanations live
+    # in demo_worker() in scripts/demo/runner.sh.
     source "$PROJECT_ROOT/scripts/demo/runner.sh"
     demo_worker "$1"
     exit

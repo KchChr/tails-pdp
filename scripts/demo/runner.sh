@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Sourced by demo.sh --worker. All scenario orchestration stays in Bash.
+# Sourced by demo.sh --isolated-worker. The commented demo chapters are in
+# demo_worker below; helpers implement publication, observation and assertions.
 
 fail() { printf '\nFEHLER: %s\n' "$*" >&2; return 1; }
 alive() {
@@ -14,9 +15,14 @@ pause_demo() {
     fi
 }
 chapter() {
-    printf '\n\033[1;36m%s\033[0m\n%s\n\n' "$1" "$2"
+    printf '\n\033[1;36m%s\033[0m\n' "$1"
+    printf '\nAusgangslage:\n  %s\n' "$2"
+    printf '\nAktion:\n  %s\n' "$3"
+    printf '\nErwartetes Verhalten:\n  %s\n' "$4"
+    printf '\nDarauf achten:\n  %s\n\n' "$5"
     pause_demo
 }
+explain() { printf '\n→ %s\n' "$*"; }
 admin() {
     "$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" "${1:-show-active}"
 }
@@ -233,8 +239,17 @@ demo_worker() {
     printf 'Eigener bpffs-Mount: vorhandene Host-Pins bleiben unverändert.\n'
     printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime. Rechts unten: FD-Beobachter.\n'
     printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
+    printf 'allow = Dateiöffnung erlaubt; deny = vom LSM mit EPERM verweigert. Andere Fehler brechen die Demo ab.\n'
+    printf 'Die Policygeneration zählt aktivierte Regelstände; die Attributgeneration zählt aktivierte Attributstände.\n'
+    printf 'show-active zeigt geladene Regeln und Werte. Ob ein Zugriff erlaubt ist, prüfen wir zusätzlich mit einer echten Dateiöffnung.\n'
+
+    # Kapitel 1: Die Durchsetzung erst nach dem nachgewiesenen LSM-Attach prüfen.
+    # Der leere Regelbestand zeigt das Allow-Verhalten ohne passende Deny-Regel.
     chapter '1. Runtime starten und Ausgangszustand prüfen' \
-        'Erwartung: Der BPF-LSM-Hook wird angehängt. Ohne Deny-Policy ist der Zugriff erlaubt.'
+        'Die Demo-Dateien sind vorbereitet. Es läuft noch keine Demo-Runtime und es sind keine Policies geladen.' \
+        'Wir starten tails-pdp. Es lädt das eBPF-Programm, bereitet die Maps vor und hängt den file_open-Hook an. Danach öffnen wir die geschützte Datei.' \
+        'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Regel wird kein Zugriff untersagt.' \
+        'Rechts oben bestätigt die Runtime ihren Start. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
     RUST_LOG=info TAILS_PDP_EBPF_DEBUG=0 TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" > "$demo_root/runtime.log" 2>&1 &
     runtime_pid=$!
     wait_log 'Waiting for Ctrl-C'
@@ -245,106 +260,167 @@ demo_worker() {
     wait_log 'scan completed'
     admin
     access_is allow
+    explain 'Ergebnis: Die Runtime ist bereit und der Ausgangszugriff ist erlaubt. Ab jetzt bleibt derselbe Runtime-Prozess aktiv.'
 
+    # Kapitel 2: Pro Negativkontrolle genau einen Filter verändern. Der Hardlink
+    # belegt zusätzlich, dass die Ressourcenidentität und nicht der Pfad zählt.
     chapter '2. Statische Regeln: Kommando, Benutzer und Ressource' \
-        'Eine Deny-Regel gilt nur für comm=cat, Real-UID 60001 und die geschützte Datei. Andere Kombinationen bleiben erlaubt. Die Probe setzt den Linux-Tasknamen kontrolliert; sie führt dieselbe open-Operation aus.'
+        'Die geschützte Datei und eine separate Kontrolldatei sind zugänglich. Ein Hardlink verweist unter einem anderen Namen auf dieselbe geschützte Datei.' \
+        'Wir veröffentlichen eine Deny-Regel für genau drei gemeinsam erforderliche Merkmale: Real-UID 60001, Linux-Taskname cat und die geschützte Ressource. Danach variieren wir diese Merkmale einzeln.' \
+        'Nur die passende Kombination wird verweigert. Eine andere UID, ein anderer Taskname und die Kontrolldatei bleiben erlaubt. Der Hardlink wird ebenfalls verweigert, weil Gerät und Inode gleich sind.' \
+        'Die Zugriffshilfe setzt den Tasknamen gezielt; sie startet kein echtes cat. Für den UID-Vergleich ändert sie nur die Real-UID, die effektive UID bleibt root. Es werden keine Benutzerkonten angelegt.'
     policy scoped deny '    subject.uid == 60001;' cat
+    explain 'Alle drei Filter passen: Die Dateiöffnung muss verweigert werden.'
     access_is deny cat 60001
+    explain 'Negativkontrollen: jeweils eine andere UID, ein anderer Taskname oder eine andere Datei. Diese Zugriffe müssen erlaubt bleiben.'
     access_is allow cat 60002
     access_is allow other 60001
     access_is allow cat 60001 "$safe"
-    printf '\nEin Hardlink hat denselben Geräte-/Inode-Schlüssel: Auch der alternative Pfad wird verweigert.\n'
+    explain 'Der alternative Hardlink-Pfad bezeichnet dieselbe Datei. Die Sperre gilt auch dort.'
     access_is deny cat 60001 "$demo_root/alias.txt"
     admin show-policies
+    explain 'Wir entfernen die Regel. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
     remove_policy scoped
     access_is allow cat 60001
 
+    # Kapitel 3: Permit hebt ein gleichzeitig passendes Deny nicht auf.
+    # Jede Veröffentlichung/Entfernung aktiviert einen neuen vollständigen Stand.
     chapter '3. Permit, Deny-Vorrang und Policy-Lebenszyklus' \
-        'Erst Permit: Zugriff erlaubt. Zusätzlich Deny: Zugriff verweigert. Nach dem Entfernen der Deny-Regel ist der Zugriff wieder erlaubt. Kein Runtime-Neustart.'
+        'Nach dem Entfernen der vorherigen Regel ist der Regelbestand wieder leer. Wir verwenden nun keine Benutzer- oder Kommandofilter.' \
+        'Wir laden zuerst Permit, ergänzen eine passende Deny-Regel und entfernen anschließend nur Deny. Zum Schluss entfernen wir auch Permit.' \
+        'Die Zugriffe folgen der Reihenfolge erlaubt → verweigert → erlaubt. Bei gleichzeitig passenden Regeln hat Deny Vorrang vor Permit.' \
+        'Die Policygeneration ändert sich bei den Veröffentlichungen und Entfernungen. Neue Entscheidungen werden ohne Neustart wirksam. Die Reihenfolge der Dateinamen bestimmt keine Priorität.'
+    explain 'Nur Permit ist vorhanden: Der Zugriff ist erlaubt.'
     policy permit permit
     access_is allow
+    explain 'Jetzt treffen Permit und Deny gleichzeitig zu: Deny setzt sich durch.'
     policy deny deny
     access_is deny
     admin
+    explain 'Nur Deny wird entfernt; Permit bleibt geladen. Der Zugriff ist wieder erlaubt.'
     remove_policy deny
     access_is allow
     remove_policy permit
 
+    # Kapitel 4: Bei unveränderter Policy die Entscheidung allein über einen
+    # Systemattributwert ändern; Attribut- und Policygeneration sind getrennt.
     chapter '4. Dynamisches Systemattribut' \
-        'Die Deny-Regel trifft bei DEFCON <= 2 zu. Nur der Attributwert wechselt 5 → 2 → 5; die Policy bleibt gleich.'
+        'Das globale Attribut system.defcon steht auf 5. Diese Zahl dient als dynamischer Kontext der Zugriffsentscheidung.' \
+        'Wir laden eine Deny-Regel mit system.defcon <= 2 und ändern anschließend nur den Attributwert von 5 auf 2 und zurück auf 5.' \
+        'Bei 5 ist die Deny-Bedingung falsch und der Zugriff erlaubt. Bei 2 ist sie erfüllt und der Zugriff verweigert. Nach der Rückkehr zu 5 ist er wieder erlaubt.' \
+        'Die Regeldatei bleibt während der Attributwechsel gleich. Im Log und im Admin-Tool ändert sich der Attributstand; die Runtime muss dafür nicht neu gestartet werden.'
     policy context deny '    system.defcon <= 2;'
     access_is allow
+    explain 'DEFCON sinkt auf 2: Die bereits geladene Deny-Regel trifft jetzt zu.'
     attribute system.attributes 'defcon = 2'
     access_is deny
     admin show-attributes
+    explain 'DEFCON steigt wieder auf 5: Dieselbe Regel trifft nicht mehr zu.'
     attribute system.attributes 'defcon = 5'
     access_is allow
     remove_policy context
 
+    # Kapitel 5: System-, Subjekt- und Ressourcenattribute sind konjunktiv.
+    # Fehlende oder anders typisierte Werte erfüllen den Stringvergleich nicht;
+    # das ist hier ein gültiger Attributstand, kein abgelehntes Update wie in 6.
     chapter '5. Subject-/Resource-Attribute und UND-Verknüpfung' \
-        'Deny erfordert gleichzeitig DEFCON <= 2, Rolle engineer und Klassifikation internal. Jede einzelne Änderung kann die Regel unzutreffend machen.'
+        'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff läuft mit Real-UID 0.' \
+        'Wir setzen DEFCON=2, die Rolle von UID 0 auf engineer und die Dateiklassifikation auf internal. Eine Deny-Regel verknüpft alle drei Bedingungen mit UND. Danach ändern wir einzelne Werte.' \
+        'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. Rolle intern oder Klassifikation public reichen jeweils aus, damit diese Deny-Regel nicht mehr passt.' \
+        'Anschließend prüfen wir eine fehlende Rolle und die Zahl 1 statt eines Rollenstrings. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
     attribute system.attributes 'defcon = 2'
     attribute subjects/0.attributes 'position = "engineer"'
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
     access_is deny
+    explain 'Nur die Rolle wird engineer → intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
     access_is allow
     attribute subjects/0.attributes 'position = "engineer"'
+    explain 'Die Rolle stimmt wieder. Jetzt ändern wir nur die Dateiklassifikation internal → public.'
     attribute "resources${target}.attributes" 'classification = "public"'
     access_is allow
+    explain 'Mit classification=internal sind wieder alle drei Bedingungen erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
     access_is deny
-    printf '\nEin fehlendes oder anders typisiertes Rollenattribut erfüllt die String-Bedingung ebenfalls nicht.\n'
+    explain 'Jetzt fehlt position vollständig. Die Veröffentlichung ist gültig, der Rollenvergleich ergibt aber keinen Treffer.'
     attribute subjects/0.attributes '# position fehlt'
     access_is allow
+    explain 'position=1 ist eine Zahl. Ein Zahlenwert erfüllt den Stringvergleich mit "engineer" ebenfalls nicht.'
     attribute subjects/0.attributes 'position = 1'
     access_is allow
+    explain 'Wir stellen den Rollenstring engineer wieder her: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
     access_is deny
     admin
     remove_policy combined
 
+    # Kapitel 6: Syntax-/Validierungsfehler dürfen keine neue Generation
+    # aktivieren. Nach der Ablehnung muss eine gültige Korrektur weiter möglich sein.
     chapter '6. Ungültige Updates und anschließende Korrektur' \
-        'Eine defekte Policy und DEFCON=9 werden zurückgewiesen. Generationen und wirksames Deny bleiben erhalten. Danach werden gültige Korrekturen ohne Neustart übernommen.'
+        'DEFCON steht noch auf 2. Wir laden eine passende Deny-Regel und merken uns vor jedem fehlerhaften Update beide Generationsnummern.' \
+        'Zuerst veröffentlichen wir eine Policy mit fehlendem Semikolon. Nach ihrer Korrektur veröffentlichen wir DEFCON=9, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.' \
+        'Beide fehlerhaften Updates werden verworfen. Die zuletzt gültigen Generationen und das wirksame Deny bleiben erhalten. Gültige Korrekturen werden anschließend wieder übernommen.' \
+        'Rechts oben erscheint die Ablehnung. Links prüfen wir die unveränderten Generationen und den weiterhin verweigerten Zugriff. Das ist keine Rückkehr zu einem leeren Regelbestand.'
     policy robust deny '    system.defcon <= 2;'
     local before offset
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
+    explain 'Die nächste Policy ist absichtlich syntaktisch fehlerhaft. Sie darf nicht aktiviert werden.'
     printf 'policy "kaputt"\ndeny\n action == "file_open"\n' | publish "$policy_dir/broken.policy"
     wait_log 'POLICY sync failed' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültige Policy änderte die Generation.'; return 1; }
     access_is deny
+    explain 'Wir ersetzen die fehlerhafte Datei durch eine gültige Permit-Policy. Das bereits vorhandene Deny hat weiterhin Vorrang.'
     policy broken permit
     access_is deny
     remove_policy broken
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
+    explain 'DEFCON=9 ist unzulässig. Der aktive Wert muss trotz geänderter Quelldatei bei 2 bleiben.'
     printf 'defcon = 9\n' | publish "$attribute_dir/system.attributes"
     wait_log 'Ignoring invalid stream attributes' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültiges Attribut änderte die Generation.'; return 1; }
     access_is deny
+    explain 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
     attribute system.attributes 'defcon = 5'
     access_is allow
     remove_policy robust
 
+    # Kapitel 7: file_open schützt neue Öffnungen. Der Userspace-PEP muss
+    # zusätzlich bestehende FDs selektiv entziehen, ohne den Prozess zu beenden.
     chapter '7. Bereits geöffnete FDs durch eine neue Policy entziehen' \
-        'Der Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird eine Deny-Policy aktiviert: Nur die drei geschützten FDs werden geschlossen; der Prozess läuft weiter.'
+        'Bisher haben wir neue Dateiöffnungen geprüft. Ein Prozess kann eine Datei aber schon geöffnet haben, bevor eine neue Regel veröffentlicht wird.' \
+        'Wir starten einen Beobachter mit drei offenen FDs zur geschützten Datei und zwei offenen FDs zur Kontrolldatei. Erst im nächsten Schritt veröffentlichen wir eine passende Deny-Regel.' \
+        'Zunächst müssen alle fünf FDs offen sein. Nach der Policyaktivierung prüft der Userspace-PEP bestehende FDs erneut und entzieht ausschließlich die drei geschützten.' \
+        'FD bedeutet Dateideskriptor: eine offene Dateireferenz in einem Prozess. Rechts unten zeigt True einen offenen FD und False einen geschlossenen. Der Beobachterprozess soll weiterlaufen.'
     start_probe
     chapter '7a. FDs sind offen – jetzt Deny veröffentlichen' \
-        'Der FD-Beobachter rechts unten zeigt den Ausgangszustand. Enter veröffentlicht die neue Regel.'
+        'Der Beobachter hält alle fünf FDs offen. Wir prüfen vor der Änderung zusätzlich, dass diese FDs noch auf die erwarteten Dateien verweisen.' \
+        'Enter veröffentlicht Deny für die geschützte Datei und den Tasknamen tails-demo-fd. Die Policyaktivierung löst eine erneute FD-Prüfung aus.' \
+        'Die drei geschützten FDs wechseln auf False. Beide Kontroll-FDs bleiben True; der Prozess wird nicht beendet.' \
+        'Rechts oben ist die Policyaktivierung mit anschließendem Scan sichtbar. Rechts unten ist der tatsächliche FD-Zustand zu sehen. Ein Logeintrag allein genügt nicht als Nachweis.'
     assert_probe_identity
     policy revoke deny '' tails-demo-fd
     expect_revoked
+    explain 'Der selektive Entzug ist bestätigt. Wir beenden jetzt den Beobachter gezielt und entfernen die Demo-Regel für das nächste Kapitel.'
     stop_probe
     remove_policy revoke
 
+    # Kapitel 8: Deny ist bereits geladen, seine Bedingung aber zunächst falsch.
+    # Nur die Attributgeneration darf sich durch den Auslöser ändern.
     chapter '8. FD-Entzug ausschließlich durch Attributänderung' \
-        'Bei DEFCON=5 bleibt die vorhandene Regel inaktiv. Ein neuer Beobachter öffnet seine Dateien; anschließend wird nur DEFCON auf 2 gesetzt.'
+        'DEFCON steht auf 5. Wir installieren vor dem Öffnen eine Deny-Regel mit system.defcon <= 2. Die Regel ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.' \
+        'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach ändern wir im nächsten Schritt ausschließlich das Systemattribut.' \
+        'Solange DEFCON=5 gilt, bleiben alle FDs offen. Der spätere Wechsel auf 2 muss den Entzug ohne Änderung der Policydatei auslösen.' \
+        'Hier unterscheiden wir eine geladene Regel von einer erfüllten Bedingung. enabled im Admin-Tool bedeutet nicht, dass die Regel auf jeden Zugriff zutrifft.'
     policy revoke deny '    system.defcon <= 2;' tails-demo-fd
     start_probe
     chapter '8a. Nur das Systemattribut ändern' \
-        'Erwartung: Attributgeneration steigt, Policygeneration bleibt gleich, geschützte FDs werden entzogen.'
+        'Die Regel ist bereits geladen und der Beobachter hält seine FDs offen. Wir merken uns die aktuelle Policygeneration.' \
+        'Enter veröffentlicht ausschließlich DEFCON=2. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.' \
+        'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.' \
+        'Rechts oben verlangt die Demo einen Scan mit Ursache attributes:<Generation>. Damit zeigen wir den Attributwechsel als Auslöser und nicht eine zusätzlich veröffentlichte Policy.'
     assert_probe_identity
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
@@ -354,11 +430,17 @@ demo_worker() {
     [[ "${before%% *}" == "${current%% *}" ]] || { fail 'Policygeneration unerwartet geändert.'; return 1; }
     wait_log "scan started cause=[attributes:${current##* }]" "$offset"
     expect_revoked
+    explain 'Die unveränderte Policygeneration und der attributes-Auslöser sind geprüft. Die Kontextänderung allein hat die bestehenden Zugriffe entzogen.'
     stop_probe
     remove_policy revoke
 
+    # Kapitel 9: Erst nach der Enter-Pause die Grenze berechnen. Ab dem Öffnen
+    # nichts mehr veröffentlichen; Zeit-Trigger und konstante Generationen prüfen.
     chapter '9. FD-Entzug ausschließlich durch eine Zeitgrenze' \
-        'Nach Enter wird eine Deny-Regel mit einer Zeitgrenze 12 Sekunden in der Zukunft vorbereitet. Der Beobachter öffnet davor seine Dateien. Danach ändern wir keine Konfiguration und verstellen keine Uhr.'
+        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.' \
+        'Nach Enter berechnen wir eine Grenze zwölf Sekunden in der Zukunft, laden die Zeitregel und öffnen die Dateien davor. Anschließend warten wir ohne weitere Konfigurationsänderung.' \
+        'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.' \
+        'Die Uhr wird nicht verstellt. Der große Modulus 4294967296 macht den Vergleich in der aktuellen Unix-Epoche zu einem einmaligen nahen Übergang. Im Log ist time:<Zeitgrenze> der Auslöser. Während dieser zwölf Sekunden gibt es keine weitere Enter-Pause.'
     local boundary
     boundary=$(( $(date +%s) + 12 ))
     (( boundary < 4294967296 )) || { fail 'Zeitgrenze außerhalb des Demo-Modulus.'; return 1; }
@@ -381,20 +463,29 @@ if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
     raise SystemExit('FDs vor der Zeitgrenze geschlossen')
 PY
     access_is deny tails-demo-fd
+    explain 'Der Zeit-Auslöser, unveränderte Generationen und der FD-Entzug nach der Grenze sind bestätigt. Auch eine neue Dateiöffnung wird nun verweigert.'
     stop_probe
     remove_policy timed
     access_is allow tails-demo-fd
 
+    # Kapitel 10: UTC-Felder ergänzen die Modulo-Demo. Immer wahre Vergleiche
+    # vermeiden eine Abhängigkeit von der Vorführungszeit und zeigen Deny-Vorrang.
     chapter '10. UTC-Zeitbedingung und abschließende Inspektion' \
-        'Zusätzlich zur Modulo-Zeitbedingung zeigen wir einen UTC-Stundenvergleich. Eine tautologisch zutreffende Grenze (Stunde >= 0) macht die Demo unabhängig von der Tageszeit.'
+        'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder. Der vorherige zeitabhängige Regelstand wurde entfernt.' \
+        'Wir laden Deny für environment.utc.hour >= 0 und zusätzlich Permit für environment.utc.minute >= 0, inspizieren die aktiven Maps und entfernen danach nur Deny.' \
+        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Mit beiden Regeln gilt Deny-Vorrang; nach dem Entfernen von Deny ist der Zugriff wieder erlaubt.' \
+        'Die bewusst immer wahren Vergleiche zeigen die UTC-Felder unabhängig von der Uhrzeit der Vorführung. Das Admin-Tool zeigt die Regeln, die Zugriffshilfe prüft deren tatsächliche Wirkung.'
     policy utc deny '    environment.utc.hour >= 0;'
     access_is deny
     policy stream-permit permit '    environment.utc.minute >= 0;'
+    explain 'Auch die zusätzliche zeitabhängige Permit-Regel hebt das passende Deny nicht auf.'
     access_is deny
     admin
+    explain 'Wir entfernen nur die UTC-Deny-Regel. Das Stream-Permit bleibt zunächst geladen.'
     remove_policy utc
     access_is allow
     remove_policy stream-permit
+    explain 'Alle Demo-Policies sind wieder entfernt. Beim Schließen werden Runtime und Hilfsprozesse beendet und die eigenen Maps aufgeräumt. Die Logs bleiben erhalten.'
     observe 'Alle Demo-Kapitel erfolgreich geprüft.'
     printf '\nGrenzen: FD-Schließen holt gelesene Daten nicht zurück; mmap und ptrace-Races sind nicht durch diese Demo abgedeckt.\n'
 }
