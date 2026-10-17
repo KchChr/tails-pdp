@@ -15,6 +15,9 @@ pause_demo() {
     fi
 }
 chapter() {
+    # Clear the current pane and move the cursor home, like clear. Keep the
+    # scrollback and transcript; this needs no additional external command.
+    printf '\033[2J\033[H'
     printf '\n\033[1;36m%s\033[0m\n' "$1"
     printf '\nAusgangslage:\n  %s\n' "$2"
     printf '\nAktion:\n  %s\n' "$3"

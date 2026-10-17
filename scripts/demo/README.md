@@ -61,6 +61,10 @@ Blick auf vorherige Ausgaben; gegebenenfalls mit Escape den tmux-Kopiermodus
 verlassen. Das Abkoppeln vom Demo-tmux beendet die Demo und räumt auf. Eine
 bereits vorhandene tmux-Sitzung bleibt erhalten.
 
+Bei jedem neuen Kapitel (auch 7a und 8a) wird der linke Bereich geleert und der
+Cursor an den Anfang gesetzt. Die rechten Bereiche laufen weiter; Scrollback
+und gespeicherte Logs bleiben erhalten.
+
 Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
 **erwartetes Verhalten** und **worauf in der Ausgabe zu achten ist**. Während
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
