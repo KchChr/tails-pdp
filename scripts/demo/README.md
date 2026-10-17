@@ -54,7 +54,10 @@ Das Skript richtet einen eigenen tmux-Server mit drei Bereichen ein:
 - **Rechts oben:** vollständiges Runtime-Log mit Aktivierungen und FD-Prüfungen.
 - **Rechts unten:** Ergebnisse und FD-Beobachter.
 
-Der Fokus liegt links. **Enter** führt den jeweils erklärten Schritt aus;
+Der Fokus liegt links. **Enter** führt den jeweils erklärten Schritt aus.
+Danach bleibt die Ausgabe stehen. Ein weiteres **Enter** wechselt zum nächsten
+Schritt und leert erst dann den linken Bereich. Nach dessen Erklärung startet
+ein erneutes **Enter** die Ausführung. Das gilt auch für die Schritte 7a und 8a;
 weitere Befehle müssen nicht eingegeben werden. **Strg+C** bricht ab. Am Ende
 bleibt das Ergebnis bis zum nächsten Enter sichtbar. Maus-Scrollen erlaubt den
 Blick auf vorherige Ausgaben; gegebenenfalls mit Escape den tmux-Kopiermodus

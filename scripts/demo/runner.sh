@@ -11,10 +11,16 @@ alive() {
 observe() { printf '%s\n' "$*" | tee -a "$demo_root/observer.log"; }
 pause_demo() {
     if [[ "$DEMO_AUTO" == 0 ]]; then
-        read -r -p 'Enter: ausführen | Strg+C: abbrechen ' _
+        read -r -p "${1:-Enter: ausführen | Strg+C: abbrechen }" _
     fi
 }
 chapter() {
+    # Leave the previous step's results visible until the presenter advances.
+    # The first chapter has no preceding results; the last uses the close prompt.
+    if [[ "${demo_chapter_started:-0}" == 1 ]]; then
+        pause_demo 'Enter: zum nächsten Schritt | Strg+C: abbrechen '
+    fi
+    demo_chapter_started=1
     # Clear the current pane and move the cursor home, like clear. Keep the
     # scrollback and transcript; this needs no additional external command.
     printf '\033[2J\033[H'
@@ -214,7 +220,7 @@ demo_worker() {
     target="$demo_root/protected.txt"
     safe="$demo_root/control.txt"
     pin_dir=/sys/fs/bpf/tails-pdp
-    runtime_pid='' probe_pid='' owns_pins=0
+    runtime_pid='' probe_pid='' owns_pins=0 demo_chapter_started=0
     exec > >(tee -a "$demo_root/transcript.log") 2>&1
     trap worker_cleanup EXIT
     trap 'exit 130' INT
