@@ -84,7 +84,7 @@ class LauncherTests(unittest.TestCase):
             root = Path(directory)
             binaries = root / "bin"
             binaries.mkdir()
-            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mktemp mv pgrep ps python3 rm sleep stat sudo tail tee uname wc".split()
+            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mktemp mount mv pgrep ps python3 readlink rm sleep stat sudo tail tee uname unshare wc".split()
             for command in commands:
                 executable = shutil.which(command)
                 if executable:
@@ -156,6 +156,47 @@ if 'respawn-pane' in args:
         attach_index = next(i for i, call in enumerate(calls) if 'attach-session' in call)
         self.assertLess(worker_index, attach_index)
         self.assertIn('kill-server', calls[-1])
+
+
+class MountNamespaceTests(unittest.TestCase):
+    def check_namespace(self, parent_namespace, mount_failure=False):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'host-pin').write_text('preserve')
+            script = '''
+source "$1"
+readlink() { printf 'mnt:[demo]\\n'; }
+mount() { printf '%s\\n' "$@" > "$TEST_MOUNT/log"; return "$MOUNT_STATUS"; }
+stat() { printf 'bpf_fs\\n'; }
+setup_demo_bpffs "$TEST_MOUNT"
+'''
+            environment = {**os.environ, 'TEST_MOUNT': directory, 'MOUNT_STATUS': '1' if mount_failure else '0'}
+            environment.pop('DEMO_PARENT_MOUNT_NS', None)
+            if parent_namespace is not None:
+                environment['DEMO_PARENT_MOUNT_NS'] = parent_namespace
+            result = subprocess.run([shutil.which('bash'), '-c', script, 'test', str(PROJECT / 'scripts/demo/runner.sh')],
+                                    env=environment, capture_output=True, text=True, timeout=5)
+            self.assertEqual((root / 'host-pin').read_text(), 'preserve')
+            calls = (root / 'log').read_text().splitlines() if (root / 'log').exists() else []
+            return result, calls
+
+    def test_no_mount_without_namespace_change(self):
+        for parent in (None, 'mnt:[demo]'):
+            with self.subTest(parent=parent):
+                result, calls = self.check_namespace(parent)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(calls, [])
+                self.assertIn('Privater Mount-Namespace fehlt', result.stderr)
+
+    def test_private_namespace_gets_fresh_bpffs(self):
+        result, calls = self.check_namespace('mnt:[host]')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[:5], ['-t', 'bpf', '-o', 'mode=700', 'bpf'])
+
+    def test_mount_failure_does_not_continue(self):
+        result, _ = self.check_namespace('mnt:[host]', mount_failure=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Demo-bpffs konnte nicht eingehängt', result.stderr)
 
 
 class SudoResolutionTests(unittest.TestCase):

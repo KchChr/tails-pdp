@@ -25,6 +25,26 @@ EOF
 if [[ "${1:-}" == --worker ]]; then
     shift
     [[ $# -eq 1 && $EUID -eq 0 ]] || exit 2
+    # Keep the wrapper outside the namespace so unshare failures remain visible
+    # in tmux even when the actual worker could not start its cleanup trap.
+    original_mount_ns="$(readlink /proc/self/ns/mnt)"
+    if DEMO_PARENT_MOUNT_NS="$original_mount_ns" unshare --mount --propagation private -- \
+        bash "$PROJECT_ROOT/scripts/demo.sh" --isolated-worker "$1"; then
+        exit 0
+    else
+        status=$?
+        if [[ ! -e "$1/exit-status" ]]; then
+            printf '%s\n' "$status" > "$1/exit-status"
+            printf '\nPrivater Mount-Namespace konnte nicht gestartet werden (Status %s).\n' "$status" >&2
+            if [[ "${DEMO_AUTO:-0}" == 0 && -t 0 ]]; then read -r -p 'Enter: Demo schließen ' _ || true; fi
+        fi
+        exit "$status"
+    fi
+fi
+
+if [[ "${1:-}" == --isolated-worker ]]; then
+    shift
+    [[ $# -eq 1 && $EUID -eq 0 ]] || exit 2
     # This branch is called by the launcher with an explicit environment.
     source "$PROJECT_ROOT/scripts/demo/runner.sh"
     demo_worker "$1"
@@ -53,7 +73,7 @@ if (( EUID != 0 )); then
 fi
 
 missing=()
-for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mv pgrep ps python3 rm sleep stat tail tee tmux uname wc ln; do
+for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mount mv pgrep ps python3 readlink rm sleep stat tail tee tmux uname unshare wc ln; do
     command -v "$program" >/dev/null 2>&1 || missing+=("$program")
 done
 if (( ${#missing[@]} )); then

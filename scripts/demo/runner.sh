@@ -149,6 +149,20 @@ for key, path in [('protected', sys.argv[2]), ('controls', sys.argv[3])]:
 PY
 }
 
+setup_demo_bpffs() {
+    local current_namespace mount_point="${1:-/sys/fs/bpf}"
+    current_namespace="$(readlink /proc/self/ns/mnt)" || return 1
+    if [[ -z "${DEMO_PARENT_MOUNT_NS:-}" || "$current_namespace" == "$DEMO_PARENT_MOUNT_NS" ]]; then
+        fail 'Privater Mount-Namespace fehlt; kein Mount im ursprünglichen Namespace.'
+        return 1
+    fi
+    [[ -d "$mount_point" ]] || { fail "Mountpunkt $mount_point fehlt."; return 1; }
+    mount -t bpf -o mode=700 bpf "$mount_point" || {
+        fail 'Eigenes Demo-bpffs konnte nicht eingehängt werden.'; return 1;
+    }
+    [[ "$(stat -f -c %T "$mount_point")" == bpf_fs ]] || { fail 'Demo-Mount ist kein bpffs.'; return 1; }
+}
+
 stop_runtime() {
     [[ -n "$runtime_pid" ]] || return 0
     kill -TERM "$runtime_pid" 2>/dev/null || true
@@ -202,15 +216,11 @@ demo_worker() {
     [[ -r /sys/kernel/security/lsm ]] && grep -qw bpf /sys/kernel/security/lsm || {
         fail 'BPF-LSM ist nicht aktiv bzw. seine Konfiguration nicht lesbar.'; return 1;
     }
-    [[ "$(stat -f -c %T /sys/fs/bpf)" == bpf_fs ]] || { fail 'bpffs ist nicht unter /sys/fs/bpf eingehängt.'; return 1; }
     mkdir -p /run/lock
     exec 9>/run/lock/tails-pdp-evaluation.lock
     flock -n 9 || { fail 'Eine Evaluation oder Demo läuft bereits.'; return 1; }
     if pgrep -x tails-pdp >/dev/null; then fail 'Es läuft bereits eine tails-pdp-Runtime.'; return 1; fi
-    local existing
-    shopt -s nullglob dotglob
-    existing=("$pin_dir"/*)
-    (( ${#existing[@]} == 0 )) || { fail 'Vorhandene Pins unter /sys/fs/bpf/tails-pdp; zuerst deren Besitzer klären.'; return 1; }
+    setup_demo_bpffs
     owns_pins=1
     mkdir -p "$policy_dir" "$attribute_dir/subjects" "$attribute_dir/resources"
     printf 'Geschützter Demo-Inhalt\n' > "$target"
@@ -220,6 +230,7 @@ demo_worker() {
     cd "$demo_root"
 
     printf 'tails-pdp – geführte Live-Demo\nLogs: %s\n' "$demo_root"
+    printf 'Eigener bpffs-Mount: vorhandene Host-Pins bleiben unverändert.\n'
     printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime. Rechts unten: FD-Beobachter.\n'
     printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
     chapter '1. Runtime starten und Ausgangszustand prüfen' \

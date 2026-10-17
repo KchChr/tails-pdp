@@ -34,10 +34,16 @@ TAILS_PDP_BIN=/absoluter/pfad/tails-pdp \
 ADM_TOOL_BIN=/absoluter/pfad/tails-pdp-admintool ./scripts/demo.sh
 ```
 
-Die Kernelvoraussetzungen (BPF-LSM, BTF, eingehängtes bpffs) werden vor dem
+Die Kernelvoraussetzungen (BPF-LSM und BTF) werden vor dem
 Runtime-Start geprüft. Die Nix-Shell kann diese Kernelvoraussetzungen nicht
-nachrüsten. Eine andere Runtime, vorhandene Pins oder eine laufende Evaluation
-führen zum Abbruch. Der E2E-Runner verwendet die Evaluationssperre nicht;
+nachrüsten. Der privilegierte Worker startet mit `unshare --mount --propagation
+private` in einem eigenen Mount-Namespace und hängt dort ein frisches bpffs unter
+`/sys/fs/bpf` ein. Vorhandene Host-Pins bleiben erhalten und blockieren die Demo
+nicht. `unshare` und `mount` werden bei Bedarf ebenfalls durch die Nix-Shell
+bereitgestellt. Das System muss private Mount-Namespaces und den bpffs-Mount
+erlauben. Eine andere Runtime oder eine laufende Evaluation führen weiterhin
+zum Abbruch: LSM-Hooks wirken systemweit, auch bei getrennten Pins.
+Der E2E-Runner verwendet die Evaluationssperre nicht;
 E2E-Tests daher nicht gleichzeitig starten.
 
 ## Bedienung
@@ -101,7 +107,9 @@ Grenzen des Prototyps.
 ## Ende, Abbruch und Diagnose
 
 Die Demo beendet ihre Hilfsprozesse und Runtime und entfernt ausschließlich die
-sechs bekannten, von ihr angelegten Maps. Bestehende Pins werden vorab abgelehnt.
+sechs bekannten, von ihr angelegten Maps im eigenen bpffs. Nach dem Ende aller
+Worker-Prozesse verschwindet dessen privater Mount-Namespace automatisch.
+Host-Pins werden weder entfernt noch überschrieben.
 Das Verzeichnis mit `transcript.log`, `runtime.log`, `observer.log`,
 `exit-status`, Konfigurationen und FD-Zuständen bleibt für Diagnose erhalten;
 sein Pfad wird nach dem Schließen ausgegeben. Status 0 bedeutet, dass alle
