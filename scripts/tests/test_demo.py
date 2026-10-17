@@ -6,7 +6,6 @@ import io
 import json
 import os
 from pathlib import Path
-import pty
 import runpy
 import shlex
 import shutil
@@ -114,6 +113,11 @@ Path(os.environ['CALLS']).write_text(json.dumps(sys.argv[1:]))
             system_sudo.write_text('#!/bin/sh\nexit 0\n')
             system_sudo.chmod(0o755)
             (binaries / "sudo").write_text('#!/bin/sh\necho "wrong sudo" >&2\nexit 99\n')
+            # NixOS does not provide FHS paths such as /usr/bin/true. This
+            # fixture also exercises quoting of binary paths containing spaces.
+            demo_binary = root / 'demo binary'
+            demo_binary.write_text('#!/bin/sh\nexit 0\n')
+            demo_binary.chmod(0o755)
             if with_tmux:
                 (binaries / "tmux").write_text('''#!/usr/bin/env python3
 import json, os, shlex, sys
@@ -130,19 +134,19 @@ if 'respawn-pane' in args:
 ''')
                 (binaries / "tmux").chmod(0o755)
             environment = {**os.environ, "PATH": str(binaries), "CALLS": str(root / "calls"), "DEMO_ROOT_CAPTURE": str(root / "demo-root"),
-                           "TAILS_PDP_BIN": "/usr/bin/true", "ADM_TOOL_BIN": "/usr/bin/true", "DEMO_SUDO_BIN": str(system_sudo),
+                           "TAILS_PDP_BIN": str(demo_binary), "ADM_TOOL_BIN": str(demo_binary), "DEMO_SUDO_BIN": str(system_sudo),
                            "DEMO_ARTIFACT_PATH_FILE": str(root / "artifact-path")}
             environment.pop("TAILS_DEMO_NIX", None)
-            primary, secondary = pty.openpty()
             try:
-                result = subprocess.run([str(PROJECT / "scripts/demo.sh"), "--auto"], env=environment,
-                                        stdin=secondary, stdout=secondary, stderr=secondary, timeout=8)
-                self.assertEqual(result.returncode, 0)
+                terminal_log = root / 'terminal.log'
+                status, timed_out = live.run_in_pty([str(PROJECT / 'scripts/demo.sh'), '--auto'],
+                                                  environment, terminal_log, timeout=20, grace=2)
+                diagnostic = terminal_log.read_text(errors='replace')
+                self.assertFalse(timed_out, f'Launcher-Test überschritt das Zeitlimit:\n{diagnostic}')
+                self.assertEqual(status, 0, f'Launcher-Ausgabe:\n{diagnostic}')
                 if with_tmux:
                     self.assertEqual((root / 'artifact-path').read_text().strip(), (root / 'demo-root').read_text())
             finally:
-                os.close(secondary)
-                os.close(primary)
                 if (root / "demo-root").exists():
                     shutil.rmtree((root / "demo-root").read_text())
             return (root / "calls").read_text()
