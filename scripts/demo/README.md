@@ -73,6 +73,18 @@ Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
 Begriffe wie FD, Generation und `allow`/`deny` werden im Ablauf erklärt.
+Vor jeder sichtbaren Admin-Ausgabe erscheint der tatsächlich ausgeführte
+Aufruf mit Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`.
+Die Befehle laufen im privilegierten Demo-Worker; Eingaben sind nicht nötig.
+Interne Generationsabfragen bleiben ohne Befehlsausgabe. Kapitel 2 nennt die
+vollständigen Pfade von `protected.txt`, `control.txt` und dem Hardlink `alias.txt`.
+Auch die Zugriffshilfe wird mit vollständigem Aufruf gezeigt: `probe.py access`
+führt eine echte Dateiöffnung aus und gibt `allow` oder `deny` zurück. Die Demo
+kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließenden
+`[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
+erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
+Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
+Admin-Ausgaben werden mit `[Admin-Tool: tails-pdp-admintool]` eingeleitet.
 Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
 kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
 der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.

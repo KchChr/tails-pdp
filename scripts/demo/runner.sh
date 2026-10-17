@@ -8,7 +8,7 @@ alive() {
     state="$(ps -o stat= -p "$runtime_pid")" || return 1
     [[ -n "$state" && "$state" != *Z* ]]
 }
-observe() { printf '%s\n' "$*" | tee -a "$demo_root/observer.log"; }
+observe() { printf '[Demo-Prüfung] %s\n' "$*" | tee -a "$demo_root/observer.log"; }
 pause_demo() {
     if [[ "$DEMO_AUTO" == 0 ]]; then
         read -r -p "${1:-Enter: ausführen | Strg+C: abbrechen }" _
@@ -32,12 +32,26 @@ chapter() {
     pause_demo
 }
 explain() { printf '\n→ %s\n' "$*"; }
+show_command() {
+    printf '\n$'
+    printf ' %q' "$@"
+    printf '\n'
+}
 admin() {
-    "$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" "${1:-show-active}"
+    local quiet=0
+    if [[ "${1:-}" == --quiet ]]; then quiet=1; shift; fi
+    local command=("$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" "${1:-show-active}")
+    if (( quiet == 0 )); then
+        # Show the exact executed argv, quoted as a valid Bash command. Internal
+        # generation polling stays quiet so it does not obscure the demo output.
+        printf '\n[Admin-Tool: tails-pdp-admintool]\n'
+        show_command "${command[@]}"
+    fi
+    "${command[@]}"
 }
 generations() {
     local output
-    output="$(admin)" || return 1
+    output="$(admin --quiet)" || return 1
     [[ "$output" =~ generation\ policy=([0-9]+).*attribute=([0-9]+) ]] || return 1
     printf '%s %s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
 }
@@ -106,9 +120,13 @@ remove_policy() {
 access_is() {
     local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
     alive || { fail 'Runtime beendet.'; return 1; }
-    actual="$(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")"
+    local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
+    printf '\n[Zugriffshilfe: probe.py access – prüft eine echte Dateiöffnung mit os.open]\n'
+    show_command "${invocation[@]}"
+    actual="$("${invocation[@]}")"
+    printf '[probe.py access → stdout] %s\n' "$actual"
     [[ "$actual" == "$expected" ]] || { fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."; return 1; }
-    observe "OK: Zugriff $actual (comm=$command, Real-UID=$uid, Datei=${file##*/})."
+    observe "OK: Erwartet=$expected, beobachtet=$actual (comm=$command, Real-UID=$uid, Datei=${file##*/})."
 }
 probe_state_is() {
     kill -0 "$probe_pid" 2>/dev/null || return 1
@@ -125,6 +143,8 @@ PY
 }
 start_probe() {
     probe_dir="$(mktemp -d "$demo_root/fd.XXXXXX")"
+    printf '\n[FD-Beobachter: probe.py hold – Ausgabe im rechten unteren Bereich]\n'
+    show_command python3 "$PROJECT_ROOT/scripts/demo/probe.py" hold "$target" "$safe" "$probe_dir"
     python3 "$PROJECT_ROOT/scripts/demo/probe.py" hold "$target" "$safe" "$probe_dir" >> "$demo_root/observer.log" 2>&1 &
     probe_pid=$!
     local deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
@@ -274,9 +294,13 @@ demo_worker() {
     # Kapitel 2: Pro Negativkontrolle genau einen Filter verändern. Der Hardlink
     # belegt zusätzlich, dass die Ressourcenidentität und nicht der Pfad zählt.
     chapter '2. Statische Regeln: Kommando, Benutzer und Ressource' \
-        'Die geschützte Datei und eine separate Kontrolldatei sind zugänglich. Ein Hardlink verweist unter einem anderen Namen auf dieselbe geschützte Datei.' \
+        "Die Dateien sind zunächst zugänglich:
+  Geschützte Datei: $target
+  Kontrolldatei: $safe
+  Hardlink auf die geschützte Datei: $demo_root/alias.txt
+  protected.txt und alias.txt bezeichnen dieselbe Datei; control.txt ist eine separate Datei." \
         'Wir veröffentlichen eine Deny-Regel für genau drei gemeinsam erforderliche Merkmale: Real-UID 60001, Linux-Taskname cat und die geschützte Ressource. Danach variieren wir diese Merkmale einzeln.' \
-        'Nur die passende Kombination wird verweigert. Eine andere UID, ein anderer Taskname und die Kontrolldatei bleiben erlaubt. Der Hardlink wird ebenfalls verweigert, weil Gerät und Inode gleich sind.' \
+        'Nur die passende Kombination auf protected.txt wird verweigert. Eine andere UID, ein anderer Taskname und die separate control.txt bleiben erlaubt. alias.txt wird ebenfalls verweigert, weil Gerät und Inode mit protected.txt übereinstimmen.' \
         'Die Zugriffshilfe setzt den Tasknamen gezielt; sie startet kein echtes cat. Für den UID-Vergleich ändert sie nur die Real-UID, die effektive UID bleibt root. Es werden keine Benutzerkonten angelegt.'
     policy scoped deny '    subject.uid == 60001;' cat
     explain 'Alle drei Filter passen: Die Dateiöffnung muss verweigert werden.'
