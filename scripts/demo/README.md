@@ -12,7 +12,11 @@ die Programme für diesen Aufruf bereit, ohne sie global zu installieren.
 `nix-shell` selbst muss bereits verfügbar sein; Paketdownloads benötigen beim
 ersten Start gegebenenfalls Netzwerkzugriff. Ein bereits eingerichtetes `sudo`
 oder ein Start als root ist für die privilegierte Runtime erforderlich; das
-Bereitstellen eines sudo-Pakets richtet keine Systemberechtigungen ein.
+Bereitstellen eines sudo-Pakets richtet keine Systemberechtigungen ein. Deshalb
+enthält die Demo-Shell kein sudo-Paket. Die Demo verwendet auf NixOS bevorzugt
+`/run/wrappers/bin/sudo` und behält dessen absoluten Pfad auch beim Wechsel in die
+Nix-Shell und beim Start des tmux-Workers bei. Bei Bedarf kann `DEMO_SUDO_BIN`
+einen anderen absoluten Pfad zu einem eingerichteten System-sudo auswählen.
 
 Fehlen Release-Binaries, baut das Skript sie automatisch mit
 `nix-config/shell.nix`, einschließlich `setup-bpf-tools`. Mit `--build` wird
@@ -107,7 +111,7 @@ führen zu einem von null verschiedenen Exitstatus.
 Unprivilegierte lokale Prüfungen (auch auf macOS):
 
 ```bash
-bash -n scripts/demo.sh scripts/demo/runner.sh
+bash -n scripts/demo.sh scripts/demo/runner.sh scripts/demo/dependencies.sh
 python3 scripts/tests/test_demo.py
 ```
 

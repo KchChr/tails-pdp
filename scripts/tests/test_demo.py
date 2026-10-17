@@ -106,6 +106,12 @@ Path(os.environ['CALLS']).write_text(json.dumps(sys.argv[1:]))
                 path.unlink(missing_ok=True)
                 path.write_text(content)
                 path.chmod(0o755)
+            # A Nix-shell sudo may shadow the host wrapper; the launcher must
+            # authenticate and launch the worker through the selected host path.
+            system_sudo = binaries / "system-sudo"
+            system_sudo.write_text('#!/bin/sh\nexit 0\n')
+            system_sudo.chmod(0o755)
+            (binaries / "sudo").write_text('#!/bin/sh\necho "wrong sudo" >&2\nexit 99\n')
             if with_tmux:
                 (binaries / "tmux").write_text('''#!/usr/bin/env python3
 import json, os, shlex, sys
@@ -114,13 +120,15 @@ args = sys.argv[1:]
 with open(os.environ['CALLS'], 'a') as log: log.write(json.dumps(args) + '\\n')
 if 'respawn-pane' in args:
     command = shlex.split(args[-1])
+    if os.geteuid() != 0:
+        assert command[0] == os.environ['DEMO_SUDO_BIN'], command
     root = Path(command[command.index('--worker') + 1].rstrip(';'))
     Path(os.environ['DEMO_ROOT_CAPTURE']).write_text(str(root))
     (root / 'exit-status').write_text('0\\n')
 ''')
                 (binaries / "tmux").chmod(0o755)
             environment = {**os.environ, "PATH": str(binaries), "CALLS": str(root / "calls"), "DEMO_ROOT_CAPTURE": str(root / "demo-root"),
-                           "TAILS_PDP_BIN": "/usr/bin/true", "ADM_TOOL_BIN": "/usr/bin/true"}
+                           "TAILS_PDP_BIN": "/usr/bin/true", "ADM_TOOL_BIN": "/usr/bin/true", "DEMO_SUDO_BIN": str(system_sudo)}
             environment.pop("TAILS_DEMO_NIX", None)
             primary, secondary = pty.openpty()
             try:
@@ -148,6 +156,43 @@ if 'respawn-pane' in args:
         attach_index = next(i for i, call in enumerate(calls) if 'attach-session' in call)
         self.assertLess(worker_index, attach_index)
         self.assertIn('kill-server', calls[-1])
+
+
+class SudoResolutionTests(unittest.TestCase):
+    def resolve(self, script, environment):
+        return subprocess.run(
+            [shutil.which("bash"), "-c", 'source "$1"; ' + script, "test", str(PROJECT / "scripts/demo/dependencies.sh")],
+            env=environment, text=True, capture_output=True, timeout=5,
+        )
+
+    def test_explicit_system_wrapper_wins_over_broken_path_sudo(self):
+        with tempfile.TemporaryDirectory(prefix="sudo wrapper ") as directory:
+            root = Path(directory)
+            system_sudo = root / "system-sudo"
+            system_sudo.write_text('#!/bin/sh\nexit 0\n')
+            system_sudo.chmod(0o755)
+            (root / "sudo").write_text('#!/bin/sh\nexit 99\n')
+            (root / "sudo").chmod(0o755)
+            result = self.resolve('resolve_demo_sudo', {**os.environ, "PATH": directory, "DEMO_SUDO_BIN": str(system_sudo)})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), str(system_sudo))
+
+    def test_nixos_wrapper_is_preferred_to_path(self):
+        # Model the executable wrapper without writing to the host's /run.
+        with tempfile.TemporaryDirectory() as directory:
+            wrapper = Path(directory) / 'sudo'
+            wrapper.write_text('#!/bin/sh\nexit 0\n')
+            wrapper.chmod(0o755)
+            environment = {**os.environ, "TEST_NIXOS_WRAPPER": str(wrapper)}
+            environment.pop('DEMO_SUDO_BIN', None)
+            result = self.resolve('resolve_demo_sudo "$TEST_NIXOS_WRAPPER"', environment)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), str(wrapper))
+
+    def test_store_sudo_is_rejected(self):
+        result = self.resolve('resolve_demo_sudo', {**os.environ, "DEMO_SUDO_BIN": "/nix/store/example-sudo/bin/sudo"})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Systemwrapper', result.stderr)
 
 
 if __name__ == "__main__":

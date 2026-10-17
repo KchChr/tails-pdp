@@ -44,8 +44,16 @@ done
 [[ "$(uname -s)" == Linux ]] || { echo 'Die Live-Demo benötigt Linux.' >&2; exit 1; }
 [[ -t 0 && -t 1 ]] || { echo 'Bitte die Demo in einem interaktiven Terminal starten.' >&2; exit 1; }
 
+# Resolve the host's privilege wrapper before Nix changes PATH, and preserve the
+# absolute path for the Nix re-exec, authentication and the tmux worker alike.
+if (( EUID != 0 )); then
+    source "$PROJECT_ROOT/scripts/demo/dependencies.sh"
+    DEMO_SUDO_BIN="$(resolve_demo_sudo)"
+    export DEMO_SUDO_BIN
+fi
+
 missing=()
-for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mv pgrep ps python3 rm sleep stat sudo tail tee tmux uname wc ln; do
+for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mv pgrep ps python3 rm sleep stat tail tee tmux uname wc ln; do
     command -v "$program" >/dev/null 2>&1 || missing+=("$program")
 done
 if (( ${#missing[@]} )); then
@@ -83,14 +91,14 @@ DEMO_TIMEOUT_SECONDS="${DEMO_TIMEOUT_SECONDS:-30}"
 [[ "$DEMO_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]] || { echo 'DEMO_TIMEOUT_SECONDS muss eine positive Ganzzahl sein.' >&2; exit 2; }
 
 # Authentication happens before entering tmux; the worker never prompts blindly.
-if (( EUID != 0 )); then sudo -v; fi
+if (( EUID != 0 )); then "$DEMO_SUDO_BIN" -v; fi
 demo_root="$(mktemp -d /tmp/tpd-demo.XXXXXX)"
 chmod 755 "$demo_root"
 for log in runtime.log observer.log transcript.log; do : > "$demo_root/$log"; done
 session="tails-demo-$$"
 tmux_command=(tmux -L "$session")
 worker=(env "PATH=$PATH" "PROJECT_ROOT=$PROJECT_ROOT" "TAILS_PDP_BIN=$TAILS_PDP_BIN" "ADM_TOOL_BIN=$ADM_TOOL_BIN" "DEMO_AUTO=$DEMO_AUTO" "DEMO_TIMEOUT_SECONDS=$DEMO_TIMEOUT_SECONDS" "DEMO_CALLER_UID=$(id -u)" "DEMO_CALLER_GID=$(id -g)" "BASH_ENV=" "ENV=" "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" "TERM=${TERM:-xterm-256color}" bash "$PROJECT_ROOT/scripts/demo.sh" --worker "$demo_root")
-if (( EUID != 0 )); then worker=(sudo -n "${worker[@]}"); fi
+if (( EUID != 0 )); then worker=("$DEMO_SUDO_BIN" -n "${worker[@]}"); fi
 printf -v worker_command '%q ' "${worker[@]}"
 printf -v close_command '%q ' "${tmux_command[@]}" kill-session -t demo
 worker_command+="; $close_command"

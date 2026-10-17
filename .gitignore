@@ -14,8 +14,7 @@ target/
 # Local IDE settings
 .idea/
 
-# Local commit/push helper
-/scripts/commit.sh
+
 
 # LaTeX build artifacts in thesis/
 thesis/*.aux
