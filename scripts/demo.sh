@@ -113,6 +113,9 @@ DEMO_TIMEOUT_SECONDS="${DEMO_TIMEOUT_SECONDS:-30}"
 # Authentication happens before entering tmux; the worker never prompts blindly.
 if (( EUID != 0 )); then "$DEMO_SUDO_BIN" -v; fi
 demo_root="$(mktemp -d /tmp/tpd-demo.XXXXXX)"
+if [[ -n "${DEMO_ARTIFACT_PATH_FILE:-}" ]]; then
+    printf '%s\n' "$demo_root" > "$DEMO_ARTIFACT_PATH_FILE"
+fi
 chmod 755 "$demo_root"
 for log in runtime.log observer.log transcript.log; do : > "$demo_root/$log"; done
 session="tails-demo-$$"

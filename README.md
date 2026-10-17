@@ -52,14 +52,16 @@ Run the complete test and evaluation chain on the dedicated Linux target with:
 ./scripts/test.sh
 ```
 
-The script runs formatting, unit tests, Clippy, and the release build first. It then requests root
-privileges for the verifier, LSM attach, enforcement, performance, capacity, and stability tests.
+The script runs formatting, unit tests, demo regression checks, Clippy, and the release build first.
+It then requests root privileges for the verifier, LSM attach, enforcement, performance, capacity,
+stability tests, and a complete automatic tmux demo under a pseudoterminal.
 Each invocation creates `test-results/<UTC timestamp>-<unique suffix>/` in the repository:
 
 - `console.log`: combined standard output and standard error from the complete chain.
 - `steps.tsv` and `exit-status.txt`: executed steps and their exit statuses, including failures.
 - `metadata.txt` and `source.diff`: timestamps, commit, system, working-tree status and tracked changes.
 - `e2e-shared/` and `evaluation/`: E2E fixtures, runtime logs, scenario reports and raw measurements.
+- `demo/`: live-demo report, terminal recording and a copy of the complete demo fixture.
 
 Results remain available after a failed run. Fixture paths stay under `/tmp` during execution and
 are copied afterwards, preserving the path lengths used by the tests. Retain the complete run
@@ -76,6 +78,17 @@ on the same dedicated target after building the release binaries:
 ```shell
 sudo ./scripts/tests/test-evaluation.sh
 ```
+
+The full demo can also be tested separately after building the release binaries:
+
+```shell
+sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
+```
+
+This runs `scripts/demo.sh --auto` with real tmux and kernel enforcement, checks completion and
+preservation of existing host pins, and archives failures as well as successful runs. The default
+overall timeout is 300 seconds (`DEMO_TEST_TIMEOUT_SECONDS`). See the
+[demo documentation](scripts/demo/README.md) for dependencies and individual chapters.
 
 Individual IDs can be appended, for example `E2E-12 PERF-02`. Each scenario has its own Bash file;
 `sudo ./scripts/tests/test-e2e.sh` runs E2E-01 through E2E-19. The runner preserves

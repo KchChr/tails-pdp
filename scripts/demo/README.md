@@ -123,4 +123,31 @@ bash -n scripts/demo.sh scripts/demo/runner.sh scripts/demo/dependencies.sh
 python3 scripts/tests/test_demo.py
 ```
 
-Der vollständige Live-Lauf muss auf dem Linux-Zielsystem geprobt werden.
+Diese Prüfungen laufen automatisch über `./scripts/test.sh`. Nach Release-Build,
+E2E-Tests und Evaluation führt die Prüfkette zusätzlich die vollständige Demo mit
+echtem tmux und `--auto` in einem Pseudoterminal aus. Damit funktioniert der Test
+auch mit umgeleiteter Konsolenausgabe und ohne manuellen Tastendruck.
+
+Einzellauf auf dem dedizierten Linux-Zielsystem mit vorhandenen Release-Binaries:
+
+```bash
+sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
+```
+
+Der Live-Test verlangt Exitstatus 0 von Launcher und Worker, die Abschlussmeldung
+aller Kapitel und die Bestätigung des privaten bpffs. Er prüft außerdem, dass die
+Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem Host
+bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den
+Start trotz vorhandener Einträge gezielt zu prüfen; dieses Verzeichnis wird
+anschließend wieder entfernt. Der Map-Inhalt fremder Pins wird nicht ausgelesen.
+
+Ein Gesamtzeitlimit von 300 Sekunden verhindert unbegrenztes Warten. Bei Bedarf
+ist es über `DEMO_TEST_TIMEOUT_SECONDS` anpassbar. Beim Timeout wird die Demo erst
+mit SIGTERM zum Aufräumen aufgefordert und nach einer Schonfrist zwangsweise
+beendet. Ein Timeout gilt immer als Fehler.
+
+Die Prüfkette speichert `demo/report.json`, `demo/terminal.log` (mit
+Terminal-Steuersequenzen) und `demo/fixture/` unter ihrem Ergebnisverzeichnis.
+Auch bei Fehlern werden verfügbare Demo-Artefakte kopiert. Beim direkten Aufruf
+ohne `TAILS_PDP_TEST_RESULTS_DIR` liegen die Nachweise unter einem ausgegebenen
+`/tmp/tails-demo-test-...`-Verzeichnis. Die kurzen Laufzeitpfade bleiben erhalten.

@@ -18,6 +18,13 @@ sudo ./scripts/tests/test-evaluation.sh
 sudo ./scripts/tests/test-evaluation.sh E2E-11 COMP-04 PERF-02
 ```
 
+Die Prüfkette enthält außerdem Demo-Regressionstests und abschließend einen
+vollständigen Live-Test von `scripts/demo.sh --auto` mit echtem tmux unter einem
+Pseudoterminal. Dieser Test ist kein Evaluationsszenario mit eigener E2E-ID.
+Bericht, Terminalmitschnitt und Fixture werden unter `test-results/<Lauf>/demo/`
+gespeichert. Details und Einzellauf stehen in
+[`scripts/demo/README.md`](../../demo/README.md).
+
 COMP-01 bis COMP-03 laufen als Rust-Komponententests im ersten Teil von `./scripts/test.sh`.
 COMP-04 verwendet echte Maps und benötigt deshalb hier Root.
 `sudo ./scripts/tests/test-e2e.sh` führt jetzt E2E-01 bis E2E-19 aus. Die ersten zehn

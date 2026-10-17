@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import pty
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -18,6 +19,7 @@ from unittest.mock import patch
 PROJECT = Path(__file__).resolve().parents[2]
 probe = types.ModuleType("demo_probe")
 exec(compile((PROJECT / "scripts/demo/probe.py").read_text(), "probe.py", "exec"), probe.__dict__)
+live = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/tests/test_demo_live.py')))
 
 
 class ProbeTests(unittest.TestCase):
@@ -128,13 +130,16 @@ if 'respawn-pane' in args:
 ''')
                 (binaries / "tmux").chmod(0o755)
             environment = {**os.environ, "PATH": str(binaries), "CALLS": str(root / "calls"), "DEMO_ROOT_CAPTURE": str(root / "demo-root"),
-                           "TAILS_PDP_BIN": "/usr/bin/true", "ADM_TOOL_BIN": "/usr/bin/true", "DEMO_SUDO_BIN": str(system_sudo)}
+                           "TAILS_PDP_BIN": "/usr/bin/true", "ADM_TOOL_BIN": "/usr/bin/true", "DEMO_SUDO_BIN": str(system_sudo),
+                           "DEMO_ARTIFACT_PATH_FILE": str(root / "artifact-path")}
             environment.pop("TAILS_DEMO_NIX", None)
             primary, secondary = pty.openpty()
             try:
                 result = subprocess.run([str(PROJECT / "scripts/demo.sh"), "--auto"], env=environment,
                                         stdin=secondary, stdout=secondary, stderr=secondary, timeout=8)
                 self.assertEqual(result.returncode, 0)
+                if with_tmux:
+                    self.assertEqual((root / 'artifact-path').read_text().strip(), (root / 'demo-root').read_text())
             finally:
                 os.close(secondary)
                 os.close(primary)
@@ -156,6 +161,41 @@ if 'respawn-pane' in args:
         attach_index = next(i for i, call in enumerate(calls) if 'attach-session' in call)
         self.assertLess(worker_index, attach_index)
         self.assertIn('kill-server', calls[-1])
+
+
+class LiveRunnerTests(unittest.TestCase):
+    def test_pty_provides_terminal_and_propagates_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'terminal.log'
+            command = [shutil.which('python3'), '-c',
+                       'import os,sys; print("tty", os.isatty(0), os.isatty(1), flush=True); sys.exit(7)']
+            status, timed_out = live.run_in_pty(command, os.environ, log, timeout=5)
+            self.assertEqual(status, 7)
+            self.assertFalse(timed_out)
+            self.assertIn('tty True True', log.read_text())
+
+    def test_pty_timeout_stops_process_and_keeps_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'terminal.log'
+            command = [shutil.which('python3'), '-c', 'import time; print("started", flush=True); time.sleep(60)']
+            _, timed_out = live.run_in_pty(command, os.environ, log, timeout=0.5, grace=1)
+            self.assertTrue(timed_out)
+            self.assertIn('started', log.read_text())
+
+    def test_success_requires_completed_demo_not_just_exit_zero(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory)
+            (fixture / 'exit-status').write_text('0\n')
+            (fixture / 'transcript.log').write_text('Eigener bpffs-Mount:\n')
+            with self.assertRaisesRegex(AssertionError, 'Demo-Abschluss fehlt'):
+                live.validate_demo(fixture, 0, False)
+            with (fixture / 'transcript.log').open('a') as output:
+                output.write('Alle Demo-Kapitel erfolgreich geprüft.\n')
+            live.validate_demo(fixture, 0, False)
+            with self.assertRaisesRegex(AssertionError, 'Gesamtzeitlimit'):
+                live.validate_demo(fixture, 0, True)
+            with self.assertRaisesRegex(AssertionError, 'Launcher fehlgeschlagen'):
+                live.validate_demo(fixture, 1, False)
 
 
 class MountNamespaceTests(unittest.TestCase):

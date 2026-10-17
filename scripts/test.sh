@@ -109,7 +109,7 @@ run_privileged_step() {
         run_step "$description" "$@"
     else
         run_step "$description" \
-            sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,EVAL_TIMEOUT,EVAL_REPEATS,EVAL_STAB_CYCLES,TAILS_PDP_TEST_RESULTS_DIR \
+            sudo --preserve-env=TAILS_PDP_BIN,ADM_TOOL_BIN,E2E_TIMEOUT_SECONDS,EVAL_TIMEOUT,EVAL_REPEATS,EVAL_STAB_CYCLES,TAILS_PDP_TEST_RESULTS_DIR,DEMO_TIMEOUT_SECONDS,DEMO_TEST_TIMEOUT_SECONDS,NIX_PATH \
             "$@"
     fi
 }
@@ -125,6 +125,12 @@ run_step "Formatierung prüfen" \
 
 run_step "Atomare Konfigurationsveröffentlichung prüfen" \
     bash "$PROJECT_ROOT/scripts/tests/test-publish-config.sh"
+
+run_step "Demo-Skripte syntaktisch prüfen" \
+    bash -n "$PROJECT_ROOT/scripts/demo.sh" "$PROJECT_ROOT/scripts/demo/runner.sh" "$PROJECT_ROOT/scripts/demo/dependencies.sh"
+
+run_step "Demo-Start, Isolation und Syscall-Helfer prüfen" \
+    env PYTHONDONTWRITEBYTECODE=1 python3 "$PROJECT_ROOT/scripts/tests/test_demo.py"
 
 # `.cargo/config.toml` konfiguriert global `sudo -E` als Runner. Unit-Tests benötigen keine
 # Privilegien und sollen keine root-eigenen Build-Artefakte erzeugen, daher wird der Runner hier
@@ -154,6 +160,9 @@ run_privileged_step "Alle privilegierten End-to-End-Tests ausführen" \
 # Ergänzt die E2E-Suite um reale Map-, Grenzfall-, Performance-, Last- und Stabilitätsprüfungen.
 run_privileged_step "Ergänzende Evaluationsszenarien ausführen" \
     bash "$PROJECT_ROOT/scripts/tests/test-evaluation.sh" "${EVALUATION_SCENARIOS[@]}"
+
+run_privileged_step "Vollständige tmux-Demo automatisch vorführen und prüfen" \
+    env "PATH=$PATH" PYTHONDONTWRITEBYTECODE=1 python3 "$PROJECT_ROOT/scripts/tests/test_demo_live.py"
 
 echo
 echo "Alle automatisierten Tests, Qualitätsprüfungen und Evaluationsszenarien waren erfolgreich."
