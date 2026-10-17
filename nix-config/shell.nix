@@ -11,6 +11,7 @@ pkgs.mkShell {
     pkgs.gnugrep
     pkgs.procps
     pkgs.python3
+    pkgs.tmux
     llvm.llvm
     llvm.libllvm
     pkgs.zlib
