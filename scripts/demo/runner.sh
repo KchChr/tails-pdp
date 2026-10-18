@@ -342,7 +342,7 @@ demo_worker() {
   protected.txt und alias.txt bezeichnen dieselbe Datei; control.txt ist eine separate Datei." \
         'Eine Deny-Policy wird für genau drei gemeinsam erforderliche Merkmale veröffentlicht: Real-UID 60001, Kommando cat und die geschützte Ressource. Danach werden diese Merkmale einzeln variiert.' \
         'Nur die passende Kombination auf protected.txt wird verweigert. Eine andere UID, ein anderes Kommando und die separate control.txt bleiben erlaubt. alias.txt wird ebenfalls verweigert, weil Gerät und Inode mit protected.txt übereinstimmen.' \
-        'Der Kommando-Filter verwendet technisch den Linux-Tasknamen comm. Die Zugriffshilfe setzt diesen Wert gezielt auf cat; sie startet kein echtes cat. Für den UID-Vergleich ändert sie nur die Real-UID, die effektive UID bleibt root. Es werden keine Benutzerkonten angelegt.'
+        'Der Kommando-Filter liest den Namen aus dem Linux-Feld comm. Die Zugriffshilfe setzt diesen Namen für den Test auf cat. Sie führt eine echte Dateiöffnung mit os.open aus und erkennt eine Verweigerung durch EPERM. So lassen sich Kommando und Real-UID gezielt variieren, ohne Benutzerkonten anzulegen. Die effektive UID bleibt root. Das Programm cat wird bei dieser Prüfung nicht gestartet.'
     policy scoped deny '    subject.uid == 60001;' cat
     explain 'Alle drei Filter passen: Die Dateiöffnung muss verweigert werden.'
     access_is deny cat 60001
