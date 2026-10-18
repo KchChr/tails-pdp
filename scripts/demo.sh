@@ -179,7 +179,7 @@ fi
 "${tmux_command[@]}" split-window -h -p 42 -t demo:0.0 "$runtime_command"
 "${tmux_command[@]}" split-window -v -p 42 -t demo:0.1 "$observer_command"
 "${tmux_command[@]}" select-pane -t demo:0.0 -T 'Geführte Demo'
-"${tmux_command[@]}" select-pane -t demo:0.1 -T 'Runtime / Policy- und Attributgenerationen'
+"${tmux_command[@]}" select-pane -t demo:0.1 -T 'Runtime / Kernel-PDP / Userspace-PEP'
 "${tmux_command[@]}" select-pane -t demo:0.2 -T 'FD-Beobachter / Ergebnisse'
 "${tmux_command[@]}" respawn-pane -k -t demo:0.0 "$worker_command"
 "${tmux_command[@]}" select-pane -t demo:0.0

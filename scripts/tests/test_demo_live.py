@@ -122,6 +122,9 @@ def validate_demo(fixture, launcher_status, timed_out):
         raise AssertionError('Vollständiger Demo-Abschluss fehlt')
     if 'Eigener bpffs-Mount:' not in transcript:
         raise AssertionError('Privates Demo-bpffs nicht bestätigt')
+    kernel_log = (fixture / 'kernel.log').read_text(errors='replace')
+    if not any(line.startswith('[Kernel-PDP]') and 'file_open final=deny' in line for line in kernel_log.splitlines()):
+        raise AssertionError('Keine Kernel-Deny-Entscheidung im Debuglog nachgewiesen')
 
 
 def main():

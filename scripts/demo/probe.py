@@ -81,7 +81,7 @@ def main(argv=None):
         description="Führt os.open aus: allow bei Erfolg, deny bei EPERM. Andere Fehler führen zum Abbruch.",
     )
     access_parser.add_argument("path", metavar="DATEI", help="Pfad der zu öffnenden Datei.")
-    access_parser.add_argument("command", metavar="KOMMANDO", help="Name für den Kommando-Filter (Linux-Feld comm); das Programm wird nicht gestartet.")
+    access_parser.add_argument("command", metavar="KOMMANDO", help="Unter Linux geführter Kommandoname comm für den Kommando-Filter; das Programm wird nicht gestartet.")
     access_parser.add_argument("uid", metavar="UID", help="Real-UID für den Test; '-' lässt die UID unverändert. Eine UID-Änderung benötigt root; die effektive UID bleibt 0.")
     hold_parser = modes.add_parser(
         "hold", help="Geschützte FDs und Kontroll-FDs öffnen und ihren Zustand beobachten.",

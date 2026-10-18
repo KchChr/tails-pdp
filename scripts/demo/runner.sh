@@ -24,6 +24,10 @@ init_demo_colors
 fail() { printf '\n%sFEHLER: %s%s\n' "$color_error" "$*" "$color_reset" >&2; return 1; }
 alive() {
     local state
+    if [[ -n "${kernel_trace_pid:-}" ]]; then
+        state="$(ps -o stat= -p "$kernel_trace_pid")" || return 1
+        [[ -n "$state" && "$state" != *Z* ]] || return 1
+    fi
     state="$(ps -o stat= -p "$runtime_pid")" || return 1
     [[ -n "$state" && "$state" != *Z* ]]
 }
@@ -249,6 +253,54 @@ setup_demo_bpffs() {
     [[ "$(stat -f -c %T "$mount_point")" == bpf_fs ]] || { fail 'Demo-Mount ist kein bpffs.'; return 1; }
 }
 
+start_kernel_trace() {
+    local setting original deadline
+    mkdir "$demo_root/tracefs"
+    mount -t tracefs tracefs "$demo_root/tracefs" || {
+        fail 'tracefs konnte für die Kernel-Debugausgabe nicht eingehängt werden.'; return 1;
+    }
+    # The mount is private, but tracing switches and the consumed trace stream
+    # are shared kernel state on this dedicated demo VM. Restore every switch.
+    for setting in tracing_on options/trace_printk; do
+        read -r original < "$demo_root/tracefs/$setting"
+        trace_settings_paths+=("$demo_root/tracefs/$setting")
+        trace_settings_values+=("$original")
+        printf '1\n' > "$demo_root/tracefs/$setting"
+    done
+    printf '[Kernel-Debug] Aktiviert: endgültige Deny-Entscheidungen und Tail-Call-Fehler.\n' >> "$demo_root/runtime.log"
+    DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
+        python3 "$PROJECT_ROOT/scripts/demo/kernel_trace.py" \
+        "$demo_root/tracefs/trace_pipe" "$demo_root/kernel-ready" "$demo_root/kernel.log" \
+        >> "$demo_root/runtime.log" 2>&1 &
+    kernel_trace_pid=$!
+    deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
+    while [[ ! -e "$demo_root/kernel-ready" ]]; do
+        kill -0 "$kernel_trace_pid" 2>/dev/null || { fail 'Kernel-Trace-Leser konnte nicht gestartet werden; siehe Runtime-Log.'; return 1; }
+        (( SECONDS < deadline )) || { fail 'Timeout beim Start des Kernel-Trace-Lesers.'; return 1; }
+        sleep 0.1
+    done
+}
+
+stop_kernel_trace() {
+    local deadline index state status=0
+    if [[ -n "$kernel_trace_pid" ]]; then
+        kill -TERM "$kernel_trace_pid" 2>/dev/null || true
+        deadline=$((SECONDS + 3))
+        while (( SECONDS < deadline )); do
+            state="$(ps -o stat= -p "$kernel_trace_pid")" || break
+            [[ -n "$state" && "$state" != *Z* ]] || break
+            sleep 0.1
+        done
+        kill -KILL "$kernel_trace_pid" 2>/dev/null || true
+        wait "$kernel_trace_pid" 2>/dev/null || true
+        kernel_trace_pid=''
+    fi
+    for index in "${!trace_settings_paths[@]}"; do
+        printf '%s\n' "${trace_settings_values[$index]}" > "${trace_settings_paths[$index]}" || status=1
+    done
+    return "$status"
+}
+
 stop_runtime() {
     [[ -n "$runtime_pid" ]] || return 0
     kill -TERM "$runtime_pid" 2>/dev/null || true
@@ -322,6 +374,7 @@ worker_cleanup() {
     set +e
     stop_probe
     stop_runtime
+    stop_kernel_trace || status=1
     if [[ "$owns_pins" == 1 ]]; then
         for name in POLICY_GENERATION ATTRIBUTE_GENERATION FILE_OPEN_STATIC_POLICIES FILE_OPEN_STREAM_POLICIES CURRENT_TIME ATTRIBUTES; do
             rm -f -- "$pin_dir/$name" || status=1
@@ -350,7 +403,8 @@ demo_worker() {
     target="$PROJECT_ROOT/demo/files/protected.txt"
     safe="$PROJECT_ROOT/demo/files/control.txt"
     pin_dir=/sys/fs/bpf/tails-pdp
-    runtime_pid='' probe_pid='' owns_pins=0 demo_chapter_started=0
+    runtime_pid='' probe_pid='' kernel_trace_pid='' owns_pins=0 demo_chapter_started=0
+    trace_settings_paths=() trace_settings_values=()
     owns_workspace=0
     workspace_dirs=()
     exec > >(tee -a "$demo_root/transcript.log") 2>&1
@@ -383,7 +437,7 @@ demo_worker() {
     printf 'Prototyp – geführte Live-Demo\nLogs: %s\n' "$demo_root"
     printf 'Eigener bpffs-Mount: vorhandene Host-Pins bleiben unverändert.\n'
     printf 'Arbeitsverzeichnis: Repository. Policies: policies/; Attribute: attributes/; Dateien: demo/files/.\n'
-    printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime. Rechts unten: FD-Beobachter.\n'
+    printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime und Kernel-Debugausgabe. Rechts unten: FD-Beobachter.\n'
     printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
     printf 'allow = Dateiöffnung erlaubt; deny = vom LSM mit EPERM verweigert. Andere Fehler brechen die Demo ab.\n'
     printf 'Die Policygeneration kennzeichnet den aktivierten Policy-Stand; die Attributgeneration kennzeichnet den aktivierten Attributstand.\n'
@@ -395,8 +449,9 @@ demo_worker() {
         'Die Demo-Dateien sind vorbereitet. Es läuft noch keine Demo-Runtime und es sind keine Policies geladen.' \
         'Der Prototyp wird gestartet. Dabei wird das eBPF-Programm geladen, die Maps werden vorbereitet und der file_open-Hook wird angehängt. Danach wird die geschützte Datei geöffnet.' \
         'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Policy wird kein Zugriff untersagt.' \
-        'Rechts oben bestätigt die Runtime ihren Start. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
-    RUST_LOG=info TAILS_PDP_EBPF_DEBUG=0 TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" > "$demo_root/runtime.log" 2>&1 &
+        'Rechts oben bestätigt die Runtime ihren Start. Kernel-Deny-Entscheidungen erscheinen dort als [Kernel-PDP] mit final=deny; USERSPACE_PEP kennzeichnet den Userspace-Pfad. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
+    start_kernel_trace
+    RUST_LOG=info TAILS_PDP_EBPF_DEBUG=1 TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
     runtime_pid=$!
     wait_log 'Waiting for Ctrl-C'
     local name
@@ -418,7 +473,7 @@ demo_worker() {
   protected.txt und alias.txt bezeichnen dieselbe Datei; control.txt ist eine separate Datei." \
         'Eine Deny-Policy wird für genau drei gemeinsam erforderliche Merkmale veröffentlicht: Real-UID 60001, Kommando cat und die geschützte Ressource. Danach werden diese Merkmale einzeln variiert.' \
         'Nur die passende Kombination auf protected.txt wird verweigert. Eine andere UID, ein anderes Kommando und die separate control.txt bleiben erlaubt. alias.txt wird ebenfalls verweigert, weil Gerät und Inode mit protected.txt übereinstimmen.' \
-        'Der Kommando-Filter liest den Namen aus dem Linux-Feld comm. Die Zugriffshilfe setzt diesen Namen für den Test auf cat. Sie führt eine echte Dateiöffnung mit os.open aus und erkennt eine Verweigerung durch EPERM. So lassen sich Kommando und Real-UID gezielt variieren, ohne Benutzerkonten anzulegen. Die effektive UID bleibt root. Das Programm cat wird bei dieser Prüfung nicht gestartet.'
+        'Der Kommando-Filter vergleicht den unter Linux geführten Kommandonamen comm. Die Zugriffshilfe setzt diesen Namen für den Test auf cat. Sie führt eine echte Dateiöffnung mit os.open aus und erkennt eine Verweigerung durch EPERM. So lassen sich Kommando und Real-UID gezielt variieren, ohne Benutzerkonten anzulegen. Die effektive UID bleibt root. Das Programm cat wird bei dieser Prüfung nicht gestartet.'
     policy scoped deny '    subject.uid == 60001;' cat
     explain 'Alle drei Filter passen: Die Dateiöffnung muss verweigert werden.'
     access_is deny cat 60001

@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import time
 import types
 import unittest
 from unittest.mock import patch
@@ -19,6 +20,7 @@ PROJECT = Path(__file__).resolve().parents[2]
 probe = types.ModuleType("demo_probe")
 exec(compile((PROJECT / "scripts/demo/probe.py").read_text(), "probe.py", "exec"), probe.__dict__)
 live = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/tests/test_demo_live.py')))
+kernel_trace = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/kernel_trace.py')))
 
 
 class ProbeTests(unittest.TestCase):
@@ -192,6 +194,7 @@ class LiveRunnerTests(unittest.TestCase):
             fixture = Path(directory)
             (fixture / 'exit-status').write_text('0\n')
             (fixture / 'transcript.log').write_text('Eigener bpffs-Mount:\n')
+            (fixture / 'kernel.log').write_text('[Kernel-PDP] cat-42: file_open final=deny\n')
             with self.assertRaisesRegex(AssertionError, 'Demo-Abschluss fehlt'):
                 live.validate_demo(fixture, 0, False)
             with (fixture / 'transcript.log').open('a') as output:
@@ -201,6 +204,52 @@ class LiveRunnerTests(unittest.TestCase):
                 live.validate_demo(fixture, 0, True)
             with self.assertRaisesRegex(AssertionError, 'Launcher fehlgeschlagen'):
                 live.validate_demo(fixture, 1, False)
+            (fixture / 'kernel.log').write_text('')
+            with self.assertRaisesRegex(AssertionError, 'Kernel-Deny-Entscheidung'):
+                live.validate_demo(fixture, 0, False)
+
+
+class KernelTraceTests(unittest.TestCase):
+    def test_filter_only_keeps_final_denials_and_tail_call_failures(self):
+        prefix = 'cat-42 [001] d..2 123.456: bpf_trace_printk: '
+        self.assertTrue(kernel_trace.selected(prefix + 'file_open final=deny'))
+        self.assertTrue(kernel_trace.selected(prefix + 'file_open tail_call=failed stage=stream'))
+        for message in ('file_open final=permit', 'file_open uid=60001', 'fos deny=1 permit=0', 'unrelated message'):
+            with self.subTest(message=message):
+                self.assertFalse(kernel_trace.selected(prefix + message))
+
+    def test_reader_discards_old_records_and_forwards_live_denial(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pipe = root / 'trace_pipe'
+            os.mkfifo(pipe)
+            feed = os.open(pipe, os.O_RDWR | os.O_NONBLOCK)
+            process = None
+            try:
+                os.write(feed, b'old: file_open final=deny\n')
+                process = subprocess.Popen([shutil.which('python3'), str(PROJECT / 'scripts/demo/kernel_trace.py'),
+                                            str(pipe), str(root / 'ready'), str(root / 'kernel.log')],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                deadline = time.monotonic() + 5
+                while not (root / 'ready').exists():
+                    self.assertIsNone(process.poll(), 'Trace reader exited before readiness')
+                    self.assertLess(time.monotonic(), deadline, 'Trace reader readiness timeout')
+                    time.sleep(0.01)
+                os.write(feed, b'new: file_open final=permit\nnew: file_open final=deny\n')
+                while not (root / 'kernel.log').exists() or 'new:' not in (root / 'kernel.log').read_text():
+                    self.assertLess(time.monotonic(), deadline, 'Trace reader output timeout')
+                    time.sleep(0.01)
+                process.terminate()
+                output, error = process.communicate(timeout=3)
+                self.assertEqual(process.returncode, 0, error)
+                self.assertIn('[Kernel-PDP] new: file_open final=deny', output)
+                self.assertNotIn('old:', output)
+                self.assertNotIn('final=permit', output)
+            finally:
+                os.close(feed)
+                if process is not None and process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=3)
 
 
 class WorkspaceTests(unittest.TestCase):

@@ -51,7 +51,7 @@ E2E-Tests daher nicht gleichzeitig starten.
 Das Skript richtet einen eigenen tmux-Server mit drei Bereichen ein:
 
 - **Links:** Erklärungen, vorbereitete Policy-/Attributtexte, Aktionen und Prüfungen.
-- **Rechts oben:** vollständiges Runtime-Log mit Aktivierungen und FD-Prüfungen.
+- **Rechts oben:** Runtime-Log mit Aktivierungen und FD-Prüfungen sowie gefilterte Kernel-Debugausgaben.
 - **Rechts unten:** Ergebnisse und FD-Beobachter.
 
 Der Fokus liegt links. **Enter** führt den jeweils erklärten Schritt aus.
@@ -109,6 +109,9 @@ kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließe
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
+Kernel-Debugmeldungen tragen `[Kernel-PDP]`. Die Runtime kennzeichnet die
+Userspace-Durchsetzung mit `USERSPACE_PEP`, etwa beim erfolgreichen oder
+fehlgeschlagenen Schließen eines FDs.
 Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
 kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
 der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
@@ -167,7 +170,7 @@ genannten Sicherung wiederhergestellt wurden. Konfiguration wird während der
 Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
 `probe.py` dient ausschließlich als Syscall-Helfer: `access` setzt kontrolliert
-das für den Kommando-Filter verwendete Linux-Feld `comm` und optional die Real-UID (effektive UID bleibt root) und
+den unter Linux geführten Kommandonamen `comm` für den Kommando-Filter und optional die Real-UID (effektive UID bleibt root) und
 unterscheidet LSM-`EPERM` von sonstigen Fehlern. Es werden keine Benutzerkonten
 angelegt. `hold` hält drei geschützte und zwei Kontroll-FDs offen und bleibt auch
 nach deren Entzug aktiv. Seine Beobachtungen werden zusätzlich zur Runtime-Ausgabe
@@ -179,13 +182,41 @@ Performance-, Stabilitäts- oder Race-Tests. FD-Entzug kann gelesene Daten und
 bestehende Speicherabbildungen nicht zurückholen; ptrace-Fehler und Races bleiben
 Grenzen des Prototyps.
 
+## Kernel-Debugausgabe
+
+Die Demo startet den Prototyp mit `TAILS_PDP_EBPF_DEBUG=1`. Ein eigener Leser
+(`scripts/demo/kernel_trace.py`) übernimmt die `bpf_printk`-Meldungen aus
+`trace_pipe` in das obere rechte Fenster. Sichtbar sind endgültige
+Kernel-Deny-Entscheidungen (`file_open final=deny`) und fehlgeschlagene
+Tail-Calls, die zur Ablehnung führen. Permit-Meldungen und die ausführlichen
+Zwischenstände der statischen und dynamischen Auswertung werden herausgefiltert,
+damit andere Dateiöffnungen die Demo nicht überladen. Die ursprüngliche
+Trace-Zeile einschließlich vorhandener Prozess- und Zeitangaben bleibt erhalten.
+
+Vor dem Start wird tracefs innerhalb des privaten Mount-Namespace unter dem
+Laufverzeichnis eingehängt. `tracing_on` und `options/trace_printk` werden für
+die Demo aktiviert und beim regulären Ende oder einem abgefangenen Abbruch auf
+ihre vorherigen Werte zurückgesetzt. Die Kernel-Unterstützung für tracefs und
+`bpf_printk` muss vorhanden sein. Fehler beim Einrichten des Lesers brechen die
+Demo mit einer Diagnose ab.
+
+Der Mount ist privat; die Tracing-Einstellungen und der Kernel-Trace-Puffer sind
+jedoch gemeinsam genutzter Kernelzustand. Das Lesen aus
+[`trace_pipe`](https://docs.kernel.org/trace/ftrace.html#trace-pipe) konsumiert
+Einträge. Deshalb ist während der Demo auf der vorgesehenen VM kein weiterer
+Trace-Leser zu betreiben. Alte Einträge werden vor dem Start des Prototyps
+verworfen. Eventverluste werden als `[Kernel-Debug]` gemeldet. Die Ausgabe ist
+eine Debughilfe und kein vollständiges Auditprotokoll; zusätzliche Protokollierung
+verändert auch das Laufzeitverhalten. Für Performance-Messungen ist diese
+Demo-Konfiguration nicht vorgesehen.
+
 ## Ende, Abbruch und Diagnose
 
 Die Demo beendet ihre Hilfsprozesse und Runtime und entfernt ausschließlich die
 sechs bekannten, von ihr angelegten Maps im eigenen bpffs. Nach dem Ende aller
 Worker-Prozesse verschwindet dessen privater Mount-Namespace automatisch.
 Host-Pins werden weder entfernt noch überschrieben.
-Das Verzeichnis mit `transcript.log`, `runtime.log`, `observer.log`,
+Das Verzeichnis mit `transcript.log`, `runtime.log`, `kernel.log`, `observer.log`,
 `exit-status`, Konfigurationen und FD-Zuständen bleibt unter `demo/runs/` für Diagnose erhalten;
 sein Pfad wird nach dem Schließen ausgegeben. Status 0 bedeutet, dass alle
 Prüfungen erfolgreich waren. Fehler, Abbruch und fehlende Abschlussmeldung
@@ -210,7 +241,8 @@ sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
 ```
 
 Der Live-Test verlangt Exitstatus 0 von Launcher und Worker, die Abschlussmeldung
-aller Kapitel und die Bestätigung des privaten bpffs. Er prüft außerdem, dass die
+aller Kapitel, die Bestätigung des privaten bpffs und mindestens eine
+Kernel-Deny-Entscheidung in `kernel.log`. Er prüft außerdem, dass die
 Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem Host
 bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den
 Start trotz vorhandener Einträge gezielt zu prüfen; dieses Verzeichnis wird
