@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Syscall helpers for the Bash demo; no external Python dependencies."""
+import argparse
 import ctypes
 import errno
 import json
 import os
 from pathlib import Path
-import sys
 import time
 
 
@@ -69,10 +69,33 @@ def hold(target, safe, directory):
         time.sleep(0.05)
 
 
-if __name__ == "__main__":
-    if sys.argv[1] == "access":
-        access(*sys.argv[2:])
-    elif sys.argv[1] == "hold":
-        hold(*sys.argv[2:])
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="probe.py",
+        description="Zugriffshilfe und FD-Beobachter für die Demo des Prototyps (Linux).",
+        epilog="Beispiel: python3 scripts/demo/probe.py access demo/files/protected.txt cat -",
+    )
+    modes = parser.add_subparsers(dest="mode", required=True, metavar="{access,hold}")
+    access_parser = modes.add_parser(
+        "access", help="Eine Dateiöffnung prüfen und allow oder deny ausgeben.",
+        description="Führt os.open aus: allow bei Erfolg, deny bei EPERM. Andere Fehler führen zum Abbruch.",
+    )
+    access_parser.add_argument("path", metavar="DATEI", help="Pfad der zu öffnenden Datei.")
+    access_parser.add_argument("command", metavar="KOMMANDO", help="Name für den Kommando-Filter (Linux-Feld comm); das Programm wird nicht gestartet.")
+    access_parser.add_argument("uid", metavar="UID", help="Real-UID für den Test; '-' lässt die UID unverändert. Eine UID-Änderung benötigt root; die effektive UID bleibt 0.")
+    hold_parser = modes.add_parser(
+        "hold", help="Geschützte FDs und Kontroll-FDs öffnen und ihren Zustand beobachten.",
+        description="Öffnet drei geschützte und zwei Kontroll-FDs. Der Prozess bleibt auch nach einem FD-Entzug aktiv und läuft bis zum Beenden weiter.",
+    )
+    hold_parser.add_argument("target", metavar="GESCHÜTZTE_DATEI", help="Datei für die drei geschützten FDs.")
+    hold_parser.add_argument("safe", metavar="KONTROLLDATEI", help="Datei für die zwei weiterhin zulässigen Kontroll-FDs.")
+    hold_parser.add_argument("directory", metavar="AUSGABEVERZEICHNIS", help="Vorhandenes Verzeichnis für ready.json und state.json.")
+    arguments = parser.parse_args(argv)
+    if arguments.mode == "access":
+        access(arguments.path, arguments.command, arguments.uid)
     else:
-        raise SystemExit("unknown probe mode")
+        hold(arguments.target, arguments.safe, arguments.directory)
+
+
+if __name__ == "__main__":
+    main()
