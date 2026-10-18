@@ -85,7 +85,7 @@ class LauncherTests(unittest.TestCase):
             root = Path(directory)
             binaries = root / "bin"
             binaries.mkdir()
-            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mktemp mount mv pgrep ps python3 readlink rm sleep stat sudo tail tee uname unshare wc".split()
+            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat sudo tail tee uname unshare wc".split()
             for command in commands:
                 executable = shutil.which(command)
                 if executable:
@@ -165,6 +165,7 @@ if 'respawn-pane' in args:
         attach_index = next(i for i, call in enumerate(calls) if 'attach-session' in call)
         self.assertLess(worker_index, attach_index)
         self.assertIn('kill-server', calls[-1])
+        self.assertTrue(any('status-format[1]' in call and 'Legende:' in call[-1] for call in calls))
 
 
 class LiveRunnerTests(unittest.TestCase):
@@ -200,6 +201,80 @@ class LiveRunnerTests(unittest.TestCase):
                 live.validate_demo(fixture, 0, True)
             with self.assertRaisesRegex(AssertionError, 'Launcher fehlgeschlagen'):
                 live.validate_demo(fixture, 1, False)
+
+
+class WorkspaceTests(unittest.TestCase):
+    def run_workspace(self, root, script):
+        run = root / 'demo/runs/test'
+        run.mkdir(parents=True, exist_ok=True)
+        environment = {**os.environ, 'PROJECT_ROOT': str(root), 'TEST_RUN': str(run)}
+        setup = '''
+set -Eeuo pipefail
+source "$1"
+demo_root="$TEST_RUN"
+owns_workspace=0
+workspace_dirs=()
+'''
+        return subprocess.run([shutil.which('bash'), '-c', setup + script, 'test', str(PROJECT / 'scripts/demo/runner.sh')],
+                              env=environment, text=True, capture_output=True, timeout=5)
+
+    def test_original_directories_are_restored_and_demo_files_archived(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for path in ('policies', 'attributes', 'demo/files'):
+                (root / path).mkdir(parents=True)
+                (root / path / 'original').write_text(path)
+            before = live.workspace_snapshot(root)
+            result = self.run_workspace(root, '''
+prepare_demo_workspace
+printf demo > "$PROJECT_ROOT/policies/demo.policy"
+printf changed > "$PROJECT_ROOT/attributes/system.attributes"
+printf protected > "$PROJECT_ROOT/demo/files/protected.txt"
+restore_demo_workspace
+''')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(live.workspace_snapshot(root), before)
+            for path in ('policies', 'attributes', 'demo/files'):
+                self.assertEqual((root / path / 'original').read_text(), path)
+                self.assertEqual(len(list((root / path).iterdir())), 1)
+            self.assertEqual((root / 'demo/runs/test/policies/demo.policy').read_text(), 'demo')
+            self.assertEqual((root / 'demo/runs/test/files/protected.txt').read_text(), 'protected')
+            self.assertFalse((root / 'demo/.workspace-active').exists())
+
+    def test_absent_original_directories_remain_absent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result = self.run_workspace(root, 'prepare_demo_workspace\nrestore_demo_workspace\n')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for path in ('policies', 'attributes', 'demo/files'):
+                self.assertFalse((root / path).exists())
+
+    def test_unfinished_workspace_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'demo/.workspace-active').mkdir(parents=True)
+            (root / 'policies').mkdir()
+            (root / 'policies/existing').write_text('preserve')
+            result = self.run_workspace(root, 'prepare_demo_workspace\n')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((root / 'policies/existing').read_text(), 'preserve')
+
+    def test_restore_failure_retains_backup_and_recovery_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'policies').mkdir()
+            (root / 'policies/original').write_text('preserve')
+            result = self.run_workspace(root, '''
+prepare_demo_workspace
+mv() {
+    if [[ "$2" == "$PROJECT_ROOT/policies" ]]; then return 1; fi
+    command mv "$@"
+}
+restore_demo_workspace
+''')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((root / 'demo/runs/test/original/policies/original').read_text(), 'preserve')
+            self.assertTrue((root / 'demo/.workspace-active/backup-path').exists())
 
 
 class MountNamespaceTests(unittest.TestCase):

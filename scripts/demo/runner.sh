@@ -58,8 +58,16 @@ chapter() {
 }
 explain() { printf '\n→ %s\n' "$*"; }
 show_command() {
+    local argument
     printf '\n%s$' "$color_command"
-    printf ' %q' "$@"
+    # The worker runs in the repository. Relative paths are equivalent here and
+    # keep the displayed commands short enough for the presentation pane.
+    for argument in "$@"; do
+        if [[ "$argument" == "$PROJECT_ROOT/"* ]]; then
+            argument="./${argument#"$PROJECT_ROOT/"}"
+        fi
+        printf ' %q' "$argument"
+    done
     printf '%s\n' "$color_reset"
 }
 show_output() {
@@ -72,10 +80,11 @@ show_output() {
 admin() {
     local quiet=0
     if [[ "${1:-}" == --quiet ]]; then quiet=1; shift; fi
-    local command=("$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" "${1:-show-active}")
+    # The demo always uses the compact view, including internal polling.
+    local command=("$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" show-active)
     if (( quiet == 0 )); then
-        # Show the exact executed argv, quoted as a valid Bash command. Internal
-        # generation polling stays quiet so it does not obscure the demo output.
+        # Show an equivalent repository-relative Bash command. Internal polling
+        # stays quiet so it does not obscure the demo output.
         printf '\n[Admin-Tool des Prototyps]\n'
         show_command "${command[@]}"
     fi
@@ -122,13 +131,14 @@ wait_generation() {
 }
 publish() {
     local destination="$1"
+    local publication=(bash ./scripts/publish-config.sh "./${demo_root#"$PROJECT_ROOT/"}/prepared" "./${destination#"$PROJECT_ROOT/"}")
     cat > "$demo_root/prepared"
-    printf '\nVeröffentliche %s:\n' "${destination#"$demo_root/"}"
+    printf '\nDie Datei %s wird veröffentlicht:\n' "${destination#"$PROJECT_ROOT/"}"
     printf '%s' "$color_config"
     cat "$demo_root/prepared"
     printf '%s' "$color_reset"
-    show_command bash "$PROJECT_ROOT/scripts/publish-config.sh" "$demo_root/prepared" "$destination"
-    show_output bash "$PROJECT_ROOT/scripts/publish-config.sh" "$demo_root/prepared" "$destination"
+    show_command "${publication[@]}"
+    show_output "${publication[@]}"
 }
 policy() {
     local name="$1" effect="$2" conditions="${3:-}" command="${4:-}" before offset
@@ -152,7 +162,7 @@ remove_policy() {
     local name="$1" before offset
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
-    printf '\nEntferne Policy %s\n' "$name"
+    printf '\nDie Policy %s wird entfernt.\n' "$name"
     show_command rm -- "$policy_dir/$name.policy"
     rm -- "$policy_dir/$name.policy"
     wait_generation policy "${before%% *}" "$offset"
@@ -248,6 +258,64 @@ stop_runtime() {
     wait "$runtime_pid" 2>/dev/null || true
     runtime_pid=''
 }
+
+workspace_path() {
+    case "$1" in
+        files) printf '%s/demo/files\n' "$PROJECT_ROOT" ;;
+        *) printf '%s/%s\n' "$PROJECT_ROOT" "$1" ;;
+    esac
+}
+
+prepare_demo_workspace() {
+    local name path
+    workspace_marker="$PROJECT_ROOT/demo/.workspace-active"
+    if [[ -e "$workspace_marker" ]]; then
+        fail "Ein früherer Demo-Arbeitsbereich ist noch markiert: $workspace_marker. Die dort vermerkte Sicherung muss zuerst wiederhergestellt werden."
+        return 1
+    fi
+    # Check every path before moving anything. The marker remains after an
+    # incomplete restoration, preventing a later run from hiding the backups.
+    for name in policies attributes files; do
+        path="$(workspace_path "$name")"
+        [[ ! -L "$path" && ( ! -e "$path" || -d "$path" ) ]] || {
+            fail "Demo-Verzeichnis ist kein reguläres Verzeichnis: $path"; return 1;
+        }
+    done
+    mkdir "$workspace_marker"
+    owns_workspace=1
+    printf '%s\n' "$demo_root/original" > "$workspace_marker/backup-path"
+    mkdir "$demo_root/original"
+    for name in policies attributes files; do
+        path="$(workspace_path "$name")"
+        if [[ -d "$path" ]]; then mv -- "$path" "$demo_root/original/$name"; fi
+        workspace_dirs+=("$name")
+        mkdir -p -- "$path"
+    done
+}
+
+restore_demo_workspace() {
+    local name path status=0
+    [[ "$owns_workspace" == 1 ]] || return 0
+    for name in "${workspace_dirs[@]-}"; do
+        [[ -n "$name" ]] || continue
+        path="$(workspace_path "$name")"
+        if [[ -e "$path" ]]; then
+            if ! mv -- "$path" "$demo_root/$name"; then status=1; continue; fi
+        fi
+        if [[ -d "$demo_root/original/$name" ]]; then
+            mv -- "$demo_root/original/$name" "$path" || status=1
+        fi
+    done
+    if (( status == 0 )); then
+        rm -- "$workspace_marker/backup-path" || return 1
+        rmdir -- "$workspace_marker" || return 1
+        owns_workspace=0
+    else
+        printf 'Die Originalverzeichnisse konnten nicht vollständig wiederhergestellt werden. Sicherungen: %s/original\n' "$demo_root" >&2
+    fi
+    return "$status"
+}
+
 worker_cleanup() {
     local status=$? name
     trap - EXIT INT TERM HUP
@@ -259,10 +327,11 @@ worker_cleanup() {
             rm -f -- "$pin_dir/$name" || status=1
         done
     fi
+    restore_demo_workspace || status=1
     printf '%s\n' "$status" > "$demo_root/exit-status"
     chown -R "$DEMO_CALLER_UID:$DEMO_CALLER_GID" "$demo_root"
     if (( status == 0 )); then
-        printf '\nDemo erfolgreich. Runtime und Hilfsprozesse beendet; eigene Maps entfernt.\n'
+        printf '\nDie Demo war erfolgreich. Runtime und Hilfsprozesse wurden beendet; die eigenen Maps wurden entfernt. Die ursprünglichen Verzeichnisse wurden wiederhergestellt.\n'
     else
         printf '\nDemo abgebrochen (Status %s). Diagnose: %s\n' "$status" "$demo_root"
     fi
@@ -276,12 +345,14 @@ worker_cleanup() {
 
 demo_worker() {
     demo_root="$1"
-    policy_dir="$demo_root/policies"
-    attribute_dir="$demo_root/attributes"
-    target="$demo_root/protected.txt"
-    safe="$demo_root/control.txt"
+    policy_dir="$PROJECT_ROOT/policies"
+    attribute_dir="$PROJECT_ROOT/attributes"
+    target="$PROJECT_ROOT/demo/files/protected.txt"
+    safe="$PROJECT_ROOT/demo/files/control.txt"
     pin_dir=/sys/fs/bpf/tails-pdp
     runtime_pid='' probe_pid='' owns_pins=0 demo_chapter_started=0
+    owns_workspace=0
+    workspace_dirs=()
     exec > >(tee -a "$demo_root/transcript.log") 2>&1
     trap worker_cleanup EXIT
     trap 'exit 130' INT
@@ -296,21 +367,26 @@ demo_worker() {
     exec 9>/run/lock/tails-pdp-evaluation.lock
     flock -n 9 || { fail 'Eine Evaluation oder Demo läuft bereits.'; return 1; }
     if pgrep -x tails-pdp >/dev/null; then fail 'Es läuft bereits eine Instanz des Prototyps.'; return 1; fi
+    (( $(printf '%s' "$target" | wc -c) <= 64 )) || {
+        fail 'Der Repositorypfad ist zu lang: Der absolute Pfad von demo/files/protected.txt darf höchstens 64 Byte umfassen. Bitte einen kürzeren Checkout-Pfad verwenden.'; return 1;
+    }
     setup_demo_bpffs
     owns_pins=1
+    prepare_demo_workspace
     mkdir -p "$policy_dir" "$attribute_dir/subjects" "$attribute_dir/resources"
     printf 'Geschützter Demo-Inhalt\n' > "$target"
     printf 'Weiterhin zulässiger Kontroll-Inhalt\n' > "$safe"
-    ln -- "$target" "$demo_root/alias.txt"
+    ln -- "$target" "$PROJECT_ROOT/demo/files/alias.txt"
     printf 'defcon = 5\n' > "$attribute_dir/system.attributes"
-    cd "$demo_root"
+    cd "$PROJECT_ROOT"
 
     printf 'Prototyp – geführte Live-Demo\nLogs: %s\n' "$demo_root"
     printf 'Eigener bpffs-Mount: vorhandene Host-Pins bleiben unverändert.\n'
+    printf 'Arbeitsverzeichnis: Repository. Policies: policies/; Attribute: attributes/; Dateien: demo/files/.\n'
     printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime. Rechts unten: FD-Beobachter.\n'
     printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
     printf 'allow = Dateiöffnung erlaubt; deny = vom LSM mit EPERM verweigert. Andere Fehler brechen die Demo ab.\n'
-    printf 'Die Policygeneration zählt aktivierte Policy-Stände; die Attributgeneration zählt aktivierte Attributstände.\n'
+    printf 'Die Policygeneration kennzeichnet den aktivierten Policy-Stand; die Attributgeneration kennzeichnet den aktivierten Attributstand.\n'
     printf 'show-active zeigt geladene Policies und Werte. Die Zugriffsentscheidung wird zusätzlich mit einer echten Dateiöffnung geprüft.\n'
 
     # Kapitel 1: Die Durchsetzung erst nach dem nachgewiesenen LSM-Attach prüfen.
@@ -336,9 +412,9 @@ demo_worker() {
     # belegt zusätzlich, dass die Ressourcenidentität und nicht der Pfad zählt.
     chapter '2. Statische Policies: Kommando, Benutzer und Ressource' \
         "Die Dateien sind zunächst zugänglich:
-  Geschützte Datei: $target
-  Kontrolldatei: $safe
-  Hardlink auf die geschützte Datei: $demo_root/alias.txt
+  Geschützte Datei: demo/files/protected.txt
+  Kontrolldatei: demo/files/control.txt
+  Hardlink auf die geschützte Datei: demo/files/alias.txt
   protected.txt und alias.txt bezeichnen dieselbe Datei; control.txt ist eine separate Datei." \
         'Eine Deny-Policy wird für genau drei gemeinsam erforderliche Merkmale veröffentlicht: Real-UID 60001, Kommando cat und die geschützte Ressource. Danach werden diese Merkmale einzeln variiert.' \
         'Nur die passende Kombination auf protected.txt wird verweigert. Eine andere UID, ein anderes Kommando und die separate control.txt bleiben erlaubt. alias.txt wird ebenfalls verweigert, weil Gerät und Inode mit protected.txt übereinstimmen.' \
@@ -351,8 +427,8 @@ demo_worker() {
     access_is allow other 60001
     access_is allow cat 60001 "$safe"
     explain 'Der alternative Hardlink-Pfad bezeichnet dieselbe Datei. Die Sperre gilt auch dort.'
-    access_is deny cat 60001 "$demo_root/alias.txt"
-    admin show-policies
+    access_is deny cat 60001 "$PROJECT_ROOT/demo/files/alias.txt"
+    admin show-active
     explain 'Die Policy wird entfernt. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
     remove_policy scoped
     access_is allow cat 60001
@@ -361,17 +437,17 @@ demo_worker() {
     # Jede Veröffentlichung/Entfernung aktiviert einen neuen vollständigen Stand.
     chapter '3. Permit, Deny-Vorrang und Policy-Lebenszyklus' \
         'Nach dem Entfernen der vorherigen Policy sind keine Policies aktiviert. Dies wird vor den Änderungen mit show-active angezeigt. In diesem Schritt werden keine Benutzer- oder Kommandofilter verwendet.' \
-        'Zuerst wird Permit geladen, dann eine passende Deny-Policy ergänzt und anschließend nur Deny entfernt. Zum Schluss wird auch Permit entfernt.' \
+        'Zuerst wird eine Permit-Policy geladen, dann eine passende Deny-Policy ergänzt und anschließend nur die Deny-Policy entfernt. Zum Schluss wird auch die Permit-Policy entfernt.' \
         'Die Zugriffe folgen der Reihenfolge erlaubt → verweigert → erlaubt. Bei gleichzeitig passenden Policies hat Deny Vorrang vor Permit.' \
         'Die Policygeneration ändert sich bei den Veröffentlichungen und Entfernungen. Neue Entscheidungen werden ohne Neustart wirksam. Die Reihenfolge der Dateinamen bestimmt keine Priorität.' show-active
-    explain 'Nur Permit ist vorhanden: Der Zugriff ist erlaubt.'
+    explain 'Zuerst wird eine Permit-Policy geladen. Der Zugriff ist damit erlaubt.'
     policy permit permit
     access_is allow
-    explain 'Jetzt treffen Permit und Deny gleichzeitig zu: Deny setzt sich durch.'
+    explain 'Eine passende Deny-Policy wird ergänzt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang.'
     policy deny deny
     access_is deny
     admin
-    explain 'Nur Deny wird entfernt; Permit bleibt geladen. Der Zugriff ist wieder erlaubt.'
+    explain 'Nur die Deny-Policy wird entfernt; die Permit-Policy bleibt geladen. Der Zugriff ist danach wieder erlaubt.'
     remove_policy deny
     access_is allow
     remove_policy permit
@@ -388,7 +464,7 @@ demo_worker() {
     explain 'DEFCON sinkt auf 2: Die bereits geladene Deny-Policy trifft jetzt zu.'
     attribute system.attributes 'defcon = 2'
     access_is deny
-    admin show-attributes
+    admin show-active
     explain 'DEFCON steigt wieder auf 5: Dieselbe Policy trifft nicht mehr zu.'
     attribute system.attributes 'defcon = 5'
     access_is allow
@@ -407,11 +483,11 @@ demo_worker() {
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
     access_is deny
-    explain 'Nur die Rolle wird engineer → intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
+    explain 'Nur die Rolle wird von engineer auf intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
     access_is allow
     attribute subjects/0.attributes 'position = "engineer"'
-    explain 'Die Rolle stimmt wieder. Jetzt wird nur die Dateiklassifikation internal → public geändert.'
+    explain 'Die Rolle ist wieder engineer. Jetzt wird nur die Dateiklassifikation von internal auf public geändert.'
     attribute "resources${target}.attributes" 'classification = "public"'
     access_is allow
     explain 'Mit classification=internal sind wieder alle drei Bedingungen erfüllt.'
@@ -445,7 +521,7 @@ demo_worker() {
     wait_log 'POLICY sync failed' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültige Policy änderte die Generation.'; return 1; }
     access_is deny
-    explain 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Das bereits vorhandene Deny hat weiterhin Vorrang.'
+    explain 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
     policy broken permit
     access_is deny
     remove_policy broken
@@ -471,7 +547,7 @@ demo_worker() {
     start_probe
     chapter '7a. FDs sind offen – jetzt Deny veröffentlichen' \
         'Der Beobachter hält alle fünf FDs offen. Vor der Änderung wird zusätzlich geprüft, dass diese FDs noch auf die erwarteten Dateien verweisen.' \
-        'Enter veröffentlicht Deny für die geschützte Datei und das Kommando tails-demo-fd. Die Policyaktivierung löst eine erneute FD-Prüfung aus.' \
+        'Mit Enter wird eine Deny-Policy für die geschützte Datei und das Kommando tails-demo-fd veröffentlicht. Die Policyaktivierung löst eine erneute FD-Prüfung aus.' \
         'Die drei geschützten FDs wechseln auf False. Beide Kontroll-FDs bleiben True; der Prozess wird nicht beendet.' \
         'Rechts oben ist die Policyaktivierung mit anschließendem Scan sichtbar. Rechts unten ist der tatsächliche FD-Zustand zu sehen. Ein Logeintrag allein genügt nicht als Nachweis.'
     assert_probe_identity
@@ -492,7 +568,7 @@ demo_worker() {
     start_probe
     chapter '8a. Nur das Systemattribut ändern' \
         'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.' \
-        'Enter veröffentlicht ausschließlich DEFCON=2. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.' \
+        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.' \
         'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.' \
         'Rechts oben wird ein Scan mit Ursache attributes:<Generation> erwartet. Damit wird der Attributwechsel als Auslöser nachgewiesen. Die Policy bleibt dabei unverändert.'
     assert_probe_identity
@@ -504,7 +580,7 @@ demo_worker() {
     [[ "${before%% *}" == "${current%% *}" ]] || { fail 'Policygeneration unerwartet geändert.'; return 1; }
     wait_log "scan started cause=[attributes:${current##* }]" "$offset"
     expect_revoked
-    explain 'Die unveränderte Policygeneration und der attributes-Auslöser sind geprüft. Die Kontextänderung allein hat die bestehenden Zugriffe entzogen.'
+    explain 'Die unveränderte Policygeneration und der attributes-Auslöser wurden geprüft. Die Kontextänderung allein hat die bestehenden Zugriffe entzogen.'
     stop_probe
     remove_policy revoke
 
@@ -512,7 +588,7 @@ demo_worker() {
     # nichts mehr veröffentlichen; Zeit-Trigger und konstante Generationen prüfen.
     chapter '9. FD-Entzug ausschließlich durch eine Zeitgrenze' \
         'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.' \
-        'Nach Enter wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die Zeitpolicy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne weitere Konfigurationsänderung gewartet.' \
+        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne weitere Konfigurationsänderung gewartet.' \
         'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.' \
         'Die Uhr wird nicht verstellt. Der große Modulus 4294967296 macht den Vergleich in der aktuellen Unix-Epoche zu einem einmaligen nahen Übergang. Im Log ist time:<Zeitgrenze> der Auslöser. Während dieser zwölf Sekunden gibt es keine weitere Enter-Pause.'
     local boundary
@@ -525,7 +601,7 @@ demo_worker() {
     access_is allow tails-demo-fd
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
-    observe "Warte auf Unix-Zeit $boundary. Keine Veröffentlichung und kein Neustart."
+    observe "Es wird auf den Unix-Zeitpunkt $boundary gewartet. Es erfolgen weder eine Veröffentlichung noch ein Neustart."
     wait_log "scan started cause=[time:$boundary]" "$offset"
     wait_log "scan completed policy_generation=${before%% *} attribute_generation=${before##* }" "$offset"
     expect_revoked
@@ -537,7 +613,7 @@ if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
     raise SystemExit('FDs vor der Zeitgrenze geschlossen')
 PY
     access_is deny tails-demo-fd
-    explain 'Der Zeit-Auslöser, unveränderte Generationen und der FD-Entzug nach der Grenze sind bestätigt. Auch eine neue Dateiöffnung wird nun verweigert.'
+    explain 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug nach der Zeitgrenze wurden bestätigt. Auch eine neue Dateiöffnung wird nun verweigert.'
     stop_probe
     remove_policy timed
     access_is allow tails-demo-fd
@@ -546,16 +622,16 @@ PY
     # vermeiden eine Abhängigkeit von der Vorführungszeit und zeigen Deny-Vorrang.
     chapter '10. UTC-Zeitbedingung und abschließende Inspektion' \
         'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder. Der vorherige zeitabhängige Policy-Stand wurde entfernt.' \
-        'Deny für environment.utc.hour >= 0 und zusätzlich Permit für environment.utc.minute >= 0 werden geladen. Die aktiven Maps werden angezeigt; danach wird nur Deny entfernt.' \
-        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Mit beiden Policies gilt Deny-Vorrang; nach dem Entfernen von Deny ist der Zugriff wieder erlaubt.' \
+        'Eine Deny-Policy mit environment.utc.hour >= 0 und zusätzlich eine Permit-Policy mit environment.utc.minute >= 0 werden geladen. Die aktivierten Policies und Attribute werden angezeigt; danach wird nur die Deny-Policy entfernt.' \
+        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Bei gleichzeitig passenden Policies hat Deny Vorrang; nach dem Entfernen der Deny-Policy ist der Zugriff wieder erlaubt.' \
         'Die bewusst immer wahren Vergleiche zeigen die UTC-Felder unabhängig von der Uhrzeit der Vorführung. Das Admin-Tool zeigt die Policies, die Zugriffshilfe prüft deren tatsächliche Wirkung.'
     policy utc deny '    environment.utc.hour >= 0;'
     access_is deny
     policy stream-permit permit '    environment.utc.minute >= 0;'
-    explain 'Auch die zusätzliche zeitabhängige Permit-Policy hebt das passende Deny nicht auf.'
+    explain 'Auch die zusätzliche zeitabhängige Permit-Policy hebt die Entscheidung der passenden Deny-Policy nicht auf.'
     access_is deny
     admin
-    explain 'Nur die UTC-Deny-Policy wird entfernt. Das Stream-Permit bleibt zunächst geladen.'
+    explain 'Nur die UTC-Deny-Policy wird entfernt. Die zeitabhängige Permit-Policy bleibt zunächst geladen.'
     remove_policy utc
     access_is allow
     remove_policy stream-permit

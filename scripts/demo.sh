@@ -75,7 +75,7 @@ if (( EUID != 0 )); then
 fi
 
 missing=()
-for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mount mv pgrep ps python3 readlink rm sleep stat tail tee tmux uname unshare wc ln; do
+for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat tail tee tmux uname unshare wc ln; do
     command -v "$program" >/dev/null 2>&1 || missing+=("$program")
 done
 if (( ${#missing[@]} )); then
@@ -114,7 +114,19 @@ DEMO_TIMEOUT_SECONDS="${DEMO_TIMEOUT_SECONDS:-30}"
 
 # Authentication happens before entering tmux; the worker never prompts blindly.
 if (( EUID != 0 )); then "$DEMO_SUDO_BIN" -v; fi
-demo_root="$(mktemp -d /tmp/tpd-demo.XXXXXX)"
+demo_caller_uid="$(id -u)"
+demo_caller_gid="$(id -g)"
+if (( EUID == 0 )) && [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]]; then
+    demo_caller_uid="$SUDO_UID"
+    demo_caller_gid="$SUDO_GID"
+fi
+for generated_directory in "$PROJECT_ROOT/demo" "$PROJECT_ROOT/demo/runs"; do
+    if [[ ! -d "$generated_directory" ]]; then
+        mkdir "$generated_directory"
+        if (( EUID == 0 )); then chown "$demo_caller_uid:$demo_caller_gid" "$generated_directory"; fi
+    fi
+done
+demo_root="$(mktemp -d "$PROJECT_ROOT/demo/runs/run.XXXXXX")"
 if [[ -n "${DEMO_ARTIFACT_PATH_FILE:-}" ]]; then
     printf '%s\n' "$demo_root" > "$DEMO_ARTIFACT_PATH_FILE"
 fi
@@ -122,7 +134,7 @@ chmod 755 "$demo_root"
 for log in runtime.log observer.log transcript.log; do : > "$demo_root/$log"; done
 session="tails-demo-$$"
 tmux_command=(tmux -L "$session")
-worker=(env "PATH=$PATH" "PROJECT_ROOT=$PROJECT_ROOT" "TAILS_PDP_BIN=$TAILS_PDP_BIN" "ADM_TOOL_BIN=$ADM_TOOL_BIN" "DEMO_AUTO=$DEMO_AUTO" "DEMO_TIMEOUT_SECONDS=$DEMO_TIMEOUT_SECONDS" "DEMO_CALLER_UID=$(id -u)" "DEMO_CALLER_GID=$(id -g)" "BASH_ENV=" "ENV=" "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" "TERM=${TERM:-xterm-256color}" "NO_COLOR=${NO_COLOR:-}" bash "$PROJECT_ROOT/scripts/demo.sh" --worker "$demo_root")
+worker=(env "PATH=$PATH" "PROJECT_ROOT=$PROJECT_ROOT" "TAILS_PDP_BIN=$TAILS_PDP_BIN" "ADM_TOOL_BIN=$ADM_TOOL_BIN" "DEMO_AUTO=$DEMO_AUTO" "DEMO_TIMEOUT_SECONDS=$DEMO_TIMEOUT_SECONDS" "DEMO_CALLER_UID=$demo_caller_uid" "DEMO_CALLER_GID=$demo_caller_gid" "BASH_ENV=" "ENV=" "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" "TERM=${TERM:-xterm-256color}" "NO_COLOR=${NO_COLOR:-}" bash "$PROJECT_ROOT/scripts/demo.sh" --worker "$demo_root")
 if (( EUID != 0 )); then worker=("$DEMO_SUDO_BIN" -n "${worker[@]}"); fi
 printf -v worker_command '%q ' "${worker[@]}"
 printf -v close_command '%q ' "${tmux_command[@]}" kill-session -t demo
@@ -157,6 +169,13 @@ trap 'exit 143' TERM HUP
 "${tmux_command[@]}" set-option -g pane-border-status top
 "${tmux_command[@]}" set-option -g pane-border-format ' #{pane_title} '
 "${tmux_command[@]}" set-option -g status-right 'Enter: weiter | Strg+C: abbrechen | Präfix Strg+B'
+"${tmux_command[@]}" set-option -g status 2
+if [[ -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
+    legend='#[default]Legende: #[fg=colour11]$ Eingabe/Befehl #[fg=colour12]Ausgabe #[fg=colour13]Policy/Attribute #[fg=colour10]Prüfung OK #[fg=colour9]Fehler #[fg=colour6,bold]Kapitel#[default] | Text: Erklärung'
+else
+    legend='Legende: $ = Eingabe/Befehl | Ausgabe = Programmantwort | Policy/Attribute = Quelldatei | OK/Fehler = Demo-Prüfung'
+fi
+"${tmux_command[@]}" set-option -g 'status-format[1]' "$legend"
 "${tmux_command[@]}" split-window -h -p 42 -t demo:0.0 "$runtime_command"
 "${tmux_command[@]}" split-window -v -p 42 -t demo:0.1 "$observer_command"
 "${tmux_command[@]}" select-pane -t demo:0.0 -T 'Geführte Demo'

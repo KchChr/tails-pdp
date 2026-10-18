@@ -63,8 +63,11 @@ Each invocation creates `test-results/<UTC timestamp>-<unique suffix>/` in the r
 - `e2e-shared/` and `evaluation/`: E2E fixtures, runtime logs, scenario reports and raw measurements.
 - `demo/`: live-demo report, terminal recording and a copy of the complete demo fixture.
 
-Results remain available after a failed run. Fixture paths stay under `/tmp` during execution and
-are copied afterwards, preserving the path lengths used by the tests. Retain the complete run
+Results remain available after a failed run. E2E and evaluation fixture paths stay under `/tmp`
+during execution and are copied afterwards, preserving the path lengths used by those tests.
+The demo uses repository-local configuration directories and `demo/files/`, temporarily backs up
+their previous contents and restores them afterwards. Logs remain under `demo/runs/` and are
+also copied into the test report. Retain the complete run
 directory when using its results as evidence for the thesis.
 The individual privileged runners remain available for targeted repetitions:
 

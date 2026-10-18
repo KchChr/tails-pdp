@@ -77,6 +77,9 @@ Die Ausgabe verwendet ein einheitliches Farbschema:
 - **Grün:** bestätigte Demo-Prüfungen, auch bei einem erwarteten `deny`.
 - **Rot:** Fehler der Demo oder eine Abweichung vom erwarteten Ergebnis.
 
+Eine dauerhaft sichtbare zweite tmux-Statuszeile zeigt diese Legende auch nach
+dem Leeren des linken Bereichs. Die obere Statuszeile enthält die Bedienhinweise.
+
 Erklärungstexte bleiben in der normalen Terminalfarbe. Quellenkennzeichnungen
 und Prüfergebnisse bleiben zusätzlich als Text erhalten. Farben lassen sich mit
 `NO_COLOR=1 ./scripts/demo.sh` deaktivieren und werden bei `TERM=dumb` oder ohne
@@ -89,11 +92,16 @@ Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
 Begriffe wie FD, Generation und `allow`/`deny` werden im Ablauf erklärt.
-Vor jeder sichtbaren Admin-Ausgabe erscheint der tatsächlich ausgeführte
-Aufruf mit Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`.
+Vor jeder sichtbaren Admin-Ausgabe erscheint der entsprechende Aufruf mit
+Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`. Pfade innerhalb des
+Repositorys werden relativ angezeigt, beispielsweise
+`./target/release/tails-pdp-admintool --policy-dir ./policies --attributes-dir ./attributes show-active`.
+Das Administrationstool wird in der gesamten Demo ausschließlich mit
+`show-active` aufgerufen. Dadurch werden nur aktivierte Policies und die
+aktuellen Attribute angezeigt, keine deaktivierten Policy-Plätze.
 Die Befehle laufen im privilegierten Demo-Worker; Eingaben sind nicht nötig.
 Interne Generationsabfragen bleiben ohne Befehlsausgabe. Kapitel 2 nennt die
-vollständigen Pfade von `protected.txt`, `control.txt` und dem Hardlink `alias.txt`.
+Pfade `demo/files/protected.txt`, `demo/files/control.txt` und `demo/files/alias.txt`.
 Auch die Zugriffshilfe wird mit vollständigem Aufruf gezeigt: `probe.py access`
 führt eine echte Dateiöffnung aus und gibt `allow` oder `deny` zurück. Die Demo
 kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließenden
@@ -135,10 +143,28 @@ eine garantierte Frist.
 9. Selektiver FD-Entzug allein an einer Zeitgrenze, bei unveränderten Konfigurationsgenerationen.
 10. UTC-Zeitbedingungen, Stream-Permit und Deny-Vorrang, abschließende Admin-Inspektion.
 
-Alle Konfigurationen sind auf eine eigens angelegte Datei unter
-`/tmp/tpd-demo.XXXXXX/` begrenzt. Die Runtime startet mit diesem Arbeitsverzeichnis;
-die Repository-Verzeichnisse `policies/` und `attributes/` werden nicht verändert.
-Konfiguration wird mit `scripts/publish-config.sh` atomar veröffentlicht.
+Die Demo startet mit dem Repository als Arbeitsverzeichnis. Die Runtime liest
+ihre Konfiguration aus `policies/` und `attributes/`; die Beispieldateien liegen
+unter `demo/files/`. Jeder Lauf erhält ein eigenes Verzeichnis
+`demo/runs/run.XXXXXX/` für Logs, FD-Zustände und vorbereitete Dateien. `demo/`
+ist in Git ausgeschlossen. Die angezeigten Befehle verwenden kurze relative
+Pfade. Nur `resource.path` in den Policies muss weiterhin ein absoluter Pfad
+sein; er darf einschließlich Repositorypfad höchstens 64 Byte umfassen.
+
+Damit die Ausgangslage reproduzierbar ist, werden vorhandene Verzeichnisse
+`policies/`, `attributes/` und `demo/files/` vorübergehend unter
+`demo/runs/run.XXXXXX/original/` gesichert. Anschließend werden die
+Demo-Verzeichnisse angelegt. Nach dem Beenden der Runtime werden die
+Demo-Konfigurationen und Beispieldateien ins Laufverzeichnis verschoben und die
+Originalverzeichnisse wiederhergestellt. README-Dateien und vorhandene
+Konfigurationen bleiben dadurch erhalten. Während der Demo sollten die
+gesicherten Originale nicht bearbeitet werden.
+
+Die Markierung `demo/.workspace-active/backup-path` nennt den Sicherungspfad.
+Nach einem nicht abfangbaren Abbruch (etwa SIGKILL oder VM-Ausfall) verhindert
+diese Markierung einen neuen Lauf, bis die Originalverzeichnisse aus der dort
+genannten Sicherung wiederhergestellt wurden. Konfiguration wird während der
+Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
 `probe.py` dient ausschließlich als Syscall-Helfer: `access` setzt kontrolliert
 das für den Kommando-Filter verwendete Linux-Feld `comm` und optional die Real-UID (effektive UID bleibt root) und
@@ -160,7 +186,7 @@ sechs bekannten, von ihr angelegten Maps im eigenen bpffs. Nach dem Ende aller
 Worker-Prozesse verschwindet dessen privater Mount-Namespace automatisch.
 Host-Pins werden weder entfernt noch überschrieben.
 Das Verzeichnis mit `transcript.log`, `runtime.log`, `observer.log`,
-`exit-status`, Konfigurationen und FD-Zuständen bleibt für Diagnose erhalten;
+`exit-status`, Konfigurationen und FD-Zuständen bleibt unter `demo/runs/` für Diagnose erhalten;
 sein Pfad wird nach dem Schließen ausgegeben. Status 0 bedeutet, dass alle
 Prüfungen erfolgreich waren. Fehler, Abbruch und fehlende Abschlussmeldung
 führen zu einem von null verschiedenen Exitstatus.
@@ -189,6 +215,9 @@ Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem H
 bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den
 Start trotz vorhandener Einträge gezielt zu prüfen; dieses Verzeichnis wird
 anschließend wieder entfernt. Der Map-Inhalt fremder Pins wird nicht ausgelesen.
+Zusätzlich werden die ursprünglichen Konfigurations- und Dateiverzeichnisse vor
+und nach der Demo anhand ihrer Einträge, Inodes, Modi und Datei-Prüfsummen
+verglichen, um die unveränderte Wiederherstellung zu prüfen.
 
 Ein Gesamtzeitlimit von 300 Sekunden verhindert unbegrenztes Warten. Bei Bedarf
 ist es über `DEMO_TEST_TIMEOUT_SECONDS` anpassbar. Beim Timeout wird die Demo erst
@@ -199,4 +228,5 @@ Die Prüfkette speichert `demo/report.json`, `demo/terminal.log` (mit
 Terminal-Steuersequenzen) und `demo/fixture/` unter ihrem Ergebnisverzeichnis.
 Auch bei Fehlern werden verfügbare Demo-Artefakte kopiert. Beim direkten Aufruf
 ohne `TAILS_PDP_TEST_RESULTS_DIR` liegen die Nachweise unter einem ausgegebenen
-`/tmp/tails-demo-test-...`-Verzeichnis. Die kurzen Laufzeitpfade bleiben erhalten.
+`test-results/demo-...`-Verzeichnis im Repository. Die Demo selbst verwendet auch
+im Live-Test die Repository-Verzeichnisse und sichert deren ursprüngliche Inhalte.

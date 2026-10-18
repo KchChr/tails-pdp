@@ -2,6 +2,7 @@
 """Run the real tmux demo under a PTY; archive evidence even on failure."""
 import fcntl
 import errno
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -92,6 +93,23 @@ def pin_snapshot():
             for path in HOST_PINS.rglob('*')}
 
 
+def workspace_snapshot(project=PROJECT):
+    snapshot = {}
+    for name in ('policies', 'attributes', 'demo/files'):
+        root = project / name
+        if not root.exists():
+            continue
+        for path in [root, *root.rglob('*')]:
+            metadata = path.lstat()
+            value = (metadata.st_dev, metadata.st_ino, metadata.st_mode)
+            if path.is_symlink():
+                value += (os.readlink(path),)
+            elif path.is_file():
+                value += (hashlib.sha256(path.read_bytes()).hexdigest(),)
+            snapshot[str(path.relative_to(project))] = value
+    return snapshot
+
+
 def validate_demo(fixture, launcher_status, timed_out):
     if timed_out:
         raise AssertionError('Gesamtzeitlimit der Demo überschritten')
@@ -111,7 +129,8 @@ def main():
         print('Der Live-Demotest benötigt root auf dem dedizierten Linux-Zielsystem.', file=sys.stderr)
         return 1
     results = os.environ.get('TAILS_PDP_TEST_RESULTS_DIR')
-    archive = Path(results) / 'demo' if results else Path(tempfile.mkdtemp(prefix='tails-demo-test-'))
+    (PROJECT / 'test-results').mkdir(exist_ok=True)
+    archive = Path(results) / 'demo' if results else Path(tempfile.mkdtemp(prefix='demo-', dir=PROJECT / 'test-results'))
     archive.mkdir(parents=True, exist_ok=True)
     path_file = archive / 'fixture-path.txt'
     # Never let an old marker turn an early launcher failure into a valid run.
@@ -136,9 +155,13 @@ def main():
             sentinel = Path(tempfile.mkdtemp(prefix='demo-test-', dir=HOST_PINS))
         report['host_pin_sentinel'] = str(sentinel) if sentinel else None
         before = pin_snapshot()
+        original_workspace = workspace_snapshot()
         status, timed_out = run_in_pty([str(PROJECT / 'scripts/demo.sh'), '--auto'], environment,
                                      archive / 'terminal.log', timeout)
         report.update(launcher_status=status, timed_out=timed_out)
+        if workspace_snapshot() != original_workspace:
+            raise AssertionError('Originalverzeichnisse wurden nach der Demo nicht unverändert wiederhergestellt')
+        report['original_workspace_restored'] = True
         if pin_snapshot() != before:
             raise AssertionError('Host-Pins wurden während der Demo verändert')
         report['host_pins_unchanged'] = True
