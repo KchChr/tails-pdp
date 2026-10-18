@@ -68,8 +68,24 @@ Bei jedem neuen Kapitel (auch 7a und 8a) wird der linke Bereich geleert und der
 Cursor an den Anfang gesetzt. Die rechten Bereiche laufen weiter; Scrollback
 und gespeicherte Logs bleiben erhalten.
 
+Die Ausgabe verwendet ein einheitliches Farbschema:
+
+- **Türkis, fett:** Kapitelüberschriften; Abschnittsüberschriften sind fett.
+- **Gelb:** ausgeführte Befehle mit `$` sowie die Enter-Aufforderungen.
+- **Hellblau:** Admin-Ausgaben, Rückgaben der Zugriffshilfe und FD-Beobachtungen.
+- **Magenta:** veröffentlichte Policy- und Attributtexte.
+- **Grün:** bestätigte Demo-Prüfungen, auch bei einem erwarteten `deny`.
+- **Rot:** Fehler der Demo oder eine Abweichung vom erwarteten Ergebnis.
+
+Erklärungstexte bleiben in der normalen Terminalfarbe. Quellenkennzeichnungen
+und Prüfergebnisse bleiben zusätzlich als Text erhalten. Farben lassen sich mit
+`NO_COLOR=1 ./scripts/demo.sh` deaktivieren und werden bei `TERM=dumb` oder ohne
+Terminal ebenfalls abgeschaltet. Die Demo-Mitschnitte enthalten bei aktivierten
+Farben ANSI-Steuersequenzen; maschinenlesbare FD-Zustände und interne
+Generationsabfragen bleiben unverändert.
+
 Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
-**erwartetes Verhalten** und **worauf in der Ausgabe zu achten ist**. Während
+**erwartetes Verhalten** und **Beobachtung**. Während
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
 Begriffe wie FD, Generation und `allow`/`deny` werden im Ablauf erklärt.
@@ -84,10 +100,15 @@ kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließe
 `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
-Admin-Ausgaben werden mit `[Admin-Tool: tails-pdp-admintool]` eingeleitet.
+Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
 kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
 der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
+In Kapitel 3 wird die Ausgangslage zusätzlich vor dem Ausführen der Aktionen
+mit einem sichtbaren `show-active`-Aufruf belegt. Dabei sind keine aktivierten
+Policy-Einträge vorhanden; die unabhängig verwalteten Attribute bleiben sichtbar.
+Die Erläuterungen verwenden durchgehend Policies und Policy-Stand für die
+geladenen Zugriffsrichtlinien.
 
 ```bash
 ./scripts/demo.sh --auto
@@ -104,7 +125,7 @@ eine garantierte Frist.
 ## Kapitel
 
 1. Runtime, LSM-Attach, erwartete Maps, Zugriff ohne Deny.
-2. Statische Regel mit Real-UID-, Tasknamen- und Ressourcenfilter, einschließlich Negativkontrollen und Hardlink-Abgleich über Geräte-/Inode-Identität.
+2. Statische Policy mit Real-UID-, Kommando- und Ressourcenfilter, einschließlich Negativkontrollen und Hardlink-Abgleich über Geräte-/Inode-Identität.
 3. Permit, Deny-Vorrang, Veröffentlichung und Entfernung ohne Neustart.
 4. Dynamisches Systemattribut `system.defcon`.
 5. Subject-/Resource-Attribute, UND-Verknüpfung, fehlende und anders typisierte Werte.
@@ -120,7 +141,7 @@ die Repository-Verzeichnisse `policies/` und `attributes/` werden nicht verände
 Konfiguration wird mit `scripts/publish-config.sh` atomar veröffentlicht.
 
 `probe.py` dient ausschließlich als Syscall-Helfer: `access` setzt kontrolliert
-den Linux-Tasknamen und optional die Real-UID (effektive UID bleibt root) und
+das für den Kommando-Filter verwendete Linux-Feld `comm` und optional die Real-UID (effektive UID bleibt root) und
 unterscheidet LSM-`EPERM` von sonstigen Fehlern. Es werden keine Benutzerkonten
 angelegt. `hold` hält drei geschützte und zwei Kontroll-FDs offen und bleibt auch
 nach deren Entzug aktiv. Seine Beobachtungen werden zusätzlich zur Runtime-Ausgabe

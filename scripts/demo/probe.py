@@ -47,11 +47,14 @@ def access(path, command, uid):
 
 
 def hold(target, safe, directory):
+    def message(text):
+        print(f"{os.environ.get('DEMO_OUTPUT_COLOR', '')}[FD-Beobachter: probe.py hold] {text}{os.environ.get('DEMO_COLOR_RESET', '')}", flush=True)
+
     set_command("tails-demo-fd")
     root = Path(directory)
     protected = [os.open(target, os.O_RDONLY) for _ in range(3)]
     controls = [os.open(safe, os.O_RDONLY) for _ in range(2)]
-    print(f"[FD-Beobachter: probe.py hold] PID {os.getpid()}: drei geschützte FDs {protected}, zwei Kontroll-FDs {controls} geöffnet.", flush=True)
+    message(f"PID {os.getpid()}: drei geschützte FDs {protected}, zwei Kontroll-FDs {controls} geöffnet.")
     save(root / "ready.json", {"pid": os.getpid(), "protected": protected, "controls": controls})
     previous = None
     while True:
@@ -59,7 +62,7 @@ def hold(target, safe, directory):
         safe_open = [is_open(fd) for fd in controls]
         state = (opened, safe_open)
         if state != previous:
-            print(f"[FD-Beobachter: probe.py hold] Geschützte FDs offen: {opened} | Kontroll-FDs offen: {safe_open} | Prozess läuft", flush=True)
+            message(f"Geschützte FDs offen: {opened} | Kontroll-FDs offen: {safe_open} | Prozess läuft")
             save(root / "state.json", {"protected": opened, "controls": safe_open, "unix_ns": time.time_ns()})
             previous = state
         # Stay alive after revocation to demonstrate that the process is not killed.
