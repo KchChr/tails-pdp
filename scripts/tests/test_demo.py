@@ -195,6 +195,7 @@ class LiveRunnerTests(unittest.TestCase):
             (fixture / 'exit-status').write_text('0\n')
             (fixture / 'transcript.log').write_text('Eigener bpffs-Mount:\n')
             (fixture / 'kernel.log').write_text('[Kernel-PDP] cat-42: file_open final=deny\n')
+            (fixture / 'runtime.log').write_text('Kernel debug logging mode=Deny\n')
             with self.assertRaisesRegex(AssertionError, 'Demo-Abschluss fehlt'):
                 live.validate_demo(fixture, 0, False)
             with (fixture / 'transcript.log').open('a') as output:
@@ -206,6 +207,12 @@ class LiveRunnerTests(unittest.TestCase):
                 live.validate_demo(fixture, 1, False)
             (fixture / 'kernel.log').write_text('')
             with self.assertRaisesRegex(AssertionError, 'Kernel-Deny-Entscheidung'):
+                live.validate_demo(fixture, 0, False)
+            (fixture / 'kernel.log').write_text('[Kernel-Debug] Trace-Ereignisse verloren: CPU:2 [LOST 2 EVENTS]\n')
+            with self.assertRaisesRegex(AssertionError, 'Trace-Ereignisse gingen'):
+                live.validate_demo(fixture, 0, False)
+            (fixture / 'runtime.log').write_text('Kernel debug logging mode=Verbose\n')
+            with self.assertRaisesRegex(AssertionError, 'Reduzierter Kernel-Loggingmodus fehlt'):
                 live.validate_demo(fixture, 0, False)
 
 

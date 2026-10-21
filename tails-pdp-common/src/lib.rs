@@ -28,6 +28,8 @@
 #[cfg(any(feature = "user", test))]
 extern crate std;
 
+pub mod kernel_logging;
+
 /// Größe des festen Linux-Commandfelds in Byte einschließlich Nullbyte.
 pub const COMMAND_LEN: usize = 16;
 /// Linux task comm reserves one byte of its fixed-size field for the trailing NUL.

@@ -26,6 +26,6 @@ pub fn file_open(ctx: LsmContext) -> i32 {
     unsafe {
         let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_STATIC);
     }
-    crate::debug_printk!(b"file_open tail_call=failed stage=static");
+    crate::deny_printk!(b"file_open tail_call=failed stage=static");
     LSM_DENY
 }

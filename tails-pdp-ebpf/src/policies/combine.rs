@@ -21,7 +21,7 @@ macro_rules! define_combine_program {
         pub fn $fn_name(_ctx: LsmContext) -> i32 {
             let decision = combine_decision();
             if decision != 0 {
-                crate::debug_printk!($deny_log);
+                crate::deny_printk!($deny_log);
             } else {
                 crate::debug_printk!($permit_log);
             }

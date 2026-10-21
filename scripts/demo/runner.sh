@@ -267,7 +267,7 @@ start_kernel_trace() {
         trace_settings_values+=("$original")
         printf '1\n' > "$demo_root/tracefs/$setting"
     done
-    printf '[Kernel-Debug] Aktiviert: endgültige Deny-Entscheidungen und Tail-Call-Fehler.\n' >> "$demo_root/runtime.log"
+    printf '[Kernel-Debug] Reduzierter Deny-Modus: Nur endgültige Deny-Entscheidungen und Tail-Call-Fehler werden im Kernel protokolliert.\n' >> "$demo_root/runtime.log"
     DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
         python3 "$PROJECT_ROOT/scripts/demo/kernel_trace.py" \
         "$demo_root/tracefs/trace_pipe" "$demo_root/kernel-ready" "$demo_root/kernel.log" \
@@ -451,9 +451,13 @@ demo_worker() {
         'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Policy wird kein Zugriff untersagt.' \
         'Rechts oben bestätigt die Runtime ihren Start. Kernel-Deny-Entscheidungen erscheinen dort als [Kernel-PDP] mit final=deny; USERSPACE_PEP kennzeichnet den Userspace-Pfad. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
     start_kernel_trace
-    RUST_LOG=info TAILS_PDP_EBPF_DEBUG=1 TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
+    RUST_LOG=info TAILS_PDP_EBPF_DEBUG=deny TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
     runtime_pid=$!
     wait_log 'Waiting for Ctrl-C'
+    if ! grep -Fq 'Kernel debug logging mode=Deny' "$demo_root/runtime.log"; then
+        fail 'Der reduzierte Kernel-Loggingmodus wurde nicht bestätigt. Bitte die Binaries mit ./scripts/demo.sh --build neu bauen.'
+        return 1
+    fi
     local name
     for name in POLICY_GENERATION ATTRIBUTE_GENERATION FILE_OPEN_STATIC_POLICIES FILE_OPEN_STREAM_POLICIES CURRENT_TIME ATTRIBUTES; do
         [[ -e "$pin_dir/$name" ]] || { fail "Map fehlt: $name"; return 1; }

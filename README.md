@@ -368,6 +368,18 @@ Kernel debug output from `bpf_printk!` is disabled by default. Enable it explici
 TAILS_PDP_EBPF_DEBUG=1 RUST_LOG=info sudo -E ./target/release/tails-pdp
 ```
 
+`TAILS_PDP_EBPF_DEBUG=1` retains verbose logging, including permitted opens and
+intermediate evaluation details. For the demo, use the reduced mode instead:
+
+```shell
+TAILS_PDP_EBPF_DEBUG=deny RUST_LOG=info sudo -E ./target/release/tails-pdp
+```
+
+This mode emits only final deny decisions and failed tail calls. Other messages
+are suppressed in the eBPF program before calling `bpf_printk`, reducing pressure
+on the trace buffer. `0` disables output. Rebuild the runtime and embedded eBPF
+object before using the new mode. The runtime logs the selected mode at startup.
+
 Then inspect the kernel trace output in a second terminal:
 
 ```shell

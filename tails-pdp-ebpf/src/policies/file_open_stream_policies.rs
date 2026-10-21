@@ -178,6 +178,6 @@ pub fn evaluate_file_open_stream_policies(ctx: LsmContext) -> i32 {
     unsafe {
         let _ = FILE_OPEN_JUMP_TABLE.tail_call(&ctx, TAIL_IDX_FILE_OPEN_COMBINE);
     }
-    crate::debug_printk!(b"file_open tail_call=failed stage=combine");
+    crate::deny_printk!(b"file_open tail_call=failed stage=combine");
     LSM_DENY
 }

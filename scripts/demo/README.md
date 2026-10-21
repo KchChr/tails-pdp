@@ -184,13 +184,23 @@ Grenzen des Prototyps.
 
 ## Kernel-Debugausgabe
 
-Die Demo startet den Prototyp mit `TAILS_PDP_EBPF_DEBUG=1`. Ein eigener Leser
+Die Demo startet den Prototyp mit `TAILS_PDP_EBPF_DEBUG=deny`. Im Kernel
+entstehen damit ausschließlich endgültige Deny-Meldungen und Tail-Call-Fehler.
+UID-, Permit- und Auswertungszwischenstände werden bereits vor `bpf_printk`
+unterdrückt und belegen keinen Trace-Pufferplatz. Der bisherige Wert `1`
+aktiviert weiterhin das ausführliche Debuglogging; `0` deaktiviert es.
+
+Nach dieser Änderung müssen die Binaries einschließlich eBPF-Objekt neu gebaut
+werden, beispielsweise mit `./scripts/demo.sh --build`. Die Demo prüft beim
+Start die Runtime-Bestätigung `Kernel debug logging mode=Deny` und bricht bei
+einem alten oder falsch konfigurierten Binary mit einem Build-Hinweis ab.
+
+Ein eigener Leser
 (`scripts/demo/kernel_trace.py`) übernimmt die `bpf_printk`-Meldungen aus
 `trace_pipe` in das obere rechte Fenster. Sichtbar sind endgültige
 Kernel-Deny-Entscheidungen (`file_open final=deny`) und fehlgeschlagene
-Tail-Calls, die zur Ablehnung führen. Permit-Meldungen und die ausführlichen
-Zwischenstände der statischen und dynamischen Auswertung werden herausgefiltert,
-damit andere Dateiöffnungen die Demo nicht überladen. Die ursprüngliche
+Tail-Calls, die zur Ablehnung führen. Der Anzeigefilter bleibt zusätzlich aktiv,
+um sonstige Meldungen aus dem gemeinsam genutzten Trace-Stream auszublenden. Die ursprüngliche
 Trace-Zeile einschließlich vorhandener Prozess- und Zeitangaben bleibt erhalten.
 
 Vor dem Start wird tracefs innerhalb des privaten Mount-Namespace unter dem
@@ -242,7 +252,8 @@ sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
 
 Der Live-Test verlangt Exitstatus 0 von Launcher und Worker, die Abschlussmeldung
 aller Kapitel, die Bestätigung des privaten bpffs und mindestens eine
-Kernel-Deny-Entscheidung in `kernel.log`. Er prüft außerdem, dass die
+Kernel-Deny-Entscheidung in `kernel.log`. Ein falscher Loggingmodus oder
+gemeldete Trace-Verluste lassen den Live-Test fehlschlagen. Er prüft außerdem, dass die
 Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem Host
 bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den
 Start trotz vorhandener Einträge gezielt zu prüfen; dieses Verzeichnis wird

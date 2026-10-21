@@ -17,6 +17,7 @@ use tails_pdp_attribute_loader::{
     open_attribute_maps, open_current_time_map, run_attribute_updater, run_current_time_updater,
     write_current_attributes, write_current_time,
 };
+use tails_pdp_common::kernel_logging::KernelLogMode;
 use tails_pdp_policy_loader::{PolicyDirectorySync, verify_pinned_map_layouts};
 use tails_pdp_userspace_common::BPF_PIN_DIRECTORY;
 use tails_pdp_userspace_pep::run_userspace_pep;
@@ -67,9 +68,12 @@ async fn main() -> anyhow::Result<()> {
             .context("map 'DEBUG_LOGGING' not found")?,
     )
     .context("failed to open DEBUG_LOGGING")?;
+    let kernel_log_mode =
+        KernelLogMode::from_setting(env::var("TAILS_PDP_EBPF_DEBUG").ok().as_deref());
     debug_logging
-        .set(0, u32::from(env_flag_enabled("TAILS_PDP_EBPF_DEBUG")), 0)
+        .set(0, kernel_log_mode as u32, 0)
         .context("failed to configure DEBUG_LOGGING")?;
+    info!("Kernel debug logging mode={kernel_log_mode:?}");
 
     let mut file_open_jump_table = ProgramArray::try_from(
         ebpf.take_map("FILE_OPEN_JUMP_TABLE")
@@ -129,14 +133,4 @@ async fn main() -> anyhow::Result<()> {
     info!("Exiting...");
 
     Ok(())
-}
-
-fn env_flag_enabled(name: &str) -> bool {
-    match env::var(name) {
-        Ok(value) => !matches!(
-            value.as_str(),
-            "" | "0" | "false" | "False" | "FALSE" | "off" | "Off" | "OFF" | "no" | "No" | "NO"
-        ),
-        Err(_) => false,
-    }
 }
