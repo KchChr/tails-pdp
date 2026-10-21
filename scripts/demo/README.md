@@ -109,9 +109,11 @@ kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließe
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
-Kernel-Debugmeldungen tragen `[Kernel-PDP]`. Die Runtime kennzeichnet die
-Userspace-Durchsetzung mit `USERSPACE_PEP`, etwa beim erfolgreichen oder
-fehlgeschlagenen Schließen eines FDs.
+Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den
+Userspace-PEP mit der Logkennung `USERSPACE_PEP`, etwa beim erfolgreichen oder
+fehlgeschlagenen Schließen eines FDs. Beide Durchsetzungspfade enthalten eine
+integrierte PDP-Funktion, die Policies auswertet und eine Entscheidung ableitet.
+Die Komponenten heißen entsprechend der Thesis Kernelspace-PEP und Userspace-PEP.
 Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
 kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
 der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
@@ -206,7 +208,7 @@ einem alten oder falsch konfigurierten Binary mit einem Build-Hinweis ab.
 Ein eigener Leser
 (`scripts/demo/kernel_trace.py`) übernimmt die `bpf_printk`-Meldungen aus
 `trace_pipe` in das obere rechte Fenster. Sichtbar sind endgültige
-Kernel-Deny-Entscheidungen (`file_open final=deny`) und fehlgeschlagene
+Deny-Entscheidungen des Kernelspace-PEP (`file_open final=deny`) und fehlgeschlagene
 Tail-Calls, die zur Ablehnung führen. Der Anzeigefilter bleibt zusätzlich aktiv,
 um sonstige Meldungen aus dem gemeinsam genutzten Trace-Stream auszublenden. Die ursprüngliche
 Trace-Zeile einschließlich vorhandener Prozess- und Zeitangaben bleibt erhalten.
@@ -260,7 +262,7 @@ sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
 
 Der Live-Test verlangt Exitstatus 0 von Launcher und Worker, die Abschlussmeldung
 aller Kapitel, die Bestätigung des privaten bpffs und mindestens eine
-Kernel-Deny-Entscheidung in `kernel.log`. Ein falscher Loggingmodus oder
+Deny-Entscheidung des Kernelspace-PEP in `kernel.log`. Ein falscher Loggingmodus oder
 gemeldete Trace-Verluste lassen den Live-Test fehlschlagen. Er prüft außerdem, dass die
 Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem Host
 bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den

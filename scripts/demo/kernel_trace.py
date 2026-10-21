@@ -61,7 +61,7 @@ def forward(pipe_path, ready_path, archive_path):
                     if 'LOST' in line and 'EVENTS' in line:
                         message = f'[Kernel-Debug] Trace-Ereignisse verloren: {line}'
                     elif selected(line):
-                        message = f'[Kernel-PDP] {line}'
+                        message = f'[Kernelspace-PEP] {line}'
                     else:
                         continue
                     archive.write(message + '\n')

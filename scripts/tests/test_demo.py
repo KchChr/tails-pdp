@@ -194,7 +194,7 @@ class LiveRunnerTests(unittest.TestCase):
             fixture = Path(directory)
             (fixture / 'exit-status').write_text('0\n')
             (fixture / 'transcript.log').write_text('Eigener bpffs-Mount:\n')
-            (fixture / 'kernel.log').write_text('[Kernel-PDP] cat-42: file_open final=deny\n')
+            (fixture / 'kernel.log').write_text('[Kernelspace-PEP] cat-42: file_open final=deny\n')
             (fixture / 'runtime.log').write_text('Kernel debug logging mode=Deny\n')
             with self.assertRaisesRegex(AssertionError, 'Demo-Abschluss fehlt'):
                 live.validate_demo(fixture, 0, False)
@@ -206,7 +206,7 @@ class LiveRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'Launcher fehlgeschlagen'):
                 live.validate_demo(fixture, 1, False)
             (fixture / 'kernel.log').write_text('')
-            with self.assertRaisesRegex(AssertionError, 'Kernel-Deny-Entscheidung'):
+            with self.assertRaisesRegex(AssertionError, 'Deny-Entscheidung des Kernelspace-PEP'):
                 live.validate_demo(fixture, 0, False)
             (fixture / 'kernel.log').write_text('[Kernel-Debug] Trace-Ereignisse verloren: CPU:2 [LOST 2 EVENTS]\n')
             with self.assertRaisesRegex(AssertionError, 'Trace-Ereignisse gingen'):
@@ -249,7 +249,7 @@ class KernelTraceTests(unittest.TestCase):
                 process.terminate()
                 output, error = process.communicate(timeout=3)
                 self.assertEqual(process.returncode, 0, error)
-                self.assertIn('[Kernel-PDP] new: file_open final=deny', output)
+                self.assertIn('[Kernelspace-PEP] new: file_open final=deny', output)
                 self.assertNotIn('old:', output)
                 self.assertNotIn('final=permit', output)
             finally:

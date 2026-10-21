@@ -505,7 +505,7 @@ demo_worker() {
         'Die Demo-Dateien sind vorbereitet. Es läuft noch keine Demo-Runtime und es sind keine Policies geladen.' \
         'Der Prototyp wird gestartet. Dabei wird das eBPF-Programm geladen, die Maps werden vorbereitet und der file_open-Hook wird angehängt. Danach wird die geschützte Datei geöffnet.' \
         'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Policy wird kein Zugriff untersagt.' \
-        'Rechts oben bestätigt die Runtime ihren Start. Kernel-Deny-Entscheidungen erscheinen dort als [Kernel-PDP] mit final=deny; USERSPACE_PEP kennzeichnet den Userspace-Pfad. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
+        'Rechts oben bestätigt die Runtime ihren Start. Deny-Entscheidungen des Kernelspace-PEP erscheinen dort als [Kernelspace-PEP] mit final=deny. USERSPACE_PEP ist die Logkennung des Userspace-PEP. Beide Durchsetzungspfade besitzen eine integrierte PDP-Funktion zur Policy-Auswertung. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
     start_kernel_trace
     RUST_LOG=info TAILS_PDP_EBPF_DEBUG=deny TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
     runtime_pid=$!
