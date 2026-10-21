@@ -171,7 +171,7 @@ trap 'exit 143' TERM HUP
 "${tmux_command[@]}" set-option -g status-right 'Enter: weiter | Strg+C: abbrechen | Präfix Strg+B'
 "${tmux_command[@]}" set-option -g status 2
 if [[ -z "${NO_COLOR:-}" && "${TERM:-dumb}" != dumb ]]; then
-    legend='#[default]Legende: #[fg=colour11]$ Eingabe/Befehl #[fg=colour12]Ausgabe #[fg=colour13]Policy/Attribute #[fg=colour10]Prüfung OK #[fg=colour9]Fehler #[fg=colour6,bold]Kapitel#[default] | Text: Erklärung'
+    legend='#[default]Legende: #[fg=colour11]$ Eingabe/Befehl #[fg=colour12]Ausgabe #[fg=colour13]Policy/Attribute #[fg=colour10]Prüfung OK #[fg=colour9]Fehler #[fg=colour6,bold]Kapitel#[default]'
 else
     legend='Legende: $ = Eingabe/Befehl | Ausgabe = Programmantwort | Policy/Attribute = Quelldatei | OK/Fehler = Demo-Prüfung'
 fi
