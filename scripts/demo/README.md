@@ -164,9 +164,17 @@ Konfigurationen bleiben dadurch erhalten. Während der Demo sollten die
 gesicherten Originale nicht bearbeitet werden.
 
 Die Markierung `demo/.workspace-active/backup-path` nennt den Sicherungspfad.
-Nach einem nicht abfangbaren Abbruch (etwa SIGKILL oder VM-Ausfall) verhindert
-diese Markierung einen neuen Lauf, bis die Originalverzeichnisse aus der dort
-genannten Sicherung wiederhergestellt wurden. Konfiguration wird während der
+Nach einem nicht abfangbaren Abbruch (etwa SIGKILL oder VM-Ausfall) wird beim
+nächsten Start automatisch versucht, die dort genannten Originalverzeichnisse
+wiederherzustellen. Die Sperre muss dafür frei sein und es darf kein Prototyp
+mehr laufen. Aktuell vorhandene Demo-Verzeichnisse werden zuvor unter
+`demo/runs/<neuer Lauf>/recovered.XXXXXX/` archiviert; die frühere Markierung
+bleibt dort ebenfalls erhalten. Es werden keine vorhandenen Dateien gelöscht.
+Das Manifest `original/directories.present` hält fest, welche Verzeichnisse vor
+einem Lauf existierten. Bei älteren Sicherungen ohne dieses Manifest werden nur
+tatsächlich vorhandene Originalsicherungen zurückgestellt; Verzeichnisse ohne
+eindeutige Zuordnung bleiben erhalten. Ungültige oder fehlende Sicherungspfade
+führen weiterhin zu einem Abbruch mit Diagnose. Konfiguration wird während der
 Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
 `probe.py` dient ausschließlich als Syscall-Helfer: `access` setzt kontrolliert

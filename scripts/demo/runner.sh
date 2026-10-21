@@ -318,12 +318,61 @@ workspace_path() {
     esac
 }
 
+recover_demo_workspace() {
+    local backup recovery name path
+    # Called only after taking the demo/evaluation lock and rejecting a running
+    # prototype. Validate the marker before using its path in privileged moves.
+    backup="$(python3 - "$PROJECT_ROOT/demo/runs" "$workspace_marker" <<'PY'
+from pathlib import Path
+import sys
+runs = Path(sys.argv[1]).resolve()
+marker = Path(sys.argv[2])
+try:
+    reference = marker / 'backup-path'
+    if marker.is_symlink() or not marker.is_dir() or reference.is_symlink() or not reference.is_file():
+        raise ValueError('Sicherungsmarkierung ist unvollständig oder kein reguläres Verzeichnis')
+    source = Path(reference.read_text().strip())
+    backup = source.resolve(strict=True)
+    if source.is_symlink() or not backup.is_dir() or backup.name != 'original' or backup.parent.parent != runs:
+        raise ValueError('Sicherung liegt nicht im erwarteten Demo-Laufverzeichnis')
+    print(backup)
+except (OSError, ValueError) as error:
+    print(f'Automatische Wiederherstellung nicht möglich: {error}. Markierung: {marker}', file=sys.stderr)
+    raise SystemExit(1)
+PY
+)" || return 1
+    for name in policies attributes files; do
+        path="$(workspace_path "$name")"
+        [[ ! -L "$path" && ( ! -e "$path" || -d "$path" ) && ! -L "$backup/$name" && ( ! -e "$backup/$name" || -d "$backup/$name" ) ]] || {
+            fail "Wiederherstellung abgebrochen: kein reguläres Verzeichnis für $name. Alle verbleibenden Sicherungen bleiben erhalten."
+            return 1
+        }
+    done
+    [[ ! -L "$backup/directories.present" ]] || { fail 'Ungültiges Sicherungsmanifest.'; return 1; }
+    recovery="$(mktemp -d "$demo_root/recovered.XXXXXX")"
+    explain "Ein unterbrochener Demo-Lauf wird wiederhergestellt. Vorhandene Demo-Dateien werden unter ${recovery#"$PROJECT_ROOT/"} archiviert."
+    for name in policies attributes files; do
+        path="$(workspace_path "$name")"
+        if [[ -d "$backup/$name" ]]; then
+            if [[ -e "$path" ]]; then mv -- "$path" "$recovery/$name" || return 1; fi
+            mv -- "$backup/$name" "$path" || return 1
+        elif [[ -f "$backup/directories.present" ]] && ! grep -Fxq -- "$name" "$backup/directories.present"; then
+            # This directory did not exist before that run. Preserve the demo
+            # contents in the archive and restore its original absence.
+            if [[ -e "$path" ]]; then mv -- "$path" "$recovery/$name" || return 1; fi
+        fi
+        # Without a manifest, a missing backup can also mean that this original
+        # was already restored. Leave that directory unchanged rather than guess.
+    done
+    mv -- "$workspace_marker" "$recovery/previous-marker" || return 1
+    explain 'Die vorhandenen Originalsicherungen wurden wiederhergestellt. Die Demo kann neu vorbereitet werden.'
+}
+
 prepare_demo_workspace() {
     local name path
     workspace_marker="$PROJECT_ROOT/demo/.workspace-active"
-    if [[ -e "$workspace_marker" ]]; then
-        fail "Ein früherer Demo-Arbeitsbereich ist noch markiert: $workspace_marker. Die dort vermerkte Sicherung muss zuerst wiederhergestellt werden."
-        return 1
+    if [[ -e "$workspace_marker" || -L "$workspace_marker" ]]; then
+        recover_demo_workspace || return 1
     fi
     # Check every path before moving anything. The marker remains after an
     # incomplete restoration, preventing a later run from hiding the backups.
@@ -337,6 +386,13 @@ prepare_demo_workspace() {
     owns_workspace=1
     printf '%s\n' "$demo_root/original" > "$workspace_marker/backup-path"
     mkdir "$demo_root/original"
+    # Persist which directories existed before any moves. Recovery can then
+    # distinguish an originally absent directory from an already-restored one.
+    : > "$demo_root/original/directories.present"
+    for name in policies attributes files; do
+        path="$(workspace_path "$name")"
+        if [[ -d "$path" ]]; then printf '%s\n' "$name" >> "$demo_root/original/directories.present"; fi
+    done
     for name in policies attributes files; do
         path="$(workspace_path "$name")"
         if [[ -d "$path" ]]; then mv -- "$path" "$demo_root/original/$name"; fi

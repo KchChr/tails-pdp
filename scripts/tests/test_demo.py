@@ -315,6 +315,75 @@ restore_demo_workspace
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual((root / 'policies/existing').read_text(), 'preserve')
 
+    def test_interrupted_legacy_run_is_recovered_without_losing_demo_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backup = root / 'demo/runs/run.old/original'
+            marker = root / 'demo/.workspace-active'
+            marker.mkdir(parents=True)
+            (marker / 'backup-path').write_text(str(backup) + '\n')
+            for name in ('policies', 'attributes'):
+                (backup / name).mkdir(parents=True)
+                (backup / name / 'original').write_text(name)
+                (root / name).mkdir()
+                (root / name / 'demo-data').write_text('keep')
+            result = self.run_workspace(root, 'prepare_demo_workspace\nrestore_demo_workspace\n')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for name in ('policies', 'attributes'):
+                self.assertEqual((root / name / 'original').read_text(), name)
+            recovery = next((root / 'demo/runs/test').glob('recovered.*'))
+            self.assertEqual((recovery / 'policies/demo-data').read_text(), 'keep')
+            self.assertEqual((recovery / 'attributes/demo-data').read_text(), 'keep')
+            self.assertTrue((recovery / 'previous-marker/backup-path').exists())
+            self.assertFalse(marker.exists())
+
+    def test_recovery_preserves_already_restored_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backup = root / 'demo/runs/run.old/original'
+            (backup / 'attributes').mkdir(parents=True)
+            (backup / 'attributes/original').write_text('attributes')
+            (root / 'policies').mkdir()
+            (root / 'policies/original').write_text('already restored')
+            marker = root / 'demo/.workspace-active'
+            marker.mkdir()
+            (marker / 'backup-path').write_text(str(backup))
+            result = self.run_workspace(root, 'prepare_demo_workspace\nrestore_demo_workspace\n')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((root / 'policies/original').read_text(), 'already restored')
+            self.assertEqual((root / 'attributes/original').read_text(), 'attributes')
+
+    def test_recovery_manifest_restores_originally_absent_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backup = root / 'demo/runs/run.old/original'
+            backup.mkdir(parents=True)
+            (backup / 'directories.present').write_text('')
+            (root / 'demo/files').mkdir()
+            (root / 'demo/files/protected.txt').write_text('demo data')
+            marker = root / 'demo/.workspace-active'
+            marker.mkdir()
+            (marker / 'backup-path').write_text(str(backup))
+            result = self.run_workspace(root, 'prepare_demo_workspace\nrestore_demo_workspace\n')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((root / 'demo/files').exists())
+            recovery = next((root / 'demo/runs/test').glob('recovered.*'))
+            self.assertEqual((recovery / 'files/protected.txt').read_text(), 'demo data')
+
+    def test_recovery_rejects_backup_outside_demo_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            backup = root / 'unrelated/original'
+            (backup / 'policies').mkdir(parents=True)
+            (backup / 'policies/original').write_text('preserve')
+            marker = root / 'demo/.workspace-active'
+            marker.mkdir(parents=True)
+            (marker / 'backup-path').write_text(str(backup))
+            result = self.run_workspace(root, 'prepare_demo_workspace\n')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((backup / 'policies/original').read_text(), 'preserve')
+            self.assertTrue(marker.exists())
+
     def test_restore_failure_retains_backup_and_recovery_marker(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
