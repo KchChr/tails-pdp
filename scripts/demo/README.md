@@ -178,6 +178,15 @@ Zugriff und keine atomare Aufzeichnung des tatsächlichen Kernel-Requests.
 Bei FD-Szenarien werden geschützte Datei und Kontrolldatei getrennt dargestellt;
 der Kontext nach einer erneuten Auswertung ist als solcher gekennzeichnet und
 bedeutet keine neue Dateiöffnung.
+Nach der Zugriffsprüfung folgt ein Entscheidungsblock mit Datei, beobachtetem
+Ergebnis (`Permit` oder `Deny`), konkreter Durchsetzung und erwarteter
+Entscheidung. Die Prüfmeldung bestätigt die Übereinstimmung; Abweichungen werden
+sichtbar als Fehler ausgegeben und brechen die Demo ab. Die Anzeige fasst die
+beobachtete Durchsetzung zusammen und behauptet keinen ausgelesenen
+Entscheidungstrace oder eine bestimmte auslösende Policy. Insbesondere bedeutet
+ein erfolgreicher Zugriff nicht, dass eine explizite Permit-Policy gepasst hat.
+Beim FD-Entzug erscheinen getrennte Ergebnisse für die drei geschützten FDs
+und die beiden weiterhin offenen Kontroll-FDs.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den

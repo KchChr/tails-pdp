@@ -250,6 +250,25 @@ class RequestViewTests(unittest.TestCase):
 
 
 class PresentationTests(unittest.TestCase):
+    def test_decision_block_shows_actual_result_and_detects_mismatch(self):
+        script = '''set -Eeuo pipefail
+source "$RUNNER"
+demo_root="$TEST_ROOT"
+show_decision "$EXPECTED" "$ACTUAL" 'Beobachtete Dateiöffnung' "$PROJECT_ROOT/demo/files/protected.txt"
+'''
+        for expected, actual in [('allow', 'allow'), ('deny', 'deny'), ('deny', 'allow')]:
+            with self.subTest(expected=expected, actual=actual), tempfile.TemporaryDirectory() as directory:
+                result = subprocess.run([shutil.which('bash'), '-c', script],
+                                        env={**os.environ, 'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'),
+                                             'PROJECT_ROOT': str(PROJECT), 'TEST_ROOT': directory,
+                                             'EXPECTED': expected, 'ACTUAL': actual},
+                                        capture_output=True, text=True)
+                label = 'Permit' if actual == 'allow' else 'Deny'
+                self.assertIn(f'Ergebnis:       {label}', result.stdout)
+                self.assertIn('Durchsetzung:   Beobachtete Dateiöffnung', result.stdout)
+                self.assertEqual(result.returncode == 0, actual == expected)
+                self.assertEqual('[Demo-Prüfung] OK:' in result.stdout, actual == expected)
+
     def test_substep_needs_both_read_and_execution_confirmation(self):
         script = '''set -Eeuo pipefail
 source "$RUNNER"
@@ -357,7 +376,8 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
         result = self.check_access('deny', 'deny')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Operation not permitted', result.stdout)
-        self.assertIn('Zugriff durch cat verweigert', result.stdout)
+        self.assertIn('Ergebnis:       Deny', result.stdout)
+        self.assertIn('Die Dateiöffnung durch cat wurde mit EPERM verweigert', result.stdout)
 
     def test_other_errors_and_unexpected_success_are_not_denials(self):
         for mode in ('dac', 'missing', 'setpriv-error', 'allow'):

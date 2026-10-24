@@ -207,17 +207,36 @@ show_request() {
     show_output python3 "$PROJECT_ROOT/scripts/demo/request.py" \
         "$demo_root/request.active" "$command" "$uid" "$file" "$PROJECT_ROOT"
 }
+show_decision() {
+    local expected="$1" actual="$2" enforcement="$3" file="$4"
+    local heading="${5:-Entscheidung zur Zugriffsanfrage}" expected_label actual_label
+    case "$expected" in allow) expected_label=Permit ;; deny) expected_label=Deny ;; *) return 1 ;; esac
+    case "$actual" in allow) actual_label=Permit ;; deny) actual_label=Deny ;; *) return 1 ;; esac
+    if [[ "$file" == "$PROJECT_ROOT/"* ]]; then file="./${file#"$PROJECT_ROOT/"}"; fi
+    printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
+    printf '%s  Datei:          %s\n' "$color_output" "$file"
+    printf '  Ergebnis:       %s\n' "$actual_label"
+    printf '  Durchsetzung:   %s\n' "$enforcement"
+    printf '  Erwartet:       %s%s\n' "$expected_label" "$color_reset"
+    if [[ "$actual" == "$expected" ]]; then
+        observe 'OK: Die beobachtete Durchsetzung entspricht der erwarteten Entscheidung.'
+    else
+        printf '%s  Prüfung:        Erwartete und beobachtete Entscheidung weichen ab.%s\n' "$color_error" "$color_reset"
+        return 1
+    fi
+}
 access_is() {
     local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
     alive || { fail 'Runtime beendet.'; return 1; }
     show_request "$command" "$uid" "$file"
     local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
     actual="$("${invocation[@]}")"
-    [[ "$actual" == "$expected" ]] || { fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."; return 1; }
-    local result='erlaubt' display_uid="$uid"
-    [[ "$actual" != deny ]] || result='verweigert'
-    [[ "$uid" != - ]] || display_uid='unverändert'
-    observe "OK: Dateiöffnung $result (Datei=${file##*/}, Kommando=$command, Real-UID=$display_uid)."
+    local enforcement='Die Datei wurde erfolgreich geöffnet und wieder geschlossen.'
+    [[ "$actual" != deny ]] || enforcement='Die Dateiöffnung wurde mit EPERM verweigert.'
+    show_decision "$expected" "$actual" "$enforcement" "$file" || {
+        fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."
+        return 1
+    }
 }
 command_access_is() {
     local expected="$1" command="$2" uid="$3" file="${4:-$target}" status=0 actual
@@ -247,15 +266,12 @@ command_access_is() {
         fail "Aufruf von $command fehlgeschlagen (Exitstatus $status); kein nachgewiesener Policy-Deny."
         return 1
     fi
-    [[ "$actual" == "$expected" ]] || {
+    local enforcement="Die Datei wurde durch $command gelesen (Exitstatus $status)."
+    [[ "$actual" != deny ]] || enforcement="Die Dateiöffnung durch $command wurde mit EPERM verweigert (Exitstatus $status)."
+    show_decision "$expected" "$actual" "$enforcement" "$file" || {
         fail "Zugriff durch $command: erwartet $expected, beobachtet $actual (Real-UID $uid)."
         return 1
     }
-    if [[ "$actual" == deny ]]; then
-        observe "OK: Zugriff durch $command verweigert (Real-UID=$uid, Datei=${file##*/}, Exitstatus=$status)."
-    else
-        observe "OK: Zugriff durch $command erlaubt (Real-UID=$uid, Datei=${file##*/}, Exitstatus=$status)."
-    fi
 }
 probe_state_is() {
     kill -0 "$probe_pid" 2>/dev/null || return 1
@@ -303,7 +319,9 @@ expect_revoked() {
         sleep 0.1
     done
     show_request tails-demo-fd 0 "$target" 'Anfragekontext nach Auswertung der geschützten FDs (keine neue Dateiöffnung)'
+    show_decision deny deny 'Die drei geschützten Dateideskriptoren wurden geschlossen.' "$target" 'Entscheidung zu den bestehenden geschützten FDs'
     show_request tails-demo-fd 0 "$safe" 'Anfragekontext nach Auswertung der Kontroll-FDs (keine neue Dateiöffnung)'
+    show_decision allow allow 'Die beiden Kontroll-Dateideskriptoren bleiben offen.' "$safe" 'Ergebnis für die bestehenden Kontroll-FDs'
     observe 'OK: Drei geschützte FDs entzogen, beide Kontroll-FDs offen, Hilfsprozess läuft weiter.'
 }
 assert_probe_identity() {
@@ -592,6 +610,9 @@ demo_worker() {
     printf '  Vor dem Zugriff zeigt ein Anfrageblock die Aktion, das Kommando, den\n'
     printf '  Benutzer, die Datei und ihre Attribute aus dem aktivierten Stand.\n'
     printf '  Die Anzeige ist eine Momentaufnahme; sie zeichnet den Kernelaufruf nicht auf.\n'
+    printf '  Danach zeigt ein Entscheidungsblock Permit oder Deny, die beobachtete\n'
+    printf '  Durchsetzung und den Vergleich mit dem erwarteten Ergebnis. Ein Permit\n'
+    printf '  bedeutet dabei nicht, dass eine bestimmte Permit-Policy zutreffen muss.\n'
 
     printf '\n%sAktive Konfiguration%s\n' "$color_section" "$color_reset"
     printf '  show-active zeigt die aktivierten Policies und Attributwerte.\n'
