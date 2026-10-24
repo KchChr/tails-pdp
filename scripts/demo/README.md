@@ -10,9 +10,9 @@ Mit der Systemkonfiguration aus `nix-config/configuration.nix` sind die
 Laufzeitwerkzeuge einschließlich `tmux` bereits systemweit verfügbar. Eine
 Nix-Shell muss vor dem Start nicht manuell geöffnet werden. Fehlen die
 Release-Binaries oder wird `--build` verwendet, ruft das Skript die
-Nix-Entwicklungsumgebung für den Build automatisch auf. Beim ersten Build muss
-die Nightly-Rust-Toolchain mit `rust-src` bereits eingerichtet sein (siehe
-Voraussetzungen in der Repository-README).
+Nix-Entwicklungsumgebung für den Build automatisch auf. Dabei installiert das
+Skript auch die Nightly-Rust-Toolchain mit `rust-src` und den BPF-Linker.
+Für die erstmalige Einrichtung und den Build wird Internetzugriff benötigt.
 
 Das Skript prüft seine Werkzeuge vor dem Start. Fehlen beispielsweise `tmux`,
 Python oder `flock`, startet es sich über `scripts/demo/shell.nix` neu. Nix stellt

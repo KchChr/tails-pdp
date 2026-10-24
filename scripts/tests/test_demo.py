@@ -82,7 +82,7 @@ p['hold'](str(root / 'target'), str(root / 'safe'), str(root))
 
 
 class LauncherTests(unittest.TestCase):
-    def run_launcher(self, with_tmux):
+    def run_launcher(self, with_tmux, build=False):
         with tempfile.TemporaryDirectory(prefix="demo test ") as directory:
             root = Path(directory)
             binaries = root / "bin"
@@ -102,7 +102,8 @@ class LauncherTests(unittest.TestCase):
                 "nix-shell": '''#!/usr/bin/env python3
 import json, os, sys
 from pathlib import Path
-Path(os.environ['CALLS']).write_text(json.dumps(sys.argv[1:]))
+with open(os.environ['CALLS'], 'a') as log:
+    log.write(json.dumps(sys.argv[1:]) + '\\n')
 ''',
             }.items():
                 path = binaries / name
@@ -141,7 +142,10 @@ if 'respawn-pane' in args:
             environment.pop("TAILS_DEMO_NIX", None)
             try:
                 terminal_log = root / 'terminal.log'
-                status, timed_out = live.run_in_pty([str(PROJECT / 'scripts/demo.sh'), '--auto'],
+                arguments = [str(PROJECT / 'scripts/demo.sh'), '--auto']
+                if build:
+                    arguments.append('--build')
+                status, timed_out = live.run_in_pty(arguments,
                                                   environment, terminal_log, timeout=20, grace=2)
                 diagnostic = terminal_log.read_text(errors='replace')
                 self.assertFalse(timed_out, f'Launcher-Test überschritt das Zeitlimit:\n{diagnostic}')
@@ -168,6 +172,27 @@ if 'respawn-pane' in args:
         self.assertLess(worker_index, attach_index)
         self.assertIn('kill-server', calls[-1])
         self.assertTrue(any('status-format[1]' in call and 'Legende:' in call[-1] for call in calls))
+
+    def test_build_bootstraps_nightly_and_stops_on_install_failure(self):
+        calls = [json.loads(line) for line in self.run_launcher(True, build=True).splitlines()]
+        build = next(call for call in calls if call[0] == str(PROJECT / 'nix-config/shell.nix'))
+        command = build[build.index('--run') + 1]
+        for status in (0, 19):
+            with self.subTest(install_status=status):
+                stubs = (
+                    f'rustup() {{ echo "rustup $*"; return {status}; }}; '
+                    'setup-bpf-tools() { echo linker; }; '
+                    'cargo() { echo "cargo $*"; }; '
+                )
+                result = subprocess.run([shutil.which('bash'), '-c', stubs + command],
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode, status, result.stderr)
+                lines = result.stdout.splitlines()
+                self.assertEqual(lines[0], 'rustup toolchain install nightly --profile minimal --component rust-src')
+                if status == 0:
+                    self.assertEqual(lines[1:], ['linker', 'cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool'])
+                else:
+                    self.assertEqual(len(lines), 1)
 
 
 class LiveRunnerTests(unittest.TestCase):

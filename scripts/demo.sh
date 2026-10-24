@@ -105,7 +105,9 @@ if (( build )) || [[ ! -x "$TAILS_PDP_BIN" || ! -x "$ADM_TOOL_BIN" ]]; then
         exit 1
     }
     echo 'Baue den Prototyp mit der vorhandenen Nix-Entwicklungsumgebung …'
-    printf -v build_command 'cd %q && setup-bpf-tools && cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool' "$PROJECT_ROOT"
+    # aya-build verwendet für das eBPF-Target Nightly und benötigt dessen rust-src.
+    # Die Toolchain gehört zum automatischen Bootstrap einer frisch geklonten Demo.
+    printf -v build_command 'cd %q && rustup toolchain install nightly --profile minimal --component rust-src && setup-bpf-tools && cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool' "$PROJECT_ROOT"
     nix-shell "$PROJECT_ROOT/nix-config/shell.nix" --run "$build_command"
 fi
 [[ -x "$TAILS_PDP_BIN" && -x "$ADM_TOOL_BIN" ]] || { echo 'Ausgewählte Binaries fehlen.' >&2; exit 1; }
