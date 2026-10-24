@@ -32,5 +32,9 @@ fn main() -> anyhow::Result<()> {
             .as_str(),
         ..Default::default()
     };
-    aya_build::build_ebpf([ebpf_package], Toolchain::default())
+    // Match the LLVM 21 linker from nix-config/shell.nix. A rolling nightly
+    // may emit newer LLVM bitcode that this linker cannot read.
+    println!("cargo:rerun-if-changed=../nix-config/ebpf-toolchain");
+    let toolchain = include_str!("../../nix-config/ebpf-toolchain").trim();
+    aya_build::build_ebpf([ebpf_package], Toolchain::Custom(toolchain))
 }

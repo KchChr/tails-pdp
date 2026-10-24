@@ -11,7 +11,9 @@ Laufzeitwerkzeuge einschließlich `tmux` bereits systemweit verfügbar. Eine
 Nix-Shell muss vor dem Start nicht manuell geöffnet werden. Fehlen die
 Release-Binaries oder wird `--build` verwendet, ruft das Skript die
 Nix-Entwicklungsumgebung für den Build automatisch auf. Dabei installiert das
-Skript auch die Nightly-Rust-Toolchain mit `rust-src` und den BPF-Linker.
+Skript auch die in `nix-config/ebpf-toolchain` festgelegte Nightly-Rust-Toolchain
+mit `rust-src` und den BPF-Linker. Der eBPF-Build verwendet dieselbe Toolchain;
+die Version ist auf den LLVM-21-Linker der Entwicklungsumgebung abgestimmt.
 Für die erstmalige Einrichtung und den Build wird Internetzugriff benötigt.
 
 Das Skript prüft seine Werkzeuge vor dem Start. Fehlen beispielsweise `tmux`,

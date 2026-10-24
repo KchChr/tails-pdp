@@ -188,7 +188,8 @@ if 'respawn-pane' in args:
                                         text=True, capture_output=True)
                 self.assertEqual(result.returncode, status, result.stderr)
                 lines = result.stdout.splitlines()
-                self.assertEqual(lines[0], 'rustup toolchain install nightly --profile minimal --component rust-src')
+                toolchain = (PROJECT / 'nix-config/ebpf-toolchain').read_text().strip()
+                self.assertEqual(lines[0], f'rustup toolchain install {toolchain} --profile minimal --component rust-src')
                 if status == 0:
                     self.assertEqual(lines[1:], ['linker', 'cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool'])
                 else:

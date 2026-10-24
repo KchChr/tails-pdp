@@ -8,7 +8,7 @@ manuals, the Rustdoc reference, and the commands to generate and check API docum
 ## Prerequisites
 
 1. stable rust toolchains: `rustup toolchain install stable`
-1. nightly rust toolchains: `rustup toolchain install nightly --component rust-src`
+1. pinned eBPF Rust toolchain (from the repository root): `rustup toolchain install "$(cat nix-config/ebpf-toolchain)" --profile minimal --component rust-src`. The Nix environment uses LLVM 21; an arbitrary newer nightly may produce incompatible LLVM bitcode. `scripts/demo.sh` installs the pinned toolchain automatically when building.
 1. (if cross-compiling to Intel/AMD Linux) rustup target: `rustup target add x86_64-unknown-linux-musl`
 1. (if cross-compiling to ARM64 Linux) rustup target: `rustup target add aarch64-unknown-linux-musl`
 1. (if cross-compiling) LLVM: (e.g.) `brew install llvm` (on macOS)
