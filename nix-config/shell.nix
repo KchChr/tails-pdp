@@ -26,6 +26,7 @@ pkgs.mkShell {
 
     export CARGO_HOME="$HOME/.cargo"
     export RUSTUP_HOME="$HOME/.rustup"
+    export RUSTUP_AUTO_INSTALL=0
     export PATH="$CARGO_HOME/bin:$PATH"
     export NIX_ENFORCE_PURITY=0
 
@@ -59,7 +60,6 @@ pkgs.mkShell {
     echo "=== Nix dev shell ready ==="
     echo "IN_NIX_SHELL=''${IN_NIX_SHELL:-}  (leer? -> evtl. schon in nix-shell)"
     echo "AYA_RUSTC_LLVM_PATH=$AYA_RUSTC_LLVM_PATH"
-    command -v rustup  >/dev/null && rustup show active-toolchain || true
     echo "Offline-Build: Compiler, rust-src und bpf-linker müssen lokal bereitstehen."
     echo "========================================"
     echo

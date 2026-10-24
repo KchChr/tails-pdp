@@ -5,8 +5,11 @@ set -Eeuo pipefail
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 export CARGO_NET_OFFLINE=true
+export RUSTUP_AUTO_INSTALL=0
 export RUSTUP_TOOLCHAIN="$(<nix-config/rust-toolchain)"
 ebpf_toolchain="$(<nix-config/ebpf-toolchain)"
+
+python3 "$PROJECT_ROOT/scripts/check-vendor.py" "$PROJECT_ROOT/vendor"
 
 for program in rustup cargo bpf-linker; do
     command -v "$program" >/dev/null || {

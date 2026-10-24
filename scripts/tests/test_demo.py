@@ -2,6 +2,7 @@
 """Unprivileged demo checks: launcher bootstrap and real helper error paths."""
 import contextlib
 import errno
+import hashlib
 import io
 import json
 import os
@@ -21,6 +22,7 @@ probe = types.ModuleType("demo_probe")
 exec(compile((PROJECT / "scripts/demo/probe.py").read_text(), "probe.py", "exec"), probe.__dict__)
 live = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/tests/test_demo_live.py')))
 kernel_trace = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/kernel_trace.py')))
+vendor_check = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/check-vendor.py')))
 
 
 class ProbeTests(unittest.TestCase):
@@ -202,6 +204,7 @@ args = sys.argv[1:]
 with open(os.environ['CALLS'], 'a') as log:
     log.write(json.dumps([name, args, os.environ.get('CARGO_NET_OFFLINE'), os.environ.get('RUSTUP_TOOLCHAIN')]) + '\\n')
 if name == 'rustup':
+    if os.environ.get('RUSTUP_AUTO_INSTALL') != '0': raise SystemExit(96)
     if args[:1] != ['run']: raise SystemExit(95)
     if os.environ['MISSING_TOOLCHAIN'] == '1': raise SystemExit(19)
     print(os.environ['SYSROOT'] if args[-2:] == ['--print', 'sysroot'] else 'rustc test')
@@ -211,7 +214,7 @@ elif name == 'bpf-linker': print('bpf-linker 0.9.15')
                 path = binaries / name
                 path.write_text(stub)
                 path.chmod(0o755)
-            environment = {**os.environ, 'PATH': str(binaries), 'CALLS': str(root / 'calls'),
+            environment = {**os.environ, 'RUSTUP_AUTO_INSTALL': '1', 'PATH': str(binaries), 'CALLS': str(root / 'calls'),
                            'SYSROOT': str(root / 'sysroot'), 'MISSING_TOOLCHAIN': str(int(missing_toolchain))}
             result = subprocess.run([shutil.which('bash'), str(PROJECT / 'scripts/demo/build.sh')],
                                     env=environment, capture_output=True, text=True)
@@ -239,6 +242,28 @@ elif name == 'bpf-linker': print('bpf-linker 0.9.15')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('rust-src', result.stderr)
         self.assertNotIn('cargo', [call[0] for call in calls])
+
+
+class VendorSourceTests(unittest.TestCase):
+    def test_missing_and_changed_sources_are_detected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            crate = root / 'example-1.0'
+            crate.mkdir()
+            source = crate / 'source.rs'
+            source.write_bytes(b'original')
+            (crate / '.cargo-checksum.json').write_text(json.dumps({
+                'files': {'source.rs': hashlib.sha256(b'original').hexdigest()}}))
+            self.assertEqual(vendor_check.verify(root), (1, []))
+            source.write_bytes(b'changed')
+            self.assertIn('Abweichende Vendor-Prüfsumme', vendor_check.verify(root)[1][0])
+            source.unlink()
+            self.assertIn('Fehlende Vendor-Datei', vendor_check.verify(root)[1][0])
+
+    def test_repository_sources_match_all_checksums(self):
+        count, errors = vendor_check.verify(PROJECT / 'vendor')
+        self.assertGreater(count, 0)
+        self.assertEqual(errors, [])
 
 
 class LiveRunnerTests(unittest.TestCase):

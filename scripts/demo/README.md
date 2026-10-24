@@ -13,7 +13,10 @@ Release-Binaries oder wird `--build` verwendet, ruft das Skript die
 Nix-Entwicklungsumgebung für den Build automatisch auf. Der Build verwendet
 `scripts/demo/build.sh`, die lokalen Rust-Quellen aus `vendor/` und
 `cargo build --frozen`. Cargo-Downloads sind auch für die verschachtelten
-eBPF-Builds deaktiviert. Der Shell-Hook installiert keine Werkzeuge mehr.
+eBPF-Builds deaktiviert. Vor dem Build prüft `scripts/check-vendor.py` sämtliche
+Dateien anhand der mitgelieferten Cargo-Prüfsummen. Der Shell-Hook installiert
+keine Werkzeuge mehr; `RUSTUP_AUTO_INSTALL=0` verhindert auch implizite
+Toolchain-Installationen durch Rustup.
 
 **Stand der Offline-Abgabe:** Die Cargo-Abhängigkeiten sind lokal vorhanden.
 Ein vollständiges Offline-Paket der Buildwerkzeuge ist noch nicht mitgeliefert.
