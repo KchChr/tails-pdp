@@ -23,6 +23,7 @@ exec(compile((PROJECT / "scripts/demo/probe.py").read_text(), "probe.py", "exec"
 live = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/tests/test_demo_live.py')))
 kernel_trace = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/kernel_trace.py')))
 vendor_check = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/check-vendor.py')))
+request_view = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/request.py')))
 
 
 class ProbeTests(unittest.TestCase):
@@ -185,6 +186,69 @@ if 'respawn-pane' in args:
         self.assertEqual(shlex.split(command), ['bash', str(PROJECT / 'scripts/demo/build.sh')])
 
 
+class RequestViewTests(unittest.TestCase):
+    def request(self, position='"engineer"', time_condition='none', alias=False):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / 'protected.txt'
+            target.write_text('protected')
+            control = root / 'control.txt'
+            control.write_text('control')
+            metadata = target.stat()
+            device = (os.major(metadata.st_dev) << 20) | os.minor(metadata.st_dev)
+            identity = f'Gerät {device}, Inode {metadata.st_ino}'
+            snapshot = (
+                'generation policy=11 policy_bank_offset=256 attribute=8 attribute_bank=0\n'
+                'FILE_OPEN_STREAM_POLICIES:\n'
+                f'[0] enabled=1 legacy_condition={time_condition}\n'
+                '    attribute_condition=subject.position Equal "engineer"\n'
+                'ATTRIBUTES:\n'
+                'system.defcon = 2\n'
+                'subject:60001 subject.position = "unrelated"\n'
+                f'resource:{device}:{metadata.st_ino} resource.classification = "internal"\n'
+                f'resource:{device}:{control.stat().st_ino} resource.classification = "public"\n'
+            )
+            if position is not None:
+                snapshot += f'subject:0 subject.position = {position}\n'
+            if alias:
+                linked = root / 'alias.txt'
+                linked.hardlink_to(target)
+                target = linked
+            return request_view.describe(snapshot, 'cat', '0', target, root, now=3661), identity
+
+    def test_only_attributes_for_requested_subject_and_resource_are_shown(self):
+        text, _ = self.request()
+        self.assertIn('subject.uid = 0', text)
+        self.assertIn('Kommando:      cat', text)
+        self.assertIn('system.defcon = 2', text)
+        self.assertIn('subject.position = "engineer"', text)
+        self.assertIn('resource.classification = "internal"', text)
+        self.assertNotIn('unrelated', text)
+        self.assertNotIn('public', text)
+        self.assertIn('Policygeneration 11, Attributgeneration 8', text)
+
+    def test_missing_and_numeric_attributes_keep_their_meaning(self):
+        text, _ = self.request(position=None)
+        self.assertIn('subject.position = nicht vorhanden', text)
+        text, _ = self.request(position='1')
+        self.assertIn('subject.position = 1', text)
+        self.assertNotIn('subject.position = "1"', text)
+
+    def test_hardlink_has_original_identity_and_resource_attributes(self):
+        text, identity = self.request(alias=True)
+        self.assertIn('./alias.txt', text)
+        self.assertIn(identity, text)
+        self.assertIn('resource.classification = "internal"', text)
+
+    def test_time_conditions_show_explicit_system_time_snapshot(self):
+        for condition in ('Time % 4294967296 GreaterThanOrEqual 10', 'Hour GreaterThanOrEqual 0'):
+            with self.subTest(condition=condition):
+                text, _ = self.request(time_condition=condition)
+                self.assertIn('Momentaufnahme der Systemzeit', text)
+                self.assertIn('environment.utc.hour = 1, environment.utc.minute = 1', text)
+                self.assertIn('environment.time = 3661', text)
+
+
 class PresentationTests(unittest.TestCase):
     def test_substep_needs_both_read_and_execution_confirmation(self):
         script = '''set -Eeuo pipefail
@@ -269,6 +333,7 @@ os.execv(os.environ['REAL_CAT'], [os.environ['REAL_CAT'], *sys.argv[1:]])
             script = '''set -Eeuo pipefail
 source "$RUNNER"
 alive() { return 0; }
+admin() { printf 'generation policy=1 attribute=1\nATTRIBUTES:\nsystem.defcon = 5\n'; }
 demo_root="$TEST_ROOT"
 target="$TEST_TARGET"
 command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001

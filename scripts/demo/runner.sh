@@ -53,7 +53,7 @@ chapter() {
     # Optional live evidence is shown before any action or execution prompt.
     if [[ "${6:-}" == show-active ]]; then
         printf '\nNachweis der Ausgangslage durch das Administrationstool:\n'
-        admin show-active
+        admin --no-label show-active
         printf '\nOhne aktivierte Policies enthält die Ausgabe keine aktivierten Policy-Einträge. Angezeigte Attribute sind davon unabhängig.\n'
     fi
     printf '\n%sAktion:%s\n  %s\n' "$color_section" "$color_reset" "$3"
@@ -90,14 +90,15 @@ show_output() {
     return "$status"
 }
 admin() {
-    local quiet=0
+    local quiet=0 label=1
     if [[ "${1:-}" == --quiet ]]; then quiet=1; shift; fi
+    if [[ "${1:-}" == --no-label ]]; then label=0; shift; fi
     # The demo always uses the compact view, including internal polling.
     local command=("$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" show-active)
     if (( quiet == 0 )); then
         # Show an equivalent repository-relative Bash command. Internal polling
         # stays quiet so it does not obscure the demo output.
-        printf '\n[Admin-Tool des Prototyps]\n'
+        if (( label )); then printf '\n[Admin-Tool des Prototyps]\n'; fi
         show_command "${command[@]}"
     fi
     if (( quiet == 0 )); then
@@ -199,9 +200,17 @@ remove_policy() {
     rm -- "$policy_dir/$name.policy"
     wait_generation policy "${before%% *}" "$offset"
 }
+show_request() {
+    local command="$1" uid="$2" file="$3" heading="${4:-Zugriffsanfrage vor der Dateiöffnung}"
+    admin --quiet > "$demo_root/request.active"
+    printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
+    show_output python3 "$PROJECT_ROOT/scripts/demo/request.py" \
+        "$demo_root/request.active" "$command" "$uid" "$file" "$PROJECT_ROOT"
+}
 access_is() {
     local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
     alive || { fail 'Runtime beendet.'; return 1; }
+    show_request "$command" "$uid" "$file"
     local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
     actual="$("${invocation[@]}")"
     [[ "$actual" == "$expected" ]] || { fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."; return 1; }
@@ -214,6 +223,7 @@ command_access_is() {
     local expected="$1" command="$2" uid="$3" file="${4:-$target}" status=0 actual
     local output="$demo_root/command.stdout" error="$demo_root/command.stderr"
     alive || { fail 'Runtime beendet.'; return 1; }
+    show_request "$command" "$uid" "$file"
     # Only the real UID changes. Effective UID 0 keeps ordinary DAC permissions
     # constant while the UID, command and resource policy filters are varied.
     local invocation=(setpriv --ruid "$uid" -- "$command" -- "$file")
@@ -262,6 +272,9 @@ PY
 }
 start_probe() {
     probe_dir="$(mktemp -d "$demo_root/fd.XXXXXX")"
+    explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Anfragekontexte lauten:'
+    show_request tails-demo-fd 0 "$target"
+    show_request tails-demo-fd 0 "$safe"
     printf '\n[FD-Beobachter: probe.py hold – Ausgabe im rechten unteren Bereich]\n'
     show_command python3 "$PROJECT_ROOT/scripts/demo/probe.py" hold "$target" "$safe" "$probe_dir"
     DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
@@ -289,6 +302,8 @@ expect_revoked() {
         (( SECONDS < deadline )) || { fail 'FD-Entzug ausgeblieben oder Kontroll-FD geschlossen.'; return 1; }
         sleep 0.1
     done
+    show_request tails-demo-fd 0 "$target" 'Anfragekontext nach Auswertung der geschützten FDs (keine neue Dateiöffnung)'
+    show_request tails-demo-fd 0 "$safe" 'Anfragekontext nach Auswertung der Kontroll-FDs (keine neue Dateiöffnung)'
     observe 'OK: Drei geschützte FDs entzogen, beide Kontroll-FDs offen, Hilfsprozess läuft weiter.'
 }
 assert_probe_identity() {
@@ -574,6 +589,9 @@ demo_worker() {
     printf '  die effektive UID bleibt root. In Kapitel 2 laufen echtes cat und head.\n\n'
     printf '  Danach erscheint nur das Ergebnis: Dateiöffnung erlaubt oder verweigert.\n'
     printf '  Als Verweigerung gilt der Fehler EPERM. Andere Fehler brechen die Demo ab.\n'
+    printf '  Vor dem Zugriff zeigt ein Anfrageblock die Aktion, das Kommando, den\n'
+    printf '  Benutzer, die Datei und ihre Attribute aus dem aktivierten Stand.\n'
+    printf '  Die Anzeige ist eine Momentaufnahme; sie zeichnet den Kernelaufruf nicht auf.\n'
 
     printf '\n%sAktive Konfiguration%s\n' "$color_section" "$color_reset"
     printf '  show-active zeigt die aktivierten Policies und Attributwerte.\n'

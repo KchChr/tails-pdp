@@ -165,6 +165,19 @@ aus und gibt intern `allow` oder `deny` zurück. Die Hilfe wird einmal zu Beginn
 erklärt; anschließend erscheinen nur die kompakten Ergebnisse mit Datei,
 Kommando und Real-UID. Die `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
+Vor jeder Dateiöffnung zeigt ein Anfrageblock `file_open`, Kommando, Real-UID,
+Dateipfad, Geräte-/Inode-Identität und die aktuellen Konfigurationsgenerationen.
+`scripts/demo/request.py` ordnet die mit `show-active` gelesenen Systemattribute
+sowie die Attribute genau dieses Benutzers und dieser Datei zu. Quell-Dateien
+werden dafür nicht ausgewertet: Ein abgelehntes Update wird nicht als aktiver
+Attributwert angezeigt. Fehlende, von Policies referenzierte Attribute erscheinen
+als „nicht vorhanden“; Zahlen und Zeichenketten behalten ihre Darstellung.
+Bei Zeitbedingungen ergänzt die Anzeige eine ausdrücklich als Momentaufnahme
+gekennzeichnete UTC-Systemzeit. Diese Ansicht ist eine Darstellung vor dem
+Zugriff und keine atomare Aufzeichnung des tatsächlichen Kernel-Requests.
+Bei FD-Szenarien werden geschützte Datei und Kontrolldatei getrennt dargestellt;
+der Kontext nach einer erneuten Auswertung ist als solcher gekennzeichnet und
+bedeutet keine neue Dateiöffnung.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den
