@@ -73,6 +73,12 @@ in {
     extraGroups = [ "wheel" "networkmanager" ];
     initialPassword = "password";
   };
+  users.users.demo = {
+    isNormalUser = true;
+    description = "Demo user";
+    extraGroups = [ "wheel" "networkmanager" ];
+    initialPassword = "demo";
+  };
   security.sudo.enable = true;
 
   # Build-Tools
