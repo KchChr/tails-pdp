@@ -6,6 +6,14 @@ Vom Repository aus auf dem dedizierten **x86_64-Linux-Zielsystem** starten:
 ./scripts/demo.sh
 ```
 
+Mit der Systemkonfiguration aus `nix-config/configuration.nix` sind die
+Laufzeitwerkzeuge einschließlich `tmux` bereits systemweit verfügbar. Eine
+Nix-Shell muss vor dem Start nicht manuell geöffnet werden. Fehlen die
+Release-Binaries oder wird `--build` verwendet, ruft das Skript die
+Nix-Entwicklungsumgebung für den Build automatisch auf. Beim ersten Build muss
+die Nightly-Rust-Toolchain mit `rust-src` bereits eingerichtet sein (siehe
+Voraussetzungen in der Repository-README).
+
 Das Skript prüft seine Werkzeuge vor dem Start. Fehlen beispielsweise `tmux`,
 Python oder `flock`, startet es sich über `scripts/demo/shell.nix` neu. Nix stellt
 die Programme für diesen Aufruf bereit, ohne sie global zu installieren.

@@ -15,6 +15,8 @@ pkgs.mkShell {
     llvm.llvm
     llvm.libllvm
     pkgs.zlib
+    # LLVM benötigt libxml2 auch beim Linken von bpf-linker.
+    pkgs.libxml2
     pkgs.rustup
   ];
 
@@ -29,7 +31,7 @@ pkgs.mkShell {
 
     # LLVM für aya-rustc-llvm-proxy / bpf-linker
     export AYA_RUSTC_LLVM_PATH="${llvm.libllvm}/lib/libLLVM-21.so"
-    export LD_LIBRARY_PATH="${pkgs.zlib.out}/lib:''${LD_LIBRARY_PATH:-}"
+    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.zlib pkgs.libxml2 ]}:''${LD_LIBRARY_PATH:-}"
 
     NIGHTLY="stable"
     if command -v rustup >/dev/null; then

@@ -1,34 +1,9 @@
 { config, pkgs, lib, ... }:
 
-let
-  upstreamKernel =
-    pkgs.callPackage
-      ({ lib, fetchurl, buildLinux, ... }@args:
-        buildLinux (args // rec {
-          version = "6.16.12";
-          modDirVersion = version;
-          src = fetchurl {
-            url = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/snapshot/linux-6.16.12.tar.gz";
-            hash = "sha256-LyPDCQEfnscTUfo4aWamm9l+Y2btkXAT1/VHHmRD9Us=";
-          };
-          withRust = true;
-          ignoreConfigErrors = false;
-          structuredExtraConfig = with lib.kernel; {
-            SECURITY = yes;
-            SECURITYFS = yes;
-            RUST = yes;
-            RUST_DEBUG_ASSERTIONS = no;
-            RUST_OVERFLOW_CHECKS = yes;
-            RUST_BUILD_ASSERT_ALLOW = no;
-          };
-        }))
-      {};
-
-  kernelPackages = pkgs.linuxPackagesFor upstreamKernel;
-in {
+{
   imports = [ ./hardware-configuration.nix ];
 
-  boot.kernelPackages = kernelPackages;
+  # Der Standardkernel der verwendeten NixOS-Version wird genutzt.
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -81,8 +56,12 @@ in {
   };
   security.sudo.enable = true;
 
-  # Build-Tools
+  # Werkzeuge für den direkten Start von ./scripts/demo.sh ohne manuelle Nix-Shell.
+  # Fehlende Release-Binaries baut das Demo-Skript in seiner Nix-Entwicklungsumgebung.
   environment.systemPackages = with pkgs; [
+    bashInteractive coreutils gnugrep procps tmux
+
+    # Build- und Administrationswerkzeuge
     rustc rustfmt clippy rust-analyzer rust-bindgen
     llvmPackages.clang llvmPackages.lld llvmPackages.llvm llvmPackages.libclang
     bc bison flex perl cpio gnumake gcc elfutils libelf ncurses
