@@ -207,22 +207,27 @@ printf 'AKTION_AUSGEFUEHRT\\n'
         with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:
             root = Path(directory)
             (root / 'policies').mkdir()
+            policy_text = ('policy "example"\ndeny\n    action == "file_open";\n'
+                           '    resource.path == "/example.txt";\n    command == "cat";\n'
+                           '    subject.uid == 60001;\n    system.defcon <= 2;\n')
             script = '''set -Eeuo pipefail
 source "$RUNNER"
 demo_root="$TEST_ROOT"
 policy_dir="$demo_root/policies"
-printf 'policy "example"\\npermit\\n' | publish "$policy_dir/example.policy"
+printf '%s' "$POLICY_TEXT" | publish "$policy_dir/example.policy"
+show_policy_context
 '''
             result = subprocess.run([shutil.which('bash'), '-c', script], cwd=PROJECT,
                                     env={**os.environ, 'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'),
-                                         'PROJECT_ROOT': str(PROJECT), 'TEST_ROOT': directory},
+                                         'PROJECT_ROOT': str(PROJECT), 'TEST_ROOT': directory,
+                                         'POLICY_TEXT': policy_text},
                                     capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('Folgende Policy veröffentlicht', result.stdout)
-            self.assertIn('policy "example"', result.stdout)
+            self.assertEqual(result.stdout.count(policy_text), 2)
             self.assertNotIn('publish-config.sh', result.stdout)
             self.assertNotIn('Published', result.stdout)
-            self.assertEqual((root / 'policies/example.policy').read_text(), 'policy "example"\npermit\n')
+            self.assertEqual((root / 'policies/example.policy').read_text(), policy_text)
             self.assertIn('publish-config.sh', (root / 'publication.log').read_text())
 
 

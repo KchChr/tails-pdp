@@ -158,8 +158,18 @@ publish() {
         printf '\nFolgende Attribute veröffentlicht (%s):\n' "${destination#"$PROJECT_ROOT/"}"
     fi
     printf '%s' "$color_config"
-    cat "$demo_root/prepared"
+    cat -- "$destination"
     printf '%s' "$color_reset"
+}
+show_policy_context() {
+    local file
+    for file in "$policy_dir"/*.policy; do
+        [[ -f "$file" ]] || continue
+        printf '\nUnveränderte Policy für die Zugriffsprüfung (%s):\n' "${file#"$PROJECT_ROOT/"}"
+        printf '%s' "$color_config"
+        cat -- "$file"
+        printf '%s\n' "$color_reset"
+    done
 }
 policy() {
     local name="$1" effect="$2" conditions="${3:-}" command="${4:-}" before offset
@@ -178,6 +188,7 @@ attribute() {
     offset="$(wc -l < "$demo_root/runtime.log")"
     printf '%s\n' "$text" | publish "$attribute_dir/$relative"
     wait_generation attribute "${before##* }" "$offset"
+    show_policy_context
 }
 remove_policy() {
     local name="$1" before offset
@@ -544,21 +555,45 @@ demo_worker() {
     printf 'defcon = 5\n' > "$attribute_dir/system.attributes"
     cd "$PROJECT_ROOT"
 
-    printf 'Prototyp – geführte Live-Demo\nLogs: %s\n' "$demo_root"
-    printf 'Eigener bpffs-Mount: vorhandene Host-Pins bleiben unverändert.\n'
-    printf 'Arbeitsverzeichnis: Repository. Policies: policies/; Attribute: attributes/; Dateien: demo/files/.\n'
-    printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime und Kernel-Debugausgabe. Rechts unten: FD-Beobachter.\n'
-    printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
-    printf 'Die Zugriffshilfe probe.py access öffnet die angegebene Datei tatsächlich mit os.open. Sie kann für die Prüfung den Kommandonamen und die Real-UID setzen; die effektive UID bleibt root.\n'
-    printf 'Im weiteren Verlauf wird dafür nur das geprüfte Ergebnis angezeigt: Dateiöffnung erlaubt oder verweigert. Nur EPERM gilt als Verweigerung; andere Fehler brechen die Demo ab. In Kapitel 2 werden stattdessen echtes cat und head gestartet.\n'
-    printf 'Die Policygeneration kennzeichnet den aktivierten Policy-Stand; die Attributgeneration kennzeichnet den aktivierten Attributstand.\n'
-    printf 'show-active zeigt geladene Policies und Werte. Die Zugriffsentscheidung wird zusätzlich mit einer echten Dateiöffnung geprüft.\n'
+    printf '\n%sPrototyp – geführte Live-Demo%s\n\n' "$color_heading" "$color_reset"
+    printf 'Die Demo zeigt, wie Policies und Attribute die Zugriffsentscheidung verändern\n'
+    printf 'und wie bereits geöffnete Dateideskriptoren entzogen werden.\n'
+
+    printf '\n%sBedienung%s\n' "$color_section" "$color_reset"
+    printf '  Enter führt durch die Kapitel und Teilschritte. Die Ergebnisse bleiben\n'
+    printf '  bis zum Weitergehen sichtbar. Strg+C beendet die Demo.\n'
+
+    printf '\n%sBildschirmaufteilung%s\n' "$color_section" "$color_reset"
+    printf '  Links:         Erklärungen, Aktionen und Zugriffsprüfungen\n'
+    printf '  Rechts oben:   Runtime-Log und Kernel-Debugausgaben\n'
+    printf '  Rechts unten:  FD-Beobachter und Prüfergebnisse\n'
+
+    printf '\n%sPrüfung der Zugriffe%s\n' "$color_section" "$color_reset"
+    printf '  Die Zugriffshilfe probe.py access öffnet die jeweilige Datei mit os.open.\n'
+    printf '  Für gezielte Prüfungen setzt sie den Kommandonamen und die Real-UID;\n'
+    printf '  die effektive UID bleibt root. In Kapitel 2 laufen echtes cat und head.\n\n'
+    printf '  Danach erscheint nur das Ergebnis: Dateiöffnung erlaubt oder verweigert.\n'
+    printf '  Als Verweigerung gilt der Fehler EPERM. Andere Fehler brechen die Demo ab.\n'
+
+    printf '\n%sAktive Konfiguration%s\n' "$color_section" "$color_reset"
+    printf '  show-active zeigt die aktivierten Policies und Attributwerte.\n'
+    printf '  Policygeneration und Attributgeneration kennzeichnen den jeweiligen\n'
+    printf '  aktivierten Stand. Zusätzlich wird der tatsächliche Dateizugriff geprüft.\n'
+
+    printf '\n%sDateien und Protokolle%s\n' "$color_section" "$color_reset"
+    printf '  Policies: policies/   Attribute: attributes/   Dateien: demo/files/\n'
+    printf '  Logs: %s\n\n' "$demo_root"
     pause_demo 'Enter: erstes Kapitel anzeigen | Strg+C: abbrechen '
 
     # Kapitel 1: Die Durchsetzung erst nach dem nachgewiesenen LSM-Attach prüfen.
     # Der leere Policy-Stand zeigt das Allow-Verhalten ohne passende Deny-Policy.
     chapter '1. Runtime starten und Ausgangszustand prüfen' \
-        'Die Demo-Dateien sind vorbereitet. Es läuft noch keine Demo-Runtime und es sind keine Policies geladen.' \
+        'Die Dateien sind vorbereitet:
+  demo/files/protected.txt – die Datei, deren Zugriff durch Policies geschützt werden soll.
+  demo/files/control.txt – eine separate Kontrolldatei, die weiterhin zugänglich bleiben soll.
+  demo/files/alias.txt – ein Hardlink auf protected.txt; beide Pfade verweisen auf dieselbe Datei.
+
+  Es läuft noch keine Runtime und es sind keine Policies geladen.' \
         'Der Prototyp wird gestartet. Dabei wird das eBPF-Programm geladen, die Maps werden vorbereitet und der file_open-Hook wird angehängt. Danach wird die geschützte Datei geöffnet.' \
         'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Policy wird kein Zugriff untersagt.' \
         'Rechts oben bestätigt die Runtime ihren Start. Deny-Entscheidungen des Kernelspace-PEP erscheinen dort als [Kernelspace-PEP] mit final=deny. USERSPACE_PEP ist die Logkennung des Userspace-PEP. Beide Durchsetzungspfade besitzen eine integrierte PDP-Funktion zur Policy-Auswertung. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'

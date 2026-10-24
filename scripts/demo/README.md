@@ -132,7 +132,12 @@ der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
 Begriffe wie FD und Generation sowie die Zugriffshilfe werden zu Beginn erklärt.
 Bei Veröffentlichungen erscheinen nur „Folgende Policy veröffentlicht“ bzw.
-„Folgende Attribute veröffentlicht“ und der jeweilige Dateiinhalt. Der interne
+„Folgende Attribute veröffentlicht“ und der jeweilige Dateiinhalt.
+Policy-Dateien werden immer vollständig angezeigt, einschließlich Wirkung,
+Aktion, Ressource, Kommandofilter und sämtlicher Bedingungen. Bei einem
+Attributwechsel werden die unveränderten Policy-Dateien erneut vollständig
+angezeigt, damit ihr Zusammenhang mit der anschließenden Zugriffsprüfung
+auch nach dem Leeren des linken Bereichs sichtbar bleibt. Der interne
 Aufruf von `publish-config.sh` und dessen technische Ausgabe stehen ausschließlich
 in `publication.log`. Eine Veröffentlichung bedeutet noch keine Aktivierung;
 deren Bestätigung folgt weiterhin als eigene Prüfmeldung.
