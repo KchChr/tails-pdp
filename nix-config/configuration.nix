@@ -55,6 +55,15 @@
     initialPassword = "demo";
   };
   security.sudo.enable = true;
+  # Demo und privilegierte Tests ohne Passwortabfrage auf der dedizierten VM.
+  security.sudo.extraRules = [
+    {
+      users = [ "demo" ];
+      commands = [
+        { command = "ALL"; options = [ "NOPASSWD" ]; }
+      ];
+    }
+  ];
 
   # Werkzeuge für den direkten Start von ./scripts/demo.sh ohne manuelle Nix-Shell.
   # Fehlende Release-Binaries baut das Demo-Skript in seiner Nix-Entwicklungsumgebung.
