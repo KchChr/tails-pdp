@@ -92,8 +92,12 @@ Das Skript richtet einen eigenen tmux-Server mit drei Bereichen ein:
 Der Fokus liegt links. **Enter** führt den jeweils erklärten Schritt aus.
 Danach bleibt die Ausgabe stehen. Ein weiteres **Enter** wechselt zum nächsten
 Schritt und leert erst dann den linken Bereich. Nach dessen Erklärung startet
-ein erneutes **Enter** die Ausführung. Das gilt auch für die Schritte 7a und 8a;
-weitere Befehle müssen nicht eingegeben werden. **Strg+C** bricht ab. Am Ende
+ein erneutes **Enter** die Ausführung. Das gilt auch für die Schritte 7a und 8a.
+Innerhalb mehrteiliger Kapitel werden die einzelnen Policy-, Attribut- und
+Zugriffsänderungen genauso als eigene Teilschritte präsentiert. Zwischen ihnen
+bleibt Zeit zum Lesen. Nur das laufende Zeitgrenzen-Szenario in Kapitel 9 läuft
+ohne zusätzliche Pause bis zum nachgewiesenen FD-Entzug durch.
+Weitere Befehle müssen nicht eingegeben werden. **Strg+C** bricht ab. Am Ende
 bleibt das Ergebnis bis zum nächsten Enter sichtbar. Maus-Scrollen erlaubt den
 Blick auf vorherige Ausgaben; gegebenenfalls mit Escape den tmux-Kopiermodus
 verlassen. Das Abkoppeln vom Demo-tmux beendet die Demo und räumt auf. Eine
@@ -126,7 +130,12 @@ Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
 **erwartetes Verhalten** und **Beobachtung**. Während
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
-Begriffe wie FD, Generation und `allow`/`deny` werden im Ablauf erklärt.
+Begriffe wie FD und Generation sowie die Zugriffshilfe werden zu Beginn erklärt.
+Bei Veröffentlichungen erscheinen nur „Folgende Policy veröffentlicht“ bzw.
+„Folgende Attribute veröffentlicht“ und der jeweilige Dateiinhalt. Der interne
+Aufruf von `publish-config.sh` und dessen technische Ausgabe stehen ausschließlich
+in `publication.log`. Eine Veröffentlichung bedeutet noch keine Aktivierung;
+deren Bestätigung folgt weiterhin als eigene Prüfmeldung.
 Vor jeder sichtbaren Admin-Ausgabe erscheint der entsprechende Aufruf mit
 Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`. Pfade innerhalb des
 Repositorys werden relativ angezeigt, beispielsweise
@@ -137,10 +146,19 @@ aktuellen Attribute angezeigt, keine deaktivierten Policy-Plätze.
 Die Befehle laufen im privilegierten Demo-Worker; Eingaben sind nicht nötig.
 Interne Generationsabfragen bleiben ohne Befehlsausgabe. Kapitel 2 nennt die
 Pfade `demo/files/protected.txt`, `demo/files/control.txt` und `demo/files/alias.txt`.
-Auch die Zugriffshilfe wird mit vollständigem Aufruf gezeigt: `probe.py access`
-führt eine echte Dateiöffnung aus und gibt `allow` oder `deny` zurück. Die Demo
-kennzeichnet diese Rückgabe mit `[probe.py access → stdout]`. Die anschließenden
-`[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
+In Kapitel 2 werden echtes `cat` und als Kommando-Gegenprobe echtes `head`
+gestartet. `setpriv --ruid` setzt dabei nur die Real-UID; die effektive UID bleibt
+0, damit gewöhnliche Dateirechte den Filtervergleich nicht beeinflussen.
+Die Demo zeigt den vollständigen Aufruf, den Dateiinhalt bei Erfolg und die
+Originalfehlermeldung bei einer Verweigerung. Der Exitstatus allein genügt nicht:
+Nur eine Fehlermeldung des aufgerufenen Programms zur erwarteten Datei mit
+`Operation not permitted` wird als Deny gewertet. Die Prozesse laufen dafür
+mit `LC_ALL=C`; fehlende Dateien, gewöhnliches `Permission denied` oder Fehler
+von `setpriv` lassen die Demo fehlschlagen.
+In den übrigen Zugriffsszenarien führt `probe.py access` eine echte Dateiöffnung
+aus und gibt intern `allow` oder `deny` zurück. Die Hilfe wird einmal zu Beginn
+erklärt; anschließend erscheinen nur die kompakten Ergebnisse mit Datei,
+Kommando und Real-UID. Die `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
@@ -214,7 +232,9 @@ eindeutige Zuordnung bleiben erhalten. Ungültige oder fehlende Sicherungspfade
 führen weiterhin zu einem Abbruch mit Diagnose. Konfiguration wird während der
 Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
-`probe.py` dient ausschließlich als Syscall-Helfer: `access` setzt kontrolliert
+Kapitel 2 benötigt keine Zugriffshilfe; `cat`, `head` und `setpriv` gehören zu
+den geprüften Laufzeitwerkzeugen. In den übrigen Kapiteln dient `probe.py`
+als Syscall-Helfer: `access` setzt kontrolliert
 den unter Linux geführten Kommandonamen `comm` für den Kommando-Filter und optional die Real-UID (effektive UID bleibt root) und
 unterscheidet LSM-`EPERM` von sonstigen Fehlern. Es werden keine Benutzerkonten
 angelegt. `hold` hält drei geschützte und zwei Kontroll-FDs offen und bleibt auch

@@ -89,7 +89,7 @@ class LauncherTests(unittest.TestCase):
             root = Path(directory)
             binaries = root / "bin"
             binaries.mkdir()
-            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat sudo tail tee uname unshare wc".split()
+            commands = "bash cat chmod chown date dirname env flock grep head id ln mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir setpriv sleep stat sudo tail tee uname unshare wc".split()
             for command in commands:
                 executable = shutil.which(command)
                 if executable:
@@ -183,6 +183,118 @@ if 'respawn-pane' in args:
         self.assertEqual(build[:8], ['--option', 'substitute', 'false', '--option', 'builders', '', '-j', '0'])
         command = build[build.index('--run') + 1]
         self.assertEqual(shlex.split(command), ['bash', str(PROJECT / 'scripts/demo/build.sh')])
+
+
+class PresentationTests(unittest.TestCase):
+    def test_substep_needs_both_read_and_execution_confirmation(self):
+        script = '''set -Eeuo pipefail
+source "$RUNNER"
+DEMO_AUTO="$AUTO"
+demo_current_chapter='3. Policy-Lebenszyklus'
+printf 'vorheriges Ergebnis\\n'
+step 'Deny-Policy ergänzen'
+printf 'AKTION_AUSGEFUEHRT\\n'
+'''
+        for automatic, entered, executes in [('0', '', False), ('0', '\n', False),
+                                             ('0', '\n\n', True), ('1', '', True)]:
+            with self.subTest(automatic=automatic, entered=repr(entered)):
+                result = subprocess.run([shutil.which('bash'), '-c', script], input=entered,
+                                        env={**os.environ, 'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'), 'AUTO': automatic},
+                                        text=True, capture_output=True)
+                self.assertEqual('AKTION_AUSGEFUEHRT' in result.stdout, executes, result.stderr)
+
+    def test_publication_shows_content_but_keeps_internal_command_in_log(self):
+        with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:
+            root = Path(directory)
+            (root / 'policies').mkdir()
+            script = '''set -Eeuo pipefail
+source "$RUNNER"
+demo_root="$TEST_ROOT"
+policy_dir="$demo_root/policies"
+printf 'policy "example"\\npermit\\n' | publish "$policy_dir/example.policy"
+'''
+            result = subprocess.run([shutil.which('bash'), '-c', script], cwd=PROJECT,
+                                    env={**os.environ, 'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'),
+                                         'PROJECT_ROOT': str(PROJECT), 'TEST_ROOT': directory},
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('Folgende Policy veröffentlicht', result.stdout)
+            self.assertIn('policy "example"', result.stdout)
+            self.assertNotIn('publish-config.sh', result.stdout)
+            self.assertNotIn('Published', result.stdout)
+            self.assertEqual((root / 'policies/example.policy').read_text(), 'policy "example"\npermit\n')
+            self.assertIn('publish-config.sh', (root / 'publication.log').read_text())
+
+
+class CommandAccessTests(unittest.TestCase):
+    def check_access(self, expected, mode, command='cat'):
+        with tempfile.TemporaryDirectory(prefix='real command ') as directory:
+            root = Path(directory)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            target = root / 'protected file.txt'
+            target.write_text('sichtbarer Dateiinhalt\n')
+            stub = '''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+if Path(sys.argv[0]).name == 'setpriv':
+    assert sys.argv[1:4] == ['--ruid', '60001', '--'], sys.argv
+    Path(os.environ['INVOCATION']).write_text(json.dumps(sys.argv[1:]))
+    if os.environ['ACCESS_MODE'] == 'setpriv-error':
+        print('setpriv: Operation not permitted', file=sys.stderr)
+        raise SystemExit(1)
+    os.execvp(sys.argv[4], sys.argv[4:])
+if sys.argv[-1] == os.environ['TEST_TARGET'] and os.environ['ACCESS_MODE'] != 'allow':
+    error = {'deny': 'Operation not permitted', 'dac': 'Permission denied', 'missing': 'No such file or directory'}[os.environ['ACCESS_MODE']]
+    print('cat: ' + sys.argv[-1] + ': ' + error, file=sys.stderr)
+    raise SystemExit(1)
+os.execv(os.environ['REAL_CAT'], [os.environ['REAL_CAT'], *sys.argv[1:]])
+'''
+            for name in ('setpriv', 'cat'):
+                path = binaries / name
+                path.write_text(stub)
+                path.chmod(0o755)
+            environment = {**os.environ, 'PATH': str(binaries) + os.pathsep + os.environ['PATH'],
+                           'REAL_CAT': shutil.which('cat'), 'ACCESS_MODE': mode,
+                           'TEST_TARGET': str(target), 'TEST_ROOT': directory,
+                           'PROJECT_ROOT': str(PROJECT),
+                           'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'),
+                           'TEST_EXPECTED': expected, 'TEST_COMMAND': command,
+                           'INVOCATION': str(root / 'invocation')}
+            script = '''set -Eeuo pipefail
+source "$RUNNER"
+alive() { return 0; }
+demo_root="$TEST_ROOT"
+target="$TEST_TARGET"
+command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
+'''
+            result = subprocess.run([shutil.which('bash'), '-c', script], env=environment,
+                                    capture_output=True, text=True)
+            self.assertTrue((root / 'invocation').exists(), result.stdout + result.stderr)
+            self.assertEqual(json.loads((root / 'invocation').read_text()),
+                             ['--ruid', '60001', '--', command, '--', str(target)])
+            return result
+
+    def test_real_cat_and_head_show_file_contents(self):
+        for command in ('cat', 'head'):
+            with self.subTest(command=command):
+                result = self.check_access('allow', 'allow', command)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('sichtbarer Dateiinhalt', result.stdout)
+                self.assertIn(f'[{command} → stdout]', result.stdout)
+
+    def test_expected_deny_is_verified(self):
+        result = self.check_access('deny', 'deny')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Operation not permitted', result.stdout)
+        self.assertIn('Zugriff durch cat verweigert', result.stdout)
+
+    def test_other_errors_and_unexpected_success_are_not_denials(self):
+        for mode in ('dac', 'missing', 'setpriv-error', 'allow'):
+            with self.subTest(mode=mode):
+                result = self.check_access('deny', mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn('[Demo-Prüfung] OK:', result.stdout)
 
 
 class PaneSupervisorTests(unittest.TestCase):

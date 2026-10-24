@@ -76,7 +76,7 @@ if (( EUID != 0 )); then
 fi
 
 missing=()
-for program in bash cat chmod chown date dirname env flock grep id mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat tail tee tmux uname unshare wc ln; do
+for program in bash cat chmod chown date dirname env flock grep head id mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir setpriv sleep stat tail tee tmux uname unshare wc ln; do
     command -v "$program" >/dev/null 2>&1 || missing+=("$program")
 done
 if (( ${#missing[@]} )); then

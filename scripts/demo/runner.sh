@@ -44,6 +44,7 @@ chapter() {
         pause_demo 'Enter: zum nächsten Schritt | Strg+C: abbrechen '
     fi
     demo_chapter_started=1
+    demo_current_chapter="$1"
     # Clear the current pane and move the cursor home, like clear. Keep the
     # scrollback and transcript; this needs no additional external command.
     printf '\033[2J\033[H'
@@ -61,6 +62,13 @@ chapter() {
     pause_demo
 }
 explain() { printf '\n→ %s\n' "$*"; }
+step() {
+    # Keep the last result visible until Enter, then present the next action.
+    pause_demo 'Enter: zum nächsten Teilschritt | Strg+C: abbrechen '
+    printf '\033[2J\033[H\n%s%s%s\n' "$color_heading" "$demo_current_chapter" "$color_reset"
+    explain "$*"
+    pause_demo
+}
 show_command() {
     local argument
     printf '\n%s$' "$color_command"
@@ -137,12 +145,21 @@ publish() {
     local destination="$1"
     local publication=(bash ./scripts/publish-config.sh "./${demo_root#"$PROJECT_ROOT/"}/prepared" "./${destination#"$PROJECT_ROOT/"}")
     cat > "$demo_root/prepared"
-    printf '\nDie Datei %s wird veröffentlicht:\n' "${destination#"$PROJECT_ROOT/"}"
+    # Retain technical publication diagnostics without displaying internal commands.
+    printf '%q ' "${publication[@]}" >> "$demo_root/publication.log"
+    printf '\n' >> "$demo_root/publication.log"
+    if ! "${publication[@]}" >> "$demo_root/publication.log" 2>&1; then
+        fail "Veröffentlichung fehlgeschlagen; siehe $demo_root/publication.log."
+        return 1
+    fi
+    if [[ "$destination" == "$policy_dir/"* ]]; then
+        printf '\nFolgende Policy veröffentlicht (%s):\n' "${destination#"$PROJECT_ROOT/"}"
+    else
+        printf '\nFolgende Attribute veröffentlicht (%s):\n' "${destination#"$PROJECT_ROOT/"}"
+    fi
     printf '%s' "$color_config"
     cat "$demo_root/prepared"
     printf '%s' "$color_reset"
-    show_command "${publication[@]}"
-    show_output "${publication[@]}"
 }
 policy() {
     local name="$1" effect="$2" conditions="${3:-}" command="${4:-}" before offset
@@ -175,12 +192,49 @@ access_is() {
     local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
     alive || { fail 'Runtime beendet.'; return 1; }
     local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
-    printf '\n[Zugriffshilfe: probe.py access – prüft eine echte Dateiöffnung mit os.open]\n'
-    show_command "${invocation[@]}"
     actual="$("${invocation[@]}")"
-    printf '%s[probe.py access → stdout] %s%s\n' "$color_output" "$actual" "$color_reset"
     [[ "$actual" == "$expected" ]] || { fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."; return 1; }
-    observe "OK: Erwartet=$expected, beobachtet=$actual (Kommando/comm=$command, Real-UID=$uid, Datei=${file##*/})."
+    local result='erlaubt' display_uid="$uid"
+    [[ "$actual" != deny ]] || result='verweigert'
+    [[ "$uid" != - ]] || display_uid='unverändert'
+    observe "OK: Dateiöffnung $result (Datei=${file##*/}, Kommando=$command, Real-UID=$display_uid)."
+}
+command_access_is() {
+    local expected="$1" command="$2" uid="$3" file="${4:-$target}" status=0 actual
+    local output="$demo_root/command.stdout" error="$demo_root/command.stderr"
+    alive || { fail 'Runtime beendet.'; return 1; }
+    # Only the real UID changes. Effective UID 0 keeps ordinary DAC permissions
+    # constant while the UID, command and resource policy filters are varied.
+    local invocation=(setpriv --ruid "$uid" -- "$command" -- "$file")
+    printf '\n[Dateizugriff durch das Programm %s]\n' "$command"
+    show_command "${invocation[@]}"
+    LC_ALL=C "${invocation[@]}" > "$output" 2> "$error" || status=$?
+    if [[ -s "$output" ]]; then
+        printf '%s[%s → stdout]\n' "$color_output" "$command"
+        show_output cat -- "$output"
+    fi
+    if [[ -s "$error" ]]; then
+        printf '%s[%s / Aufruf → stderr]\n' "$color_output" "$command"
+        show_output cat -- "$error"
+    fi
+    if (( status == 0 )); then
+        actual=allow
+    elif (( status == 1 )) && grep -Eq "^${command}: " "$error" \
+        && grep -Fq -- "$file" "$error" && grep -Fq 'Operation not permitted' "$error"; then
+        actual=deny
+    else
+        fail "Aufruf von $command fehlgeschlagen (Exitstatus $status); kein nachgewiesener Policy-Deny."
+        return 1
+    fi
+    [[ "$actual" == "$expected" ]] || {
+        fail "Zugriff durch $command: erwartet $expected, beobachtet $actual (Real-UID $uid)."
+        return 1
+    }
+    if [[ "$actual" == deny ]]; then
+        observe "OK: Zugriff durch $command verweigert (Real-UID=$uid, Datei=${file##*/}, Exitstatus=$status)."
+    else
+        observe "OK: Zugriff durch $command erlaubt (Real-UID=$uid, Datei=${file##*/}, Exitstatus=$status)."
+    fi
 }
 probe_state_is() {
     kill -0 "$probe_pid" 2>/dev/null || return 1
@@ -440,7 +494,7 @@ worker_cleanup() {
     printf '%s\n' "$status" > "$demo_root/exit-status"
     chown -R "$DEMO_CALLER_UID:$DEMO_CALLER_GID" "$demo_root"
     if (( status == 0 )); then
-        printf '\nDie Demo war erfolgreich. Runtime und Hilfsprozesse wurden beendet; die eigenen Maps wurden entfernt. Die ursprünglichen Verzeichnisse wurden wiederhergestellt.\n'
+        printf '\nDie Demo wurde erfolgreich abgeschlossen. Die Logs bleiben erhalten.\n'
     else
         printf '\nDemo abgebrochen (Status %s). Diagnose: %s\n' "$status" "$demo_root"
     fi
@@ -495,9 +549,11 @@ demo_worker() {
     printf 'Arbeitsverzeichnis: Repository. Policies: policies/; Attribute: attributes/; Dateien: demo/files/.\n'
     printf 'Links: Erklärung und Aktionen. Rechts oben: Runtime und Kernel-Debugausgabe. Rechts unten: FD-Beobachter.\n'
     printf 'Nur die Enter-Taste ist für die Schritte nötig. Strg+C beendet die Demo.\n'
-    printf 'allow = Dateiöffnung erlaubt; deny = vom LSM mit EPERM verweigert. Andere Fehler brechen die Demo ab.\n'
+    printf 'Die Zugriffshilfe probe.py access öffnet die angegebene Datei tatsächlich mit os.open. Sie kann für die Prüfung den Kommandonamen und die Real-UID setzen; die effektive UID bleibt root.\n'
+    printf 'Im weiteren Verlauf wird dafür nur das geprüfte Ergebnis angezeigt: Dateiöffnung erlaubt oder verweigert. Nur EPERM gilt als Verweigerung; andere Fehler brechen die Demo ab. In Kapitel 2 werden stattdessen echtes cat und head gestartet.\n'
     printf 'Die Policygeneration kennzeichnet den aktivierten Policy-Stand; die Attributgeneration kennzeichnet den aktivierten Attributstand.\n'
     printf 'show-active zeigt geladene Policies und Werte. Die Zugriffsentscheidung wird zusätzlich mit einer echten Dateiöffnung geprüft.\n'
+    pause_demo 'Enter: erstes Kapitel anzeigen | Strg+C: abbrechen '
 
     # Kapitel 1: Die Durchsetzung erst nach dem nachgewiesenen LSM-Attach prüfen.
     # Der leere Policy-Stand zeigt das Allow-Verhalten ohne passende Deny-Policy.
@@ -533,20 +589,25 @@ demo_worker() {
   protected.txt und alias.txt bezeichnen dieselbe Datei; control.txt ist eine separate Datei." \
         'Eine Deny-Policy wird für genau drei gemeinsam erforderliche Merkmale veröffentlicht: Real-UID 60001, Kommando cat und die geschützte Ressource. Danach werden diese Merkmale einzeln variiert.' \
         'Nur die passende Kombination auf protected.txt wird verweigert. Eine andere UID, ein anderes Kommando und die separate control.txt bleiben erlaubt. alias.txt wird ebenfalls verweigert, weil Gerät und Inode mit protected.txt übereinstimmen.' \
-        'Der Kommando-Filter vergleicht den unter Linux geführten Kommandonamen comm. Die Zugriffshilfe setzt diesen Namen für den Test auf cat. Sie führt eine echte Dateiöffnung mit os.open aus und erkennt eine Verweigerung durch EPERM. So lassen sich Kommando und Real-UID gezielt variieren, ohne Benutzerkonten anzulegen. Die effektive UID bleibt root. Das Programm cat wird bei dieser Prüfung nicht gestartet.'
+        'Hier werden die Programme cat und head tatsächlich gestartet. setpriv setzt nur die Real-UID des jeweiligen Prozesses auf 60001 oder 60002; dafür sind keine zusätzlichen Benutzerkonten nötig. Die effektive UID bleibt root, damit gewöhnliche Dateirechte den Vergleich nicht beeinflussen. Der Kommando-Filter prüft den unter Linux geführten Kommandonamen comm: cat passt zur Policy, head nicht. Erlaubte Aufrufe zeigen den Dateiinhalt; beim verweigerten cat-Aufruf erscheint dessen echte Fehlermeldung.'
+    explain 'Vor dem Laden der Policy kann cat mit Real-UID 60001 die geschützte Datei lesen.'
+    command_access_is allow cat 60001
+    step 'Die Deny-Policy für cat, Real-UID 60001 und die geschützte Datei wird veröffentlicht und anschließend geprüft.'
     policy scoped deny '    subject.uid == 60001;' cat
     explain 'Alle drei Filter passen: Die Dateiöffnung muss verweigert werden.'
-    access_is deny cat 60001
-    explain 'Negativkontrollen: jeweils eine andere UID, ein anderes Kommando oder eine andere Datei. Diese Zugriffe müssen erlaubt bleiben.'
-    access_is allow cat 60002
-    access_is allow other 60001
-    access_is allow cat 60001 "$safe"
-    explain 'Der alternative Hardlink-Pfad bezeichnet dieselbe Datei. Die Sperre gilt auch dort.'
-    access_is deny cat 60001 "$PROJECT_ROOT/demo/files/alias.txt"
+    command_access_is deny cat 60001
+    step 'Nur die Real-UID wird auf 60002 geändert. cat muss die geschützte Datei weiterhin lesen können.'
+    command_access_is allow cat 60002
+    step 'Nur das Kommando wird geändert: head muss die geschützte Datei mit Real-UID 60001 lesen können.'
+    command_access_is allow head 60001
+    step 'cat mit Real-UID 60001 liest jetzt die separate Kontrolldatei. Dieser Zugriff muss erlaubt bleiben.'
+    command_access_is allow cat 60001 "$safe"
+    step 'Der alternative Hardlink-Pfad bezeichnet dieselbe geschützte Datei. cat muss auch über diesen Pfad abgewiesen werden.'
+    command_access_is deny cat 60001 "$PROJECT_ROOT/demo/files/alias.txt"
     admin show-active
-    explain 'Die Policy wird entfernt. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
+    step 'Die Policy wird entfernt. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
     remove_policy scoped
-    access_is allow cat 60001
+    command_access_is allow cat 60001
 
     # Kapitel 3: Permit hebt ein gleichzeitig passendes Deny nicht auf.
     # Jede Veröffentlichung/Entfernung aktiviert einen neuen vollständigen Stand.
@@ -558,13 +619,14 @@ demo_worker() {
     explain 'Zuerst wird eine Permit-Policy geladen. Der Zugriff ist damit erlaubt.'
     policy permit permit
     access_is allow
-    explain 'Eine passende Deny-Policy wird ergänzt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang.'
+    step 'Eine passende Deny-Policy wird ergänzt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang.'
     policy deny deny
     access_is deny
     admin
-    explain 'Nur die Deny-Policy wird entfernt; die Permit-Policy bleibt geladen. Der Zugriff ist danach wieder erlaubt.'
+    step 'Nur die Deny-Policy wird entfernt; die Permit-Policy bleibt geladen. Der Zugriff ist danach wieder erlaubt.'
     remove_policy deny
     access_is allow
+    step 'Die Permit-Policy wird zum Abschluss dieses Kapitels entfernt.'
     remove_policy permit
 
     # Kapitel 4: Bei unveränderter Policy die Entscheidung allein über einen
@@ -576,13 +638,14 @@ demo_worker() {
         'Die Policydatei bleibt während der Attributwechsel gleich. Im Log und im Admin-Tool ändert sich der Attributstand; die Runtime muss dafür nicht neu gestartet werden.'
     policy context deny '    system.defcon <= 2;'
     access_is allow
-    explain 'DEFCON sinkt auf 2: Die bereits geladene Deny-Policy trifft jetzt zu.'
+    step 'DEFCON sinkt auf 2: Die bereits geladene Deny-Policy trifft jetzt zu.'
     attribute system.attributes 'defcon = 2'
     access_is deny
     admin show-active
-    explain 'DEFCON steigt wieder auf 5: Dieselbe Policy trifft nicht mehr zu.'
+    step 'DEFCON steigt wieder auf 5: Dieselbe Policy trifft nicht mehr zu.'
     attribute system.attributes 'defcon = 5'
     access_is allow
+    step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy context
 
     # Kapitel 5: System-, Subjekt- und Ressourcenattribute sind konjunktiv.
@@ -592,32 +655,35 @@ demo_worker() {
         'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff läuft mit Real-UID 0.' \
         'DEFCON wird auf 2, die Rolle von UID 0 auf engineer und die Dateiklassifikation auf internal gesetzt. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.' \
         'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. Rolle intern oder Klassifikation public reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.' \
-        'Anschließend werden eine fehlende Rolle und die Zahl 1 statt eines Rollenstrings geprüft. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
+        'Anschließend wird das Attribut position zunächst weggelassen und danach auf die Zahl 1 statt auf die Zeichenkette "engineer" gesetzt. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
     attribute system.attributes 'defcon = 2'
     attribute subjects/0.attributes 'position = "engineer"'
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
     access_is deny
-    explain 'Nur die Rolle wird von engineer auf intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
+    step 'Nur die Rolle wird von engineer auf intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
     access_is allow
+    step 'Die Rolle wird auf engineer zurückgesetzt. Damit sind wieder alle drei Bedingungen erfüllt.'
     attribute subjects/0.attributes 'position = "engineer"'
-    explain 'Die Rolle ist wieder engineer. Jetzt wird nur die Dateiklassifikation von internal auf public geändert.'
+    access_is deny
+    step 'Jetzt wird nur die Dateiklassifikation von internal auf public geändert. Damit passt die Deny-Policy nicht mehr.'
     attribute "resources${target}.attributes" 'classification = "public"'
     access_is allow
-    explain 'Mit classification=internal sind wieder alle drei Bedingungen erfüllt.'
+    step 'Mit classification=internal sind wieder alle drei Bedingungen erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
     access_is deny
-    explain 'Jetzt fehlt position vollständig. Die Veröffentlichung ist gültig, der Rollenvergleich ergibt aber keinen Treffer.'
+    step 'Jetzt fehlt position vollständig. Die Veröffentlichung ist gültig, der Rollenvergleich ergibt aber keinen Treffer.'
     attribute subjects/0.attributes '# position fehlt'
     access_is allow
-    explain 'position=1 ist eine Zahl. Ein Zahlenwert erfüllt den Stringvergleich mit "engineer" ebenfalls nicht.'
+    step 'position wird auf die Zahl 1 statt auf eine Zeichenkette gesetzt. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
     attribute subjects/0.attributes 'position = 1'
     access_is allow
-    explain 'Der Rollenstring engineer wird wiederhergestellt: Alle Bedingungen passen und der Zugriff wird verweigert.'
+    step 'position wird wieder auf die Zeichenkette "engineer" gesetzt: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
     access_is deny
     admin
+    step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy combined
 
     # Kapitel 6: Syntax-/Validierungsfehler dürfen keine neue Generation
@@ -626,30 +692,46 @@ demo_worker() {
         'DEFCON steht noch auf 2. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.' \
         'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird DEFCON=9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.' \
         'Beide fehlerhaften Updates werden verworfen. Die zuletzt gültigen Generationen und das wirksame Deny bleiben erhalten. Gültige Korrekturen werden anschließend wieder übernommen.' \
-        'Rechts oben erscheint die Ablehnung. Links werden die unveränderten Generationen und der weiterhin verweigerte Zugriff geprüft. Der letzte gültige Policy-Stand bleibt aktiv.'
+        'Rechts oben erscheint die Ablehnung. Links zeigt show-active die aktivierten Policies, Attribute und Generationen vor und nach jedem ungültigen Update sowie nach den gültigen Korrekturen. Ungültige Updates ändern keine Generation; erst die gültigen Korrekturen aktivieren einen neuen Stand. Der tatsächliche Zugriff wird zusätzlich geprüft.'
     policy robust deny '    system.defcon <= 2;'
     local before offset
+    explain 'Aktiver Ausgangszustand vor der ungültigen Policy: Die Deny-Policy robust ist aktiviert und DEFCON steht auf 2.'
+    admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
-    explain 'Die nächste Policy ist absichtlich syntaktisch fehlerhaft. Sie darf nicht aktiviert werden.'
-    printf 'policy "kaputt"\ndeny\n action == "file_open"\n' | publish "$policy_dir/broken.policy"
+    step 'Die nächste Policy ist absichtlich syntaktisch fehlerhaft. Sie darf nicht aktiviert werden.'
+    printf 'policy "broken"\ndeny\n action == "file_open"\n' | publish "$policy_dir/broken.policy"
     wait_log 'POLICY sync failed' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültige Policy änderte die Generation.'; return 1; }
+    explain 'Aktiver Zustand nach der Ablehnung: broken wurde nicht aktiviert. Policies, Attribute und beide Generationen bleiben unverändert.'
+    admin show-active
+    observe "Ungültige Policy verworfen: Policygeneration ${before%% *} und Attributgeneration ${before##* } unverändert."
     access_is deny
-    explain 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
+    step 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
     policy broken permit
+    explain 'Nach der gültigen Policy-Korrektur ist broken zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
+    admin show-active
     access_is deny
+    step 'Die korrigierte Policy broken wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
     remove_policy broken
+    explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: broken wurde wieder entfernt. Die Deny-Policy robust und DEFCON=2 bleiben aktiv.'
+    admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
-    explain 'DEFCON=9 ist unzulässig. Der aktive Wert muss trotz geänderter Quelldatei bei 2 bleiben.'
+    step 'DEFCON=9 ist unzulässig. Der aktive Wert muss trotz geänderter Quelldatei bei 2 bleiben.'
     printf 'defcon = 9\n' | publish "$attribute_dir/system.attributes"
     wait_log 'Ignoring invalid stream attributes' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültiges Attribut änderte die Generation.'; return 1; }
+    explain 'Aktiver Zustand nach der Ablehnung von DEFCON=9: show-active zeigt weiterhin DEFCON=2 sowie dieselben Policies und Generationen.'
+    admin show-active
+    observe "Ungültiges Attribut verworfen: Policygeneration ${before%% *} und Attributgeneration ${before##* } unverändert."
     access_is deny
-    explain 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
+    step 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
     attribute system.attributes 'defcon = 5'
+    explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: DEFCON=5 und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'
+    admin show-active
     access_is allow
+    step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy robust
 
     # Kapitel 7: file_open schützt neue Öffnungen. Der Userspace-PEP muss
@@ -668,7 +750,7 @@ demo_worker() {
     assert_probe_identity
     policy revoke deny '' tails-demo-fd
     expect_revoked
-    explain 'Der selektive Entzug ist bestätigt. Der Beobachter wird jetzt gezielt beendet und die Demo-Policy für das nächste Kapitel entfernt.'
+    step 'Der selektive Entzug ist bestätigt. Der Beobachter wird jetzt gezielt beendet und die Demo-Policy für das nächste Kapitel entfernt.'
     stop_probe
     remove_policy revoke
 
@@ -695,7 +777,7 @@ demo_worker() {
     [[ "${before%% *}" == "${current%% *}" ]] || { fail 'Policygeneration unerwartet geändert.'; return 1; }
     wait_log "scan started cause=[attributes:${current##* }]" "$offset"
     expect_revoked
-    explain 'Die unveränderte Policygeneration und der attributes-Auslöser wurden geprüft. Die Kontextänderung allein hat die bestehenden Zugriffe entzogen.'
+    step 'Der FD-Entzug durch die Attributänderung ist bestätigt. Beobachter und Demo-Policy werden für das nächste Kapitel zurückgesetzt.'
     stop_probe
     remove_policy revoke
 
@@ -728,7 +810,7 @@ if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
     raise SystemExit('FDs vor der Zeitgrenze geschlossen')
 PY
     access_is deny tails-demo-fd
-    explain 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug nach der Zeitgrenze wurden bestätigt. Auch eine neue Dateiöffnung wird nun verweigert.'
+    step 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug sind bestätigt. Der Beobachter wird beendet und die Policy entfernt; danach muss eine neue Dateiöffnung wieder erlaubt sein.'
     stop_probe
     remove_policy timed
     access_is allow tails-demo-fd
@@ -736,21 +818,16 @@ PY
     # Kapitel 10: UTC-Felder ergänzen die Modulo-Demo. Immer wahre Vergleiche
     # vermeiden eine Abhängigkeit von der Vorführungszeit und zeigen Deny-Vorrang.
     chapter '10. UTC-Zeitbedingung und abschließende Inspektion' \
-        'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder. Der vorherige zeitabhängige Policy-Stand wurde entfernt.' \
-        'Eine Deny-Policy mit environment.utc.hour >= 0 und zusätzlich eine Permit-Policy mit environment.utc.minute >= 0 werden geladen. Die aktivierten Policies und Attribute werden angezeigt; danach wird nur die Deny-Policy entfernt.' \
-        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Bei gleichzeitig passenden Policies hat Deny Vorrang; nach dem Entfernen der Deny-Policy ist der Zugriff wieder erlaubt.' \
+        'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder.' \
+        'Zuerst wird eine Permit-Policy mit environment.utc.minute >= 0 geladen und der Zugriff geprüft. Danach kommt eine Deny-Policy mit environment.utc.hour >= 0 hinzu. Abschließend werden die aktivierten Policies und Attribute angezeigt.' \
+        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Mit der Permit-Policy ist der Zugriff erlaubt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang und der Zugriff wird verweigert.' \
         'Die bewusst immer wahren Vergleiche zeigen die UTC-Felder unabhängig von der Uhrzeit der Vorführung. Das Admin-Tool zeigt die Policies, die Zugriffshilfe prüft deren tatsächliche Wirkung.'
-    policy utc deny '    environment.utc.hour >= 0;'
-    access_is deny
     policy stream-permit permit '    environment.utc.minute >= 0;'
-    explain 'Auch die zusätzliche zeitabhängige Permit-Policy hebt die Entscheidung der passenden Deny-Policy nicht auf.'
+    access_is allow
+    step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht. Sie hat Vorrang vor der passenden Permit-Policy.'
+    policy utc deny '    environment.utc.hour >= 0;'
+    explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang vor der passenden Permit-Policy.'
     access_is deny
     admin
-    explain 'Nur die UTC-Deny-Policy wird entfernt. Die zeitabhängige Permit-Policy bleibt zunächst geladen.'
-    remove_policy utc
-    access_is allow
-    remove_policy stream-permit
-    explain 'Alle Demo-Policies sind wieder entfernt. Beim Schließen werden Runtime und Hilfsprozesse beendet und die eigenen Maps aufgeräumt. Die Logs bleiben erhalten.'
     observe 'Alle Demo-Kapitel erfolgreich geprüft.'
-    printf '\nGrenzen: FD-Schließen holt gelesene Daten nicht zurück; mmap und ptrace-Races sind nicht durch diese Demo abgedeckt.\n'
 }
