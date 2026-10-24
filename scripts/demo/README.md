@@ -10,17 +10,28 @@ Mit der Systemkonfiguration aus `nix-config/configuration.nix` sind die
 Laufzeitwerkzeuge einschließlich `tmux` bereits systemweit verfügbar. Eine
 Nix-Shell muss vor dem Start nicht manuell geöffnet werden. Fehlen die
 Release-Binaries oder wird `--build` verwendet, ruft das Skript die
-Nix-Entwicklungsumgebung für den Build automatisch auf. Dabei installiert das
-Skript auch die in `nix-config/ebpf-toolchain` festgelegte Nightly-Rust-Toolchain
-mit `rust-src` und den BPF-Linker. Der eBPF-Build verwendet dieselbe Toolchain;
-die Version ist auf den LLVM-21-Linker der Entwicklungsumgebung abgestimmt.
-Für die erstmalige Einrichtung und den Build wird Internetzugriff benötigt.
+Nix-Entwicklungsumgebung für den Build automatisch auf. Der Build verwendet
+`scripts/demo/build.sh`, die lokalen Rust-Quellen aus `vendor/` und
+`cargo build --frozen`. Cargo-Downloads sind auch für die verschachtelten
+eBPF-Builds deaktiviert. Der Shell-Hook installiert keine Werkzeuge mehr.
+
+**Stand der Offline-Abgabe:** Die Cargo-Abhängigkeiten sind lokal vorhanden.
+Ein vollständiges Offline-Paket der Buildwerkzeuge ist noch nicht mitgeliefert.
+Die in `nix-config/rust-toolchain` und `nix-config/ebpf-toolchain` festgelegten
+Compiler, `rust-src`, BPF-Linker 0.9.15 und die LLVM-21-Bibliotheken müssen lokal
+vorhanden sein. Der aktuelle Aya-eBPF-Build benötigt weiterhin Nightly;
+die Anforderung, auch den eBPF-Teil ausschließlich mit Stable Rust zu bauen,
+ist damit noch nicht erfüllt. Es wird weder eine Nightly-Installation noch
+ein `RUSTC_BOOTSTRAP`-Workaround während der Demo ausgeführt.
 
 Das Skript prüft seine Werkzeuge vor dem Start. Fehlen beispielsweise `tmux`,
 Python oder `flock`, startet es sich über `scripts/demo/shell.nix` neu. Nix stellt
 die Programme für diesen Aufruf bereit, ohne sie global zu installieren.
-`nix-shell` selbst muss bereits verfügbar sein; Paketdownloads benötigen beim
-ersten Start gegebenenfalls Netzwerkzugriff. Ein bereits eingerichtetes `sudo`
+`nix-shell`, die lokale Nixpkgs-Quelle und alle benötigten Nix-Store-Pfade müssen
+bereits verfügbar sein. Substitutionen sowie lokale und entfernte Nix-Builds
+sind für diese Aufrufe deaktiviert; fehlende Pakete führen zum Abbruch.
+Die lokale Nixpkgs-Quelle ist bisher noch nicht im Repository gepinnt oder
+mitgeliefert. Ein bereits eingerichtetes `sudo`
 oder ein Start als root ist für die privilegierte Runtime erforderlich; das
 Bereitstellen eines sudo-Pakets richtet keine Systemberechtigungen ein. Deshalb
 enthält die Demo-Shell kein sudo-Paket. Die Demo verwendet auf NixOS bevorzugt
@@ -29,7 +40,7 @@ Nix-Shell und beim Start des tmux-Workers bei. Bei Bedarf kann `DEMO_SUDO_BIN`
 einen anderen absoluten Pfad zu einem eingerichteten System-sudo auswählen.
 
 Fehlen Release-Binaries, baut das Skript sie automatisch mit
-`nix-config/shell.nix`, einschließlich `setup-bpf-tools`. Mit `--build` wird
+`nix-config/shell.nix` und `scripts/demo/build.sh`. Mit `--build` wird
 dieser Build auch bei vorhandenen Binaries durchgeführt. Nach Änderungen am
 Rust-Code sollte man diese Option verwenden:
 

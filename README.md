@@ -7,13 +7,18 @@ manuals, the Rustdoc reference, and the commands to generate and check API docum
 
 ## Prerequisites
 
-1. stable rust toolchains: `rustup toolchain install stable`
-1. pinned eBPF Rust toolchain (from the repository root): `rustup toolchain install "$(cat nix-config/ebpf-toolchain)" --profile minimal --component rust-src`. The Nix environment uses LLVM 21; an arbitrary newer nightly may produce incompatible LLVM bitcode. `scripts/demo.sh` installs the pinned toolchain automatically when building.
+1. Userspace Rust toolchain: the exact version in `nix-config/rust-toolchain` must be installed locally.
+1. eBPF Rust toolchain: the exact version in `nix-config/ebpf-toolchain`, including `rust-src`, must be installed locally. The current Aya eBPF build still requires nightly; a Stable-only source build is not implemented. The Nix environment uses LLVM 21. `scripts/demo.sh` does not download or install toolchains.
 1. (if cross-compiling to Intel/AMD Linux) rustup target: `rustup target add x86_64-unknown-linux-musl`
 1. (if cross-compiling to ARM64 Linux) rustup target: `rustup target add aarch64-unknown-linux-musl`
 1. (if cross-compiling) LLVM: (e.g.) `brew install llvm` (on macOS)
 1. (if cross-compiling) C toolchain: (e.g.) [`brew install filosottile/musl-cross/musl-cross`](https://github.com/FiloSottile/homebrew-musl-cross) (on macOS)
-1. bpf-linker: `cargo install bpf-linker` (`--no-default-features` on macOS)
+1. bpf-linker 0.9.15 with LLVM 21 and its system libraries must be available locally for the demo build.
+
+Cargo uses the checked-in `vendor/` sources with networking disabled. The demo
+source build additionally uses `--frozen`. The complete offline tool bundle
+(compilers, linker, LLVM, Nixpkgs and Nix store closure) is not yet included;
+see [the demo documentation](scripts/demo/README.md) for the current limitations.
 
 ## Build & Run
 

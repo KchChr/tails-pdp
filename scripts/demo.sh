@@ -15,7 +15,8 @@ Aufruf: ./scripts/demo.sh [--auto] [--build]
   --help         Diese Hilfe anzeigen.
 
 Benötigt ein dediziertes x86_64-Linux-System mit BPF-LSM und BTF.
-Fehlende Programme werden über scripts/demo/shell.nix bereitgestellt.
+Fehlende Programme werden über scripts/demo/shell.nix offline bereitgestellt.
+Alle Nix-Pakete und Buildwerkzeuge müssen bereits lokal vorhanden sein.
 Nix selbst muss dafür bereits installiert sein. sudo kann ein Passwort anfordern.
 TAILS_PDP_BIN und ADM_TOOL_BIN können vorhandene Binaries auswählen.
 DEMO_TIMEOUT_SECONDS (Standard 30) begrenzt technische Wartephasen.
@@ -91,7 +92,7 @@ if (( ${#missing[@]} )); then
     # %q quotes each original argument as Bash code; no eval of user text.
     printf -v invocation '%q ' bash "$PROJECT_ROOT/scripts/demo.sh" "$@"
     export TAILS_DEMO_NIX=1
-    exec nix-shell "$PROJECT_ROOT/scripts/demo/shell.nix" --run "$invocation"
+    exec nix-shell --option substitute false --option builders '' -j 0 "$PROJECT_ROOT/scripts/demo/shell.nix" --run "$invocation"
 fi
 
 TAILS_PDP_BIN="${TAILS_PDP_BIN:-$PROJECT_ROOT/target/release/tails-pdp}"
@@ -104,12 +105,9 @@ if (( build )) || [[ ! -x "$TAILS_PDP_BIN" || ! -x "$ADM_TOOL_BIN" ]]; then
         echo 'Zum Bauen fehlt nix-shell; alternativ fertige Binaries über TAILS_PDP_BIN und ADM_TOOL_BIN auswählen.' >&2
         exit 1
     }
-    echo 'Baue den Prototyp mit der vorhandenen Nix-Entwicklungsumgebung …'
-    # aya-build verwendet für das eBPF-Target Nightly und benötigt dessen rust-src.
-    # Die Toolchain gehört zum automatischen Bootstrap einer frisch geklonten Demo.
-    ebpf_toolchain="$(<"$PROJECT_ROOT/nix-config/ebpf-toolchain")"
-    printf -v build_command 'cd %q && rustup toolchain install %q --profile minimal --component rust-src && setup-bpf-tools && cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool' "$PROJECT_ROOT" "$ebpf_toolchain"
-    nix-shell "$PROJECT_ROOT/nix-config/shell.nix" --run "$build_command"
+    echo 'Baue den Prototyp ausschließlich aus lokalen Quellen …'
+    printf -v build_command 'bash %q' "$PROJECT_ROOT/scripts/demo/build.sh"
+    nix-shell --option substitute false --option builders '' -j 0 "$PROJECT_ROOT/nix-config/shell.nix" --run "$build_command"
 fi
 [[ -x "$TAILS_PDP_BIN" && -x "$ADM_TOOL_BIN" ]] || { echo 'Ausgewählte Binaries fehlen.' >&2; exit 1; }
 DEMO_TIMEOUT_SECONDS="${DEMO_TIMEOUT_SECONDS:-30}"

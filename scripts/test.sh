@@ -127,7 +127,7 @@ run_step "Atomare Konfigurationsveröffentlichung prüfen" \
     bash "$PROJECT_ROOT/scripts/tests/test-publish-config.sh"
 
 run_step "Demo-Skripte syntaktisch prüfen" \
-    bash -n "$PROJECT_ROOT/scripts/demo.sh" "$PROJECT_ROOT/scripts/demo/runner.sh" "$PROJECT_ROOT/scripts/demo/dependencies.sh"
+    bash -n "$PROJECT_ROOT/scripts/demo.sh" "$PROJECT_ROOT/scripts/demo/runner.sh" "$PROJECT_ROOT/scripts/demo/dependencies.sh" "$PROJECT_ROOT/scripts/demo/build.sh"
 
 run_step "Demo-Start, Isolation und Syscall-Helfer prüfen" \
     env PYTHONDONTWRITEBYTECODE=1 python3 "$PROJECT_ROOT/scripts/tests/test_demo.py"

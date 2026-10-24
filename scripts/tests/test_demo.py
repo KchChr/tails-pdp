@@ -159,9 +159,10 @@ if 'respawn-pane' in args:
 
     def test_missing_programs_reexec_via_nix(self):
         arguments = json.loads(self.run_launcher(False))
-        self.assertEqual(arguments[0], str(PROJECT / "scripts/demo/shell.nix"))
-        self.assertEqual(arguments[1], "--run")
-        self.assertEqual(shlex.split(arguments[2]), ["bash", str(PROJECT / "scripts/demo.sh"), "--auto"])
+        self.assertEqual(arguments[:8], ['--option', 'substitute', 'false', '--option', 'builders', '', '-j', '0'])
+        self.assertEqual(arguments[8], str(PROJECT / "scripts/demo/shell.nix"))
+        self.assertEqual(arguments[9], "--run")
+        self.assertEqual(shlex.split(arguments[10]), ["bash", str(PROJECT / "scripts/demo.sh"), "--auto"])
 
     def test_tmux_layout_and_worker_are_configured_before_attach(self):
         calls = [json.loads(line) for line in self.run_launcher(True).splitlines()]
@@ -173,27 +174,71 @@ if 'respawn-pane' in args:
         self.assertIn('kill-server', calls[-1])
         self.assertTrue(any('status-format[1]' in call and 'Legende:' in call[-1] for call in calls))
 
-    def test_build_bootstraps_nightly_and_stops_on_install_failure(self):
+    def test_build_uses_local_nix_dependencies_and_offline_builder(self):
         calls = [json.loads(line) for line in self.run_launcher(True, build=True).splitlines()]
-        build = next(call for call in calls if call[0] == str(PROJECT / 'nix-config/shell.nix'))
+        build = next(call for call in calls if str(PROJECT / 'nix-config/shell.nix') in call)
+        self.assertEqual(build[:8], ['--option', 'substitute', 'false', '--option', 'builders', '', '-j', '0'])
         command = build[build.index('--run') + 1]
-        for status in (0, 19):
-            with self.subTest(install_status=status):
-                stubs = (
-                    f'rustup() {{ echo "rustup $*"; return {status}; }}; '
-                    'setup-bpf-tools() { echo linker; }; '
-                    'cargo() { echo "cargo $*"; }; '
-                )
-                result = subprocess.run([shutil.which('bash'), '-c', stubs + command],
-                                        text=True, capture_output=True)
-                self.assertEqual(result.returncode, status, result.stderr)
-                lines = result.stdout.splitlines()
-                toolchain = (PROJECT / 'nix-config/ebpf-toolchain').read_text().strip()
-                self.assertEqual(lines[0], f'rustup toolchain install {toolchain} --profile minimal --component rust-src')
-                if status == 0:
-                    self.assertEqual(lines[1:], ['linker', 'cargo build --locked --release --bin tails-pdp --bin tails-pdp-admintool'])
-                else:
-                    self.assertEqual(len(lines), 1)
+        self.assertEqual(shlex.split(command), ['bash', str(PROJECT / 'scripts/demo/build.sh')])
+
+
+class OfflineBuildTests(unittest.TestCase):
+    def run_build(self, missing_toolchain=False, missing_sources=False):
+        with tempfile.TemporaryDirectory(prefix='offline build ') as directory:
+            root = Path(directory)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            for name in ('dirname', 'python3'):
+                (binaries / name).symlink_to(shutil.which(name))
+            core = root / 'sysroot/lib/rustlib/src/rust/library/core'
+            core.mkdir(parents=True)
+            if not missing_sources:
+                (core / 'Cargo.toml').write_text('[package]\nname="core"\n')
+            stub = '''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+name = Path(sys.argv[0]).name
+args = sys.argv[1:]
+with open(os.environ['CALLS'], 'a') as log:
+    log.write(json.dumps([name, args, os.environ.get('CARGO_NET_OFFLINE'), os.environ.get('RUSTUP_TOOLCHAIN')]) + '\\n')
+if name == 'rustup':
+    if args[:1] != ['run']: raise SystemExit(95)
+    if os.environ['MISSING_TOOLCHAIN'] == '1': raise SystemExit(19)
+    print(os.environ['SYSROOT'] if args[-2:] == ['--print', 'sysroot'] else 'rustc test')
+elif name == 'bpf-linker': print('bpf-linker 0.9.15')
+'''
+            for name in ('rustup', 'cargo', 'bpf-linker'):
+                path = binaries / name
+                path.write_text(stub)
+                path.chmod(0o755)
+            environment = {**os.environ, 'PATH': str(binaries), 'CALLS': str(root / 'calls'),
+                           'SYSROOT': str(root / 'sysroot'), 'MISSING_TOOLCHAIN': str(int(missing_toolchain))}
+            result = subprocess.run([shutil.which('bash'), str(PROJECT / 'scripts/demo/build.sh')],
+                                    env=environment, capture_output=True, text=True)
+            calls = [json.loads(line) for line in (root / 'calls').read_text().splitlines()]
+            return result, calls
+
+    def test_offline_build_uses_frozen_sources_and_pinned_tools(self):
+        result, calls = self.run_build()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls[-1][0:2], ['cargo', ['build', '--frozen', '--release', '--bin', 'tails-pdp', '--bin', 'tails-pdp-admintool']])
+        self.assertTrue(all(call[2] == 'true' for call in calls))
+        self.assertTrue(all(call[3] == (PROJECT / 'nix-config/rust-toolchain').read_text().strip() for call in calls))
+        self.assertEqual([call[1][1] for call in calls if call[0] == 'rustup'][:2],
+                         [(PROJECT / 'nix-config/rust-toolchain').read_text().strip(),
+                          (PROJECT / 'nix-config/ebpf-toolchain').read_text().strip()])
+
+    def test_missing_toolchain_stops_without_installing_or_building(self):
+        result, calls = self.run_build(missing_toolchain=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('es wird nichts heruntergeladen', result.stderr)
+        self.assertEqual([call[0] for call in calls], ['rustup'])
+
+    def test_missing_rust_sources_stops_before_cargo(self):
+        result, calls = self.run_build(missing_sources=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('rust-src', result.stderr)
+        self.assertNotIn('cargo', [call[0] for call in calls])
 
 
 class LiveRunnerTests(unittest.TestCase):

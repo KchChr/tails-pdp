@@ -33,21 +33,15 @@ pkgs.mkShell {
     export AYA_RUSTC_LLVM_PATH="${llvm.libllvm}/lib/libLLVM-21.so"
     export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.zlib pkgs.libxml2 ]}:''${LD_LIBRARY_PATH:-}"
 
-    NIGHTLY="stable"
-    if command -v rustup >/dev/null; then
-      rustup toolchain install "$NIGHTLY" \
-        -c rust-src \
-        -c rustfmt \
-        -c clippy >/dev/null 2>&1 || true
-      export RUSTUP_TOOLCHAIN="$NIGHTLY"
-    fi
+    # Nur lokal vorhandene Toolchains verwenden; der Shell-Start lädt nichts nach.
+    export RUSTUP_TOOLCHAIN="${pkgs.lib.strings.trim (builtins.readFile ./rust-toolchain)}"
 
-    # Manuell aufrufbarer Installer für den vom eBPF-Build benötigten Linker.
+    # Vorab bereitgestellten Linker prüfen, niemals während der Demo installieren.
     setup-bpf-tools() {
       WANT_BPF_LINKER="0.9.15"
       if ! command -v bpf-linker >/dev/null || ! bpf-linker -V 2>/dev/null | grep -q "bpf-linker $WANT_BPF_LINKER"; then
-        echo "[setup] installing bpf-linker $WANT_BPF_LINKER (features=llvm-21)"
-        cargo install --force bpf-linker --version "$WANT_BPF_LINKER" --no-default-features --features llvm-21 || return
+        echo "[setup] Offline-Abhängigkeit fehlt: bpf-linker $WANT_BPF_LINKER (LLVM 21)." >&2
+        return 1
       fi
       echo "[setup] done."
     }
@@ -66,7 +60,7 @@ pkgs.mkShell {
     echo "IN_NIX_SHELL=''${IN_NIX_SHELL:-}  (leer? -> evtl. schon in nix-shell)"
     echo "AYA_RUSTC_LLVM_PATH=$AYA_RUSTC_LLVM_PATH"
     command -v rustup  >/dev/null && rustup show active-toolchain || true
-    echo "Tipp: 'setup-bpf-tools' ausführen, um bpf-linker zu installieren."
+    echo "Offline-Build: Compiler, rust-src und bpf-linker müssen lokal bereitstehen."
     echo "========================================"
     echo
   '';
