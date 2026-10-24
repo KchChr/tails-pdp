@@ -76,7 +76,7 @@ if (( EUID != 0 )); then
 fi
 
 missing=()
-for program in bash cat chmod chown date dirname env flock grep id mkdir mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat tail tee tmux uname unshare wc ln; do
+for program in bash cat chmod chown date dirname env flock grep id mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat tail tee tmux uname unshare wc ln; do
     command -v "$program" >/dev/null 2>&1 || missing+=("$program")
 done
 if (( ${#missing[@]} )); then
@@ -113,8 +113,7 @@ fi
 DEMO_TIMEOUT_SECONDS="${DEMO_TIMEOUT_SECONDS:-30}"
 [[ "$DEMO_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]] || { echo 'DEMO_TIMEOUT_SECONDS muss eine positive Ganzzahl sein.' >&2; exit 2; }
 
-# Authentication happens before entering tmux; the worker never prompts blindly.
-if (( EUID != 0 )); then "$DEMO_SUDO_BIN" -v; fi
+# Authenticate in the worker's tmux terminal: sudo timestamps are normally per tty.
 demo_caller_uid="$(id -u)"
 demo_caller_gid="$(id -g)"
 if (( EUID == 0 )) && [[ -n "${SUDO_UID:-}" && -n "${SUDO_GID:-}" ]]; then
@@ -132,12 +131,12 @@ if [[ -n "${DEMO_ARTIFACT_PATH_FILE:-}" ]]; then
     printf '%s\n' "$demo_root" > "$DEMO_ARTIFACT_PATH_FILE"
 fi
 chmod 755 "$demo_root"
-for log in runtime.log observer.log transcript.log; do : > "$demo_root/$log"; done
+for log in runtime.log observer.log transcript.log startup.log; do : > "$demo_root/$log"; done
 session="tails-demo-$$"
 tmux_command=(tmux -L "$session")
 worker=(env "PATH=$PATH" "PROJECT_ROOT=$PROJECT_ROOT" "TAILS_PDP_BIN=$TAILS_PDP_BIN" "ADM_TOOL_BIN=$ADM_TOOL_BIN" "DEMO_AUTO=$DEMO_AUTO" "DEMO_TIMEOUT_SECONDS=$DEMO_TIMEOUT_SECONDS" "DEMO_CALLER_UID=$demo_caller_uid" "DEMO_CALLER_GID=$demo_caller_gid" "BASH_ENV=" "ENV=" "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" "TERM=${TERM:-xterm-256color}" "NO_COLOR=${NO_COLOR:-}" bash "$PROJECT_ROOT/scripts/demo.sh" --worker "$demo_root")
-if (( EUID != 0 )); then worker=("$DEMO_SUDO_BIN" -n "${worker[@]}"); fi
-printf -v worker_command '%q ' "${worker[@]}"
+if (( EUID != 0 )); then worker=("$DEMO_SUDO_BIN" "${worker[@]}"); fi
+printf -v worker_command '%q ' bash "$PROJECT_ROOT/scripts/demo/pane.sh" "$demo_root" "$DEMO_AUTO" "${worker[@]}"
 printf -v close_command '%q ' "${tmux_command[@]}" kill-session -t demo
 worker_command+="; $close_command"
 printf -v runtime_command '%q ' tail -n +1 -F "$demo_root/runtime.log"
@@ -156,6 +155,10 @@ launcher_cleanup() {
         read -r status < "$demo_root/exit-status"
     elif (( status == 0 )); then
         status=1
+    fi
+    if (( status != 0 )); then
+        printf 'Demo fehlgeschlagen (Status %s).\n' "$status" >&2
+        if [[ -s "$demo_root/startup.log" ]]; then tail -n 30 "$demo_root/startup.log" >&2; fi
     fi
     exit "$status"
 }
@@ -184,6 +187,6 @@ fi
 "${tmux_command[@]}" select-pane -t demo:0.2 -T 'FD-Beobachter / Ergebnisse'
 "${tmux_command[@]}" respawn-pane -k -t demo:0.0 "$worker_command"
 "${tmux_command[@]}" select-pane -t demo:0.0
-echo 'Die Demo wird gestartet. Im linken Bereich führt Enter jeweils den nächsten Schritt aus.'
+echo 'Die Demo wird gestartet. Falls erforderlich, links das sudo-Passwort eingeben; danach führt Enter durch die Schritte.'
 # An independent server also works when launched inside an existing tmux session.
 TMUX= "${tmux_command[@]}" attach-session -t demo

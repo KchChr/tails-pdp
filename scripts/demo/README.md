@@ -47,6 +47,11 @@ enthält die Demo-Shell kein sudo-Paket. Die Demo verwendet auf NixOS bevorzugt
 `/run/wrappers/bin/sudo` und behält dessen absoluten Pfad auch beim Wechsel in die
 Nix-Shell und beim Start des tmux-Workers bei. Bei Bedarf kann `DEMO_SUDO_BIN`
 einen anderen absoluten Pfad zu einem eingerichteten System-sudo auswählen.
+Die Passwortabfrage erfolgt direkt im linken tmux-Bereich, da sudo die
+Anmeldung normalerweise an das jeweilige Terminal bindet. Startfehler vor
+dem eigentlichen Worker werden unter `startup.log` protokolliert und bleiben
+bis zur Bestätigung mit Enter sichtbar. Bei einem Abbruch zeigt der Launcher
+die letzten Zeilen dieser Datei auch nach dem Schließen von tmux an.
 
 Fehlen Release-Binaries, baut das Skript sie automatisch mit
 `nix-config/shell.nix` und `scripts/demo/build.sh`. Mit `--build` wird

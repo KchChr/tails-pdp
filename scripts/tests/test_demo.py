@@ -89,7 +89,7 @@ class LauncherTests(unittest.TestCase):
             root = Path(directory)
             binaries = root / "bin"
             binaries.mkdir()
-            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat sudo tail tee uname unshare wc".split()
+            commands = "bash cat chmod chown date dirname env flock grep id ln mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat sudo tail tee uname unshare wc".split()
             for command in commands:
                 executable = shutil.which(command)
                 if executable:
@@ -132,7 +132,8 @@ with open(os.environ['CALLS'], 'a') as log: log.write(json.dumps(args) + '\\n')
 if 'respawn-pane' in args:
     command = shlex.split(args[-1])
     if os.geteuid() != 0:
-        assert command[0] == os.environ['DEMO_SUDO_BIN'], command
+        assert command[4] == os.environ['DEMO_SUDO_BIN'], command
+        assert '-n' not in command and '-v' not in command, command
     root = Path(command[command.index('--worker') + 1].rstrip(';'))
     Path(os.environ['DEMO_ROOT_CAPTURE']).write_text(str(root))
     (root / 'exit-status').write_text('0\\n')
@@ -182,6 +183,31 @@ if 'respawn-pane' in args:
         self.assertEqual(build[:8], ['--option', 'substitute', 'false', '--option', 'builders', '', '-j', '0'])
         command = build[build.index('--run') + 1]
         self.assertEqual(shlex.split(command), ['bash', str(PROJECT / 'scripts/demo/build.sh')])
+
+
+class PaneSupervisorTests(unittest.TestCase):
+    def test_early_failure_is_logged_and_returns_status(self):
+        with tempfile.TemporaryDirectory(prefix='pane failure ') as directory:
+            root = Path(directory)
+            command = [shutil.which('bash'), str(PROJECT / 'scripts/demo/pane.sh'), directory, '1',
+                       shutil.which('python3'), '-c',
+                       'import os,sys; print("stdout_tty", os.isatty(1)); print("sudo: a password is required", file=sys.stderr); sys.exit(9)']
+            status, timed_out = live.run_in_pty(command, os.environ, root / 'terminal.log', timeout=5)
+            self.assertFalse(timed_out)
+            self.assertEqual(status, 9)
+            self.assertEqual((root / 'exit-status').read_text().strip(), '9')
+            self.assertIn('sudo: a password is required', (root / 'startup.log').read_text())
+            self.assertIn('stdout_tty True', (root / 'terminal.log').read_text())
+
+    def test_interactive_early_failure_waits_for_enter(self):
+        with tempfile.TemporaryDirectory(prefix='pane interactive ') as directory:
+            root = Path(directory)
+            command = [shutil.which('bash'), str(PROJECT / 'scripts/demo/pane.sh'), directory, '0',
+                       shutil.which('python3'), '-c', 'raise SystemExit(7)']
+            _, timed_out = live.run_in_pty(command, os.environ, root / 'terminal.log', timeout=1, grace=1)
+            self.assertTrue(timed_out, 'Startfehler muss bis zur Eingabe sichtbar bleiben.')
+            self.assertIn('Enter: tmux-Demo schließen', (root / 'terminal.log').read_text())
+            self.assertEqual((root / 'exit-status').read_text().strip(), '7')
 
 
 class OfflineBuildTests(unittest.TestCase):
