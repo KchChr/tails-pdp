@@ -9,8 +9,6 @@ export RUSTUP_AUTO_INSTALL=0
 export RUSTUP_TOOLCHAIN="$(<nix-config/rust-toolchain)"
 ebpf_toolchain="$(<nix-config/ebpf-toolchain)"
 
-python3 "$PROJECT_ROOT/scripts/check-vendor.py" "$PROJECT_ROOT/vendor"
-
 for program in rustup cargo bpf-linker; do
     command -v "$program" >/dev/null || {
         printf 'Offline-Build: %s fehlt. Die mitgelieferte Buildumgebung ist unvollständig.\n' "$program" >&2
@@ -30,6 +28,8 @@ sysroot="$(rustup run "$ebpf_toolchain" rustc --print sysroot)"
     printf 'Offline-Build: rust-src für %s fehlt.\n' "$ebpf_toolchain" >&2
     exit 1
 }
+python3 "$PROJECT_ROOT/scripts/check-vendor.py" "$PROJECT_ROOT/vendor" \
+    --sysroot-lock "$sysroot/lib/rustlib/src/rust/library/Cargo.lock"
 version="$(bpf-linker --version)"
 [[ "$version" == 'bpf-linker 0.9.15' ]] || {
     printf 'Offline-Build: bpf-linker 0.9.15 benötigt, vorhanden: %s\n' "$version" >&2

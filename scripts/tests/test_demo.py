@@ -196,6 +196,7 @@ class OfflineBuildTests(unittest.TestCase):
             core.mkdir(parents=True)
             if not missing_sources:
                 (core / 'Cargo.toml').write_text('[package]\nname="core"\n')
+                shutil.copyfile(PROJECT / 'nix-config/ebpf-sysroot/Cargo.lock', core.parent / 'Cargo.lock')
             stub = '''#!/usr/bin/env python3
 import json, os, sys
 from pathlib import Path
@@ -264,6 +265,19 @@ class VendorSourceTests(unittest.TestCase):
         count, errors = vendor_check.verify(PROJECT / 'vendor')
         self.assertGreater(count, 0)
         self.assertEqual(errors, [])
+        self.assertEqual(vendor_check.verify_sysroot(PROJECT / 'vendor', PROJECT / 'nix-config/ebpf-sysroot/registry.json'), [])
+
+    def test_missing_entire_sysroot_crate_is_detected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            errors = vendor_check.verify_sysroot(Path(directory), PROJECT / 'nix-config/ebpf-sysroot/registry.json')
+            self.assertTrue(any('rustc-literal-escaper-0.0.7' in error for error in errors))
+
+    def test_wrong_installed_sysroot_lock_is_detected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock = Path(directory) / 'Cargo.lock'
+            lock.write_text('wrong version')
+            errors = vendor_check.verify_sysroot(PROJECT / 'vendor', PROJECT / 'nix-config/ebpf-sysroot/registry.json', lock)
+            self.assertTrue(any('rust-src passt nicht' in error for error in errors))
 
 
 class LiveRunnerTests(unittest.TestCase):

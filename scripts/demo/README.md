@@ -18,6 +18,12 @@ Dateien anhand der mitgelieferten Cargo-Prüfsummen. Der Shell-Hook installiert
 keine Werkzeuge mehr; `RUSTUP_AUTO_INSTALL=0` verhindert auch implizite
 Toolchain-Installationen durch Rustup.
 
+Die Quellen umfassen auch die in `nix-config/ebpf-sysroot/` festgelegten
+Registry-Abhängigkeiten der Rust-Systembibliothek. Diese werden beim
+eBPF-Build von `core` zusätzlich zu den Projektabhängigkeiten benötigt.
+Die Prüfroutine gleicht außerdem das Lockfile der installierten
+`rust-src`-Komponente mit dieser mitgelieferten Liste ab.
+
 **Stand der Offline-Abgabe:** Die Cargo-Abhängigkeiten sind lokal vorhanden.
 Ein vollständiges Offline-Paket der Buildwerkzeuge ist noch nicht mitgeliefert.
 Die in `nix-config/rust-toolchain` und `nix-config/ebpf-toolchain` festgelegten
