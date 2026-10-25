@@ -9,10 +9,19 @@ Die Dokumentation besteht aus zwei eigenständigen Handbüchern und der Rustdoc-
 | Rustdoc | Crates, öffentliche Typen/Funktionen, Parametersemantik, Rückgaben und Fehlerkontrakte | Dokumentationskommentare direkt in `tails-pdp*/src/` |
 
 Die Handbuchquellen liegen im Schwesterverzeichnis der lokalen Ablage. Sie sind für die
-Abgabe im vereinbarten `source`-Paket bereitzustellen; die kompilierten PDFs können nach
-`docs/` kopiert und in die vereinbarte FTK-Ablage übernommen werden. Die IDE-Konfiguration
-„thesis“ baut beide Handbücher gemeinsam mit der Thesis. Die Handbücher benötigen keine
-eingebundenen Thesis-Dateien und sind auch einzeln kompilierbar.
+Abgabe im vereinbarten `source`-Paket bereitzustellen. Die IDE-Konfiguration „thesis“ ruft
+`scripts/build-thesis.sh` auf. Das Skript baut die Thesis und beide Handbücher mit `latexmk`
+und kopiert erst nach erfolgreichem Build aller drei Dokumente die PDFs nach `docs/`:
+
+- `Christian_Koch_Attribute_Stream-Based_Access_Control_im_Linux-Kernel.pdf`
+- `Christian_Koch_Installationshandbuch_tails-pdp.pdf`
+- `Christian_Koch_Programmierhandbuch_tails-pdp.pdf`
+
+Der gemeinsame Build lässt sich aus jeder Arbeitsumgebung mit
+`bash scripts/build-thesis.sh` aus der Repository-Wurzel starten. Dazu werden die Quellen
+unter `../thesis/` und eine LaTeX-Installation einschließlich `latexmk` und Biber benötigt.
+Die PDFs können anschließend in die vereinbarte FTK-Ablage übernommen werden.
+Die Handbücher benötigen keine eingebundenen Thesis-Dateien und sind auch einzeln kompilierbar.
 
 ## Rustdoc erzeugen
 
