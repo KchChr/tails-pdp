@@ -1,0 +1,388 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[german]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{longtable,array}
+\usepackage{listings,xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+\hypersetup{pdftitle={Installationshandbuch tails-pdp},pdfauthor={Christian Koch}}
+
+\usepackage[left=4cm,right=2cm,top=3cm,bottom=3cm,footskip=1.75cm]{geometry}
+
+% FTK-Layout: einzeiliger Text mit einer Leerzeile zwischen Absätzen.
+\usepackage[skip=\baselineskip,indent=0pt]{parskip}
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\raggedright\fontsize{16}{19.2}\selectfont\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\raggedright\fontsize{14}{16.8}\selectfont\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\raggedright\fontsize{12}{14.4}\selectfont\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[block]{\normalfont\raggedright\fontsize{12}{14.4}\selectfont\itshape}{\theparagraph}{1em}{}
+\titlespacing*{\section}{0pt}{0pt}{\baselineskip}
+\titlespacing*{\subsection}{0pt}{2\baselineskip}{\baselineskip}
+\titlespacing*{\subsubsection}{0pt}{2\baselineskip}{\baselineskip}
+\titlespacing*{\paragraph}{0pt}{2\baselineskip}{\baselineskip}
+
+% Tabellen und Beschriftungen einheitlich in 10 pt.
+\usepackage{etoolbox}
+\AtBeginEnvironment{tabular}{\fontsize{10}{12}\selectfont}
+\usepackage{caption}
+\DeclareCaptionFont{ftk}{\fontsize{10}{12}\selectfont}
+\captionsetup{font=ftk,format=hang,justification=raggedright,singlelinecheck=false}
+\captionsetup[table]{position=top}
+\captionsetup[figure]{position=bottom}
+
+% Seitenzahl rechts unten; Grundschrift der Fußzeile 10 pt, Seitenzahl 12 pt.
+\usepackage{fancyhdr}
+\fancypagestyle{ftk}{
+    \fancyhf{}
+    \fancyfoot[R]{\normalfont\fontsize{10}{12}\selectfont{\fontsize{12}{14.4}\selectfont\thepage}}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0.4pt}
+}
+\pagestyle{ftk}
+\setlength{\emergencystretch}{3em}
+
+% Codebeispiele in 10 pt, passend zur Tabellenschrift der Thesis.
+\AtBeginEnvironment{longtable}{\fontsize{10}{12}\selectfont}
+\lstset{basicstyle=\ttfamily\fontsize{10}{12}\selectfont,
+  breaklines=true,columns=fullflexible,keepspaces=true,
+  showstringspaces=false,frame=single,framerule=0.4pt,
+  backgroundcolor=\color{white},aboveskip=\baselineskip,belowskip=\baselineskip}
+
+\title{Installationshandbuch\\tails-pdp\\\large ASBAC-Prototyp im Linux-Kernel}
+\author{Christian Koch}
+\date{Stand: 25. Oktober 2026}
+\begin{document}
+\hypersetup{pageanchor=false}
+\pagenumbering{gobble}
+\maketitle
+\thispagestyle{empty}
+
+\clearpage
+\pagenumbering{roman}
+\hypersetup{pageanchor=true}
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+
+\section{Zweck und Geltungsbereich}
+Dieses Handbuch beschreibt den Build und die Inbetriebnahme des Prototyps auf einem
+vorbereiteten Linux-Zielsystem in drei Arbeitsschritten. Es bezieht sich auf die
+bereinigte Repository-Struktur mit den Einstiegsskripten unter \path{scripts/}.
+Der Prototyp kontrolliert neue Dateiöffnungen über den BPF-LSM-Hook
+\texttt{file\_open} und bewertet bereits offene Dateideskriptoren im Userspace nach.
+Socket-Bind-Policies werden nicht unterstützt.
+
+Das Zielsystem wird vor der Installation bereitgestellt. Die Einrichtung des
+Hypervisors und die Installation des Betriebssystems sind Voraussetzungen dieses
+Ablaufs. Die Referenzkonfiguration beschreibt eine dedizierte Test-VM; die
+Installation ist für eine solche Umgebung vorgesehen. Die nachfolgenden Befehle
+werden in Bash ausgeführt. Platzhalter wie \texttt{REPOSITORY-URL} und
+\texttt{ABGABE-TAG} sind durch die tatsächlich bereitgestellten Werte zu ersetzen.
+
+\section{Voraussetzungen und Lieferumfang}
+\subsection{Linux-Zielsystem}
+Als Referenz dienen NixOS auf x86\_64 und Linux 6.16.12. Die in der Evaluation
+verwendete VM besitzt vier virtuelle CPUs, 8192 MiB RAM und eine 64-GiB-Systemplatte.
+Diese Ausstattung ist eine Referenz, keine gemessene Mindestanforderung.
+Andere Kernel und Architekturen benötigen eine eigene Funktionsprüfung.
+
+Benötigt werden:
+\begin{itemize}[nosep]
+  \item ein Kernel mit eBPF, BPF-LSM und Kernel-BTF;
+  \item \texttt{bpf} in der aktiven LSM-Reihenfolge;
+  \item lesbare BTF-Daten unter \path{/sys/kernel/btf/vmlinux};
+  \item eingehängte Dateisysteme \texttt{securityfs} unter
+    \path{/sys/kernel/security} und \texttt{bpf} unter \path{/sys/fs/bpf};
+  \item Root-Zugriff über \texttt{sudo} für Laden, Attach, Map-Zugriff und
+    \texttt{ptrace}-basierten FD-Entzug;
+  \item Git, Nix mit \texttt{nix-shell}, Bash und die lokal vorbereiteten
+    Buildwerkzeuge; für die geführte Demo außerdem \texttt{tmux}, Python 3,
+    \texttt{flock}, \texttt{unshare} und \texttt{mount}.
+    Ein Netzwerkzugang kann zur vorgelagerten Beschaffung der Werkzeuge nötig sein;
+    der Cargo-Build verwendet die mitgelieferten Abhängigkeitsquellen.
+\end{itemize}
+
+Die Dateien \path{nix-config/configuration.nix} und
+\path{nix-config/hardware-configuration.nix} dokumentieren die Referenzinstallation.
+Die Hardwaredatei gehört zum konkreten Gast und darf auf einem anderen Rechner
+nicht ungeprüft dessen Hardwarekonfiguration ersetzen. Die enthaltenen
+Initialpasswörter \texttt{password} sind Demowerte; Zugangsdaten des bereitgestellten
+Zielsystems werden separat eingerichtet. Die benötigten Kerneloptionen und
+LSM-Einstellungen sind durch die Systemadministration vorab bereitzustellen.
+
+Die aktive Umgebung wird geprüft mit:
+\begin{lstlisting}
+uname -m
+uname -r
+cat /sys/kernel/security/lsm
+test -r /sys/kernel/btf/vmlinux
+findmnt -t bpf /sys/fs/bpf
+sudo -v
+\end{lstlisting}
+In der LSM-Ausgabe muss \texttt{bpf} als Eintrag vorhanden sein. Im ausgewerteten
+Referenzlauf lautete die Reihenfolge \texttt{capability,landlock,yama,bpf}.
+Fehlende Kernelvoraussetzungen werden vor dem Build behoben. Falls nur das
+BPF-Dateisystem noch nicht eingehängt ist, kann die Administration es mit
+\texttt{sudo mount -t bpf bpf /sys/fs/bpf} einhängen.
+
+\subsection{Buildumgebung und Dateien}
+Die Entwicklungsumgebung wird über \path{nix-config/shell.nix} bereitgestellt:
+LLVM 21 einschließlich Laufzeitbibliothek, Rustup, Bash, Coreutils, GNU Grep,
+Procps, Python 3 und tmux. Die Dateiinhalte von \path{nix-config/rust-toolchain}
+und \path{nix-config/ebpf-toolchain} legen die Toolchains fest: aktuell
+\texttt{1.93.0} für Userspace und \texttt{nightly-2026-01-15} für eBPF.
+Benötigt werden außerdem Rustfmt und Clippy für die Userspace-Toolchain,
+\texttt{rust-src} für die eBPF-Toolchain sowie \texttt{bpf-linker} 0.9.15
+mit LLVM-21-Unterstützung. Der aktuelle Aya-eBPF-Build benötigt weiterhin Nightly.
+Die Nix-Shell setzt \texttt{RUSTUP\_AUTO\_INSTALL=0} und installiert weder Toolchains
+noch den Linker beim Start nach.
+
+\path{Cargo.lock} legt die Projektabhängigkeiten fest. Die Quellen unter
+\path{vendor/} umfassen Registry- und Git-Abhängigkeiten einschließlich Aya
+sowie die Registry-Pakete für den eBPF-Systembibliotheksbuild. Dessen Liste liegt
+unter \path{nix-config/ebpf-sysroot/}. Die Quellenersetzung in
+\path{.cargo/config.toml} ist bereits aktiviert; Cargo arbeitet standardmäßig offline.
+\path{scripts/check-vendor.py} prüft Paketdateien, Prüfsummen und auf Wunsch
+auch die Abhängigkeitsliste der installierten \texttt{rust-src}-Komponente.
+
+Die Shell importiert \texttt{<nixpkgs>} ohne feste Revision. Compiler, Rust-Quellen,
+Linker, LLVM-Bibliotheken und benötigte Nix-Store-Pfade müssen vorher lokal vorhanden
+sein. Ein vollständiges Offline-Werkzeugpaket einschließlich Nixpkgs und Nix-Store-
+Abhängigkeiten ist derzeit nicht mitgeliefert. Das Cargo-Vendoring allein ersetzt
+keine vorbereitete System- und Werkzeugumgebung.
+
+Der Quellumfang umfasst die acht \texttt{tails-pdp*}-Crates, Cargo-Manifeste,
+Lockdatei, \path{.cargo/config.toml}, Skripte, Konfigurationsbeispiele und Lizenzen.
+\path{tails-pdp-ebpf/src/vmlinux.rs} wird zum Build benötigt.
+Das eBPF-Objekt wird durch das Cargo-Buildskript erstellt und in das Hauptprogramm
+eingebettet; es muss zur Ausführung nicht als separate Datei installiert werden.
+Das Evaluationsarchiv liegt unter \path{eval-tails-pdp/}.
+
+\section{Installation in drei Arbeitsschritten}
+\subsection{Schritt 1: Quellstand und Werkzeuge vorbereiten}
+Den bereitgestellten Abgabestand beziehen und eine Nix-Shell öffnen:
+\begin{lstlisting}
+git clone REPOSITORY-URL tails-pdp
+cd tails-pdp
+git checkout ABGABE-TAG
+nix-shell nix-config/shell.nix
+\end{lstlisting}
+Bei einer Übergabe als Quellarchiv wird dieses stattdessen entpackt und in sein
+Wurzelverzeichnis gewechselt. Die Toolchains, der Linker und die Nix-Abhängigkeiten
+müssen auf dem Zielsystem bereits bereitgestellt sein. Innerhalb der Nix-Shell prüfen:
+\begin{lstlisting}
+rustup run "$(cat nix-config/rust-toolchain)" rustc --version
+rustup run "$(cat nix-config/ebpf-toolchain)" rustc --version
+setup-bpf-tools
+bpf-linker -V
+\end{lstlisting}
+\texttt{setup-bpf-tools} prüft ausschließlich den vorhandenen Linker auf Version
+0.9.15; die Funktion installiert nichts. Die reguläre Toolchain wird aus
+\path{nix-config/rust-toolchain} gelesen, die eBPF-Toolchain aus
+\path{nix-config/ebpf-toolchain}. Ein unversioniertes \texttt{stable} oder
+\texttt{nightly} ersetzt diese Festlegung nicht.
+
+Falls die Toolchains bei der vorgelagerten Vorbereitung mit Netzwerkzugang noch
+beschafft werden müssen, können die festgelegten Versionen ausdrücklich installiert werden:
+\begin{lstlisting}
+rustup toolchain install "$(cat nix-config/rust-toolchain)" --component rustfmt --component clippy
+rustup toolchain install "$(cat nix-config/ebpf-toolchain)" --component rust-src
+\end{lstlisting}
+Die passende Linkerinstallation und alle Nix-Pakete sind ebenfalls vor dem
+Offline-Betrieb bereitzustellen. Die Shell stellt zusätzlich die Funktion
+\texttt{tails-pdp-admintool} bereit. Sie bestimmt die Repository-Wurzel aus der
+Nix-Datei und ruft das dort gebaute Admintool mit \texttt{sudo} auf.
+Die folgenden Beispiele verwenden den expliziten Binary-Aufruf.
+
+\subsection{Schritt 2: Programme bauen}
+Im Repository-Wurzelverzeichnis innerhalb der Nix-Shell ausführen:
+\begin{lstlisting}
+bash scripts/demo/build.sh
+test -x target/release/tails-pdp
+test -x target/release/tails-pdp-admintool
+\end{lstlisting}
+Der gemeinsame Buildhelfer prüft die festgelegten Toolchains, \texttt{rust-src},
+die Vendor-Prüfsummen und \texttt{bpf-linker} 0.9.15. Danach baut er Runtime und
+Admintool einschließlich des eingebetteten eBPF-Programms mit
+\texttt{cargo build --frozen}. \texttt{--frozen} verbindet eine unveränderte
+Abhängigkeitsauflösung mit dem Offline-Modus. Fehlende Quellen oder Werkzeuge
+führen zum Abbruch und werden nicht automatisch installiert.
+
+Der entsprechende explizite Cargo-Aufruf lautet:
+\begin{lstlisting}
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 cargo build --frozen --release --bin tails-pdp --bin tails-pdp-admintool
+\end{lstlisting}
+Alternativ ist weiterhin ein ausdrücklicher Offline-Build möglich:
+\begin{lstlisting}
+CARGO_NET_OFFLINE=true cargo build --locked --offline --release --bin tails-pdp --bin tails-pdp-admintool
+\end{lstlisting}
+\texttt{CARGO\_NET\_OFFLINE=true} gilt auch für verschachtelte Cargo-Prozesse des
+eBPF-Builds. Der Cargo-Direktaufruf ersetzt die zusätzlichen Prüfungen des
+Buildhelfers nicht. Toolchains und Systemwerkzeuge gehören nicht zu \path{vendor/}.
+Die unter \path{runtime/bin/} bereitgestellten Binaries besitzen einen Nix-spezifischen
+dynamischen Interpreter und benötigen dessen Laufzeitabhängigkeiten; sie sind kein
+allgemein auf beliebigen Linux-Systemen ausführbares Paket.
+
+\subsection{Schritt 3: Runtime starten und Bereitschaft prüfen}
+Vor dem Start sicherstellen, dass keine weitere Runtime aktiv ist:
+\begin{lstlisting}
+pgrep -x tails-pdp
+\end{lstlisting}
+Eine vorhandene Instanz zuerst regulär beenden. Bei einem frischen Checkout sind
+keine Beispiel-Policies automatisch aktiviert. Verbliebene lokale \texttt{.policy}-Dateien
+unter \path{policies/} vorab prüfen. Dann aus der Repository-Wurzel starten:
+\begin{lstlisting}
+sudo env RUST_LOG=info ./target/release/tails-pdp
+\end{lstlisting}
+Das Arbeitsverzeichnis ist Teil der Konfiguration: Die Runtime lädt Policies aus
+\path{policies/} und Attribute aus \path{attributes/}. Fehlende Verzeichnisse werden
+angelegt. Die Runtime bleibt im Vordergrund. Im Log müssen das Beobachten des
+Policyverzeichnisses und \texttt{Waiting for Ctrl-C...} erscheinen; Attach-Fehler
+dürfen nicht auftreten. Eine zweite Shell kann den Prozess und die aktiven Daten
+prüfen:
+\begin{lstlisting}
+pgrep -x tails-pdp
+sudo ./target/release/tails-pdp-admintool show-active
+\end{lstlisting}
+Ein leeres Policy-Ergebnis ist beim Erststart zulässig. Ein bloß vorhandener Map-Pin
+beweist keine laufende Runtime. Mit Strg+C wird die Runtime regulär beendet.
+Gepinnte Maps können danach weiterhin vorhanden sein.
+
+Alternativ bündelt \path{scripts/run.sh} den Admintool-Build und den Runtime-Start:
+\begin{lstlisting}
+./scripts/run.sh
+\end{lstlisting}
+Das Skript bestimmt selbst die Repository-Wurzel und verwendet über die
+Cargo-Konfiguration \texttt{sudo -E} als Runner. Es aktualisiert den Checkout nicht.
+
+\section{Funktionsprobe mit einer temporären Policy}
+Die folgende Probe demonstriert die statische Dateikontrolle für \texttt{cat}.
+Sie wird bei laufender Runtime in einer zweiten Shell aus der Repository-Wurzel
+ausgeführt. Andere aktive Policies können das Ergebnis beeinflussen; für diese
+Probe einen sonst leeren Policystand verwenden.
+\begin{lstlisting}
+printf 'demo\n' > /tmp/tails-pdp-install-demo.txt
+cat > /tmp/tails-pdp-install-demo.policy <<'POLICY'
+policy "installation demo"
+deny
+    action == "file_open";
+    command == "cat";
+    resource.path == "/tmp/tails-pdp-install-demo.txt";
+POLICY
+bash scripts/publish-config.sh /tmp/tails-pdp-install-demo.policy policies/install-demo.policy
+sudo ./target/release/tails-pdp-admintool show-active
+cat /tmp/tails-pdp-install-demo.txt
+\end{lstlisting}
+Die Veröffentlichung wird asynchron validiert und aktiviert. Erst nach
+Bestätigung der Aktivierung im Runtime-Log oder Admintool ist die neue Regel
+wirksam. \texttt{cat} muss dann mit einer verweigerten Dateiöffnung enden.
+Ein unmittelbar nach der Veröffentlichung noch erfolgreicher Aufruf kann vor
+der Aktivierung liegen und wird danach wiederholt.
+
+Zum Aufräumen:
+\begin{lstlisting}
+rm policies/install-demo.policy
+\end{lstlisting}
+Nach Bestätigung der neuen Policygeneration muss \texttt{cat} wieder erfolgreich
+sein. Anschließend:
+\begin{lstlisting}
+rm /tmp/tails-pdp-install-demo.policy /tmp/tails-pdp-install-demo.txt
+\end{lstlisting}
+Änderungen an aktiven Policy- und Attributdateien stets über
+\path{scripts/publish-config.sh} veröffentlichen, statt sie während des Betriebs
+direkt zu überschreiben. Die Beispiel-Policies mit \path{/home/hntr/test.txt}
+benötigen eine passende Ressource und gegebenenfalls angepasste UID-/Attributdaten.
+
+\section{Geführte Demonstration}
+Auf dem vorbereiteten dedizierten x86\_64-Linux-System kann die vollständige
+Terminal-Demo verwendet werden. Eine zuvor manuell gestartete Runtime beenden;
+Demo und Evaluationssuiten nicht gleichzeitig ausführen.
+\begin{lstlisting}
+./scripts/demo.sh
+./scripts/demo.sh --auto
+./scripts/demo.sh --build
+\end{lstlisting}
+Ohne Option führt Enter zum nächsten Schritt. \texttt{--auto} führt die Schritte
+ohne Eingabepausen aus; \texttt{--build} erzwingt vorher einen neuen Release-Build.
+Fehlende Binaries lösen ebenfalls den Build über die Nix-Umgebung aus.
+Werkzeuge und Nix-Abhängigkeiten müssen lokal vorliegen; die Demo lädt sie nicht nach.
+Ein eingerichtetes System-\texttt{sudo} beziehungsweise Root-Rechte bleiben erforderlich.
+
+Die Demo verwendet tmux und einen privaten Mount-Namespace mit eigenem bpffs.
+Vorhandene Host-Pins bleiben erhalten. Die Konfigurationsverzeichnisse und
+\path{demo/files/} werden für die Demo vorbereitet; vorhandene Inhalte werden
+gesichert und beim regulären Aufräumen wiederhergestellt. Logs liegen unter
+\path{demo/runs/}. Einzelheiten und Diagnoseoptionen beschreibt
+\path{scripts/demo/README.md}. Ein erfolgreicher Demolauf ist vom archivierten
+Evaluationslauf und dessen Messwerten getrennt zu behandeln.
+
+\section{Prüfkette, Fehlerdiagnose und Grenzen}
+Die vollständige Prüfung erfolgt ausschließlich auf dem dedizierten Linux-Zielsystem,
+nach Beenden der Demonstrationsruntime. Eine weiterhin wirksame Demo-Policy vorher entfernen.
+\begin{lstlisting}
+./scripts/test.sh
+\end{lstlisting}
+Die Prüfkette umfasst Formatierung, Veröffentlichungstest, Demo-Syntax- und
+Regressionstests, Rust-Tests, Python-Messauswertung, Clippy, Release-Build,
+privilegierte Systemtests und eine automatisch geprüfte vollständige tmux-Demo.
+Sie erzeugt ein Ergebnisverzeichnis unter \path{test-results/}. Die privilegierten
+Tests verwalten temporär bekannte Maps und isolierte Runtime-Fixtures. Vorhandene
+Pins und Prozesse können einen Teststart verhindern.
+
+Bei unvereinbaren gepinnten Map-Layouts oder vor einem ausdrücklich vorgesehenen
+Testlauf die Runtime zunächst beenden und die bekannten Pins bereinigen:
+\begin{lstlisting}
+sudo ./scripts/remove-maps.sh
+\end{lstlisting}
+Das Skript entfernt aktuelle Pins und historische Pins früherer Fassungen.
+Es beendet keine Runtime. Es darf deshalb nicht als laufender Konfigurationswechsel
+verwendet werden.
+
+\begin{description}[style=nextline]
+  \item[Buildfehler oder fehlender Linker]
+    Innerhalb der Nix-Shell bauen, \texttt{setup-bpf-tools} ausführen und Rust-Toolchains
+    sowie \texttt{rust-src} prüfen. Den vollständigen Compilerfehler auswerten.
+  \item[Fehlendes BTF oder fehlgeschlagener LSM-Attach]
+    Kernelvoraussetzungen, aktive LSM-Reihenfolge und BTF-Datei prüfen.
+    MacOS ist kein Ausführungsziel für die Runtime.
+  \item[Fehler beim Pinnen oder Öffnen von Maps]
+    BPF-Mount, Root-Berechtigungen und Map-Layout prüfen. Alte Pins nur nach
+    Beenden der Runtime entfernen.
+  \item[Policy oder Attribut wird nicht übernommen]
+    Arbeitsverzeichnis, Dateiendung und Runtime-Log prüfen. Ungültige Updates lassen
+    die letzte gültige Generation bestehen; initial ungültige Daten können den
+    Start verhindern. Veröffentlichungsbestätigung allein ist keine Aktivierungsbestätigung.
+  \item[FD-Entzug oder privilegierter Test schlägt fehl]
+    Root-/ptrace-Berechtigungen und den konkreten Testreport prüfen. Die
+    Userspace-Nachbewertung ist nicht atomar mit sämtlichen Dateioperationen;
+    ein erfolgreicher Einzellauf beweist keine Race-Freiheit.
+\end{description}
+
+\section{Dokumentausgabe und Nachweisstand}
+Die LaTeX-Datei ist eigenständig und benötigt keine eingebundenen Thesis-Dateien,
+Literaturdaten oder Abbildungen. Für den gemeinsamen Build liegen die Quellen unter
+\path{../thesis/}; benötigt werden LaTeX, \texttt{latexmk} und Biber.
+Aus der Repository-Wurzel ausführen:
+\begin{lstlisting}
+bash scripts/build-thesis.sh
+\end{lstlisting}
+Die lokale Laufkonfiguration \texttt{thesis} ruft denselben Helfer auf.
+Er baut Thesis und beide Handbücher und kopiert erst nach erfolgreichem Build
+aller drei Dokumente die PDFs nach \path{thesis/final/}. Dieses Handbuch erhält dort den
+Namen \path{Christian_Koch_Installationshandbuch_tails-pdp.pdf}; die Thesis wird
+mit Namen und Arbeitstitel benannt. Die Handbuchquellen bleiben im vorgesehenen
+Thesis-/source-Paket. Eine separate Kompilierung dieses Handbuchs ist weiterhin möglich.
+
+Die dokumentierten Programme, Skripte und Pfade wurden mit dem bereinigten
+Quellstand abgeglichen. Die vollständige Neuinstallation nach diesem Handbuch
+ist noch auf dem vorgesehenen Linux-Zielsystem zu prüfen. Das archivierte
+Evaluationsergebnis vom 10. Oktober 2026 zum Commit \texttt{a9fd6c0} belegt den
+damaligen Quellstand; spätere Bereinigungen und dieses Handbuch sind damit nicht
+automatisch erneut evaluiert. Für die finale Übergabe sind der tatsächliche
+Abgabetag und die ausgelieferten Binärartefakte eindeutig zuzuordnen.
+\end{document}

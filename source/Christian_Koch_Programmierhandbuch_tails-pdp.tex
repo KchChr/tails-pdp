@@ -1,0 +1,533 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[german]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{longtable,array}
+\usepackage{listings,xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+\hypersetup{pdftitle={Programmierhandbuch tails-pdp},pdfauthor={Christian Koch}}
+
+\usepackage[left=4cm,right=2cm,top=3cm,bottom=3cm,footskip=1.75cm]{geometry}
+
+% FTK-Layout: einzeiliger Text mit einer Leerzeile zwischen Absätzen.
+\usepackage[skip=\baselineskip,indent=0pt]{parskip}
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\raggedright\fontsize{16}{19.2}\selectfont\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\raggedright\fontsize{14}{16.8}\selectfont\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\raggedright\fontsize{12}{14.4}\selectfont\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[block]{\normalfont\raggedright\fontsize{12}{14.4}\selectfont\itshape}{\theparagraph}{1em}{}
+\titlespacing*{\section}{0pt}{0pt}{\baselineskip}
+\titlespacing*{\subsection}{0pt}{2\baselineskip}{\baselineskip}
+\titlespacing*{\subsubsection}{0pt}{2\baselineskip}{\baselineskip}
+\titlespacing*{\paragraph}{0pt}{2\baselineskip}{\baselineskip}
+
+% Tabellen und Beschriftungen einheitlich in 10 pt.
+\usepackage{etoolbox}
+\AtBeginEnvironment{tabular}{\fontsize{10}{12}\selectfont}
+\usepackage{caption}
+\DeclareCaptionFont{ftk}{\fontsize{10}{12}\selectfont}
+\captionsetup{font=ftk,format=hang,justification=raggedright,singlelinecheck=false}
+\captionsetup[table]{position=top}
+\captionsetup[figure]{position=bottom}
+
+% Seitenzahl rechts unten; Grundschrift der Fußzeile 10 pt, Seitenzahl 12 pt.
+\usepackage{fancyhdr}
+\fancypagestyle{ftk}{
+    \fancyhf{}
+    \fancyfoot[R]{\normalfont\fontsize{10}{12}\selectfont{\fontsize{12}{14.4}\selectfont\thepage}}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0.4pt}
+}
+\pagestyle{ftk}
+\setlength{\emergencystretch}{3em}
+
+% Codebeispiele in 10 pt, passend zur Tabellenschrift der Thesis.
+\AtBeginEnvironment{longtable}{\fontsize{10}{12}\selectfont}
+\lstset{basicstyle=\ttfamily\fontsize{10}{12}\selectfont,
+  breaklines=true,columns=fullflexible,keepspaces=true,
+  showstringspaces=false,frame=single,framerule=0.4pt,
+  backgroundcolor=\color{white},aboveskip=\baselineskip,belowskip=\baselineskip}
+
+\title{Programmierhandbuch\\tails-pdp\\\large Architektur, Schnittstellen und Erweiterung}
+\author{Christian Koch}
+\date{Stand: 25. Oktober 2026}
+\begin{document}
+\hypersetup{pageanchor=false}
+\pagenumbering{gobble}
+\maketitle
+\thispagestyle{empty}
+
+\clearpage
+\pagenumbering{roman}
+\hypersetup{pageanchor=true}
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+
+\section{Zweck und Quellstand}
+Dieses Handbuch beschreibt die Programmierung und Wartung des ASBAC-Prototyps
+\texttt{tails-pdp}. Grundlage ist der bereinigte Workspace mit Skripten unter
+\path{scripts/} und ohne die stillgelegten Socket-Bind-Datentypen.
+Die Installation auf dem Linux-Zielsystem ist im separaten Installationshandbuch
+beschrieben. Die Dokumente sind unabhängig voneinander kompilierbar.
+
+Die Runtime unterstützt \texttt{file\_open}: Neue Dateiöffnungen werden über BPF-LSM
+entschieden. Ein Userspace-PEP bewertet bereits offene Dateideskriptoren bei
+relevanten Änderungen nach. Policies und Attribute werden aus Dateien geladen;
+das Admintool ist eine lesende Diagnosekomponente. Der Parser unterstützt einen
+beschränkten SAPL-inspirierten Ausschnitt, keine vollständige SAPL-Engine.
+
+\section{Workspace und Verantwortlichkeiten}
+Alle Pfade beziehen sich, sofern nicht anders angegeben, auf die Repository-Wurzel.
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.41\textwidth} >{\raggedright\arraybackslash}p{0.53\textwidth}}
+\textbf{Crate bzw. Verzeichnis} & \textbf{Aufgabe} \\
+\hline
+\endhead
+\path{tails-pdp/} & Userspace-Einstieg, eBPF-Laden, Initialisierung, Attach und Lebenszyklus der asynchronen Aufgaben. \\
+\path{tails-pdp-ebpf/} & LSM-Hook, Tail-Call-Kette, Maps und Auswertung neuer Dateiöffnungen; \texttt{no\_std}. \\
+\path{tails-pdp-common/} & Gemeinsame Datentypen, Map-Layouts, Konstanten und Policy-/Attributlogik; \texttt{no\_std}, optionale Userspace-Funktionen über Feature \texttt{user}. \\
+\path{tails-pdp-policy-loader/} & Dateiparser, Übersetzung und generationenbasierte Aktivierung der Policies. \\
+\path{tails-pdp-attribute-loader/} & Zeitmap, strukturierte Attribute und Aktivierung neuer Attributgenerationen. \\
+\path{tails-pdp-userspace-common/} & Gepinnte Maps, Aktivierungstrigger, rekursiver Dateiwatcher und Messmarkierungen. \\
+\path{tails-pdp-userspace-pep/} & Nachbewertung offener FDs und versuchter Entzug verletzender Deskriptoren. \\
+\path{tails-pdp-admintool/} & Kommandozeile und lesende Ausgabe von Policies, Attributen und aktivem Zustand. \\
+\path{scripts/tests/} & Komponenten-, E2E-, Performance-, Last-, Stabilitäts- und Demo-Regressionsprüfungen einschließlich Pythonhelfern. \\
+\path{scripts/demo/} & Geführte tmux-Demo, Offline-Buildhelfer, Werkzeugprüfung und isolierter Demoablauf. \\
+\path{examples/} & Inaktive Policy- und Attributbeispiele zur gezielten Veröffentlichung. \\
+\end{longtable}
+
+\section{Kontrollfluss und Entscheidungslogik}
+\subsection{Initialisierung und Lebenszyklus}
+\path{tails-pdp/src/main.rs} richtet das Pin-Verzeichnis ein und prüft vorhandene
+Map-Layouts. Es lädt das eingebettete eBPF-Objekt und die BTF-Daten, lädt die
+LSM-Programme und belegt die Tail-Call-Tabelle. Danach werden Policies, Zeit und
+Attribute initial geschrieben. Erst anschließend wird der Einstiegshook angehängt.
+
+Nach dem Attach laufen Zeitpflege, Attributwatcher, Policysynchronisierung und
+Userspace-PEP über \texttt{tokio::select!}. Strg+C beendet die Runtime; die Rückkehr
+einer dieser Aufgaben beendet ebenfalls den gemeinsamen Ablauf und propagiert
+gegebenenfalls den Fehler. Es gibt keinen separat betriebenen Policy-Daemon und
+keine HTTP-Schnittstelle. Gepinnte Maps können das Prozessende überdauern.
+
+\subsection{Neue Dateiöffnung}
+Der Hook \texttt{file\_open} erhält Requestdaten aus dem Kernel. Die Ressource wird
+über Gerät und Inode identifiziert, der Prozess über UID und Kernel-Commandnamen.
+Ein bereits negativer Rückgabewert einer vorausgehenden BPF-LSM-Entscheidung wird
+erhalten. Danach folgt die Kette:
+\begin{lstlisting}
+file_open
+  -> evaluate_file_open_static_policies  (Tail-Index 0)
+  -> evaluate_file_open_stream_policies  (Tail-Index 1)
+  -> combine_file_open                  (Tail-Index 2)
+\end{lstlisting}
+Die Jump-Table-Indizes und Programmnamen sind in \path{tails-pdp/src/lib.rs} und
+\path{tails-pdp-ebpf/src/maps.rs} aufeinander abgestimmt.
+Ein fehlgeschlagener Tail-Call oder fehlender Entscheidungszustand führt zur
+Ablehnung. Die Kombination verwendet Deny-Overrides: Eine passende Deny-Policy
+führt zu \texttt{-EPERM}; ohne passende Deny-Policy ist die Entscheidung erlaubend.
+Eine Permit-Policy überstimmt kein Deny. Ein leerer Policystand erlaubt daher
+Dateiöffnungen, sofern die übrigen Sicherheitsmechanismen sie erlauben.
+
+\subsection{Nachbewertung offener Deskriptoren}
+\path{tails-pdp-userspace-pep/src/pep.rs} empfängt Aktivierungstrigger und plant
+zusätzlich Nachbewertungen an relevanten Zeitbedingungsgrenzen. Es scannt
+\path{/proc} nicht periodisch unabhängig von diesen Ursachen.
+Ein Scan verwendet einen gemeinsamen Kontext aus Policygeneration,
+Attributgeneration, Attributbank und Zeit. Prozess- und FD-Daten werden auf
+Dateiidentitäten zurückgeführt und gegen die Policylogik geprüft.
+
+Der Entzug wird über \path{tails-pdp-userspace-pep/src/fd_revoker.rs} versucht.
+Unter x86\_64-Linux wird der Zielprozess mit \texttt{ptrace} angehalten; ein
+\texttt{close}-Systemaufruf wird injiziert und Code-/Registerzustand werden
+wiederhergestellt. Auf anderen Plattformen liefert die Entzugsimplementierung
+einen ausdrücklichen Fehler. PID 0, PID 1 und der Runtime-Prozess sind geschützt.
+Der Ablauf ist nicht atomar mit allen konkurrierenden Prozessoperationen.
+
+\section{Maps und binäre Schnittstellen}
+Die Maps werden in \path{tails-pdp-ebpf/src/maps.rs} definiert.
+Gepinnte Maps liegen unter \path{/sys/fs/bpf/tails-pdp/}.
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.46\textwidth} >{\raggedright\arraybackslash}p{0.48\textwidth}}
+\textbf{Map} & \textbf{Inhalt und Kapazität} \\
+\hline
+\endhead
+\texttt{FILE\_OPEN\_STATIC\_POLICIES} & Array mit 32 \texttt{FileOpenStaticPolicy}-Einträgen: zwei Bänke mit je 16 Policies. \\
+\texttt{FILE\_OPEN\_STREAM\_POLICIES} & Array mit 32 \texttt{FileOpenStreamPolicy}-Einträgen: zwei Bänke mit je 16 Policies. \\
+\texttt{POLICY\_GENERATION} & Array mit einer aktiven Generationsnummer vom Typ \texttt{u32}. \\
+\texttt{ATTRIBUTES} & HashMap mit höchstens 1024 Einträgen; Schlüssel \texttt{AttributeKey}, Wert \texttt{AttributeValue}. \\
+\texttt{ATTRIBUTE\_GENERATION} & Array mit einer aktiven Attributgeneration vom Typ \texttt{u32}. \\
+\texttt{CURRENT\_TIME} & Array mit einer Unix-Zeit in Sekunden vom Typ \texttt{u64}. \\
+\texttt{FILE\_OPEN\_JUMP\_TABLE} & Nicht gepinnte ProgramArray mit drei Tail-Call-Zielen. \\
+\texttt{DECISIONS} & Nicht gepinnte PerCpuArray mit Deny-, Permit- und Policygenerationszustand. \\
+\texttt{DEBUG\_LOGGING} & Nicht gepinnte Array mit einem Debug-Schalter. \\
+\end{longtable}
+
+Die gemeinsamen \texttt{repr(C)}-Strukturen und expliziten Paddingfelder bilden
+die Schnittstelle zwischen Kernel und Userspace. \texttt{repr(u8)}-Enums haben
+explizite Werte; \texttt{PolicyAction::FileOpen} bleibt \texttt{1}.
+Die File-Open-Policystrukturen besitzen im geprüften Layout 104 bzw. 320 Byte
+bei Ausrichtung 8. Direkte Map-Zugriffe erfordern exakt passende Typen und Größen.
+Padding, Feldreihenfolge und Enumwerte dürfen nicht beiläufig verändert werden.
+\texttt{aya::Pod}-Implementierungen sind Teil dieser Verantwortung.
+
+Die Policybank beginnt bei
+\texttt{(generation \% 2) * 16}; die Attributbank wird durch
+\texttt{generation \% 2} gewählt. Loader schreiben zunächst den inaktiven Stand
+und schalten danach die Generation um. Policy- und Attributgeneration sind
+getrennte Zustände; mehrere veröffentlichte Dateien und die beiden Loader sind
+keine gemeinsame Transaktion. Die Attributkapazitätsprüfung berücksichtigt
+die tatsächlich gepinnte Map und den noch benötigten aktiven Bestand. Eine feste
+Garantie von 512 Attributen je Generation lässt sich daraus nicht ableiten.
+
+\section{Dateibasierte Konfigurationsschnittstelle}
+\subsection{Policyformat}
+Unter \path{policies/} einschließlich Unterverzeichnissen wird jede Datei mit
+Endung \texttt{.policy} als genau ein Policydokument gelesen. Der Pfad ergibt
+sich aus dem Arbeitsverzeichnis der Runtime, nicht dem Ort des Programmbinaries.
+\begin{lstlisting}
+policy "deny demo for engineers"
+deny
+    action == "file_open";
+    command == "cat";
+    resource.path == "/tmp/tails-pdp-programmer-demo.txt";
+    subject.position == "engineer";
+    system.defcon <= 3;
+\end{lstlisting}
+Die Entitlement-Zeile ist \texttt{permit} oder \texttt{deny}. Statements enden mit
+Semikolon und werden als Konjunktion verknüpft. Unterstützt sind:
+\begin{itemize}[nosep]
+  \item \texttt{action == "file\_open"} (auch Schreibweise \texttt{file-open});
+  \item optionale statische Filter \texttt{subject.uid}, \texttt{command} und \texttt{resource.path};
+  \item Zeitbedingungen wie \texttt{environment.time \% N < VALUE} oder
+    Vergleiche mit \texttt{environment.utc.hour}, \texttt{minute} und \texttt{second};
+  \item bis zu vier dynamische Bedingungen auf \texttt{system.*}, \texttt{subject.*}
+    und \texttt{resource.*} sowie höchstens eine zusätzliche Zeitbedingung;
+  \item numerische Vergleiche \texttt{<}, \texttt{<=}, \texttt{==}, \texttt{>=},
+    \texttt{>}; Stringattribute werden nur mit Gleichheit verglichen.
+\end{itemize}
+Nicht unterstützt sind unter anderem Socket-Bind-Aktionen, Imports, Schemata,
+Variablen, Obligations, Advice, Transformationen und \texttt{or}.
+Disjunktionen können für passende Anwendungsfälle als mehrere Policies
+modelliert werden; dabei gilt weiterhin Deny-Overrides.
+
+Die maximale Commandlänge beträgt 15 Byte; Linux reserviert im 16-Byte-Commandfeld
+ein Nullbyte. Ressourcenpfade sind auf 64 Byte begrenzt. Der Loader löst vorhandene
+Ressourcenpfade in Gerät/Inode auf. Eine später am selben Pfad ersetzte Datei besitzt
+möglicherweise eine andere Identität; die Regel ist keine laufende Pfadnamensüberwachung.
+
+\subsection{Attributformat}
+Die Dateien verwenden die Endung \texttt{.attributes} und Einträge
+\texttt{name = wert}. Beispiele:
+\begin{lstlisting}
+# attributes/system.attributes
+defcon = 3
+
+# attributes/subjects/1000.attributes
+position = "engineer"
+access-level = 2
+on_call = true
+
+# attributes/resources/tmp/tails-pdp-programmer-demo.txt.attributes
+classification = "internal"
+clearanceLevel = 3
+\end{lstlisting}
+Die drei Namensräume sind System, Subject und Resource. Subjectdateien werden
+über die UID benannt. Resource-Dateipfade bilden den absoluten Ressourcenpfad
+ohne führenden Schrägstrich plus Attributsuffix ab; beim Laden wird die Identität
+der beschriebenen Datei aufgelöst. Globale Systemattribute haben keine
+requestabhängige Objektidentität. Namen und Stringwerte werden durch gemeinsame
+Hashfunktionen in die Map-Repräsentation überführt. Zahlen sind vorzeichenlose
+Ganzzahlen, boolesche Werte sind \texttt{true}/\texttt{false}; DEFCON muss zwischen
+1 und 5 liegen. Regeln mit \texttt{subject.position} benötigen die Attributdatei
+für die tatsächlich anfragende UID, nicht zwingend für UID 1000.
+
+\subsection{Veröffentlichung und Fehlerverhalten}
+\path{scripts/publish-config.sh} erhält genau zwei Argumente: eine vollständig
+vorbereitete Quelldatei und das Ziel mit Endung \texttt{.policy} oder
+\texttt{.attributes}. Es schreibt eine temporäre Datei im Zielverzeichnis und
+ersetzt das Ziel durch Umbenennung auf demselben Dateisystem. Bei Ersetzung werden
+die Zugriffsbits des vorhandenen Ziels erhalten; Eigentümer ist der veröffentlichende
+Prozess. Symlink- und Verzeichnisziele werden abgelehnt.
+\begin{lstlisting}
+printf 'demo\n' > /tmp/tails-pdp-programmer-demo.txt
+bash scripts/publish-config.sh /tmp/prepared.policy policies/demo.policy
+bash scripts/publish-config.sh /tmp/prepared.attributes attributes/system.attributes
+rm policies/demo.policy
+\end{lstlisting}
+Die vorbereiteten Quelldateien müssen vorher mit vollständigen gültigen Inhalten
+erstellt werden. Der rekursive Inotify-Watcher reagiert auf Veröffentlichung und
+Entfernung; temporäre Schreibvorgänge werden ignoriert. Es gibt keinen festen
+Debounce-Timer. Die Veröffentlichung validiert die Policysemantik nicht und
+bestätigt nicht die spätere Aktivierung. Laufende ungültige Updates erhalten den
+letzten gültigen Stand; initial ungültige Daten können den Start verhindern.
+Bestätigung erfolgt über Runtime-Log und Admintool.
+
+\section{Rust-Schnittstellen und Fehlerkontrakte}
+Die folgenden Schnittstellen werden vom Runtime-Einstieg verwendet. Sie ersetzen
+keine vollständige Rustdoc-Auflistung, beschreiben aber die zentralen Integrationspunkte.
+\subsection{Policyloader}
+\begin{lstlisting}
+PolicyDirectorySync::new(
+    enforcement_triggers: mpsc::Sender<EnforcementTrigger>
+) -> anyhow::Result<Self>
+
+PolicyDirectorySync::directory(&self) -> &Path
+PolicyDirectorySync::sync_initial(&mut self) -> anyhow::Result<()>
+PolicyDirectorySync::run(self) -> impl Future<Output = anyhow::Result<()>>
+verify_pinned_map_layouts() -> anyhow::Result<()>
+\end{lstlisting}
+\texttt{new} erstellt das Standardverzeichnis und öffnet die benötigten gepinnten
+Maps. \texttt{sync\_initial} validiert und aktiviert den vollständigen initialen
+Stand; Fehler werden zurückgegeben. \texttt{run} ist im Quellcode eine
+\texttt{async fn}, konsumiert das Objekt und verarbeitet Verzeichnisänderungen.
+Ein Aktivierungstrigger wird erst nach erfolgreichem Commit ausgelöst.
+Die Layoutprüfung erfolgt vor dem Laden des eBPF-Objekts.
+
+\subsection{Attribut- und Zeitloader}
+\begin{lstlisting}
+open_attribute_maps() -> anyhow::Result<AttributeMaps>
+write_current_attributes(
+    attribute_maps: &mut AttributeMaps,
+    enforcement_triggers: &mpsc::Sender<EnforcementTrigger>
+) -> anyhow::Result<()>
+async fn run_attribute_updater(
+    attribute_maps: &mut AttributeMaps,
+    enforcement_triggers: mpsc::Sender<EnforcementTrigger>
+) -> anyhow::Result<()>
+
+open_current_time_map() -> anyhow::Result<Array<MapData, u64>>
+write_current_time(map: &mut Array<MapData, u64>) -> anyhow::Result<()>
+async fn run_current_time_updater(
+    map: &mut Array<MapData, u64>
+) -> anyhow::Result<()>
+\end{lstlisting}
+\texttt{AttributeMaps} kapselt Attribute und Generationsmap. Der initiale
+Attributschreibvorgang lädt die Dateien und aktiviert eine Generation.
+Der Updater validiert neue Inhalte und Kapazitäten vor der Aktivierung.
+Die Zeitpflege schreibt Unix-Sekunden in \texttt{CURRENT\_TIME[0]} und aktualisiert
+sie im Ein-Sekunden-Takt. UTC-Komponenten werden durch \texttt{PolicyTime} abgeleitet.
+
+\subsection{Trigger und Userspace-PEP}
+\begin{lstlisting}
+enum EnforcementTrigger {
+    PolicyGenerationActivated { generation: u32 },
+    AttributeGenerationActivated { generation: u32 },
+    TimeConditionChanged { unix_seconds: u64 },
+}
+
+notify_enforcement(
+    sender: &mpsc::Sender<EnforcementTrigger>,
+    trigger: EnforcementTrigger
+) -> anyhow::Result<bool>
+
+async fn run_userspace_pep(
+    enforcement_triggers: mpsc::Receiver<EnforcementTrigger>
+) -> anyhow::Result<()>
+\end{lstlisting}
+Der Kanal hat Kapazität 1. \texttt{notify\_enforcement} verwendet
+\texttt{try\_send}: \texttt{true} bedeutet eingereiht; ein voller Kanal liefert
+\texttt{false}, weil eine Nachbewertung bereits aussteht. Ein geschlossener Kanal
+ist ein Fehler. Trigger sind keine verlustfreie Historie aller Generationen.
+Zeittrigger werden vom PEP beim Erreichen einer berechneten Zeitgrenze intern
+gebildet; sie enthalten deren Unix-Sekunden. Der PEP bewertet den aktuellen
+aktiven Zustand. Der FD-Entzugshelfer ist ein
+internes Modul und wird nicht als öffentliche Crate-Schnittstelle exportiert.
+
+\subsection{Gemeinsame Policylogik}
+\path{tails-pdp-common/src/lib.rs} enthält unter anderem
+\texttt{FileOpenRequest}, \texttt{FileOpenStaticPolicy},
+\texttt{FileOpenStreamPolicy}, \texttt{AttributeCondition}, \texttt{AttributeKey},
+\texttt{AttributeValue} und \texttt{PolicyTime}.
+\path{evaluate_file_open_static_policy} liefert ein optionales Entitlement;
+\texttt{None} bezeichnet eine nicht passende Policy. Die Stream-Auswertung trennt
+statische Requestfilter, Zeitbedingung und dynamische Map-Abfragen.
+Die noch verwendeten Funktionen mit \texttt{legacy} im Namen verarbeiten aktive
+Zeitbedingungen und dürfen nicht allein wegen ihrer Benennung entfernt werden.
+
+\section{Admintool und Diagnoseaufrufe}
+Das Admintool öffnet Maps lesend. Es bietet \texttt{show}, \texttt{show-active},
+\texttt{show-policies} und \texttt{show-attributes}; \texttt{set} oder
+\texttt{set-stream} existieren nicht.
+\begin{lstlisting}
+sudo ./target/release/tails-pdp-admintool show-active
+sudo ./target/release/tails-pdp-admintool show-policies
+sudo ./target/release/tails-pdp-admintool show-attributes
+./target/release/tails-pdp-admintool --help
+\end{lstlisting}
+Root ist in den Beispielen für den Map-Zugriff vorgesehen; tatsächlich ausreichende
+Leserechte können auch ohne \texttt{sudo} genügen. Optionen wie
+\texttt{--policy-dir} und \texttt{--attributes-dir} dienen der Zuordnung der
+Quellverzeichnisse bei der Anzeige; sie ändern nicht die Verzeichnisse der Runtime.
+Map-Pfade lassen sich über die im CLI definierten Pin-Pfadoptionen auswählen.
+
+\begin{lstlisting}
+sudo env RUST_LOG=debug ./target/release/tails-pdp
+sudo env TAILS_PDP_EBPF_DEBUG=1 RUST_LOG=info ./target/release/tails-pdp
+sudo cat /sys/kernel/debug/tracing/trace_pipe
+sudo env TAILS_PDP_TIMING=1 ./target/release/tails-pdp
+\end{lstlisting}
+\texttt{RUST\_LOG} steuert Userspace-Logs; Standard ist \texttt{info}.
+\texttt{TAILS\_PDP\_EBPF\_DEBUG} aktiviert Kernel-Debugausgaben.
+Der Trace-Aufruf benötigt eine verfügbare Tracefs-/Debugfs-Ablage.
+\texttt{TAILS\_PDP\_TIMING=1} aktiviert opt-in Messmarkierungen auf Basis der
+Linux-Monotonzeit. Logs und Marker beeinflussen Performance-Messungen und müssen
+bei deren Interpretation berücksichtigt werden.
+
+\section{Build, Tests und Erweiterung}
+\subsection{Entwicklungsbefehle}
+Buildwerkzeuge und Linux-Voraussetzungen sind im Installationshandbuch beschrieben.
+\path{nix-config/rust-toolchain} legt aktuell Rust \texttt{1.93.0} für Userspace fest;
+\path{nix-config/ebpf-toolchain} legt \texttt{nightly-2026-01-15} für den eBPF-Build fest.
+\path{tails-pdp/build.rs} liest die eBPF-Version und übergibt sie an Aya.
+Die Nix-Shell wählt die Userspace-Version und unterbindet implizite Rustup-Installationen.
+Der aktuelle Aya-eBPF-Build setzt weiterhin Nightly und dessen \texttt{rust-src} voraus.
+
+Die Quellenersetzung unter \path{.cargo/config.toml} und der Offline-Modus sind aktiv.
+\path{vendor/} enthält die Projektabhängigkeiten und die unter
+\path{nix-config/ebpf-sysroot/} beschriebenen Registry-Pakete des
+Systembibliotheksbuilds. \path{scripts/check-vendor.py} prüft deren Vollständigkeit
+und Prüfsummen; der Buildhelfer vergleicht auch das Lockfile der installierten Rust-Quellen.
+Compiler, LLVM, Linker und Nix-Store-Abhängigkeiten sind gesonderte Voraussetzungen.
+
+Innerhalb der vorbereiteten Nix-Shell:
+\begin{lstlisting}
+bash scripts/demo/build.sh
+cargo fmt --all -- --check
+cargo test --locked -p tails-pdp-common -p tails-pdp-policy-loader --config 'target."cfg(all())".runner="env"'
+cargo doc --locked --no-deps -p tails-pdp-common -p tails-pdp-policy-loader
+\end{lstlisting}
+Der Buildhelfer verwendet \texttt{cargo build --frozen} und prüft vorhandene
+Toolchains, Rust-Quellen und Linker. Er installiert keine fehlenden Werkzeuge.
+Die Test-Runner-Überschreibung verhindert Root-Ausführung normaler Rust-Tests;
+das Workspace-Cargo-Setup verwendet sonst \texttt{sudo -E}.
+Der Hauptbuild baut über \path{tails-pdp/build.rs} auch das eBPF-Objekt.
+Die Buildskripte verbleiben in ihren Crates. Generierte Kerneltypen werden nur
+gezielt untersucht und nicht pauschal verändert.
+
+\subsection{Geführte Demo und Isolation}
+\path{scripts/demo.sh} ist der Einstieg für die Demonstration. Der Launcher richtet
+tmux ein und startet den privilegierten Worker. Der fachliche Ablauf liegt in
+\path{scripts/demo/runner.sh}, die System-sudo-Auswahl in
+\path{scripts/demo/dependencies.sh}, der Offline-Build in
+\path{scripts/demo/build.sh} und die Terminaldarstellung in \path{scripts/demo/pane.sh}.
+\begin{lstlisting}
+./scripts/demo.sh
+./scripts/demo.sh --auto
+./scripts/demo.sh --build
+TAILS_PDP_BIN=/absoluter/pfad/tails-pdp ADM_TOOL_BIN=/absoluter/pfad/tails-pdp-admintool ./scripts/demo.sh
+\end{lstlisting}
+Die Optionen steuern Eingabepausen beziehungsweise einen erzwungenen Neubuild.
+Ohne Binaries wird automatisch ein Build angefordert. Fehlende Werkzeuge führen
+entweder zur lokalen Nix-Demo-Shell oder zu einer Fehlermeldung; Nix-Downloads
+und Nix-Builds sind für diese Bereitstellung deaktiviert. Die vollständige
+Offline-Werkzeugumgebung ist derzeit nicht im Repository enthalten.
+
+Ein privater Mount-Namespace mit eigenem bpffs erhält die Host-Pins. Die Demo
+sichert vorhandene Konfigurationsverzeichnisse und \path{demo/files/} und stellt
+sie beim regulären Aufräumen wieder her. Logs bleiben unter \path{demo/runs/}.
+LSM-Hooks wirken weiterhin systemweit: keine zweite Runtime und keine parallele
+Evaluation starten. \texttt{DEMO\_TIMEOUT\_SECONDS} begrenzt technische Wartephasen
+standardmäßig auf 30 Sekunden. Weitere Optionen dokumentiert \path{scripts/demo/README.md}.
+
+\subsection{API-Dokumentation mit Rustdoc}
+Die Crates und ihre öffentlichen Schnittstellen sind unmittelbar im Quelltext mit
+\texttt{//!}- bzw. \texttt{///}-Kommentaren dokumentiert. Die Referenz erläutert
+Parametersemantik, Rückgaben, Fehlerfälle, Wildcards, Datenlayouts und relevante
+Plattformgrenzen. Wesentliche interne Algorithmen sind zusätzlich an den betreffenden
+Routinen dokumentiert. Signaturen und Typverweise erzeugt Rustdoc aus dem Code.
+
+Auf dem vorbereiteten Linux-Zielsystem erzeugt ein gemeinsamer Einstieg die
+Referenz aller acht Bibliotheksziele:
+\begin{lstlisting}
+./scripts/docs.sh
+./scripts/docs.sh --document-private-items
+cargo test --locked --doc -p tails-pdp-common --config 'target."cfg(all())".runner="env"'
+\end{lstlisting}
+Das Skript prüft fehlende öffentliche Dokumentation und ungültige Rustdoc-Verweise
+als Fehler. Die zweite Variante enthält zusätzlich interne Symbole. Die
+HTML-Ausgabe liegt unter \path{target/doc/}; bei einem expliziten Cross-Target unter
+\path{target/<target>/doc/}. Die gesamte HTML-Ablage einschließlich Ressourcen
+kann separat in das Abgabepaket kopiert werden. Sie wird nicht als Teil des
+Buildverzeichnisses versioniert. Der Beispieltest benötigt keine BPF-Pins und
+keine Root-Rechte; privilegierte Runtime-Tests bleiben ein eigener Nachweis.
+
+\subsection{Testzuordnung}
+\begin{lstlisting}
+bash scripts/tests/test-publish-config.sh
+python3 -B scripts/tests/test_demo.py
+PYTHONPATH=scripts/tests/evaluation python3 -B -m unittest discover -s scripts/tests/evaluation -p test_perf03.py
+./scripts/test.sh
+sudo ./scripts/tests/test-e2e.sh
+sudo ./scripts/tests/test-evaluation.sh E2E-18 E2E-19
+\end{lstlisting}
+Die ersten drei Befehle sind lokale Hilfsprüfungen. Die vollständige Prüfkette,
+Rustkomponenten mit Linux-APIs sowie die privilegierten Tests benötigen das
+dedizierte Linux-Zielsystem. E2E-01 bis E2E-19 prüfen die reale Runtime.
+COMP-, PERF-, LOAD-, STAB-, CHAR- und RACE-Szenarien untersuchen weitere
+Komponenten-, Mess- und Grenzfälle. Die vollständige Prüfkette enthält außerdem
+\path{scripts/tests/test_demo_live.py}: Der Test führt die automatische Demo mit
+realem tmux und Kernel-Enforcement unter einem Pseudoterminal aus und archiviert
+Report, Terminalmitschnitt und Demo-Fixture unter \path{test-results/}.
+Der privilegierte Live-Test ist kein Ersatz für lokale Demo-Regressionsprüfungen.
+Die Suite vor dem Start von fremden
+Runtime-Prozessen und vorhandenen Test-Pins freihalten; Suiten nicht parallel starten.
+
+\subsection{Erweiterungsschritte}
+\begin{enumerate}
+  \item Fachliche Semantik und Fehlerverhalten festlegen. Für zusätzliche Syntax
+    Parser und Validierung in \path{tails-pdp-policy-loader/src/policy_source.rs}
+    oder \path{tails-pdp-attribute-loader/src/stream_attributes.rs} anpassen.
+  \item Gemeinsame Repräsentation und reine Evaluierung in
+    \path{tails-pdp-common/src/lib.rs} erweitern. Bestehende Map-Layouts und
+    Enumwerte beachten; bei inkompatiblen Änderungen Migration und Pin-Bereinigung
+    planen. Kapazitäten nicht nur im Parser, sondern auch in Maps und Prüfungen ändern.
+  \item Kernel- und Userspace-Auswertung auf dieselbe Semantik bringen.
+    Fehlende Attribute, Typkonflikte, Wildcards und Zeitgrenzen ausdrücklich prüfen.
+    Für einen neuen Hook zusätzlich Requestgewinnung, Programme, Maps,
+    Lade-/Attach-Listen, Administration und Nachbewertung entwerfen.
+  \item Positive und negative Parser-/Komponententests sowie passende
+    privilegierte Szenarien ergänzen. Dokumentation und Beispiele aktualisieren;
+    erst danach Build, Clippy, Kernel-Verifier und reale Durchsetzung prüfen.
+\end{enumerate}
+Die Wiederaufnahme einer Socket-Bind-Aktion ist eine neue Funktion und kein
+Umschalten eines vorhandenen Flags. Die vorherigen Implementierungsreste sind entfernt.
+
+\section{Grenzen und Nachweiszuordnung}
+Der Prototyp ist keine vollständige SAPL-Implementierung. Der Remote-FD-Entzug
+ist nur für x86\_64-Linux implementiert und benötigt geeignete ptrace-Rechte.
+Bereits erzeugte Speicherabbildungen und konkurrierende FD-/Prozessoperationen
+sind nicht durch einen atomaren globalen Entzug abgedeckt. Ein bestandener
+Race-Test beweist keine Race-Freiheit. Dateiidentität und Pfadname dürfen nicht
+gleichgesetzt werden. Mehrdatei-Veröffentlichungen und Policy-/Attributaktivierung
+bilden keine gemeinsame Transaktion. Eine einzelne Generationsumschaltung belegt
+keine unveränderte Lesesicht bei wiederholter Bankverwendung durch parallele Leser.
+Der synchrone Userspace-Scan und blockierendes Warten beim \texttt{ptrace}-Entzug
+können andere Zweige desselben Runtime-Tasks verzögern. Für das Warten besteht
+keine ausdrückliche Zeitbegrenzung; eine feste maximale Aktualisierungslatenz wird
+nicht zugesichert. Fehlgeschlagene Entzüge werden nicht ohne neuen Auslöser wiederholt.
+
+Das Archiv \path{eval-tails-pdp/} enthält den Lauf vom 10. Oktober 2026 zum
+protokollierten Commit \texttt{a9fd6c0} mit dokumentiertem Arbeitsbaum.
+Seine Dateien sind über \path{eval-tails-pdp/SHA256SUMS} prüfbar.
+Bereinigungen nach diesem Lauf und dieses Handbuch sind kein neuer vollständiger
+Systemtestnachweis. Für die Abgabe den endgültigen Quellstand, Binaries und
+Nachweise eindeutig zuordnen.
+
+\section{Ausgabe des Handbuchs}
+Diese LaTeX-Datei benötigt keine eingebundenen Thesis-Dateien, Grafiken oder
+Literaturdaten. Der gemeinsame Build benötigt die Quellen unter \path{../thesis/}
+sowie LaTeX, \texttt{latexmk} und Biber. Aus der Repository-Wurzel:
+\begin{lstlisting}
+bash scripts/build-thesis.sh
+\end{lstlisting}
+Die lokale Laufkonfiguration \texttt{thesis} verwendet denselben Helfer. Er baut
+Thesis und beide Handbücher und kopiert alle drei PDFs erst nach erfolgreicher
+Kompilierung nach \path{thesis/final/}. Dieses Handbuch liegt dort als
+\path{Christian_Koch_Programmierhandbuch_tails-pdp.pdf}. Die bearbeitbare Quelle
+verbleibt für die Abgabe im vorgesehenen Thesis-/source-Paket.
+Eine eigenständige Kompilierung dieses Handbuchs bleibt möglich.
+\end{document}

@@ -11,7 +11,7 @@ Die Dokumentation besteht aus zwei eigenständigen Handbüchern und der Rustdoc-
 Die Handbuchquellen liegen im Schwesterverzeichnis der lokalen Ablage. Sie sind für die
 Abgabe im vereinbarten `source`-Paket bereitzustellen. Die IDE-Konfiguration „thesis“ ruft
 `scripts/build-thesis.sh` auf. Das Skript baut die Thesis und beide Handbücher mit `latexmk`
-und kopiert erst nach erfolgreichem Build aller drei Dokumente die PDFs nach `docs/`:
+und kopiert erst nach erfolgreichem Build aller drei Dokumente die PDFs nach `thesis/final/`:
 
 - `Christian_Koch_Attribute_Stream-Based_Access_Control_im_Linux-Kernel.pdf`
 - `Christian_Koch_Installationshandbuch_tails-pdp.pdf`

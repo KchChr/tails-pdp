@@ -4,7 +4,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 THESIS_ROOT="$PROJECT_ROOT/../thesis"
-OUTPUT_ROOT="$PROJECT_ROOT/docs"
+OUTPUT_ROOT="$PROJECT_ROOT/thesis/final"
 
 cd -- "$THESIS_ROOT"
 latexmk -pdf -synctex=1 -interaction=nonstopmode -halt-on-error \
