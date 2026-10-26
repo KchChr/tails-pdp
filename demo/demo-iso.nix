@@ -64,6 +64,8 @@ in
   } ];
 
   environment.systemPackages = tools.packages;
+  # Allow checking the customized linker before building the complete image.
+  system.build.demoLinker = tools.linker;
   environment.variables = tools.variables;
   # Keep the exact Nixpkgs source available for manual offline test shells too.
   nix.nixPath = [ "nixpkgs=${sources.nixpkgs}" ];

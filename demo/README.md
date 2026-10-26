@@ -14,6 +14,15 @@ nix-build ./demo -A iso
 ls -lh result/iso/
 ```
 
+Der angepasste LLVM-21-Linker kann vorab separat gebaut und geprüft werden:
+
+```bash
+nix-build ./demo -A configuration.system.build.demoLinker -o result-demo-linker
+./result-demo-linker/bin/bpf-linker --version
+```
+
+Die erwartete Ausgabe ist `bpf-linker 0.9.15`.
+
 Der erste ISO-Build benötigt Internet für die in `sources.nix` auf feste
 Commit-IDs gepinnten Nix-Quellen und die Paketquellen. Ein Linux-Remote-Builder
 kann diesen Build auch von einem Mac aus übernehmen. Die Ausgabe liegt unter

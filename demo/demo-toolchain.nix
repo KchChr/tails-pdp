@@ -8,9 +8,13 @@ let
   };
   llvm = pkgs.llvmPackages_21;
   # Do not inherit the default compiler's potentially different LLVM version.
-  linker = pkgs.bpf-linker.overrideAttrs (_: {
-    buildFeatures = [ "llvm-21" ];
-    nativeBuildInputs = [ llvm.llvm ];
+  linker = pkgs.bpf-linker.overrideAttrs (old: {
+    # buildRustPackage has already translated buildFeatures at this point.
+    cargoBuildFeatures = [ "llvm-21" ];
+    # Keep Cargo/rustc and the build/install hooks added by buildRustPackage.
+    # Only replace the original LLVM dependency.
+    nativeBuildInputs = builtins.filter (input: input != pkgs.rustc.llvm)
+      (old.nativeBuildInputs or [ ]) ++ [ llvm.llvm ];
     nativeCheckInputs = [ ];
     doCheck = false;
   });
