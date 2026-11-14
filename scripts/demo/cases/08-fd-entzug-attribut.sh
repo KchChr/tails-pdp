@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Kapitel 8: Deny ist bereits geladen, seine Bedingung aber zunächst falsch.
+# Nur die Attributgeneration darf sich durch den Auslöser ändern.
+# Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
+
+    chapter '8. FD-Entzug ausschließlich durch Attributänderung' \
+        'DEFCON steht auf 5. Vor dem Öffnen wird eine Deny-Policy mit system.defcon <= 2 installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.' \
+        'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird im nächsten Schritt ausschließlich das Systemattribut geändert.' \
+        'Solange DEFCON=5 gilt, bleiben alle FDs offen. Der spätere Wechsel auf 2 muss den Entzug ohne Änderung der Policydatei auslösen.' \
+        'Eine geladene Policy und eine erfüllte Bedingung sind zu unterscheiden. enabled im Admin-Tool bedeutet, dass die Policy aktiviert ist; ihre Bedingungen werden für den jeweiligen Zugriff ausgewertet.'
+    policy revoke deny '    system.defcon <= 2;' tails-demo-fd
+    start_probe
+    chapter '8a. Nur das Systemattribut ändern' \
+        'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.' \
+        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.' \
+        'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.' \
+        'Rechts oben wird ein Scan mit Ursache attributes:<Generation> erwartet. Damit wird der Attributwechsel als Auslöser nachgewiesen. Die Policy bleibt dabei unverändert.'
+    assert_probe_identity
+    before="$(generations)"
+    offset="$(wc -l < "$demo_root/runtime.log")"
+    attribute system.attributes 'defcon = 2'
+    local current
+    current="$(generations)"
+    [[ "${before%% *}" == "${current%% *}" ]] || { fail 'Policygeneration unerwartet geändert.'; return 1; }
+    wait_log "scan started cause=[attributes:${current##* }]" "$offset"
+    expect_revoked
+    step 'Der FD-Entzug durch die Attributänderung ist bestätigt. Beobachter und Demo-Policy werden für das nächste Kapitel zurückgesetzt.'
+    stop_probe
+    remove_policy revoke

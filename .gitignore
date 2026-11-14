@@ -44,3 +44,5 @@ __pycache__/
 #!/demo/*.sh
 #!/demo/README.md
 *.bak
+scripts/build-thesis.sh
+demo/prototype-demo.iso

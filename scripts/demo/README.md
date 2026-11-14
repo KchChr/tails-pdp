@@ -194,8 +194,13 @@ Userspace-PEP mit der Logkennung `USERSPACE_PEP`, etwa beim erfolgreichen oder
 fehlgeschlagenen Schließen eines FDs. Beide Durchsetzungspfade enthalten eine
 integrierte PDP-Funktion, die Policies auswertet und eine Entscheidung ableitet.
 Die Komponenten heißen entsprechend der Thesis Kernelspace-PEP und Userspace-PEP.
-Die Kapitel sind auch direkt in `demo_worker()` in `scripts/demo/runner.sh`
-kommentiert. Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
+Jeder der zehn Demofälle hat ein eigenes Bash-Skript unter `scripts/demo/cases/`.
+Der Kommentar am Dateianfang beschreibt, was der Fall demonstriert.
+`scripts/demo.sh` bleibt der Einstieg: Der Runner bindet die Fälle der Reihe
+nach ein, damit sie sich Runtime und Arbeitsbereich teilen. Die Dateien sind
+für diesen gemeinsamen Ablauf vorgesehen. Die Zwischenschritte 7a und 8a
+stehen beim jeweiligen FD-Fall.
+Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
 der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
 In Kapitel 3 wird die Ausgangslage zusätzlich vor dem Ausführen der Aktionen
 mit einem sichtbaren `show-active`-Aufruf belegt. Dabei sind keine aktivierten
@@ -327,7 +332,9 @@ führen zu einem von null verschiedenen Exitstatus.
 Unprivilegierte lokale Prüfungen (auch auf macOS):
 
 ```bash
-bash -n scripts/demo.sh scripts/demo/runner.sh scripts/demo/dependencies.sh
+for script in scripts/demo.sh scripts/demo/*.sh scripts/demo/cases/*.sh; do
+    bash -n "$script" || break
+done
 python3 scripts/tests/test_demo.py
 ```
 
