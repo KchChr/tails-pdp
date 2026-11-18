@@ -4,15 +4,15 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter '1. Runtime starten und Ausgangszustand prüfen' \
-        'Die Dateien sind vorbereitet:
-  demo/files/protected.txt – die Datei, deren Zugriff durch Policies geschützt werden soll.
-  demo/files/control.txt – eine separate Kontrolldatei, die weiterhin zugänglich bleiben soll.
-  demo/files/alias.txt – ein Hardlink auf protected.txt; beide Pfade verweisen auf dieselbe Datei.
+        'relevante Dateien:
+  demo/files/protected.txt
+  demo/files/control.txt –
+  demo/files/alias.txt
 
   Es läuft noch keine Runtime und es sind keine Policies geladen.' \
-        'Der Prototyp wird gestartet. Dabei wird das eBPF-Programm geladen, die Maps werden vorbereitet und der file_open-Hook wird angehängt. Danach wird die geschützte Datei geöffnet.' \
-        'Alle erwarteten Maps existieren, die Runtime läuft und die Dateiöffnung ist erlaubt: Ohne passende Deny-Policy wird kein Zugriff untersagt.' \
-        'Rechts oben bestätigt die Runtime ihren Start. Deny-Entscheidungen des Kernelspace-PEP erscheinen dort als [Kernelspace-PEP] mit final=deny. USERSPACE_PEP ist die Logkennung des Userspace-PEP. Beide Durchsetzungspfade besitzen eine integrierte PDP-Funktion zur Policy-Auswertung. Links zeigt das Admin-Tool den geladenen Zustand; die anschließende OK-Zeile bestätigt den tatsächlichen Zugriff.'
+        'Der Prototyp wird gestartet, danach wird die geschützte Datei geöffnet.' \
+        'Die Datei kann ohnn Einschränkungen geöffnet werden, es erfolgt noch kein Enformcement' \
+
     start_kernel_trace
     RUST_LOG=info TAILS_PDP_EBPF_DEBUG=deny TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
     runtime_pid=$!
