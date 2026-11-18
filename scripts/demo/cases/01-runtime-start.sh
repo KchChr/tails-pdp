@@ -10,7 +10,7 @@
   ${target%/*}/alias.txt
 
   Es läuft noch keine Runtime und es sind keine Policies geladen." \
-        'Der Prototyp wird gestartet, danach wird die Datei ' $safe ' geöffnet.' \
+        'Der Prototyp wird gestartet, danach wird die Datei $safe geöffnet.' \
         'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enformcement' \
         ''
 
