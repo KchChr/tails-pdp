@@ -37,7 +37,7 @@ pause_demo() {
         read -r -p "$color_prompt${1:-Enter: ausführen | Strg+C: abbrechen }$color_reset" _
     fi
 }
-chapter() {
+chapter_start() {
     # Leave the previous step's results visible until the presenter advances.
     # The first chapter has no preceding results; the last uses the close prompt.
     if [[ "${demo_chapter_started:-0}" == 1 ]]; then
@@ -49,18 +49,11 @@ chapter() {
     # scrollback and transcript; this needs no additional external command.
     printf '\033[2J\033[H'
     printf '\n%s%s%s\n' "$color_heading" "$1" "$color_reset"
-    printf '\n%sAusgangslage:%s\n  %s\n' "$color_section" "$color_reset" "$2"
-    # Optional live evidence is shown before any action or execution prompt.
-    if [[ "${6:-}" == show-active ]]; then
-        printf '\nNachweis der Ausgangslage durch das Administrationstool:\n'
-        admin --no-label show-active
-        printf '\nOhne aktivierte Policies enthält die Ausgabe keine aktivierten Policy-Einträge. Angezeigte Attribute sind davon unabhängig.\n'
-    fi
-    printf '\n%sAktion:%s\n  %s\n' "$color_section" "$color_reset" "$3"
-    printf '\n%sErwartetes Verhalten:%s\n  %s\n' "$color_section" "$color_reset" "$4"
-    printf '\n%sBeobachtung:%s\n  %s\n\n' "$color_section" "$color_reset" "$5"
-    pause_demo
 }
+chapter_section() {
+    printf '\n%s%s:%s\n  %s\n' "$color_section" "$1" "$color_reset" "$2"
+}
+
 explain() { printf '\n→ %s\n' "$*"; }
 step() {
     # Keep the last result visible until Enter, then present the next action.

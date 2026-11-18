@@ -198,6 +198,20 @@ eigenes Bash-Skript unter `scripts/demo/cases/`. Alle sichtbaren Texte und
 Aktionen eines Kapitels werden dort kuratiert. Der Kommentar am Dateianfang
 beschreibt seinen Zweck. `00-einfuehrung.sh` enthält die Einführung,
 `01-…sh` bis `10-…sh` die fachlichen Kapitel und `99-abschluss.sh` den Abschluss.
+Auch die Abschnittsüberschriften stehen ausdrücklich in jeder Kapiteldatei:
+
+```bash
+chapter_start '1. Runtime starten und Ausgangszustand prüfen'
+chapter_section 'Ausgangslage' \
+    "Die geschützte Datei ist $target."
+chapter_section 'Aktion' \
+    'Der Prototyp wird gestartet.'
+```
+
+Abschnitte können in der Kapiteldatei umbenannt, entfernt oder ergänzt werden.
+`chapter_start` übernimmt nur den Bildschirmwechsel und die Titelanzeige;
+`chapter_section` formatiert die übergebene Überschrift und den Text.
+Die Enter-Pause vor den Aktionen steht ebenfalls ausdrücklich in der Datei.
 
 `scripts/demo/chapters.sh` legt die Reihenfolge ausdrücklich fest. Hier kann
 ein Kapitel in den Ablauf aufgenommen werden. Die Kapitel bauen aufeinander

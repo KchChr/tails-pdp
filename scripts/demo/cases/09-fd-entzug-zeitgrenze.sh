@@ -3,11 +3,17 @@
 # nichts mehr veröffentlichen; Zeit-Trigger und konstante Generationen prüfen.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
-    chapter '9. FD-Entzug ausschließlich durch eine Zeitgrenze' \
-        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.' \
-        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne weitere Konfigurationsänderung gewartet.' \
-        'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.' \
+    chapter_start '9. FD-Entzug ausschließlich durch eine Zeitgrenze'
+    chapter_section 'Ausgangslage' \
+        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.'
+    chapter_section 'Aktion' \
+        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne weitere Konfigurationsänderung gewartet.'
+    chapter_section 'Erwartetes Verhalten' \
+        'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.'
+    chapter_section 'Beobachtung' \
         'Die Uhr wird nicht verstellt. Der große Modulus 4294967296 macht den Vergleich in der aktuellen Unix-Epoche zu einem einmaligen nahen Übergang. Im Log ist time:<Zeitgrenze> der Auslöser. Während dieser zwölf Sekunden gibt es keine weitere Enter-Pause.'
+    printf '\n'
+    pause_demo
     local boundary
     boundary=$(( $(date +%s) + 12 ))
     (( boundary < 4294967296 )) || { fail 'Zeitgrenze außerhalb des Demo-Modulus.'; return 1; }

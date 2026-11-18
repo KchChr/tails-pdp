@@ -4,11 +4,17 @@
 # das ist hier ein gültiger Attributstand, kein abgelehntes Update wie in 6.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
-    chapter '5. Subject-/Resource-Attribute und UND-Verknüpfung' \
-        'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff läuft mit Real-UID 0.' \
-        'DEFCON wird auf 2, die Rolle von UID 0 auf engineer und die Dateiklassifikation auf internal gesetzt. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.' \
-        'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. Rolle intern oder Klassifikation public reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.' \
+    chapter_start '5. Subject-/Resource-Attribute und UND-Verknüpfung'
+    chapter_section 'Ausgangslage' \
+        'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff läuft mit Real-UID 0.'
+    chapter_section 'Aktion' \
+        'DEFCON wird auf 2, die Rolle von UID 0 auf engineer und die Dateiklassifikation auf internal gesetzt. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.'
+    chapter_section 'Erwartetes Verhalten' \
+        'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. Rolle intern oder Klassifikation public reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.'
+    chapter_section 'Beobachtung' \
         'Anschließend wird das Attribut position zunächst weggelassen und danach auf die Zahl 1 statt auf die Zeichenkette "engineer" gesetzt. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
+    printf '\n'
+    pause_demo
     attribute system.attributes 'defcon = 2'
     attribute subjects/0.attributes 'position = "engineer"'
     attribute "resources${target}.attributes" 'classification = "internal"'

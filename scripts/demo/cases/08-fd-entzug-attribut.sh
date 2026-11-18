@@ -3,18 +3,30 @@
 # Nur die Attributgeneration darf sich durch den Auslöser ändern.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
-    chapter '8. FD-Entzug ausschließlich durch Attributänderung' \
-        'DEFCON steht auf 5. Vor dem Öffnen wird eine Deny-Policy mit system.defcon <= 2 installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.' \
-        'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird im nächsten Schritt ausschließlich das Systemattribut geändert.' \
-        'Solange DEFCON=5 gilt, bleiben alle FDs offen. Der spätere Wechsel auf 2 muss den Entzug ohne Änderung der Policydatei auslösen.' \
+    chapter_start '8. FD-Entzug ausschließlich durch Attributänderung'
+    chapter_section 'Ausgangslage' \
+        'DEFCON steht auf 5. Vor dem Öffnen wird eine Deny-Policy mit system.defcon <= 2 installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.'
+    chapter_section 'Aktion' \
+        'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird im nächsten Schritt ausschließlich das Systemattribut geändert.'
+    chapter_section 'Erwartetes Verhalten' \
+        'Solange DEFCON=5 gilt, bleiben alle FDs offen. Der spätere Wechsel auf 2 muss den Entzug ohne Änderung der Policydatei auslösen.'
+    chapter_section 'Beobachtung' \
         'Eine geladene Policy und eine erfüllte Bedingung sind zu unterscheiden. enabled im Admin-Tool bedeutet, dass die Policy aktiviert ist; ihre Bedingungen werden für den jeweiligen Zugriff ausgewertet.'
+    printf '\n'
+    pause_demo
     policy revoke deny '    system.defcon <= 2;' tails-demo-fd
     start_probe
-    chapter '8a. Nur das Systemattribut ändern' \
-        'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.' \
-        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.' \
-        'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.' \
+    chapter_start '8a. Nur das Systemattribut ändern'
+    chapter_section 'Ausgangslage' \
+        'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.'
+    chapter_section 'Aktion' \
+        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.'
+    chapter_section 'Erwartetes Verhalten' \
+        'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.'
+    chapter_section 'Beobachtung' \
         'Rechts oben wird ein Scan mit Ursache attributes:<Generation> erwartet. Damit wird der Attributwechsel als Auslöser nachgewiesen. Die Policy bleibt dabei unverändert.'
+    printf '\n'
+    pause_demo
     assert_probe_identity
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"

@@ -3,11 +3,17 @@
 # aktivieren. Nach der Ablehnung muss eine gültige Korrektur weiter möglich sein.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
-    chapter '6. Ungültige Updates und anschließende Korrektur' \
-        'DEFCON steht noch auf 2. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.' \
-        'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird DEFCON=9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.' \
-        'Beide fehlerhaften Updates werden verworfen. Die zuletzt gültigen Generationen und das wirksame Deny bleiben erhalten. Gültige Korrekturen werden anschließend wieder übernommen.' \
+    chapter_start '6. Ungültige Updates und anschließende Korrektur'
+    chapter_section 'Ausgangslage' \
+        'DEFCON steht noch auf 2. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.'
+    chapter_section 'Aktion' \
+        'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird DEFCON=9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.'
+    chapter_section 'Erwartetes Verhalten' \
+        'Beide fehlerhaften Updates werden verworfen. Die zuletzt gültigen Generationen und das wirksame Deny bleiben erhalten. Gültige Korrekturen werden anschließend wieder übernommen.'
+    chapter_section 'Beobachtung' \
         'Rechts oben erscheint die Ablehnung. Links zeigt show-active die aktivierten Policies, Attribute und Generationen vor und nach jedem ungültigen Update sowie nach den gültigen Korrekturen. Ungültige Updates ändern keine Generation; erst die gültigen Korrekturen aktivieren einen neuen Stand. Der tatsächliche Zugriff wird zusätzlich geprüft.'
+    printf '\n'
+    pause_demo
     policy robust deny '    system.defcon <= 2;'
     local before offset
     explain 'Aktiver Ausgangszustand vor der ungültigen Policy: Die Deny-Policy robust ist aktiviert und DEFCON steht auf 2.'

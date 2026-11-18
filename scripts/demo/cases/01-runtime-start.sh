@@ -3,16 +3,22 @@
 # Der leere Policy-Stand zeigt das Allow-Verhalten ohne passende Deny-Policy.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
-    chapter '1. Runtime starten und Ausgangszustand prüfen' \
+    chapter_start '1. Runtime starten und Ausgangszustand prüfen'
+    chapter_section 'Ausgangslage' \
         "relevante Dateien:
   $target
   $safe
   ${target%/*}/alias.txt
 
-  Es läuft noch keine Runtime und es sind keine Policies geladen." \
-        "Der Prototyp wird gestartet. Danach wird die Datei ${target} geöffnet." \
-                'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcmement' \
+  Es läuft noch keine Runtime und es sind keine Policies geladen."
+    chapter_section 'Aktion' \
+        "Der Prototyp wird gestartet. Danach wird die Datei ${target} geöffnet."
+    chapter_section 'Erwartetes Verhalten' \
+        'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcmement'
+    chapter_section 'Beobachtung' \
         ''
+    printf '\n'
+    pause_demo
 
     start_kernel_trace
     RUST_LOG=info TAILS_PDP_EBPF_DEBUG=deny TAILS_PDP_TIMING=0 "$TAILS_PDP_BIN" >> "$demo_root/runtime.log" 2>&1 &
