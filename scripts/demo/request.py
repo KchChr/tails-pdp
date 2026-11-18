@@ -8,7 +8,7 @@ import re
 import time
 
 
-def describe(snapshot, command, uid, path, project_root, now=None):
+def describe(snapshot, command, uid, path, now=None):
     uid = os.getuid() if uid == '-' else int(uid)
     metadata = path.stat()
     device = (os.major(metadata.st_dev) << 20) | os.minor(metadata.st_dev)
@@ -42,15 +42,11 @@ def describe(snapshot, command, uid, path, project_root, now=None):
     for name in required:
         attributes.setdefault(name, 'nicht vorhanden')
 
-    try:
-        display_path = './' + str(path.relative_to(project_root))
-    except ValueError:
-        display_path = str(path)
     lines = [
         '  Aktion:        file_open (Datei öffnen)',
         f'  Kommando:      {command}',
         f'  Benutzer:      subject.uid = {uid} (Real-UID)',
-        f'  Ressource:     {display_path}',
+        f'  Ressource:     {path.absolute()}',
         f'  Dateiidentität: Gerät {device}, Inode {metadata.st_ino}',
         f'  Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
         '  Zugeordnete aktive Attribute:',
@@ -78,9 +74,8 @@ def main():
     parser.add_argument('command')
     parser.add_argument('uid')
     parser.add_argument('file', type=Path)
-    parser.add_argument('project_root', type=Path)
     args = parser.parse_args()
-    print(describe(args.snapshot.read_text(), args.command, args.uid, args.file, args.project_root))
+    print(describe(args.snapshot.read_text(), args.command, args.uid, args.file))
 
 
 if __name__ == '__main__':

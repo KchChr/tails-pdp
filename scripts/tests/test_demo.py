@@ -214,7 +214,9 @@ class RequestViewTests(unittest.TestCase):
                 linked = root / 'alias.txt'
                 linked.hardlink_to(target)
                 target = linked
-            return request_view.describe(snapshot, 'cat', '0', target, root, now=3661), identity
+            text = request_view.describe(snapshot, 'cat', '0', target, now=3661)
+            self.assertIn(f'Ressource:     {target}\n', text)
+            return text, identity
 
     def test_only_attributes_for_requested_subject_and_resource_are_shown(self):
         text, _ = self.request()
@@ -236,7 +238,6 @@ class RequestViewTests(unittest.TestCase):
 
     def test_hardlink_has_original_identity_and_resource_attributes(self):
         text, identity = self.request(alias=True)
-        self.assertIn('./alias.txt', text)
         self.assertIn(identity, text)
         self.assertIn('resource.classification = "internal"', text)
 

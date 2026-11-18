@@ -142,9 +142,8 @@ Aufruf von `publish-config.sh` und dessen technische Ausgabe stehen ausschließl
 in `publication.log`. Eine Veröffentlichung bedeutet noch keine Aktivierung;
 deren Bestätigung folgt weiterhin als eigene Prüfmeldung.
 Vor jeder sichtbaren Admin-Ausgabe erscheint der entsprechende Aufruf mit
-Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`. Pfade innerhalb des
-Repositorys werden relativ angezeigt, beispielsweise
-`./target/release/tails-pdp-admintool --policy-dir ./policies --attributes-dir ./attributes show-active`.
+Binärpfad, Quellverzeichnissen und Unterbefehl als `$ ...`. Die Demo zeigt
+absolute Dateipfade, abgeleitet vom tatsächlichen Repository-Pfad.
 Das Administrationstool wird in der gesamten Demo ausschließlich mit
 `show-active` aufgerufen. Dadurch werden nur aktivierte Policies und die
 aktuellen Attribute angezeigt, keine deaktivierten Policy-Plätze.
@@ -237,9 +236,8 @@ Die Demo startet mit dem Repository als Arbeitsverzeichnis. Die Runtime liest
 ihre Konfiguration aus `policies/` und `attributes/`; die Beispieldateien liegen
 unter `demo/files/`. Jeder Lauf erhält ein eigenes Verzeichnis
 `demo/runs/run.XXXXXX/` für Logs, FD-Zustände und vorbereitete Dateien. `demo/`
-ist in Git ausgeschlossen. Die angezeigten Befehle verwenden kurze relative
-Pfade. Nur `resource.path` in den Policies muss weiterhin ein absoluter Pfad
-sein; er darf einschließlich Repositorypfad höchstens 64 Byte umfassen.
+ist in Git ausgeschlossen. Der absolute `resource.path` in den Policies darf
+einschließlich Repositorypfad höchstens 64 Byte umfassen.
 
 Damit die Ausgangslage reproduzierbar ist, werden vorhandene Verzeichnisse
 `policies/`, `attributes/` und `demo/files/` vorübergehend unter

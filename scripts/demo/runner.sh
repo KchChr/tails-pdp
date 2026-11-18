@@ -72,12 +72,7 @@ step() {
 show_command() {
     local argument
     printf '\n%s$' "$color_command"
-    # The worker runs in the repository. Relative paths are equivalent here and
-    # keep the displayed commands short enough for the presentation pane.
     for argument in "$@"; do
-        if [[ "$argument" == "$PROJECT_ROOT/"* ]]; then
-            argument="./${argument#"$PROJECT_ROOT/"}"
-        fi
         printf ' %q' "$argument"
     done
     printf '%s\n' "$color_reset"
@@ -96,8 +91,7 @@ admin() {
     # The demo always uses the compact view, including internal polling.
     local command=("$ADM_TOOL_BIN" --policy-dir "$policy_dir" --attributes-dir "$attribute_dir" show-active)
     if (( quiet == 0 )); then
-        # Show an equivalent repository-relative Bash command. Internal polling
-        # stays quiet so it does not obscure the demo output.
+        # Internal polling stays quiet so it does not obscure the demo output.
         if (( label )); then printf '\n[Admin-Tool des Prototyps]\n'; fi
         show_command "${command[@]}"
     fi
@@ -154,9 +148,9 @@ publish() {
         return 1
     fi
     if [[ "$destination" == "$policy_dir/"* ]]; then
-        printf '\nFolgende Policy veröffentlicht (%s):\n' "${destination#"$PROJECT_ROOT/"}"
+        printf '\nFolgende Policy veröffentlicht (%s):\n' "$destination"
     else
-        printf '\nFolgende Attribute veröffentlicht (%s):\n' "${destination#"$PROJECT_ROOT/"}"
+        printf '\nFolgende Attribute veröffentlicht (%s):\n' "$destination"
     fi
     printf '%s' "$color_config"
     cat -- "$destination"
@@ -166,7 +160,7 @@ show_policy_context() {
     local file
     for file in "$policy_dir"/*.policy; do
         [[ -f "$file" ]] || continue
-        printf '\nUnveränderte Policy für die Zugriffsprüfung (%s):\n' "${file#"$PROJECT_ROOT/"}"
+        printf '\nUnveränderte Policy für die Zugriffsprüfung (%s):\n' "$file"
         printf '%s' "$color_config"
         cat -- "$file"
         printf '%s\n' "$color_reset"
@@ -205,14 +199,13 @@ show_request() {
     admin --quiet > "$demo_root/request.active"
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
     show_output python3 "$PROJECT_ROOT/scripts/demo/request.py" \
-        "$demo_root/request.active" "$command" "$uid" "$file" "$PROJECT_ROOT"
+        "$demo_root/request.active" "$command" "$uid" "$file"
 }
 show_decision() {
     local expected="$1" actual="$2" enforcement="$3" file="$4"
     local heading="${5:-Entscheidung zur Zugriffsanfrage}" expected_label actual_label
     case "$expected" in allow) expected_label=Permit ;; deny) expected_label=Deny ;; *) return 1 ;; esac
     case "$actual" in allow) actual_label=Permit ;; deny) actual_label=Deny ;; *) return 1 ;; esac
-    if [[ "$file" == "$PROJECT_ROOT/"* ]]; then file="./${file#"$PROJECT_ROOT/"}"; fi
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
     printf '%s  Datei:          %s\n' "$color_output" "$file"
     printf '  Ergebnis:       %s\n' "$actual_label"
@@ -448,7 +441,7 @@ PY
     done
     [[ ! -L "$backup/directories.present" ]] || { fail 'Ungültiges Sicherungsmanifest.'; return 1; }
     recovery="$(mktemp -d "$demo_root/recovered.XXXXXX")"
-    explain "Ein unterbrochener Demo-Lauf wird wiederhergestellt. Vorhandene Demo-Dateien werden unter ${recovery#"$PROJECT_ROOT/"} archiviert."
+    explain "Ein unterbrochener Demo-Lauf wird wiederhergestellt. Vorhandene Demo-Dateien werden unter $recovery archiviert."
     for name in policies attributes files; do
         path="$(workspace_path "$name")"
         if [[ -d "$backup/$name" ]]; then
@@ -576,7 +569,7 @@ demo_worker() {
     flock -n 9 || { fail 'Eine Evaluation oder Demo läuft bereits.'; return 1; }
     if pgrep -x tails-pdp >/dev/null; then fail 'Es läuft bereits eine Instanz des Prototyps.'; return 1; fi
     (( $(printf '%s' "$target" | wc -c) <= 64 )) || {
-        fail 'Der Repositorypfad ist zu lang: Der absolute Pfad von demo/files/protected.txt darf höchstens 64 Byte umfassen. Bitte einen kürzeren Checkout-Pfad verwenden.'; return 1;
+        fail "Der Repositorypfad ist zu lang: $target darf höchstens 64 Byte umfassen. Bitte einen kürzeren Checkout-Pfad verwenden."; return 1;
     }
     setup_demo_bpffs
     owns_pins=1
@@ -620,7 +613,7 @@ demo_worker() {
     printf '  aktivierten Stand. Zusätzlich wird der tatsächliche Dateizugriff geprüft.\n'
 
     printf '\n%sDateien und Protokolle%s\n' "$color_section" "$color_reset"
-    printf '  Policies: policies/   Attribute: attributes/   Dateien: demo/files/\n'
+    printf '  Policies:  %s\n  Attribute: %s\n  Dateien:   %s\n' "$policy_dir" "$attribute_dir" "${target%/*}"
     printf '  Logs: %s\n\n' "$demo_root"
     pause_demo 'Enter: erstes Kapitel anzeigen | Strg+C: abbrechen '
 

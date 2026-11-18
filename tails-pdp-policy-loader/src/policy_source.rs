@@ -32,7 +32,7 @@ type PolicyGenerationMap = Array<MapData, u32>;
 
 #[derive(Clone, Eq, PartialEq)]
 struct PolicyDocument {
-    relative_path: PathBuf,
+    source_path: PathBuf,
     source: String,
 }
 
@@ -410,13 +410,13 @@ fn prepare_array_bank<T: Copy>(
 
 fn read_policy_documents(policy_dir: &Path) -> anyhow::Result<Vec<PolicyDocument>> {
     let mut documents = Vec::new();
-    read_policy_documents_recursive(policy_dir, policy_dir, &mut documents)?;
-    documents.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+    let policy_dir = std::path::absolute(policy_dir)?;
+    read_policy_documents_recursive(&policy_dir, &mut documents)?;
+    documents.sort_by(|left, right| left.source_path.cmp(&right.source_path));
     Ok(documents)
 }
 
 fn read_policy_documents_recursive(
-    root: &Path,
     current: &Path,
     documents: &mut Vec<PolicyDocument>,
 ) -> anyhow::Result<()> {
@@ -429,7 +429,7 @@ fn read_policy_documents_recursive(
     for entry in entries {
         let path = entry.path();
         if path.is_dir() {
-            read_policy_documents_recursive(root, &path, documents)?;
+            read_policy_documents_recursive(&path, documents)?;
             continue;
         }
 
@@ -439,17 +439,8 @@ fn read_policy_documents_recursive(
 
         let source = fs::read_to_string(&path)
             .with_context(|| format!("failed to read policy file '{}'", path.display()))?;
-        let relative_path = path
-            .strip_prefix(root)
-            .with_context(|| {
-                format!(
-                    "failed to create relative path for policy file '{}'",
-                    path.display()
-                )
-            })?
-            .to_path_buf();
         documents.push(PolicyDocument {
-            relative_path,
+            source_path: path,
             source,
         });
     }
@@ -467,7 +458,7 @@ fn translate_policy_documents(documents: &[PolicyDocument]) -> anyhow::Result<Tr
             bail!(
                 "duplicate policy name '{}' in '{}'",
                 parsed.name,
-                document.relative_path.display()
+                document.source_path.display()
             );
         }
         translate_policy(&mut translated, parsed)?;
@@ -493,16 +484,13 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             Some((line_no + 1, trimmed.to_string()))
         });
 
-    let (policy_line_no, policy_line) = lines.next().ok_or_else(|| {
-        anyhow!(
-            "policy file '{}' is empty",
-            document.relative_path.display()
-        )
-    })?;
+    let (policy_line_no, policy_line) = lines
+        .next()
+        .ok_or_else(|| anyhow!("policy file '{}' is empty", document.source_path.display()))?;
     let name = parse_policy_name(&policy_line).with_context(|| {
         format!(
             "{}:{}: invalid policy header",
-            document.relative_path.display(),
+            document.source_path.display(),
             policy_line_no
         )
     })?;
@@ -510,14 +498,14 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     let (entitlement_line_no, entitlement_line) = lines.next().ok_or_else(|| {
         anyhow!(
             "{}:{}: missing entitlement line after policy header",
-            document.relative_path.display(),
+            document.source_path.display(),
             policy_line_no
         )
     })?;
     let entitlement = parse_entitlement(&entitlement_line).with_context(|| {
         format!(
             "{}:{}: invalid entitlement line",
-            document.relative_path.display(),
+            document.source_path.display(),
             entitlement_line_no
         )
     })?;
@@ -532,7 +520,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
         let statement = line.strip_suffix(';').ok_or_else(|| {
             anyhow!(
                 "{}:{}: policy statements must end with ';'",
-                document.relative_path.display(),
+                document.source_path.display(),
                 line_no
             )
         })?;
@@ -541,7 +529,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             set_once(
                 &mut action,
                 parsed_action,
-                &document.relative_path,
+                &document.source_path,
                 line_no,
                 "action",
             )?;
@@ -552,7 +540,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             set_once(
                 &mut subject,
                 parsed_subject,
-                &document.relative_path,
+                &document.source_path,
                 line_no,
                 "subject.uid",
             )?;
@@ -563,7 +551,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             set_once(
                 &mut command,
                 parsed_command,
-                &document.relative_path,
+                &document.source_path,
                 line_no,
                 "command",
             )?;
@@ -574,7 +562,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
             set_once(
                 &mut file_resource,
                 parsed_resource,
-                &document.relative_path,
+                &document.source_path,
                 line_no,
                 "resource.path",
             )?;
@@ -588,7 +576,7 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
 
         bail!(
             "{}:{}: unsupported statement '{}'",
-            document.relative_path.display(),
+            document.source_path.display(),
             line_no,
             statement
         );
@@ -597,13 +585,13 @@ fn parse_policy_document(document: &PolicyDocument) -> anyhow::Result<ParsedPoli
     action.ok_or_else(|| {
         anyhow!(
             "{}: policy '{}' is missing 'action == ...'",
-            document.relative_path.display(),
+            document.source_path.display(),
             name
         )
     })?;
 
     Ok(ParsedPolicy {
-        source_path: document.relative_path.clone(),
+        source_path: document.source_path.clone(),
         name,
         entitlement,
         subject: subject.unwrap_or(ANY_SUBJECT),
@@ -1091,7 +1079,7 @@ mod tests {
 
     fn document(source: &str) -> PolicyDocument {
         PolicyDocument {
-            relative_path: PathBuf::from("test.policy"),
+            source_path: PathBuf::from("/test.policy"),
             source: source.to_owned(),
         }
     }
@@ -1363,10 +1351,7 @@ mod tests {
         fs::remove_dir_all(&root).expect("remove temporary policy directory");
 
         assert_eq!(documents.len(), 1);
-        assert_eq!(
-            documents[0].relative_path,
-            PathBuf::from("nested/accepted.policy")
-        );
+        assert_eq!(documents[0].source_path, nested.join("accepted.policy"));
     }
 
     #[test]
