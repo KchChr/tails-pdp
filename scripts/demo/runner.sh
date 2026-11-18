@@ -582,35 +582,16 @@ demo_worker() {
     cd "$PROJECT_ROOT"
 
     printf '\n%sPrototyp – geführte Live-Demo%s\n\n' "$color_heading" "$color_reset"
-    printf 'Die Demo zeigt, wie Policies und Attribute die Zugriffsentscheidung verändern\n'
-    printf 'und wie bereits geöffnete Dateideskriptoren entzogen werden.\n'
+    printf 'Die Demo zeigt, wie Policies, Attribute und Zeitbedingungen den\n'
+    printf 'Dateizugriff steuern und bereits geöffnete Dateideskriptoren entzogen werden.\n'
 
     printf '\n%sBedienung%s\n' "$color_section" "$color_reset"
-    printf '  Enter führt durch die Kapitel und Teilschritte. Die Ergebnisse bleiben\n'
-    printf '  bis zum Weitergehen sichtbar. Strg+C beendet die Demo.\n'
+    printf '  Enter führt zum nächsten Schritt. Strg+C beendet die Demo.\n'
 
-    printf '\n%sBildschirmaufteilung%s\n' "$color_section" "$color_reset"
-    printf '  Links:         Erklärungen, Aktionen und Zugriffsprüfungen\n'
-    printf '  Rechts oben:   Runtime-Log und Kernel-Debugausgaben\n'
-    printf '  Rechts unten:  FD-Beobachter und Prüfergebnisse\n'
-
-    printf '\n%sPrüfung der Zugriffe%s\n' "$color_section" "$color_reset"
-    printf '  Die Zugriffshilfe probe.py access öffnet die jeweilige Datei mit os.open.\n'
-    printf '  Für gezielte Prüfungen setzt sie den Kommandonamen und die Real-UID;\n'
-    printf '  die effektive UID bleibt root. In Kapitel 2 laufen echtes cat und head.\n\n'
-    printf '  Danach erscheint nur das Ergebnis: Dateiöffnung erlaubt oder verweigert.\n'
-    printf '  Als Verweigerung gilt der Fehler EPERM. Andere Fehler brechen die Demo ab.\n'
-    printf '  Vor dem Zugriff zeigt ein Anfrageblock die Aktion, das Kommando, den\n'
-    printf '  Benutzer, die Datei und ihre Attribute aus dem aktivierten Stand.\n'
-    printf '  Die Anzeige ist eine Momentaufnahme; sie zeichnet den Kernelaufruf nicht auf.\n'
-    printf '  Danach zeigt ein Entscheidungsblock Permit oder Deny, die beobachtete\n'
-    printf '  Durchsetzung und den Vergleich mit dem erwarteten Ergebnis. Ein Permit\n'
-    printf '  bedeutet dabei nicht, dass eine bestimmte Permit-Policy zutreffen muss.\n'
-
-    printf '\n%sAktive Konfiguration%s\n' "$color_section" "$color_reset"
-    printf '  show-active zeigt die aktivierten Policies und Attributwerte.\n'
-    printf '  Policygeneration und Attributgeneration kennzeichnen den jeweiligen\n'
-    printf '  aktivierten Stand. Zusätzlich wird der tatsächliche Dateizugriff geprüft.\n'
+    printf '\n%sAnzeige%s\n' "$color_section" "$color_reset"
+    printf '  Links:         Erklärungen, Zugriffsanfragen und Entscheidungen\n'
+    printf '  Rechts oben:   Runtime- und Kernel-Logs\n'
+    printf '  Rechts unten:  Zustand der offenen Dateideskriptoren\n'
 
     printf '\n%sDateien und Protokolle%s\n' "$color_section" "$color_reset"
     printf '  Policies:  %s\n  Attribute: %s\n  Dateien:   %s\n' "$policy_dir" "$attribute_dir" "${target%/*}"
