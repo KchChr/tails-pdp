@@ -581,35 +581,6 @@ demo_worker() {
     printf 'defcon = 5\n' > "$attribute_dir/system.attributes"
     cd "$PROJECT_ROOT"
 
-    printf '\n%sPrototyp – geführte Live-Demo%s\n\n' "$color_heading" "$color_reset"
-    printf 'Die Demo zeigt, wie Policies, Attribute und Zeitbedingungen den\n'
-    printf 'Dateizugriff steuern und bereits geöffnete Dateideskriptoren entzogen werden.\n'
-
-    printf '\n%sBedienung%s\n' "$color_section" "$color_reset"
-    printf '  Enter: nächster Schritt.\n'
-    printf '  Strg+C: Beenden.\n'
-
-    printf '\n%sAnzeige%s\n' "$color_section" "$color_reset"
-    printf '  Links:         Demo\n'
-    printf '  Rechts oben:   Logs\n'
-    printf '  Rechts unten:  Filedesciptors\n'
-
-    printf '\n%srelevante Dateien und Ordner%s\n' "$color_section" "$color_reset"
-    printf '  Policies:  %s\n  Attribute: %s\n  Dateien:   %s\n' "$policy_dir" "$attribute_dir" "${target%/*}"
-    printf '  Logs: %s\n\n' "$demo_root"
-    pause_demo 'Enter: erstes Kapitel anzeigen | Strg+C: abbrechen '
-
-    # Die Fälle verwenden denselben Demo-Zustand und bauen aufeinander auf.
-    source "$PROJECT_ROOT/scripts/demo/cases/01-runtime-start.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/02-statische-policies.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/03-policy-lebenszyklus.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/04-systemattribut.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/05-subjekt-und-ressourcenattribute.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/06-ungueltige-updates.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/07-fd-entzug-policy.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/08-fd-entzug-attribut.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/09-fd-entzug-zeitgrenze.sh"
-    source "$PROJECT_ROOT/scripts/demo/cases/10-utc-zeitbedingungen.sh"
-
-    observe 'Alle Demo-Kapitel erfolgreich geprüft.'
+    # Alle sichtbaren Kapiteltexte und Aktionen liegen in cases/.
+    source "$PROJECT_ROOT/scripts/demo/chapters.sh"
 }

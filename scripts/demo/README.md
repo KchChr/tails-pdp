@@ -193,10 +193,19 @@ Userspace-PEP mit der Logkennung `USERSPACE_PEP`, etwa beim erfolgreichen oder
 fehlgeschlagenen Schließen eines FDs. Beide Durchsetzungspfade enthalten eine
 integrierte PDP-Funktion, die Policies auswertet und eine Entscheidung ableitet.
 Die Komponenten heißen entsprechend der Thesis Kernelspace-PEP und Userspace-PEP.
-Jeder der zehn Demofälle hat ein eigenes Bash-Skript unter `scripts/demo/cases/`.
-Der Kommentar am Dateianfang beschreibt, was der Fall demonstriert.
-`scripts/demo.sh` bleibt der Einstieg: Der Runner bindet die Fälle der Reihe
-nach ein, damit sie sich Runtime und Arbeitsbereich teilen. Die Dateien sind
+Einführung, jedes der zehn fachlichen Kapitel und Abschluss haben jeweils ein
+eigenes Bash-Skript unter `scripts/demo/cases/`. Alle sichtbaren Texte und
+Aktionen eines Kapitels werden dort kuratiert. Der Kommentar am Dateianfang
+beschreibt seinen Zweck. `00-einfuehrung.sh` enthält die Einführung,
+`01-…sh` bis `10-…sh` die fachlichen Kapitel und `99-abschluss.sh` den Abschluss.
+
+`scripts/demo/chapters.sh` legt die Reihenfolge ausdrücklich fest. Hier kann
+ein Kapitel in den Ablauf aufgenommen werden. Die Kapitel bauen aufeinander
+auf; bloßes Umordnen oder Weglassen kann ihre Voraussetzungen verletzen.
+`scripts/demo.sh` bleibt der Einstieg. Der Runner enthält die technischen
+Hilfsfunktionen, richtet den Arbeitsbereich ein und räumt nach dem Ablauf auf.
+Er bindet den Redaktionsplan ein, sodass die Kapitel Runtime und Arbeitsbereich
+teilen. Die Dateien sind
 für diesen gemeinsamen Ablauf vorgesehen. Die Zwischenschritte 7a und 8a
 stehen beim jeweiligen FD-Fall.
 Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen

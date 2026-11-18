@@ -11,7 +11,7 @@
 
   Es läuft noch keine Runtime und es sind keine Policies geladen." \
         "Der Prototyp wird gestartet. Danach wird die Datei ${target} geöffnet." \
-                'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enformcement' \
+                'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcmement' \
         ''
 
     start_kernel_trace

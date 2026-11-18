@@ -129,6 +129,7 @@ run_step "Atomare Konfigurationsveröffentlichung prüfen" \
 run_step "Demo-Skripte syntaktisch prüfen" \
     bash -c 'for script; do bash -n "$script" || exit; done' bash \
     "$PROJECT_ROOT/scripts/demo.sh" "$PROJECT_ROOT/scripts/demo/runner.sh" \
+    "$PROJECT_ROOT/scripts/demo/chapters.sh" \
     "$PROJECT_ROOT/scripts/demo/dependencies.sh" "$PROJECT_ROOT/scripts/demo/build.sh" \
     "$PROJECT_ROOT/scripts/demo/pane.sh" "$PROJECT_ROOT"/scripts/demo/cases/*.sh
 
