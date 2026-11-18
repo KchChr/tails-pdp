@@ -586,14 +586,15 @@ demo_worker() {
     printf 'Dateizugriff steuern und bereits geöffnete Dateideskriptoren entzogen werden.\n'
 
     printf '\n%sBedienung%s\n' "$color_section" "$color_reset"
-    printf '  Enter führt zum nächsten Schritt. Strg+C beendet die Demo.\n'
+    printf '  Enter: nächster Schritt.\n'
+    printf '  Strg+C: Beenden.\n'
 
     printf '\n%sAnzeige%s\n' "$color_section" "$color_reset"
-    printf '  Links:         Erklärungen, Zugriffsanfragen und Entscheidungen\n'
-    printf '  Rechts oben:   Runtime- und Kernel-Logs\n'
-    printf '  Rechts unten:  Zustand der offenen Dateideskriptoren\n'
+    printf '  Links:         Demo\n'
+    printf '  Rechts oben:   Logs\n'
+    printf '  Rechts unten:  Filedesciptors\n'
 
-    printf '\n%sDateien und Protokolle%s\n' "$color_section" "$color_reset"
+    printf '\n%srelevante Dateien und Ordner%s\n' "$color_section" "$color_reset"
     printf '  Policies:  %s\n  Attribute: %s\n  Dateien:   %s\n' "$policy_dir" "$attribute_dir" "${target%/*}"
     printf '  Logs: %s\n\n' "$demo_root"
     pause_demo 'Enter: erstes Kapitel anzeigen | Strg+C: abbrechen '
