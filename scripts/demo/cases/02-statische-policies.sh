@@ -11,7 +11,7 @@
   Hardlink auf die Ressource: ${target%/*}/alias.txt"
     chapter_section 'Aktion' \
         'Eine Deny-Policy wird veröffentlicht. Danach werden subject.uid, command und resouce einzeln variiert.'
-    admin
+
     chapter_section 'Erwartetes Verhalten' \
         'Deny bei Übereinstimmung aller Attribute, ansonsten Permit'
     chapter_section 'Beobachtung' \
@@ -22,7 +22,7 @@
     command_access_is allow cat -
     step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können. Eine Verweigerung hier zeigt ein Problem mit den normalen Dateirechten.'
     command_access_is allow cat "$comparison_uid"
-    step 'Die Deny-Policy für die UID des Demo-Workers, command == "cat"; und die geschützte Ressource wird veröffentlicht.'
+    step 'Die Deny-Policy für die UID "$UID", command == "cat"; und die geschützte Ressource wird veröffentlicht.'
     policy scoped deny "    subject.uid == $UID;" cat
     command_access_is deny cat -
     step 'Nur der Benutzer wird geändert: sudo -u startet cat mit der anderen Benutzeridentität.'
