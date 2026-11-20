@@ -179,6 +179,8 @@ Die Kontextwerte stehen in der Schreibweise der Policy-Bedingungen:
 action == "file_open";
 command == "cat";
 subject.uid == 60001;
+resource.device == 2049;
+resource.inode == 12345;
 resource.path == "/home/demo/tails-pdp/demo/files/protected.txt";
 system.defcon == 2;
 subject.position == "engineer";
@@ -190,7 +192,14 @@ Policy. Die eigentlichen Policies können andere Vergleiche verwenden, etwa
 `system.defcon <= 2;`. Zeichenketten sind quotiert; Zahlen bleiben unquotiert.
 Fehlende Attribute erscheinen als Kommentar, etwa
 `# subject.position: nicht vorhanden`, und nicht als erfundene Policy-Bedingung.
-Gerät, Inode und Generationen stehen separat unter **Metadaten**.
+Die Werte für `resource.device` und `resource.inode` werden für die jeweilige
+Datei ermittelt; die Zahlen im Beispiel sind exemplarisch. Diese beiden Werte
+bilden die Ressourcenidentität für den Abgleich im Kernel. `resource.path` steht
+darunter zur Orientierung; ein Pfadvergleich findet im Kernel nicht statt.
+Der Loader übersetzt den Ressourcenpfad einer Policy zuvor in Gerät und Inode.
+`resource.device` und `resource.inode` sind hier Anzeigefelder des Context,
+keine zusätzlichen Felder der Policy-Eingabesprache.
+Die Generationen stehen separat unter **Metadaten**.
 
 Dabei haben `=` und `==` unterschiedliche, feste Aufgaben: Eine Attributdatei
 weist mit `defcon = 2` einen Wert zu; eine Policy vergleicht mit

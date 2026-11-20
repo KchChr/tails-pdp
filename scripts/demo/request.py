@@ -47,8 +47,10 @@ def describe(snapshot, command, uid, path, now=None):
         '  action == "file_open";',
         f'  command == {json.dumps(command, ensure_ascii=False)};',
         f'  subject.uid == {uid};',
+        f'  resource.device == {device};',
+        f'  resource.inode == {metadata.st_ino};',
         f'  resource.path == {json.dumps(str(path.absolute()), ensure_ascii=False)};',
-        '  Zugeordnete aktive Attribute:',
+        '   Attribute:',
     ]
     lines.extend(
         f'    {name} == {value};' if value is not None else f'    # {name}: nicht vorhanden'
@@ -71,7 +73,6 @@ def describe(snapshot, command, uid, path, now=None):
                 lines.append(f'    environment.time % {modulo} == {timestamp % modulo};')
     lines.extend([
         '  Metadaten (keine Policy-Bedingungen):',
-        f'    Dateiidentität: Gerät {device}, Inode {metadata.st_ino}',
         f'    Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
     ])
     return '\n'.join(lines)

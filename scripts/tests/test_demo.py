@@ -196,7 +196,7 @@ class RequestViewTests(unittest.TestCase):
             control.write_text('control')
             metadata = target.stat()
             device = (os.major(metadata.st_dev) << 20) | os.minor(metadata.st_dev)
-            identity = f'Gerät {device}, Inode {metadata.st_ino}'
+            identity = (device, metadata.st_ino)
             snapshot = (
                 'generation policy=11 policy_bank_offset=256 attribute=8 attribute_bank=0\n'
                 'FILE_OPEN_STREAM_POLICIES:\n'
@@ -215,6 +215,10 @@ class RequestViewTests(unittest.TestCase):
                 linked.hardlink_to(target)
                 target = linked
             text = request_view.describe(snapshot, 'cat', '0', target, now=3661)
+            device_line = f'resource.device == {device};'
+            inode_line = f'resource.inode == {metadata.st_ino};'
+            self.assertLess(text.index(device_line), text.index(inode_line))
+            self.assertLess(text.index(inode_line), text.index('resource.path =='))
             self.assertIn(f'resource.path == {json.dumps(str(target), ensure_ascii=False)};', text)
             return text, identity
 
@@ -240,7 +244,9 @@ class RequestViewTests(unittest.TestCase):
 
     def test_hardlink_has_original_identity_and_resource_attributes(self):
         text, identity = self.request(alias=True)
-        self.assertIn(identity, text)
+        self.assertIn(f'resource.device == {identity[0]};', text)
+        self.assertIn(f'resource.inode == {identity[1]};', text)
+        self.assertNotIn('Dateiidentität:', text)
         self.assertIn('resource.classification == "internal";', text)
 
     def test_context_quotes_strings_without_creating_additional_statements(self):
