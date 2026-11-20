@@ -150,8 +150,8 @@ aktuellen Attribute angezeigt, keine deaktivierten Policy-Plätze.
 Die Befehle laufen im privilegierten Demo-Worker; Eingaben sind nicht nötig.
 Interne Generationsabfragen bleiben ohne Befehlsausgabe. Kapitel 2 nennt die
 Pfade `demo/files/protected.txt`, `demo/files/control.txt` und `demo/files/alias.txt`.
-In Kapitel 2 werden echtes `cat` und als Kommando-Gegenprobe echtes `head`
-gestartet. `setpriv --ruid` setzt dabei nur die Real-UID; die effektive UID bleibt
+In Kapitel 1 und 2 wird echtes `cat` gestartet, in Kapitel 2 zusätzlich echtes
+`head`. `setpriv --ruid` setzt dabei nur die Real-UID; die effektive UID bleibt
 0, damit gewöhnliche Dateirechte den Filtervergleich nicht beeinflussen.
 Die Demo zeigt den vollständigen Aufruf, den Dateiinhalt bei Erfolg und die
 Originalfehlermeldung bei einer Verweigerung. Der Exitstatus allein genügt nicht:
@@ -173,7 +173,8 @@ ausgelesener PDP-Trace.
 
 Vor jeder Dateiöffnung zeigt ein Block **Authorization Context** `file_open`, Kommando, Real-UID,
 Dateipfad, Geräte-/Inode-Identität und die aktuellen Konfigurationsgenerationen.
-Die Kontextwerte stehen in der Schreibweise der Policy-Bedingungen:
+Die Anzeige ist linksbündig; Leerzeilen trennen Attribute, Zeitkontext und
+Metadaten. Die Kontextwerte stehen in der Schreibweise der Policy-Bedingungen:
 
 ```text
 action == "file_open";
@@ -217,9 +218,12 @@ Zugriff und keine atomare Aufzeichnung des tatsächlichen Kernel-Requests.
 Bei FD-Szenarien werden geschützte Datei und Kontrolldatei getrennt dargestellt;
 der Authorization Context nach einer Re-evaluation ist als solcher gekennzeichnet
 und bedeutet keine neue Dateiöffnung.
-Nach der Zugriffsprüfung folgt ein Block **Authorization Decision** mit Datei,
-`Decision` (`Permit` oder `Deny`), **Observed Enforcement** und **Expected Decision**.
-Die Prüfmeldung bestätigt die Übereinstimmung; Abweichungen werden
+Nach der Zugriffsprüfung folgt ein kompakter Block **Authorization Decision**
+mit `resource.path` und `Decision` (`Permit` oder `Deny`). Die zusätzliche Anzeige
+von Observed Enforcement und Expected Decision entfällt. Kapitel 1 und 2 zeigen
+stattdessen die tatsächliche Ausgabe von `cat` beziehungsweise `head`.
+Der erwartete Ausgang wird weiterhin intern geprüft. Die Prüfmeldung bestätigt
+die Übereinstimmung; Abweichungen werden
 sichtbar als Fehler ausgegeben und brechen die Demo ab. Die Anzeige fasst
 das beobachtete Enforcement zusammen und behauptet keinen ausgelesenen
 Decision Trace oder eine bestimmte auslösende Policy. Insbesondere bedeutet
@@ -327,7 +331,7 @@ eindeutige Zuordnung bleiben erhalten. Ungültige oder fehlende Sicherungspfade
 führen weiterhin zu einem Abbruch mit Diagnose. Konfiguration wird während der
 Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
-Kapitel 2 benötigt keine Zugriffshilfe; `cat`, `head` und `setpriv` gehören zu
+Kapitel 1 und 2 benötigen keine Zugriffshilfe; `cat`, `head` und `setpriv` gehören zu
 den geprüften Laufzeitwerkzeugen. In den übrigen Kapiteln dient `probe.py`
 als Syscall-Helfer: `access` setzt kontrolliert
 den unter Linux geführten Kommandonamen `comm` für den Kommando-Filter und optional die Real-UID (effektive UID bleibt root) und

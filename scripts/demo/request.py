@@ -44,36 +44,39 @@ def describe(snapshot, command, uid, path, now=None):
         attributes.setdefault(name, None)
 
     lines = [
-        '  action == "file_open";',
-        f'  command == {json.dumps(command, ensure_ascii=False)};',
-        f'  subject.uid == {uid};',
-        f'  resource.device == {device};',
-        f'  resource.inode == {metadata.st_ino};',
-        f'  resource.path == {json.dumps(str(path.absolute()), ensure_ascii=False)};',
-        '   Attribute:',
+        'action == "file_open";',
+        f'command == {json.dumps(command, ensure_ascii=False)};',
+        f'subject.uid == {uid};',
+        f'resource.device == {device};',
+        f'resource.inode == {metadata.st_ino};',
+        f'resource.path == {json.dumps(str(path.absolute()), ensure_ascii=False)};',
+        '',
+        'Attribute:',
     ]
     lines.extend(
-        f'    {name} == {value};' if value is not None else f'    # {name}: nicht vorhanden'
+        f'{name} == {value};' if value is not None else f'# {name}: nicht vorhanden'
         for name, value in sorted(attributes.items())
     )
     if not attributes:
-        lines.append('    keine')
+        lines.append('keine')
     if re.search(r'legacy_condition=(?:Time|Hour|Minute|Second)', snapshot):
         timestamp = int(time.time()) if now is None else int(now)
         utc = datetime.fromtimestamp(timestamp, timezone.utc)
         lines.extend([
-            '  Zeitkontext (Momentaufnahme der Systemzeit):',
-            f'    environment.time == {timestamp};',
-            f'    environment.utc.hour == {utc.hour};',
-            f'    environment.utc.minute == {utc.minute};',
-            f'    environment.utc.second == {utc.second};',
+            '',
+            'Zeitkontext (Momentaufnahme der Systemzeit):',
+            f'environment.time == {timestamp};',
+            f'environment.utc.hour == {utc.hour};',
+            f'environment.utc.minute == {utc.minute};',
+            f'environment.utc.second == {utc.second};',
         ])
         for modulo in sorted(set(int(value) for value in re.findall(r'legacy_condition=Time % (\d+)', snapshot))):
             if modulo:
-                lines.append(f'    environment.time % {modulo} == {timestamp % modulo};')
+                lines.append(f'environment.time % {modulo} == {timestamp % modulo};')
     lines.extend([
-        '  Metadaten (keine Policy-Bedingungen):',
-        f'    Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
+        '',
+        'Metadaten (keine Policy-Bedingungen):',
+        f'Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
     ])
     return '\n'.join(lines)
 

@@ -233,6 +233,9 @@ class RequestViewTests(unittest.TestCase):
         self.assertNotIn('unrelated', text)
         self.assertNotIn('public', text)
         self.assertIn('Policygeneration 11, Attributgeneration 8', text)
+        self.assertIn('\n\nAttribute:\n', text)
+        self.assertIn('\n\nMetadaten (keine Policy-Bedingungen):\n', text)
+        self.assertTrue(all(not line or line == line.lstrip() for line in text.splitlines()))
 
     def test_missing_and_numeric_attributes_keep_their_meaning(self):
         text, _ = self.request(position=None)
@@ -278,7 +281,7 @@ class PresentationTests(unittest.TestCase):
         script = '''set -Eeuo pipefail
 source "$RUNNER"
 demo_root="$TEST_ROOT"
-show_decision "$EXPECTED" "$ACTUAL" 'Beobachtete Dateiöffnung' "$PROJECT_ROOT/demo/files/protected.txt"
+show_decision "$EXPECTED" "$ACTUAL" "$PROJECT_ROOT/demo/files/protected.txt"
 '''
         for expected, actual in [('allow', 'allow'), ('deny', 'deny'), ('deny', 'allow')]:
             with self.subTest(expected=expected, actual=actual), tempfile.TemporaryDirectory() as directory:
@@ -288,9 +291,10 @@ show_decision "$EXPECTED" "$ACTUAL" 'Beobachtete Dateiöffnung' "$PROJECT_ROOT/d
                                              'EXPECTED': expected, 'ACTUAL': actual},
                                         capture_output=True, text=True)
                 label = 'Permit' if actual == 'allow' else 'Deny'
-                self.assertIn(f'Decision:             {label}', result.stdout)
+                self.assertIn(f'Decision: {label}', result.stdout)
                 self.assertIn(f'resource.path == {json.dumps(str(PROJECT / "demo/files/protected.txt"), ensure_ascii=False)};', result.stdout)
-                self.assertIn('Observed Enforcement: Beobachtete Dateiöffnung', result.stdout)
+                self.assertNotIn('Observed Enforcement:', result.stdout)
+                self.assertNotIn('Expected Decision:', result.stdout)
                 self.assertEqual(result.returncode == 0, actual == expected)
                 self.assertEqual('[Demo-Prüfung] OK:' in result.stdout, actual == expected)
 
@@ -401,8 +405,9 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
         result = self.check_access('deny', 'deny')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Operation not permitted', result.stdout)
-        self.assertIn('Decision:             Deny', result.stdout)
-        self.assertIn('Die Dateiöffnung durch cat wurde mit EPERM verweigert', result.stdout)
+        self.assertIn('Decision: Deny', result.stdout)
+        self.assertIn('[cat / Aufruf → stderr]', result.stdout)
+        self.assertIn('Operation not permitted', result.stdout)
 
     def test_other_errors_and_unexpected_success_are_not_denials(self):
         for mode in ('dac', 'missing', 'setpriv-error', 'allow'):

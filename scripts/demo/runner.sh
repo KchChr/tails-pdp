@@ -217,20 +217,18 @@ show_request() {
 }
 # Zeigt die aus dem beobachteten Enforcement abgeleitete und die erwartete Authorization Decision; eine Abweichung liefert Exitstatus 1.
 show_decision() {
-    local expected="$1" actual="$2" enforcement="$3" file="$4"
-    local heading="${5:-Authorization Decision}" expected_label actual_label
+    local expected="$1" actual="$2" file="$3"
+    local heading="${4:-Authorization Decision}" expected_label actual_label
     case "$expected" in allow) expected_label=Permit ;; deny) expected_label=Deny ;; *) return 1 ;; esac
     case "$actual" in allow) actual_label=Permit ;; deny) actual_label=Deny ;; *) return 1 ;; esac
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
     printf '%s' "$color_output"
-    python3 -c 'import json,sys; print("  resource.path == " + json.dumps(sys.argv[1], ensure_ascii=False) + ";")' "$file"
-    printf '  Decision:             %s\n' "$actual_label"
-    printf '  Observed Enforcement: %s\n' "$enforcement"
-    printf '  Expected Decision:    %s%s\n' "$expected_label" "$color_reset"
+    python3 -c 'import json,sys; print("resource.path == " + json.dumps(sys.argv[1], ensure_ascii=False) + ";")' "$file"
+    printf 'Decision: %s%s\n' "$actual_label" "$color_reset"
     if [[ "$actual" == "$expected" ]]; then
         observe 'OK: Das beobachtete Enforcement entspricht der erwarteten Authorization Decision.'
     else
-        printf '%s  Prüfung:        Expected Decision und aus dem Enforcement abgeleitete Decision weichen ab.%s\n' "$color_error" "$color_reset"
+        printf '%sPrüfung: Erwartet %s, beobachtet %s.%s\n' "$color_error" "$expected_label" "$actual_label" "$color_reset"
         return 1
     fi
 }
@@ -241,9 +239,7 @@ access_is() {
     show_request "$command" "$uid" "$file"
     local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
     actual="$("${invocation[@]}")"
-    local enforcement='Die Datei wurde erfolgreich geöffnet und wieder geschlossen.'
-    [[ "$actual" != deny ]] || enforcement='Die Dateiöffnung wurde mit EPERM verweigert.'
-    show_decision "$expected" "$actual" "$enforcement" "$file" || {
+    show_decision "$expected" "$actual" "$file" || {
         fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."
         return 1
     }
@@ -277,9 +273,7 @@ command_access_is() {
         fail "Aufruf von $command fehlgeschlagen (Exitstatus $status); kein nachgewiesener Policy-Deny."
         return 1
     fi
-    local enforcement="Die Datei wurde durch $command gelesen (Exitstatus $status)."
-    [[ "$actual" != deny ]] || enforcement="Die Dateiöffnung durch $command wurde mit EPERM verweigert (Exitstatus $status)."
-    show_decision "$expected" "$actual" "$enforcement" "$file" || {
+    show_decision "$expected" "$actual" "$file" || {
         fail "Zugriff durch $command: erwartet $expected, beobachtet $actual (Real-UID $uid)."
         return 1
     }
@@ -334,9 +328,9 @@ expect_revoked() {
         sleep 0.1
     done
     show_request tails-demo-fd 0 "$target" 'Authorization Context nach Re-evaluation der geschützten FDs (keine neue Dateiöffnung)'
-    show_decision deny deny 'Die drei geschützten Dateideskriptoren wurden geschlossen.' "$target" 'Authorization Decision für die bestehenden geschützten FDs'
+    show_decision deny deny "$target" 'Authorization Decision für die bestehenden geschützten FDs'
     show_request tails-demo-fd 0 "$safe" 'Authorization Context nach Re-evaluation der Kontroll-FDs (keine neue Dateiöffnung)'
-    show_decision allow allow 'Die beiden Kontroll-Dateideskriptoren bleiben offen.' "$safe" 'Authorization Decision für die bestehenden Kontroll-FDs'
+    show_decision allow allow "$safe" 'Authorization Decision für die bestehenden Kontroll-FDs'
     observe 'OK: Drei geschützte FDs entzogen, beide Kontroll-FDs offen, Hilfsprozess läuft weiter.'
 }
 # Prüft vor dem Auslöser über Gerät und Inode, ob die offenen FDs auf die erwarteten Dateien zeigen.
