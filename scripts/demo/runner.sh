@@ -240,6 +240,7 @@ command_access_is() {
     if [[ "$uid" == - ]]; then uid="$UID"; fi
     show_request "$command" "$uid" "$file"
     local invocation=("$command" "$file")
+    local metadata_invocation=(stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' "$file")
     if [[ "$uid" == "$UID" ]]; then
         printf '\n%s$ echo $UID%s\n' "$color_command" "$color_reset"
         show_output echo "$UID"
@@ -251,16 +252,16 @@ command_access_is() {
         show_command sudo -u "$user" -- id -u
         show_output "$sudo_bin" -u "$user" -- id -u
         invocation=("$sudo_bin" -u "$user" -- "$command" "$file")
+        metadata_invocation=("$sudo_bin" -u "$user" -- "${metadata_invocation[@]}")
     fi
-    printf '\n[Dateizugriff durch das Programm %s]\n' "$command"
+    show_command "${metadata_invocation[@]}"
+    show_output "${metadata_invocation[@]}"
     show_command "${invocation[@]}"
     LC_ALL=C "${invocation[@]}" > "$output" 2> "$error" || status=$?
     if [[ -s "$output" ]]; then
-        printf '%s[%s → stdout]\n' "$color_output" "$command"
         show_output cat -- "$output"
     fi
     if [[ -s "$error" ]]; then
-        printf '%s[%s / Aufruf → stderr]\n' "$color_output" "$command"
         show_output cat -- "$error"
     fi
     if (( status == 0 )); then

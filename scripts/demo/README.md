@@ -154,6 +154,11 @@ Alle Dateiöffnungen werden mit echtem `cat` geprüft; Kapitel 2 verwendet
 zusätzlich `head` als Kommando-Gegenprobe. `echo $UID` zeigt vor den Aufrufen die
 tatsächliche UID des Demo-Workers. Die vollständigen Befehle und ihre
 Originalausgaben bleiben sichtbar.
+Unmittelbar nach der UID-Ausgabe folgt
+`stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' <absoluter Pfad>`,
+danach direkt `cat <absoluter Pfad>`. Für den Vergleichsbenutzer werden auch
+die Metadaten mit `sudo -u` gelesen. `stat` zeigt das Device als Major:Minor;
+der Context verwendet die Kernel-Kodierung `(major << 20) | minor`.
 
 Für den UID-Vergleich in Kapitel 2 wird der vorhandene angemeldete Benutzer
 verwendet. Bei einem reinen root-Aufruf dient der vorhandene Benutzer `nobody`

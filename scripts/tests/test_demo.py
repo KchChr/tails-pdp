@@ -399,6 +399,11 @@ if Path(sys.argv[0]).name == 'id':
     assert sys.argv[1:] == ['-un', '60001'], sys.argv
     print('demo-test')
     raise SystemExit(0)
+if Path(sys.argv[0]).name == 'stat':
+    assert sys.argv[1:3] == ['-Lc', 'Device (Major:Minor): %Hd:%Ld | Inode: %i'], sys.argv
+    metadata = os.stat(sys.argv[3])
+    print(f'Device (Major:Minor): {os.major(metadata.st_dev)}:{os.minor(metadata.st_dev)} | Inode: {metadata.st_ino}')
+    raise SystemExit(0)
 if Path(sys.argv[0]).name == 'sudo':
     assert sys.argv[1:4] == ['-u', 'demo-test', '--'], sys.argv
     Path(os.environ['INVOCATION']).write_text(json.dumps(sys.argv[1:]))
@@ -415,7 +420,7 @@ if sys.argv[-1] == os.environ['TEST_TARGET'] and os.environ['ACCESS_MODE'] != 'a
     raise SystemExit(1)
 os.execv(os.environ['REAL_CAT'], [os.environ['REAL_CAT'], *sys.argv[1:]])
 '''
-            for name in ('sudo', 'id', 'cat'):
+            for name in ('sudo', 'id', 'stat', 'cat'):
                 path = binaries / name
                 path.write_text(stub)
                 path.chmod(0o755)
@@ -453,6 +458,9 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" "$TEST_UID"
         result = self.check_access('allow', 'allow', uid='-')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('sichtbarer Dateiinhalt', result.stdout)
+        self.assertRegex(result.stdout, r'\$ echo \$UID\n\d+\n\n\$ stat ')
+        self.assertRegex(result.stdout, r'Device \(Major:Minor\): \d+:\d+ \| Inode: \d+\n\n\$ cat ')
+        self.assertNotIn('Dateizugriff durch das Programm', result.stdout)
 
     def test_real_cat_and_head_show_file_contents(self):
         for command in ('cat', 'head'):
@@ -460,14 +468,14 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" "$TEST_UID"
                 result = self.check_access('allow', 'allow', command)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn('sichtbarer Dateiinhalt', result.stdout)
-                self.assertIn(f'[{command} → stdout]', result.stdout)
+                self.assertNotIn('→ stdout]', result.stdout)
 
     def test_expected_deny_is_verified(self):
         result = self.check_access('deny', 'deny')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Operation not permitted', result.stdout)
         self.assertIn('Decision: Deny', result.stdout)
-        self.assertIn('[cat / Aufruf → stderr]', result.stdout)
+        self.assertNotIn('Aufruf → stderr]', result.stdout)
         self.assertIn('Operation not permitted', result.stdout)
 
     def test_other_errors_and_unexpected_success_are_not_denials(self):
