@@ -10,12 +10,12 @@
   Kontrolldatei: $safe
   Hardlink auf die Ressource: ${target%/*}/alias.txt"
     chapter_section 'Aktion' \
-        'Eine Deny-Policy wird ()für die tatsächliche UID des Demo-Workers, command == "cat"; und die geschützte Ressource veröffentlicht. Danach werden Benutzer, Kommando und Ressource einzeln variiert.'
+        'Eine Deny-Policy wird veröffentlicht. Danach werden subject.uid, command und resouce einzeln variiert.'
     admin
     chapter_section 'Erwartetes Verhalten' \
-        'Nur die passende Kombination wird verweigert. Der andere Benutzer, command == "head"; und die Kontrolldatei bleiben erlaubt. Der Hardlink wird ebenfalls verweigert, weil Gerät und Inode übereinstimmen.'
+        'Deny bei Übereinstimmung aller Attribute, ansonsten Permit'
     chapter_section 'Beobachtung' \
-        'echo $UID zeigt die UID des Demo-Workers. sudo -u wechselt zum vorhandenen Vergleichsbenutzer; id -u zeigt dessen tatsächliche UID. Dabei ändern sich Real-UID und effektive UID. Vor der Policy muss cat für beide Benutzer funktionieren, damit eine spätere Verweigerung dem Prototyp zugeordnet werden kann. cat und head werden tatsächlich ausgeführt.'
+        'echo $UID zeigt die UID des Demo-Workers. sudo -u wechselt die UID ; id -u zeigt dessen tatsächliche UID. Dabei ändern sich Real-UID und effektive UID. Vor der Policy muss cat für beide Benutzer funktionieren, damit eine spätere Verweigerung dem Prototyp zugeordnet werden kann. cat und head werden tatsächlich ausgeführt.'
     printf '\n'
     pause_demo
     explain 'Vor der Policy liest der Demo-Worker die geschützte Datei mit cat.'
