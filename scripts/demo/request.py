@@ -2,6 +2,7 @@
 """Render an Authorization Context with attributes read from the active maps by show-active."""
 import argparse
 from datetime import datetime, timezone
+import json
 import os
 from pathlib import Path
 import re
@@ -40,18 +41,19 @@ def describe(snapshot, command, uid, path, now=None):
     # significant, e.g. subject.position in chapter 5. Never read source files.
     required = set(re.findall(r'attribute_condition=((?:system|subject|resource)\.[A-Za-z_][A-Za-z0-9_-]*)', snapshot))
     for name in required:
-        attributes.setdefault(name, 'nicht vorhanden')
+        attributes.setdefault(name, None)
 
     lines = [
-        '  Aktion:        file_open (Datei öffnen)',
-        f'  Kommando:      {command}',
-        f'  Benutzer:      subject.uid = {uid} (Real-UID)',
-        f'  Ressource:     {path.absolute()}',
-        f'  Dateiidentität: Gerät {device}, Inode {metadata.st_ino}',
-        f'  Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
+        '  action == "file_open";',
+        f'  command == {json.dumps(command, ensure_ascii=False)};',
+        f'  subject.uid == {uid};',
+        f'  resource.path == {json.dumps(str(path.absolute()), ensure_ascii=False)};',
         '  Zugeordnete aktive Attribute:',
     ]
-    lines.extend(f'    {name} = {value}' for name, value in sorted(attributes.items()))
+    lines.extend(
+        f'    {name} == {value};' if value is not None else f'    # {name}: nicht vorhanden'
+        for name, value in sorted(attributes.items())
+    )
     if not attributes:
         lines.append('    keine')
     if re.search(r'legacy_condition=(?:Time|Hour|Minute|Second)', snapshot):
@@ -59,12 +61,19 @@ def describe(snapshot, command, uid, path, now=None):
         utc = datetime.fromtimestamp(timestamp, timezone.utc)
         lines.extend([
             '  Zeitkontext (Momentaufnahme der Systemzeit):',
-            f'    environment.time = {timestamp}',
-            f'    environment.utc.hour = {utc.hour}, environment.utc.minute = {utc.minute}',
+            f'    environment.time == {timestamp};',
+            f'    environment.utc.hour == {utc.hour};',
+            f'    environment.utc.minute == {utc.minute};',
+            f'    environment.utc.second == {utc.second};',
         ])
         for modulo in sorted(set(int(value) for value in re.findall(r'legacy_condition=Time % (\d+)', snapshot))):
             if modulo:
-                lines.append(f'    environment.time % {modulo} = {timestamp % modulo}')
+                lines.append(f'    environment.time % {modulo} == {timestamp % modulo};')
+    lines.extend([
+        '  Metadaten (keine Policy-Bedingungen):',
+        f'    Dateiidentität: Gerät {device}, Inode {metadata.st_ino}',
+        f'    Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
+    ])
     return '\n'.join(lines)
 
 

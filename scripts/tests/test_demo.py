@@ -215,39 +215,56 @@ class RequestViewTests(unittest.TestCase):
                 linked.hardlink_to(target)
                 target = linked
             text = request_view.describe(snapshot, 'cat', '0', target, now=3661)
-            self.assertIn(f'Ressource:     {target}\n', text)
+            self.assertIn(f'resource.path == {json.dumps(str(target), ensure_ascii=False)};', text)
             return text, identity
 
     def test_only_attributes_for_requested_subject_and_resource_are_shown(self):
         text, _ = self.request()
-        self.assertIn('subject.uid = 0', text)
-        self.assertIn('Kommando:      cat', text)
-        self.assertIn('system.defcon = 2', text)
-        self.assertIn('subject.position = "engineer"', text)
-        self.assertIn('resource.classification = "internal"', text)
+        self.assertIn('subject.uid == 0;', text)
+        self.assertIn('action == "file_open";', text)
+        self.assertIn('command == "cat";', text)
+        self.assertIn('system.defcon == 2;', text)
+        self.assertIn('subject.position == "engineer";', text)
+        self.assertIn('resource.classification == "internal";', text)
         self.assertNotIn('unrelated', text)
         self.assertNotIn('public', text)
         self.assertIn('Policygeneration 11, Attributgeneration 8', text)
 
     def test_missing_and_numeric_attributes_keep_their_meaning(self):
         text, _ = self.request(position=None)
-        self.assertIn('subject.position = nicht vorhanden', text)
+        self.assertIn('# subject.position: nicht vorhanden', text)
+        self.assertNotIn('subject.position ==', text)
         text, _ = self.request(position='1')
-        self.assertIn('subject.position = 1', text)
-        self.assertNotIn('subject.position = "1"', text)
+        self.assertIn('subject.position == 1;', text)
+        self.assertNotIn('subject.position == "1";', text)
 
     def test_hardlink_has_original_identity_and_resource_attributes(self):
         text, identity = self.request(alias=True)
         self.assertIn(identity, text)
-        self.assertIn('resource.classification = "internal"', text)
+        self.assertIn('resource.classification == "internal";', text)
+
+    def test_context_quotes_strings_without_creating_additional_statements(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'quoted"file.txt'
+            target.write_text('protected')
+            command = 'cat";\nother'
+            snapshot = 'generation policy=1 attribute=2\nATTRIBUTES:\n'
+            text = request_view.describe(snapshot, command, '0', target)
+            for field, expected in [('command', command), ('resource.path', str(target))]:
+                line = next(line.strip() for line in text.splitlines()
+                            if line.strip().startswith(field + ' == '))
+                self.assertTrue(line.endswith(';'))
+                self.assertEqual(json.loads(line[len(field + ' == '):-1]), expected)
 
     def test_time_conditions_show_explicit_system_time_snapshot(self):
         for condition in ('Time % 4294967296 GreaterThanOrEqual 10', 'Hour GreaterThanOrEqual 0'):
             with self.subTest(condition=condition):
                 text, _ = self.request(time_condition=condition)
                 self.assertIn('Momentaufnahme der Systemzeit', text)
-                self.assertIn('environment.utc.hour = 1, environment.utc.minute = 1', text)
-                self.assertIn('environment.time = 3661', text)
+                self.assertIn('environment.utc.hour == 1;', text)
+                self.assertIn('environment.utc.minute == 1;', text)
+                self.assertIn('environment.utc.second == 1;', text)
+                self.assertIn('environment.time == 3661;', text)
 
 
 class PresentationTests(unittest.TestCase):
@@ -266,6 +283,7 @@ show_decision "$EXPECTED" "$ACTUAL" 'Beobachtete Dateiöffnung' "$PROJECT_ROOT/d
                                         capture_output=True, text=True)
                 label = 'Permit' if actual == 'allow' else 'Deny'
                 self.assertIn(f'Decision:             {label}', result.stdout)
+                self.assertIn(f'resource.path == {json.dumps(str(PROJECT / "demo/files/protected.txt"), ensure_ascii=False)};', result.stdout)
                 self.assertIn('Observed Enforcement: Beobachtete Dateiöffnung', result.stdout)
                 self.assertEqual(result.returncode == 0, actual == expected)
                 self.assertEqual('[Demo-Prüfung] OK:' in result.stdout, actual == expected)

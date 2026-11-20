@@ -222,7 +222,8 @@ show_decision() {
     case "$expected" in allow) expected_label=Permit ;; deny) expected_label=Deny ;; *) return 1 ;; esac
     case "$actual" in allow) actual_label=Permit ;; deny) actual_label=Deny ;; *) return 1 ;; esac
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
-    printf '%s  Datei:                %s\n' "$color_output" "$file"
+    printf '%s' "$color_output"
+    python3 -c 'import json,sys; print("  resource.path == " + json.dumps(sys.argv[1], ensure_ascii=False) + ";")' "$file"
     printf '  Decision:             %s\n' "$actual_label"
     printf '  Observed Enforcement: %s\n' "$enforcement"
     printf '  Expected Decision:    %s%s\n' "$expected_label" "$color_reset"

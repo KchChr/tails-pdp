@@ -11,7 +11,7 @@
     chapter_section 'Erwartetes Verhalten' \
         'Zunächst müssen alle fünf FDs offen sein. Nach der Policyaktivierung führt der Userspace-PEP eine Re-evaluation für die bestehenden FDs aus. Das Enforcement entzieht ausschließlich die drei geschützten FDs.'
     chapter_section 'Beobachtung' \
-        'FD bedeutet Dateideskriptor: eine offene Dateireferenz in einem Prozess. Rechts unten zeigt True einen offenen FD und False einen geschlossenen. Der Beobachterprozess soll weiterlaufen.'
+        'FD bedeutet Dateideskriptor: eine offene Dateireferenz in einem Prozess. Rechts unten steht jeder FD mit seinem Zustand offen oder geschlossen. Der Beobachterprozess soll weiterlaufen.'
     printf '\n'
     pause_demo
     start_probe
@@ -19,9 +19,9 @@
     chapter_section 'Ausgangslage' \
         'Der Beobachter hält alle fünf FDs offen. Vor der Änderung wird zusätzlich geprüft, dass diese FDs noch auf die erwarteten Dateien verweisen.'
     chapter_section 'Aktion' \
-        'Mit Enter wird eine Deny-Policy für die geschützte Datei und das Kommando tails-demo-fd veröffentlicht. Die Policyaktivierung löst eine Re-evaluation der bestehenden FDs aus.'
+        'Mit Enter wird eine Deny-Policy für die geschützte Datei mit `command == "tails-demo-fd";` veröffentlicht. Die Policyaktivierung löst eine Re-evaluation der bestehenden FDs aus.'
     chapter_section 'Erwartetes Verhalten' \
-        'Die drei geschützten FDs wechseln auf False. Beide Kontroll-FDs bleiben True; der Prozess wird nicht beendet.'
+        'Die drei geschützten FDs wechseln auf geschlossen. Beide Kontroll-FDs bleiben offen; der Prozess wird nicht beendet.'
     chapter_section 'Beobachtung' \
         'Rechts oben ist die Policyaktivierung mit anschließendem Scan sichtbar. Rechts unten ist der tatsächliche FD-Zustand zu sehen. Ein Logeintrag allein genügt nicht als Nachweis.'
     printf '\n'

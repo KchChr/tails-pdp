@@ -5,11 +5,11 @@
 
     chapter_start '8. FD-Entzug ausschließlich durch Attributänderung'
     chapter_section 'Ausgangslage' \
-        'DEFCON steht auf 5. Vor dem Öffnen wird eine Deny-Policy mit system.defcon <= 2 installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.'
+        'Im Authorization Context gilt `system.defcon == 5;`. Vor dem Öffnen wird eine Deny-Policy mit `system.defcon <= 2;` installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.'
     chapter_section 'Aktion' \
         'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird im nächsten Schritt ausschließlich das Systemattribut geändert.'
     chapter_section 'Erwartetes Verhalten' \
-        'Solange DEFCON=5 gilt, bleiben alle FDs offen. Der spätere Wechsel auf 2 muss den Entzug ohne Änderung der Policydatei auslösen.'
+        'Solange `system.defcon == 5;` gilt, bleiben alle FDs offen. Der spätere Wechsel auf `system.defcon == 2;` muss den Entzug ohne Änderung der Policydatei auslösen.'
     chapter_section 'Beobachtung' \
         'Eine geladene Policy und eine erfüllte Bedingung sind zu unterscheiden. enabled im Admin-Tool bedeutet, dass die Policy aktiviert ist; ihre Bedingungen werden für den jeweiligen Zugriff ausgewertet.'
     printf '\n'
@@ -20,7 +20,7 @@
     chapter_section 'Ausgangslage' \
         'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.'
     chapter_section 'Aktion' \
-        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine Re-evaluation der bestehenden FDs aus.'
+        'Mit Enter wird ausschließlich defcon = 2 in der Systemattributdatei veröffentlicht. Anschließend gilt im Authorization Context `system.defcon == 2;`. Der Attributloader aktiviert den neuen Wert und löst damit eine Re-evaluation der bestehenden FDs aus.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.'
     chapter_section 'Beobachtung' \

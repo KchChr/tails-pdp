@@ -6,13 +6,13 @@
 
     chapter_start '5. Subject-/Resource-Attribute und UND-Verknüpfung'
     chapter_section 'Ausgangslage' \
-        'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff läuft mit Real-UID 0.'
+        'Attribute können für das gesamte System, für einen Benutzer und für eine konkrete Datei hinterlegt werden. Der normale Demo-Zugriff verwendet `subject.uid == 0;` (Real-UID).'
     chapter_section 'Aktion' \
-        'DEFCON wird auf 2, die Rolle von UID 0 auf engineer und die Dateiklassifikation auf internal gesetzt. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.'
+        'Der Authorization Context wird vorbereitet: `system.defcon == 2;`, `subject.position == "engineer";` für `subject.uid == 0;` und `resource.classification == "internal";`. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.'
     chapter_section 'Erwartetes Verhalten' \
-        'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. Rolle intern oder Klassifikation public reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.'
+        'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. `subject.position == "intern";` oder `resource.classification == "public";` reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.'
     chapter_section 'Beobachtung' \
-        'Anschließend wird das Attribut position zunächst weggelassen und danach auf die Zahl 1 statt auf die Zeichenkette "engineer" gesetzt. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
+        'Anschließend fehlt subject.position zunächst; danach gilt `subject.position == 1;` statt `subject.position == "engineer";`. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
     printf '\n'
     pause_demo
     attribute system.attributes 'defcon = 2'
@@ -20,25 +20,25 @@
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
     access_is deny
-    step 'Nur die Rolle wird von engineer auf intern geändert. Damit ist eine der drei UND-Bedingungen falsch.'
+    step 'Nur subject.position ändert sich von `subject.position == "engineer";` zu `subject.position == "intern";`. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
     access_is allow
-    step 'Die Rolle wird auf engineer zurückgesetzt. Damit sind wieder alle drei Bedingungen erfüllt.'
+    step 'Im Authorization Context gilt wieder `subject.position == "engineer";`. Damit sind wieder alle drei Bedingungen erfüllt.'
     attribute subjects/0.attributes 'position = "engineer"'
     access_is deny
-    step 'Jetzt wird nur die Dateiklassifikation von internal auf public geändert. Damit passt die Deny-Policy nicht mehr.'
+    step 'Nur resource.classification ändert sich von `resource.classification == "internal";` zu `resource.classification == "public";`. Damit passt die Deny-Policy nicht mehr.'
     attribute "resources${target}.attributes" 'classification = "public"'
     access_is allow
-    step 'Mit classification=internal sind wieder alle drei Bedingungen erfüllt.'
+    step 'Mit `resource.classification == "internal";` sind wieder alle drei Bedingungen erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
     access_is deny
-    step 'Jetzt fehlt position vollständig. Die Veröffentlichung ist gültig, der Rollenvergleich ergibt aber keinen Treffer.'
+    step 'Jetzt fehlt subject.position vollständig. Die Veröffentlichung ist gültig; die Bedingung `subject.position == "engineer";` passt jedoch nicht.'
     attribute subjects/0.attributes '# position fehlt'
     access_is allow
-    step 'position wird auf die Zahl 1 statt auf eine Zeichenkette gesetzt. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
+    step 'Im Authorization Context gilt `subject.position == 1;` statt `subject.position == "engineer";`. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
     attribute subjects/0.attributes 'position = 1'
     access_is allow
-    step 'position wird wieder auf die Zeichenkette "engineer" gesetzt: Alle Bedingungen passen und der Zugriff wird verweigert.'
+    step 'Im Authorization Context gilt wieder `subject.position == "engineer";`: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
     access_is deny
     admin

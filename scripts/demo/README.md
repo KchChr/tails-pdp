@@ -173,6 +173,30 @@ ausgelesener PDP-Trace.
 
 Vor jeder Dateiöffnung zeigt ein Block **Authorization Context** `file_open`, Kommando, Real-UID,
 Dateipfad, Geräte-/Inode-Identität und die aktuellen Konfigurationsgenerationen.
+Die Kontextwerte stehen in der Schreibweise der Policy-Bedingungen:
+
+```text
+action == "file_open";
+command == "cat";
+subject.uid == 60001;
+resource.path == "/home/demo/tails-pdp/demo/files/protected.txt";
+system.defcon == 2;
+subject.position == "engineer";
+resource.classification == "internal";
+```
+
+Diese Gleichheiten beschreiben die aktuellen Werte, keine zusätzlich geladene
+Policy. Die eigentlichen Policies können andere Vergleiche verwenden, etwa
+`system.defcon <= 2;`. Zeichenketten sind quotiert; Zahlen bleiben unquotiert.
+Fehlende Attribute erscheinen als Kommentar, etwa
+`# subject.position: nicht vorhanden`, und nicht als erfundene Policy-Bedingung.
+Gerät, Inode und Generationen stehen separat unter **Metadaten**.
+
+Dabei haben `=` und `==` unterschiedliche, feste Aufgaben: Eine Attributdatei
+weist mit `defcon = 2` einen Wert zu; eine Policy vergleicht mit
+`system.defcon == 2;`. Der Authorization Context verwendet die Vergleichsform.
+Die vollständigen Attributdateien und die echte Admin-Tool-Ausgabe behalten
+ihre ursprüngliche Schreibweise.
 `scripts/demo/request.py` ordnet die mit `show-active` gelesenen Systemattribute
 sowie die Attribute genau dieses Benutzers und dieser Datei zu. Quell-Dateien
 werden dafür nicht ausgewertet: Ein abgelehntes Update wird nicht als aktiver
@@ -193,6 +217,8 @@ Decision Trace oder eine bestimmte auslösende Policy. Insbesondere bedeutet
 ein erfolgreicher Zugriff nicht, dass eine explizite Permit-Policy gepasst hat.
 Beim FD-Entzug erscheinen getrennte Ergebnisse für die drei geschützten FDs
 und die beiden weiterhin offenen Kontroll-FDs.
+Der FD-Beobachter zeigt die Descriptor-Nummern jeweils mit **offen** oder
+**geschlossen**. Seine JSON-Zustandsdateien verwenden weiterhin boolesche Werte.
 Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den

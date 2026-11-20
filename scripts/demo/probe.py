@@ -62,7 +62,9 @@ def hold(target, safe, directory):
         safe_open = [is_open(fd) for fd in controls]
         state = (opened, safe_open)
         if state != previous:
-            message(f"Geschützte FDs offen: {opened} | Kontroll-FDs offen: {safe_open} | Prozess läuft")
+            protected_state = ', '.join(f'{fd}: {"offen" if active else "geschlossen"}' for fd, active in zip(protected, opened))
+            control_state = ', '.join(f'{fd}: {"offen" if active else "geschlossen"}' for fd, active in zip(controls, safe_open))
+            message(f"Geschützte FDs [{protected_state}] | Kontroll-FDs [{control_state}] | Prozess läuft")
             save(root / "state.json", {"protected": opened, "controls": safe_open, "unix_ns": time.time_ns()})
             previous = state
         # Stay alive after revocation to demonstrate that the process is not killed.
