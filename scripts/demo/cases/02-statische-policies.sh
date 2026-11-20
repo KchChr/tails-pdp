@@ -10,7 +10,8 @@
   Kontrolldatei: $safe
   Hardlink auf die Ressource: ${target%/*}/alias.txt"
     chapter_section 'Aktion' \
-        'Eine Deny-Policy wird für die tatsächliche UID des Demo-Workers, command == "cat"; und die geschützte Ressource veröffentlicht. Danach werden Benutzer, Kommando und Ressource einzeln variiert.'
+        'Eine Deny-Policy wird ()für die tatsächliche UID des Demo-Workers, command == "cat"; und die geschützte Ressource veröffentlicht. Danach werden Benutzer, Kommando und Ressource einzeln variiert.'
+    admin
     chapter_section 'Erwartetes Verhalten' \
         'Nur die passende Kombination wird verweigert. Der andere Benutzer, command == "head"; und die Kontrolldatei bleiben erlaubt. Der Hardlink wird ebenfalls verweigert, weil Gerät und Inode übereinstimmen.'
     chapter_section 'Beobachtung' \
