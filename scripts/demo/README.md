@@ -126,8 +126,11 @@ Terminal ebenfalls abgeschaltet. Die Demo-Mitschnitte enthalten bei aktivierten
 Farben ANSI-Steuersequenzen; maschinenlesbare FD-Zustände und interne
 Generationsabfragen bleiben unverändert.
 
-Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
-**erwartetes Verhalten** und **Beobachtung**. Während
+Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion** und
+**erwartetes Verhalten**. Die Beobachtung ergibt sich aus den sichtbaren
+Linux-Kommandos und ihren tatsächlichen Ausgaben. Zusätzliche Hinweise
+erscheinen nur, wenn sie für den Ablauf notwendig sind, etwa vor der
+automatischen Wartephase in Kapitel 9. Während
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
 Begriffe wie FD und Generation werden im jeweiligen Kapitel erklärt.

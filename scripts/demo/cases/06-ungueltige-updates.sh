@@ -10,8 +10,6 @@
         'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird in der Systemattributdatei defcon = 9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.'
     chapter_section 'Erwartetes Verhalten' \
         'Beide fehlerhaften Updates werden verworfen. Die zuletzt gültigen Generationen und das wirksame Deny bleiben erhalten. Gültige Korrekturen werden anschließend wieder übernommen.'
-    chapter_section 'Beobachtung' \
-        'Rechts oben erscheint die Ablehnung. Links zeigt show-active die aktivierten Policies, Attribute und Generationen vor und nach jedem ungültigen Update sowie nach den gültigen Korrekturen. Ungültige Updates ändern keine Generation; erst die gültigen Korrekturen aktivieren einen neuen Stand. Der tatsächliche Zugriff wird zusätzlich geprüft.'
     printf '\n'
     pause_demo
     policy robust deny '    system.defcon <= 2;'

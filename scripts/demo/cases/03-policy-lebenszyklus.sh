@@ -13,8 +13,6 @@
         'Zuerst wird eine Permit-Policy geladen, dann eine passende Deny-Policy ergänzt und anschließend nur die Deny-Policy entfernt. Zum Schluss wird auch die Permit-Policy entfernt.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Zugriffe folgen der Reihenfolge erlaubt → verweigert → erlaubt. Bei gleichzeitig passenden Policies hat Deny Vorrang vor Permit.'
-    chapter_section 'Beobachtung' \
-        'Die Policygeneration ändert sich bei den Veröffentlichungen und Entfernungen. Neue Authorization Decisions werden ohne Neustart wirksam. Die Reihenfolge der Dateinamen bestimmt keine Priorität.'
     printf '\n'
     pause_demo
     explain 'Zuerst wird eine Permit-Policy geladen. Der Zugriff ist damit erlaubt.'

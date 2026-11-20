@@ -15,8 +15,6 @@
         "Der Prototyp wird gestartet und die Ressource geöffnet."
     chapter_section 'Erwartetes Verhalten' \
         'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt kein Enforcement.'
-    chapter_section 'Beobachtung' \
-        ''
     printf '\n'
     pause_demo
 

@@ -10,8 +10,6 @@
         'Eine Deny-Policy mit `system.defcon <= 2;` wird geladen. Anschließend wird nur der Attributwert von 5 auf 2 und zurück auf 5 geändert.'
     chapter_section 'Erwartetes Verhalten' \
         'Bei `system.defcon == 5;` ist die Deny-Bedingung falsch und der Zugriff erlaubt. Bei `system.defcon == 2;` ist sie erfüllt und der Zugriff verweigert. Nach der Rückkehr zu `system.defcon == 5;` ist er wieder erlaubt.'
-    chapter_section 'Beobachtung' \
-        'Die Policydatei bleibt während der Attributwechsel gleich. Im Log und im Admin-Tool ändert sich der Attributstand; die Runtime muss dafür nicht neu gestartet werden.'
     printf '\n'
     pause_demo
     policy context deny '    system.defcon <= 2;'

@@ -10,8 +10,6 @@
         'Ein neuer Beobachter öffnet drei geschützte und zwei Kontroll-FDs. Danach wird im nächsten Schritt ausschließlich das Systemattribut geändert.'
     chapter_section 'Erwartetes Verhalten' \
         'Solange `system.defcon == 5;` gilt, bleiben alle FDs offen. Der spätere Wechsel auf `system.defcon == 2;` muss den Entzug ohne Änderung der Policydatei auslösen.'
-    chapter_section 'Beobachtung' \
-        'Eine geladene Policy und eine erfüllte Bedingung sind zu unterscheiden. enabled im Admin-Tool bedeutet, dass die Policy aktiviert ist; ihre Bedingungen werden für den jeweiligen Zugriff ausgewertet.'
     printf '\n'
     pause_demo
     policy revoke deny '    system.defcon <= 2;'
@@ -23,8 +21,6 @@
         'Mit Enter wird ausschließlich defcon = 2 in der Systemattributdatei veröffentlicht. Anschließend gilt im Authorization Context `system.defcon == 2;`. Der Attributloader aktiviert den neuen Wert und löst damit eine Re-evaluation der bestehenden FDs aus.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.'
-    chapter_section 'Beobachtung' \
-        'Rechts oben wird ein Scan mit Ursache attributes:<Generation> erwartet. Damit wird der Attributwechsel als Auslöser nachgewiesen. Die Policy bleibt dabei unverändert.'
     printf '\n'
     pause_demo
     assert_probe_identity

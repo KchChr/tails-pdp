@@ -11,8 +11,6 @@
         'Der Authorization Context wird vorbereitet: `system.defcon == 2;`, `subject.position == "engineer";` für `subject.uid == 0;` und `resource.classification == "internal";`. Eine Deny-Policy verknüpft alle drei Bedingungen mit UND. Danach werden einzelne Werte geändert.'
     chapter_section 'Erwartetes Verhalten' \
         'Deny gilt nur, wenn alle drei Bedingungen erfüllt sind. `subject.position == "intern";` oder `resource.classification == "public";` reichen jeweils aus, damit diese Deny-Policy nicht mehr passt.'
-    chapter_section 'Beobachtung' \
-        'Anschließend fehlt subject.position zunächst; danach gilt `subject.position == 1;` statt `subject.position == "engineer";`. Beide Attributstände sind gültig, erfüllen aber den Vergleich mit "engineer" nicht. Deshalb greift hier kein Deny.'
     printf '\n'
     pause_demo
     attribute system.attributes 'defcon = 2'

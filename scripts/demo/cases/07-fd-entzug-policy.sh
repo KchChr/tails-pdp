@@ -10,8 +10,6 @@
         'Ein Beobachter mit drei offenen FDs zur geschützten Datei und zwei offenen FDs zur Kontrolldatei wird gestartet. Erst im nächsten Schritt wird eine passende Deny-Policy veröffentlicht.'
     chapter_section 'Erwartetes Verhalten' \
         'Zunächst müssen alle fünf FDs offen sein. Nach der Policyaktivierung führt der Userspace-PEP eine Re-evaluation für die bestehenden FDs aus. Das Enforcement entzieht ausschließlich die drei geschützten FDs.'
-    chapter_section 'Beobachtung' \
-        'FD bedeutet Dateideskriptor: eine offene Dateireferenz in einem Prozess. Rechts unten steht jeder FD mit seinem Zustand offen oder geschlossen. Der Beobachterprozess soll weiterlaufen.'
     printf '\n'
     pause_demo
     start_probe
@@ -22,8 +20,6 @@
         'Mit Enter wird eine Deny-Policy für die geschützte Ressource veröffentlicht. Die Policyaktivierung löst eine Re-evaluation der bestehenden FDs aus. Ein zusätzlicher Kommando-Filter wird in diesem Kapitel nicht verwendet.'
     chapter_section 'Erwartetes Verhalten' \
         'Die drei geschützten FDs wechseln auf geschlossen. Beide Kontroll-FDs bleiben offen; der Prozess wird nicht beendet.'
-    chapter_section 'Beobachtung' \
-        'Rechts oben ist die Policyaktivierung mit anschließendem Scan sichtbar. Rechts unten ist der tatsächliche FD-Zustand zu sehen. Ein Logeintrag allein genügt nicht als Nachweis.'
     printf '\n'
     pause_demo
     assert_probe_identity
