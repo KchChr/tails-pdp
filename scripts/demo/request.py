@@ -75,7 +75,7 @@ def describe(snapshot, command, uid, path, now=None):
                 lines.append(f'environment.time % {modulo} == {timestamp % modulo};')
     lines.extend([
         '',
-        'Metadaten (keine Policy-Bedingungen):',
+        'Metadaten:',
         f'Aktiver Stand: Policygeneration {generation[1]}, Attributgeneration {generation[2]}',
     ])
     return '\n'.join(lines)

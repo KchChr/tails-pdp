@@ -275,7 +275,7 @@ class RequestViewTests(unittest.TestCase):
         self.assertNotIn('public', text)
         self.assertIn('Policygeneration 11, Attributgeneration 8', text)
         self.assertIn('\n\nAttribute:\n', text)
-        self.assertIn('\n\nMetadaten (keine Policy-Bedingungen):\n', text)
+        self.assertIn('\n\nMetadaten:\n', text)
         self.assertTrue(all(not line or line == line.lstrip() for line in text.splitlines()))
 
     def test_missing_and_numeric_attributes_keep_their_meaning(self):
