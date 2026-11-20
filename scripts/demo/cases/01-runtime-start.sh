@@ -12,9 +12,9 @@
 
   Es läuft noch keine Runtime und es sind keine Policies geladen."
     chapter_section 'Aktion' \
-        "Der Prototyp wird gestartet. Danach wird die Datei ${target} geöffnet."
+        "Der Prototyp wird gestartet. Danach wird die Ressource ${target} geöffnet."
     chapter_section 'Erwartetes Verhalten' \
-        'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcmement'
+        'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcement'
     chapter_section 'Beobachtung' \
         ''
     printf '\n'

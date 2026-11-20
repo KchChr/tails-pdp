@@ -6,14 +6,13 @@
     chapter_start '2. Statische Policies: Kommando, Benutzer und Ressource'
     chapter_section 'Ausgangslage' \
         "Die Dateien sind zunächst zugänglich:
-  Geschützte Datei: $target
+  Ressource: $target
   Kontrolldatei: $safe
-  Hardlink auf die geschützte Datei: ${target%/*}/alias.txt
-  Der Hardlink bezeichnet dieselbe Datei; die Kontrolldatei ist eine separate Datei."
+  Hardlink wird auf die ressource gesetzt: ${target%/*}/alias.txt"
     chapter_section 'Aktion' \
         'Eine Deny-Policy wird für genau drei gemeinsam erforderliche Merkmale veröffentlicht: Real-UID 60001, Kommando cat und die geschützte Ressource. Danach werden diese Merkmale einzeln variiert.'
     chapter_section 'Erwartetes Verhalten' \
-        'Nur die passende Kombination auf der geschützten Datei wird verweigert. Eine andere UID, ein anderes Kommando und der Zugriff auf die Kontrolldatei bleiben erlaubt. Der Zugriff über den Hardlink wird ebenfalls verweigert, weil Gerät und Inode mit der geschützten Datei übereinstimmen.'
+        'Der Zugriff auf die Ressource mit UID 60001 und cat wird verweigert. Eine andere UID, ein anderes Kommando und der Zugriff auf die Kontrolldatei bleiben erlaubt. Der Zugriff über den Hardlink wird ebenfalls verweigert, weil Gerät und Inode mit der geschützten Datei übereinstimmen.'
     chapter_section 'Beobachtung' \
         'Hier werden die Programme cat und head tatsächlich gestartet. setpriv setzt nur die Real-UID des jeweiligen Prozesses auf 60001 oder 60002; dafür sind keine zusätzlichen Benutzerkonten nötig. Die effektive UID bleibt root, damit gewöhnliche Dateirechte den Vergleich nicht beeinflussen. Der Kommando-Filter prüft den unter Linux geführten Kommandonamen comm: cat passt zur Policy, head nicht. Erlaubte Aufrufe zeigen den Dateiinhalt; beim verweigerten cat-Aufruf erscheint dessen echte Fehlermeldung.'
     printf '\n'
