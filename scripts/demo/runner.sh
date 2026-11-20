@@ -606,7 +606,7 @@ demo_worker() {
     owns_pins=1
     prepare_demo_workspace
     mkdir -p "$policy_dir" "$attribute_dir/subjects" "$attribute_dir/resources"
-    printf 'Geschützter Demo-Inhalt\n' > "$target"
+    printf 'Geschützter Inhalt der Datei $(target)\n' > "$target"
     printf 'Weiterhin zulässiger Kontroll-Inhalt\n' > "$safe"
     ln -- "$target" "$PROJECT_ROOT/demo/files/alias.txt"
     printf 'defcon = 5\n' > "$attribute_dir/system.attributes"
