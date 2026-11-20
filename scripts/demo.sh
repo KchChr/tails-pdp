@@ -5,6 +5,7 @@ set -Eeuo pipefail
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export PROJECT_ROOT
 
+# Zeigt Aufruf, Optionen und Voraussetzungen der Demo an.
 usage() {
     cat <<'EOF'
 Aufruf: ./scripts/demo.sh [--auto] [--build]
@@ -141,6 +142,7 @@ worker_command+="; $close_command"
 printf -v runtime_command '%q ' tail -n +1 -F "$demo_root/runtime.log"
 printf -v observer_command '%q ' tail -n +1 -F "$demo_root/observer.log"
 
+# Schließt den privaten tmux-Server, wartet auf den Worker-Status und nennt die erhaltenen Diagnoseprotokolle.
 launcher_cleanup() {
     local status=$?
     trap - EXIT INT TERM HUP

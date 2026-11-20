@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Kapitel 1: Die Durchsetzung erst nach dem nachgewiesenen LSM-Attach prüfen.
+# Kapitel 1: Das Enforcement erst nach dem nachgewiesenen LSM-Attach prüfen.
 # Der leere Policy-Stand zeigt das Allow-Verhalten ohne passende Deny-Policy.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
@@ -14,7 +14,7 @@
     chapter_section 'Aktion' \
         "Der Prototyp wird gestartet. Danach wird die Ressource ${target} geöffnet."
     chapter_section 'Erwartetes Verhalten' \
-        'Die Datei kann ohne Einschränkungen geöffnet werden, es erfolgt noch kein Enforcement'
+        'Die Datei kann ohne Einschränkungen geöffnet werden, das Enforcement lässt die Dateiöffnung zu'
     chapter_section 'Beobachtung' \
         ''
     printf '\n'

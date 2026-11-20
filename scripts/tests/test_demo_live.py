@@ -128,7 +128,7 @@ def validate_demo(fixture, launcher_status, timed_out):
     if 'Trace-Ereignisse verloren:' in kernel_log:
         raise AssertionError('Kernel-Trace-Ereignisse gingen während der Demo verloren')
     if not any(line.startswith('[Kernelspace-PEP]') and 'file_open final=deny' in line for line in kernel_log.splitlines()):
-        raise AssertionError('Keine Deny-Entscheidung des Kernelspace-PEP im Debuglog nachgewiesen')
+        raise AssertionError('Keine Deny Decision des Kernelspace-PEP im Debuglog nachgewiesen')
 
 
 def main():

@@ -265,8 +265,8 @@ show_decision "$EXPECTED" "$ACTUAL" 'Beobachtete Dateiöffnung' "$PROJECT_ROOT/d
                                              'EXPECTED': expected, 'ACTUAL': actual},
                                         capture_output=True, text=True)
                 label = 'Permit' if actual == 'allow' else 'Deny'
-                self.assertIn(f'Ergebnis:       {label}', result.stdout)
-                self.assertIn('Durchsetzung:   Beobachtete Dateiöffnung', result.stdout)
+                self.assertIn(f'Decision:             {label}', result.stdout)
+                self.assertIn('Observed Enforcement: Beobachtete Dateiöffnung', result.stdout)
                 self.assertEqual(result.returncode == 0, actual == expected)
                 self.assertEqual('[Demo-Prüfung] OK:' in result.stdout, actual == expected)
 
@@ -377,7 +377,7 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
         result = self.check_access('deny', 'deny')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Operation not permitted', result.stdout)
-        self.assertIn('Ergebnis:       Deny', result.stdout)
+        self.assertIn('Decision:             Deny', result.stdout)
         self.assertIn('Die Dateiöffnung durch cat wurde mit EPERM verweigert', result.stdout)
 
     def test_other_errors_and_unexpected_success_are_not_denials(self):
@@ -545,7 +545,7 @@ class LiveRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'Launcher fehlgeschlagen'):
                 live.validate_demo(fixture, 1, False)
             (fixture / 'kernel.log').write_text('')
-            with self.assertRaisesRegex(AssertionError, 'Deny-Entscheidung des Kernelspace-PEP'):
+            with self.assertRaisesRegex(AssertionError, 'Deny Decision des Kernelspace-PEP'):
                 live.validate_demo(fixture, 0, False)
             (fixture / 'kernel.log').write_text('[Kernel-Debug] Trace-Ereignisse verloren: CPU:2 [LOST 2 EVENTS]\n')
             with self.assertRaisesRegex(AssertionError, 'Trace-Ereignisse gingen'):

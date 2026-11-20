@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a demo request with attributes read from the active maps by show-active."""
+"""Render an Authorization Context with attributes read from the active maps by show-active."""
 import argparse
 from datetime import datetime, timezone
 import os

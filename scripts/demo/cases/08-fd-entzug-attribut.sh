@@ -20,7 +20,7 @@
     chapter_section 'Ausgangslage' \
         'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.'
     chapter_section 'Aktion' \
-        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine FD-Prüfung aus.'
+        'Mit Enter wird ausschließlich DEFCON=2 veröffentlicht. Der Attributloader aktiviert den neuen Wert und löst damit eine Re-evaluation der bestehenden FDs aus.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.'
     chapter_section 'Beobachtung' \

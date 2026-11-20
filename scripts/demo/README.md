@@ -86,7 +86,7 @@ E2E-Tests daher nicht gleichzeitig starten.
 Das Skript richtet einen eigenen tmux-Server mit drei Bereichen ein:
 
 - **Links:** Erklärungen, vorbereitete Policy-/Attributtexte, Aktionen und Prüfungen.
-- **Rechts oben:** Runtime-Log mit Aktivierungen und FD-Prüfungen sowie gefilterte Kernel-Debugausgaben.
+- **Rechts oben:** Runtime-Log mit Aktivierungen und Re-evaluations bestehender FDs sowie gefilterte Kernel-Debugausgaben.
 - **Rechts unten:** Ergebnisse und FD-Beobachter.
 
 Der Fokus liegt links. **Enter** führt den jeweils erklärten Schritt aus.
@@ -164,7 +164,14 @@ aus und gibt intern `allow` oder `deny` zurück. Die Hilfe wird einmal zu Beginn
 erklärt; anschließend erscheinen nur die kompakten Ergebnisse mit Datei,
 Kommando und Real-UID. Die `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
 erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
-Vor jeder Dateiöffnung zeigt ein Anfrageblock `file_open`, Kommando, Real-UID,
+Die Demo verwendet die Begriffe **Authorization Context** für die Eingaben der
+Auswertung, **Authorization Decision** für Permit/Deny, **Enforcement** für die
+Umsetzung und **Re-evaluation** für die erneute Auswertung bestehender FDs.
+Der angezeigte Context ist keine SAPL Authorization Subscription. Die angezeigte
+Decision wird aus dem beobachteten Enforcement abgeleitet; sie ist kein
+ausgelesener PDP-Trace.
+
+Vor jeder Dateiöffnung zeigt ein Block **Authorization Context** `file_open`, Kommando, Real-UID,
 Dateipfad, Geräte-/Inode-Identität und die aktuellen Konfigurationsgenerationen.
 `scripts/demo/request.py` ordnet die mit `show-active` gelesenen Systemattribute
 sowie die Attribute genau dieses Benutzers und dieser Datei zu. Quell-Dateien
@@ -175,14 +182,14 @@ Bei Zeitbedingungen ergänzt die Anzeige eine ausdrücklich als Momentaufnahme
 gekennzeichnete UTC-Systemzeit. Diese Ansicht ist eine Darstellung vor dem
 Zugriff und keine atomare Aufzeichnung des tatsächlichen Kernel-Requests.
 Bei FD-Szenarien werden geschützte Datei und Kontrolldatei getrennt dargestellt;
-der Kontext nach einer erneuten Auswertung ist als solcher gekennzeichnet und
-bedeutet keine neue Dateiöffnung.
-Nach der Zugriffsprüfung folgt ein Entscheidungsblock mit Datei, beobachtetem
-Ergebnis (`Permit` oder `Deny`), konkreter Durchsetzung und erwarteter
-Entscheidung. Die Prüfmeldung bestätigt die Übereinstimmung; Abweichungen werden
-sichtbar als Fehler ausgegeben und brechen die Demo ab. Die Anzeige fasst die
-beobachtete Durchsetzung zusammen und behauptet keinen ausgelesenen
-Entscheidungstrace oder eine bestimmte auslösende Policy. Insbesondere bedeutet
+der Authorization Context nach einer Re-evaluation ist als solcher gekennzeichnet
+und bedeutet keine neue Dateiöffnung.
+Nach der Zugriffsprüfung folgt ein Block **Authorization Decision** mit Datei,
+`Decision` (`Permit` oder `Deny`), **Observed Enforcement** und **Expected Decision**.
+Die Prüfmeldung bestätigt die Übereinstimmung; Abweichungen werden
+sichtbar als Fehler ausgegeben und brechen die Demo ab. Die Anzeige fasst
+das beobachtete Enforcement zusammen und behauptet keinen ausgelesenen
+Decision Trace oder eine bestimmte auslösende Policy. Insbesondere bedeutet
 ein erfolgreicher Zugriff nicht, dass eine explizite Permit-Policy gepasst hat.
 Beim FD-Entzug erscheinen getrennte Ergebnisse für die drei geschützten FDs
 und die beiden weiterhin offenen Kontroll-FDs.
@@ -190,8 +197,8 @@ Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den
 Userspace-PEP mit der Logkennung `USERSPACE_PEP`, etwa beim erfolgreichen oder
-fehlgeschlagenen Schließen eines FDs. Beide Durchsetzungspfade enthalten eine
-integrierte PDP-Funktion, die Policies auswertet und eine Entscheidung ableitet.
+fehlgeschlagenen Schließen eines FDs. Beide Enforcement-Pfade enthalten eine
+integrierte PDP-Funktion, die Policies auswertet und eine Authorization Decision ableitet.
 Die Komponenten heißen entsprechend der Thesis Kernelspace-PEP und Userspace-PEP.
 Einführung, jedes der zehn fachlichen Kapitel und Abschluss haben jeweils ein
 eigenes Bash-Skript unter `scripts/demo/cases/`. Alle sichtbaren Texte und
@@ -293,7 +300,7 @@ unterscheidet LSM-`EPERM` von sonstigen Fehlern. Es werden keine Benutzerkonten
 angelegt. `hold` hält drei geschützte und zwei Kontroll-FDs offen und bleibt auch
 nach deren Entzug aktiv. Seine Beobachtungen werden zusätzlich zur Runtime-Ausgabe
 geprüft. Das Admin-Tool liest Maps; seine Ausgabe allein gilt nicht als
-Durchsetzungsnachweis.
+Enforcement-Nachweis.
 
 Die Demo prüft die gezeigten Funktionsabläufe. Sie ersetzt keine Kapazitäts-,
 Performance-, Stabilitäts- oder Race-Tests. FD-Entzug kann gelesene Daten und
@@ -316,7 +323,7 @@ einem alten oder falsch konfigurierten Binary mit einem Build-Hinweis ab.
 Ein eigener Leser
 (`scripts/demo/kernel_trace.py`) übernimmt die `bpf_printk`-Meldungen aus
 `trace_pipe` in das obere rechte Fenster. Sichtbar sind endgültige
-Deny-Entscheidungen des Kernelspace-PEP (`file_open final=deny`) und fehlgeschlagene
+Deny Decisions des Kernelspace-PEP (`file_open final=deny`) und fehlgeschlagene
 Tail-Calls, die zur Ablehnung führen. Der Anzeigefilter bleibt zusätzlich aktiv,
 um sonstige Meldungen aus dem gemeinsam genutzten Trace-Stream auszublenden. Die ursprüngliche
 Trace-Zeile einschließlich vorhandener Prozess- und Zeitangaben bleibt erhalten.
@@ -372,7 +379,7 @@ sudo env "PATH=$PATH" python3 scripts/tests/test_demo_live.py
 
 Der Live-Test verlangt Exitstatus 0 von Launcher und Worker, die Abschlussmeldung
 aller Kapitel, die Bestätigung des privaten bpffs und mindestens eine
-Deny-Entscheidung des Kernelspace-PEP in `kernel.log`. Ein falscher Loggingmodus oder
+Deny Decision des Kernelspace-PEP in `kernel.log`. Ein falscher Loggingmodus oder
 gemeldete Trace-Verluste lassen den Live-Test fehlschlagen. Er prüft außerdem, dass die
 Namen, Inodes und Modi vorhandener Host-Pins unverändert bleiben. Ist auf dem Host
 bpffs eingehängt, erzeugt er darin ein eigenes temporäres Testverzeichnis, um den

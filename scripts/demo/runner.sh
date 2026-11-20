@@ -4,6 +4,7 @@
 
 # Initialise before the worker redirects stdout through tee. Colour is a display
 # concern only; raw admin polling and helper return values remain undecorated.
+# Initialisiert die Anzeigefarben; ohne geeignetes Terminal oder mit NO_COLOR bleiben sie leer.
 init_demo_colors() {
     color_reset='' color_heading='' color_section='' color_command=''
     color_output='' color_config='' color_success='' color_error='' color_prompt=''
@@ -21,7 +22,9 @@ init_demo_colors() {
 }
 init_demo_colors
 
+# Gibt eine Fehlermeldung auf stderr aus und liefert Exitstatus 1 zurück.
 fail() { printf '\n%sFEHLER: %s%s\n' "$color_error" "$*" "$color_reset" >&2; return 1; }
+# Prüft, ob die Runtime und ein gegebenenfalls gestarteter Kernel-Trace-Leser noch laufen.
 alive() {
     local state
     if [[ -n "${kernel_trace_pid:-}" ]]; then
@@ -31,12 +34,15 @@ alive() {
     state="$(ps -o stat= -p "$runtime_pid")" || return 1
     [[ -n "$state" && "$state" != *Z* ]]
 }
+# Zeigt ein Prüfergebnis an und schreibt es zusätzlich in das Beobachterprotokoll.
 observe() { printf '%s[Demo-Prüfung] %s%s\n' "$color_success" "$*" "$color_reset" | tee -a "$demo_root/observer.log"; }
+# Wartet auf Enter; im automatischen Modus wird die Pause übersprungen.
 pause_demo() {
     if [[ "$DEMO_AUTO" == 0 ]]; then
         read -r -p "$color_prompt${1:-Enter: ausführen | Strg+C: abbrechen }$color_reset" _
     fi
 }
+# Wartet vor dem Kapitelwechsel, leert den linken Bereich und zeigt den neuen Titel.
 chapter_start() {
     # Leave the previous step's results visible until the presenter advances.
     # The first chapter has no preceding results; the last uses the close prompt.
@@ -50,11 +56,14 @@ chapter_start() {
     printf '\033[2J\033[H'
     printf '\n%s%s%s\n' "$color_heading" "$1" "$color_reset"
 }
+# Zeigt die vom Kapitel übergebene Abschnittsüberschrift und ihren Text formatiert an.
 chapter_section() {
     printf '\n%s%s:%s\n  %s\n' "$color_section" "$1" "$color_reset" "$2"
 }
 
+# Gibt einen erläuternden Text mit einem vorangestellten Pfeil aus.
 explain() { printf '\n→ %s\n' "$*"; }
+# Lässt das vorige Ergebnis lesen und bestätigt danach die Ausführung des nächsten Teilschritts.
 step() {
     # Keep the last result visible until Enter, then present the next action.
     pause_demo 'Enter: zum nächsten Teilschritt | Strg+C: abbrechen '
@@ -62,6 +71,7 @@ step() {
     explain "$*"
     pause_demo
 }
+# Zeigt einen Befehl mit für Bash maskierten Argumenten an, ohne ihn auszuführen.
 show_command() {
     local argument
     printf '\n%s$' "$color_command"
@@ -70,6 +80,7 @@ show_command() {
     done
     printf '%s\n' "$color_reset"
 }
+# Führt einen Befehl aus, färbt seine Standardausgabe ein und erhält dessen Exitstatus.
 show_output() {
     local status=0
     printf '%s' "$color_output"
@@ -77,6 +88,7 @@ show_output() {
     printf '%s' "$color_reset"
     return "$status"
 }
+# Ruft das Admin-Tool mit show-active auf; --quiet unterdrückt die Einleitung, --no-label nur die Kennzeichnung.
 admin() {
     local quiet=0 label=1
     if [[ "${1:-}" == --quiet ]]; then quiet=1; shift; fi
@@ -94,12 +106,14 @@ admin() {
         "${command[@]}"
     fi
 }
+# Liest Policy- und Attributgeneration aus show-active und gibt beide Nummern aus.
 generations() {
     local output
     output="$(admin --quiet)" || return 1
     [[ "$output" =~ generation\ policy=([0-9]+).*attribute=([0-9]+) ]] || return 1
     printf '%s %s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
 }
+# Wartet mit Zeitlimit auf eine feste Zeichenfolge im Runtime-Log, optional erst nach einer Zeilenposition.
 wait_log() {
     local pattern="$1" offset="${2:-0}" deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
     while (( SECONDS < deadline )); do
@@ -111,6 +125,7 @@ wait_log() {
     done
     fail "Timeout bei Logmeldung: $pattern"
 }
+# Wartet auf eine neue Generation und deren abgeschlossene Re-evaluation; zeigt dann die Aktivierung an.
 wait_generation() {
     local kind="$1" before="$2" offset="$3" current deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
     local policy attribute
@@ -121,7 +136,7 @@ wait_generation() {
             if { [[ "$kind" == policy && "$policy" != "$before" ]]; } ||
                { [[ "$kind" == attribute && "$attribute" != "$before" ]]; }; then
                 wait_log "scan completed policy_generation=$policy attribute_generation=$attribute" "$offset"
-                observe "Aktiviert: Policygeneration $policy, Attributgeneration $attribute; FD-Prüfung abgeschlossen."
+                observe "Aktiviert: Policygeneration $policy, Attributgeneration $attribute; Re-evaluation abgeschlossen."
                 return 0
             fi
         fi
@@ -129,6 +144,7 @@ wait_generation() {
     done
     fail "Timeout beim Aktivieren von $kind."
 }
+# Veröffentlicht den Text von stdin atomar in der Zieldatei und zeigt ihren Pfad und vollständigen Inhalt.
 publish() {
     local destination="$1"
     local publication=(bash ./scripts/publish-config.sh "./${demo_root#"$PROJECT_ROOT/"}/prepared" "./${destination#"$PROJECT_ROOT/"}")
@@ -149,16 +165,18 @@ publish() {
     cat -- "$destination"
     printf '%s' "$color_reset"
 }
+# Zeigt die aktuellen Policydateien vollständig an, etwa nach einer Attributänderung.
 show_policy_context() {
     local file
     for file in "$policy_dir"/*.policy; do
         [[ -f "$file" ]] || continue
-        printf '\nUnveränderte Policy für die Zugriffsprüfung (%s):\n' "$file"
+        printf '\nUnveränderte Policy für den Authorization Context (%s):\n' "$file"
         printf '%s' "$color_config"
         cat -- "$file"
         printf '%s\n' "$color_reset"
     done
 }
+# Erzeugt eine Policy für die geschützte Datei und wartet nach der Veröffentlichung auf ihre Aktivierung.
 policy() {
     local name="$1" effect="$2" conditions="${3:-}" command="${4:-}" before offset
     before="$(generations)"
@@ -170,6 +188,7 @@ policy() {
     } | publish "$policy_dir/$name.policy"
     wait_generation policy "${before%% *}" "$offset"
 }
+# Veröffentlicht eine Attributdatei, wartet auf ihre Aktivierung und zeigt die unveränderten Policies.
 attribute() {
     local relative="$1" text="$2" before offset
     before="$(generations)"
@@ -178,6 +197,7 @@ attribute() {
     wait_generation attribute "${before##* }" "$offset"
     show_policy_context
 }
+# Entfernt die benannte Policydatei und wartet auf die Aktivierung des neuen Policy-Stands.
 remove_policy() {
     local name="$1" before offset
     before="$(generations)"
@@ -187,30 +207,33 @@ remove_policy() {
     rm -- "$policy_dir/$name.policy"
     wait_generation policy "${before%% *}" "$offset"
 }
+# Zeigt den Authorization Context mit den für Benutzer und Datei zugeordneten aktiven Attributen.
 show_request() {
-    local command="$1" uid="$2" file="$3" heading="${4:-Zugriffsanfrage vor der Dateiöffnung}"
+    local command="$1" uid="$2" file="$3" heading="${4:-Authorization Context vor der Dateiöffnung}"
     admin --quiet > "$demo_root/request.active"
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
     show_output python3 "$PROJECT_ROOT/scripts/demo/request.py" \
         "$demo_root/request.active" "$command" "$uid" "$file"
 }
+# Zeigt die aus dem beobachteten Enforcement abgeleitete und die erwartete Authorization Decision; eine Abweichung liefert Exitstatus 1.
 show_decision() {
     local expected="$1" actual="$2" enforcement="$3" file="$4"
-    local heading="${5:-Entscheidung zur Zugriffsanfrage}" expected_label actual_label
+    local heading="${5:-Authorization Decision}" expected_label actual_label
     case "$expected" in allow) expected_label=Permit ;; deny) expected_label=Deny ;; *) return 1 ;; esac
     case "$actual" in allow) actual_label=Permit ;; deny) actual_label=Deny ;; *) return 1 ;; esac
     printf '\n%s%s%s\n' "$color_section" "$heading" "$color_reset"
-    printf '%s  Datei:          %s\n' "$color_output" "$file"
-    printf '  Ergebnis:       %s\n' "$actual_label"
-    printf '  Durchsetzung:   %s\n' "$enforcement"
-    printf '  Erwartet:       %s%s\n' "$expected_label" "$color_reset"
+    printf '%s  Datei:                %s\n' "$color_output" "$file"
+    printf '  Decision:             %s\n' "$actual_label"
+    printf '  Observed Enforcement: %s\n' "$enforcement"
+    printf '  Expected Decision:    %s%s\n' "$expected_label" "$color_reset"
     if [[ "$actual" == "$expected" ]]; then
-        observe 'OK: Die beobachtete Durchsetzung entspricht der erwarteten Entscheidung.'
+        observe 'OK: Das beobachtete Enforcement entspricht der erwarteten Authorization Decision.'
     else
-        printf '%s  Prüfung:        Erwartete und beobachtete Entscheidung weichen ab.%s\n' "$color_error" "$color_reset"
+        printf '%s  Prüfung:        Expected Decision und aus dem Enforcement abgeleitete Decision weichen ab.%s\n' "$color_error" "$color_reset"
         return 1
     fi
 }
+# Prüft die Dateiöffnung mit probe.py und vergleicht das tatsächliche Ergebnis mit allow oder deny.
 access_is() {
     local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
     alive || { fail 'Runtime beendet.'; return 1; }
@@ -224,6 +247,7 @@ access_is() {
         return 1
     }
 }
+# Startet cat oder head mit gesetzter Real-UID und prüft Erfolg beziehungsweise eine echte EPERM-Verweigerung.
 command_access_is() {
     local expected="$1" command="$2" uid="$3" file="${4:-$target}" status=0 actual
     local output="$demo_root/command.stdout" error="$demo_root/command.stderr"
@@ -259,6 +283,7 @@ command_access_is() {
         return 1
     }
 }
+# Prüft den FD-Beobachter: drei geschützte FDs im erwarteten Zustand und beide Kontroll-FDs weiterhin offen.
 probe_state_is() {
     kill -0 "$probe_pid" 2>/dev/null || return 1
     python3 - "$probe_dir/state.json" "$1" <<'PY'
@@ -272,9 +297,10 @@ expected = sys.argv[2] == 'open'
 raise SystemExit(0 if state['protected'] == [expected] * 3 and state['controls'] == [True] * 2 else 1)
 PY
 }
+# Startet den Beobachter mit drei geschützten und zwei Kontroll-FDs und wartet auf deren Öffnung.
 start_probe() {
     probe_dir="$(mktemp -d "$demo_root/fd.XXXXXX")"
-    explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Anfragekontexte lauten:'
+    explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Authorization Contexts lauten:'
     show_request tails-demo-fd 0 "$target"
     show_request tails-demo-fd 0 "$safe"
     printf '\n[FD-Beobachter: probe.py hold – Ausgabe im rechten unteren Bereich]\n'
@@ -289,6 +315,7 @@ start_probe() {
         sleep 0.1
     done
 }
+# Beendet den FD-Beobachter und wartet auf das Prozessende.
 stop_probe() {
     if [[ -n "$probe_pid" ]]; then
         kill -TERM "$probe_pid" 2>/dev/null || true
@@ -296,6 +323,7 @@ stop_probe() {
         probe_pid=''
     fi
 }
+# Wartet auf den selektiven Entzug der geschützten FDs und zeigt die geprüften Ergebnisse an.
 expect_revoked() {
     local deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
     while ! probe_state_is closed; do
@@ -304,12 +332,13 @@ expect_revoked() {
         (( SECONDS < deadline )) || { fail 'FD-Entzug ausgeblieben oder Kontroll-FD geschlossen.'; return 1; }
         sleep 0.1
     done
-    show_request tails-demo-fd 0 "$target" 'Anfragekontext nach Auswertung der geschützten FDs (keine neue Dateiöffnung)'
-    show_decision deny deny 'Die drei geschützten Dateideskriptoren wurden geschlossen.' "$target" 'Entscheidung zu den bestehenden geschützten FDs'
-    show_request tails-demo-fd 0 "$safe" 'Anfragekontext nach Auswertung der Kontroll-FDs (keine neue Dateiöffnung)'
-    show_decision allow allow 'Die beiden Kontroll-Dateideskriptoren bleiben offen.' "$safe" 'Ergebnis für die bestehenden Kontroll-FDs'
+    show_request tails-demo-fd 0 "$target" 'Authorization Context nach Re-evaluation der geschützten FDs (keine neue Dateiöffnung)'
+    show_decision deny deny 'Die drei geschützten Dateideskriptoren wurden geschlossen.' "$target" 'Authorization Decision für die bestehenden geschützten FDs'
+    show_request tails-demo-fd 0 "$safe" 'Authorization Context nach Re-evaluation der Kontroll-FDs (keine neue Dateiöffnung)'
+    show_decision allow allow 'Die beiden Kontroll-Dateideskriptoren bleiben offen.' "$safe" 'Authorization Decision für die bestehenden Kontroll-FDs'
     observe 'OK: Drei geschützte FDs entzogen, beide Kontroll-FDs offen, Hilfsprozess läuft weiter.'
 }
+# Prüft vor dem Auslöser über Gerät und Inode, ob die offenen FDs auf die erwarteten Dateien zeigen.
 assert_probe_identity() {
     python3 - "$probe_dir/ready.json" "$target" "$safe" <<'PY'
 import json, os, sys
@@ -323,6 +352,7 @@ for key, path in [('protected', sys.argv[2]), ('controls', sys.argv[3])]:
 PY
 }
 
+# Hängt ein eigenes BPF-Dateisystem ein; verweigert dies außerhalb des privaten Mount-Namespace.
 setup_demo_bpffs() {
     local current_namespace mount_point="${1:-/sys/fs/bpf}"
     current_namespace="$(readlink /proc/self/ns/mnt)" || return 1
@@ -337,6 +367,7 @@ setup_demo_bpffs() {
     [[ "$(stat -f -c %T "$mount_point")" == bpf_fs ]] || { fail 'Demo-Mount ist kein bpffs.'; return 1; }
 }
 
+# Sichert Trace-Einstellungen, startet die Anzeige der Kernel-Deny-Meldungen und wartet auf den Leser.
 start_kernel_trace() {
     local setting original deadline
     mkdir "$demo_root/tracefs"
@@ -351,7 +382,7 @@ start_kernel_trace() {
         trace_settings_values+=("$original")
         printf '1\n' > "$demo_root/tracefs/$setting"
     done
-    printf '[Kernel-Debug] Reduzierter Deny-Modus: Nur endgültige Deny-Entscheidungen und Tail-Call-Fehler werden im Kernel protokolliert.\n' >> "$demo_root/runtime.log"
+    printf '[Kernel-Debug] Reduzierter Deny-Modus: Nur endgültige Deny Decisions und Tail-Call-Fehler werden im Kernel protokolliert.\n' >> "$demo_root/runtime.log"
     DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
         python3 "$PROJECT_ROOT/scripts/demo/kernel_trace.py" \
         "$demo_root/tracefs/trace_pipe" "$demo_root/kernel-ready" "$demo_root/kernel.log" \
@@ -365,6 +396,7 @@ start_kernel_trace() {
     done
 }
 
+# Beendet den Kernel-Trace-Leser und stellt die zuvor gesicherten Trace-Einstellungen wieder her.
 stop_kernel_trace() {
     local deadline index state status=0
     if [[ -n "$kernel_trace_pid" ]]; then
@@ -385,6 +417,7 @@ stop_kernel_trace() {
     return "$status"
 }
 
+# Beendet die Runtime zunächst mit TERM und erzwingt bei überschrittener Wartezeit das Prozessende.
 stop_runtime() {
     [[ -n "$runtime_pid" ]] || return 0
     kill -TERM "$runtime_pid" 2>/dev/null || true
@@ -395,6 +428,7 @@ stop_runtime() {
     runtime_pid=''
 }
 
+# Ermittelt den absoluten Arbeitsverzeichnispfad; files bezeichnet dabei demo/files.
 workspace_path() {
     case "$1" in
         files) printf '%s/demo/files\n' "$PROJECT_ROOT" ;;
@@ -402,6 +436,7 @@ workspace_path() {
     esac
 }
 
+# Validiert die Markierung eines abgebrochenen Laufs, archiviert dessen Dateien und stellt die Sicherung wieder her.
 recover_demo_workspace() {
     local backup recovery name path
     # Called only after taking the demo/evaluation lock and rejecting a running
@@ -452,6 +487,7 @@ PY
     explain 'Die vorhandenen Originalsicherungen wurden wiederhergestellt. Die Demo kann neu vorbereitet werden.'
 }
 
+# Sichert vorhandene Policies, Attribute und Dateien und legt einen markierten Demo-Arbeitsbereich an.
 prepare_demo_workspace() {
     local name path
     workspace_marker="$PROJECT_ROOT/demo/.workspace-active"
@@ -485,6 +521,7 @@ prepare_demo_workspace() {
     done
 }
 
+# Archiviert die Demo-Dateien und stellt die ursprünglichen Verzeichnisse aus ihrer Sicherung wieder her.
 restore_demo_workspace() {
     local name path status=0
     [[ "$owns_workspace" == 1 ]] || return 0
@@ -508,6 +545,7 @@ restore_demo_workspace() {
     return "$status"
 }
 
+# Räumt bei Ende oder Abbruch Prozesse, Trace-Einstellungen, eigene Pins und Arbeitsbereich auf; erhält die Logs.
 worker_cleanup() {
     local status=$? name
     trap - EXIT INT TERM HUP
@@ -536,6 +574,7 @@ worker_cleanup() {
     exit "$status"
 }
 
+# Prüft die Linux-Voraussetzungen, bereitet den Arbeitsbereich vor und führt den Kapitelplan mit Aufräum-Trap aus.
 demo_worker() {
     demo_root="$1"
     policy_dir="$PROJECT_ROOT/policies"

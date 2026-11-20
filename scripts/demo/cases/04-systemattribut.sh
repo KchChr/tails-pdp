@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Kapitel 4: Bei unveränderter Policy die Entscheidung allein über einen
+# Kapitel 4: Bei unveränderter Policy die Authorization Decision allein über einen
 # Systemattributwert ändern; Attribut- und Policygeneration sind getrennt.
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '4. Dynamisches Systemattribut'
     chapter_section 'Ausgangslage' \
-        'Das globale Attribut system.defcon steht auf 5. Diese Zahl dient als dynamischer Kontext der Zugriffsentscheidung.'
+        'Das globale Attribut system.defcon steht auf 5. Diese Zahl dient als dynamischer Bestandteil des Authorization Context.'
     chapter_section 'Aktion' \
         'Eine Deny-Policy mit system.defcon <= 2 wird geladen. Anschließend wird nur der Attributwert von 5 auf 2 und zurück auf 5 geändert.'
     chapter_section 'Erwartetes Verhalten' \

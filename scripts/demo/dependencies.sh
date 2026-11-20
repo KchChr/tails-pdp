@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # sudo is a host capability, not a dependency supplied by nix-shell.
+# Ermittelt einen ausführbaren absoluten System-sudo-Pfad; lehnt das ungeeignete sudo im Nix-Store ab.
 resolve_demo_sudo() {
     local candidate system_wrapper="${1:-/run/wrappers/bin/sudo}"
     if [[ -n "${DEMO_SUDO_BIN:-}" ]]; then
