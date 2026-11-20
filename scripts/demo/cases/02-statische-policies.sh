@@ -22,7 +22,9 @@
     command_access_is allow cat -
     step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können. Eine Verweigerung hier zeigt ein Problem mit den normalen Dateirechten.'
     command_access_is allow cat "$comparison_uid"
-    step "Die Deny-Policy für subject.uid == ${UID};, command == \"cat\"; und die geschützte Ressource wird veröffentlicht."    policy scoped deny "    subject.uid == $UID;" cat
+    step "Die Deny-Policy für subject.uid == ${UID};, command == \"cat\"; und die geschützte Ressource wird veröffentlicht."
+    policy scoped deny "    subject.uid == $UID;" cat
+    admin show-active
     command_access_is deny cat -
     step 'Nur der Benutzer wird geändert: sudo -u startet cat mit der anderen Benutzeridentität.'
     command_access_is allow cat "$comparison_uid"

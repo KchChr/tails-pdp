@@ -356,6 +356,47 @@ printf 'AKTION_AUSGEFUEHRT\\n'
                                         text=True, capture_output=True)
                 self.assertEqual('AKTION_AUSGEFUEHRT' in result.stdout, executes, result.stderr)
 
+    def test_substep_rejects_accidentally_appended_commands(self):
+        script = 'source "$1"; DEMO_AUTO=1; step "Policy veröffentlichen" policy scoped deny'
+        result = subprocess.run(
+            [shutil.which('bash'), '-c', script, 'test', str(PROJECT / 'scripts/demo/runner.sh')],
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('nachfolgende Befehle in eine eigene Zeile', result.stderr)
+
+    def test_static_policy_chapter_activates_and_shows_policy_before_deny_check(self):
+        script = '''set -Eeuo pipefail
+target=/example/protected.txt
+safe=/example/control.txt
+PROJECT_ROOT=/example
+comparison_uid=1000
+active=0 shown=0
+chapter_start() { :; }
+chapter_section() { :; }
+pause_demo() { :; }
+explain() { :; }
+step() { [[ $# -eq 1 ]]; }
+policy() { [[ "$1" == scoped && "$2" == deny ]]; active=1; printf 'POLICY_ACTIVATED\n'; }
+admin() { if [[ "$active" == 1 ]]; then shown=1; printf 'ACTIVE_POLICY_SHOWN\n'; fi; }
+command_access_is() {
+    if [[ "$1" == deny ]]; then
+        [[ "$active" == 1 && "$shown" == 1 ]]
+        printf 'DENY_CHECKED\n'
+    fi
+}
+remove_policy() { active=0; }
+source "$1"
+'''
+        result = subprocess.run(
+            [shutil.which('bash'), '-c', script, 'test',
+             str(PROJECT / 'scripts/demo/cases/02-statische-policies.sh')],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertLess(result.stdout.index('POLICY_ACTIVATED'), result.stdout.index('ACTIVE_POLICY_SHOWN'))
+        self.assertLess(result.stdout.index('ACTIVE_POLICY_SHOWN'), result.stdout.index('DENY_CHECKED'))
+
     def test_publication_shows_content_but_keeps_internal_command_in_log(self):
         with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:
             root = Path(directory)

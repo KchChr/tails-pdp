@@ -65,6 +65,10 @@ chapter_section() {
 explain() { printf '\n→ %s\n' "$*"; }
 # Lässt das vorige Ergebnis lesen und bestätigt danach die Ausführung des nächsten Teilschritts.
 step() {
+    [[ $# -eq 1 ]] || {
+        fail 'step erwartet genau einen Erklärungstext. Bitte nachfolgende Befehle in eine eigene Zeile schreiben.'
+        return 1
+    }
     # Keep the last result visible until Enter, then present the next action.
     pause_demo 'Enter: zum nächsten Teilschritt | Strg+C: abbrechen '
     printf '\033[2J\033[H\n%s%s%s\n' "$color_heading" "$demo_current_chapter" "$color_reset"
