@@ -19,7 +19,7 @@
     chapter_section 'Ausgangslage' \
         'Der Beobachter hält alle fünf FDs offen. Vor der Änderung wird zusätzlich geprüft, dass diese FDs noch auf die erwarteten Dateien verweisen.'
     chapter_section 'Aktion' \
-        'Mit Enter wird eine Deny-Policy für die geschützte Datei mit `command == "tails-demo-fd";` veröffentlicht. Die Policyaktivierung löst eine Re-evaluation der bestehenden FDs aus.'
+        'Mit Enter wird eine Deny-Policy für die geschützte Ressource veröffentlicht. Die Policyaktivierung löst eine Re-evaluation der bestehenden FDs aus. Ein zusätzlicher Kommando-Filter wird in diesem Kapitel nicht verwendet.'
     chapter_section 'Erwartetes Verhalten' \
         'Die drei geschützten FDs wechseln auf geschlossen. Beide Kontroll-FDs bleiben offen; der Prozess wird nicht beendet.'
     chapter_section 'Beobachtung' \
@@ -27,7 +27,7 @@
     printf '\n'
     pause_demo
     assert_probe_identity
-    policy revoke deny '' tails-demo-fd
+    policy revoke deny ''
     expect_revoked
     step 'Der selektive Entzug ist bestätigt. Der Beobachter wird jetzt gezielt beendet und die Demo-Policy für das nächste Kapitel entfernt.'
     stop_probe

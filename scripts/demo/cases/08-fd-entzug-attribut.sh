@@ -14,7 +14,7 @@
         'Eine geladene Policy und eine erfüllte Bedingung sind zu unterscheiden. enabled im Admin-Tool bedeutet, dass die Policy aktiviert ist; ihre Bedingungen werden für den jeweiligen Zugriff ausgewertet.'
     printf '\n'
     pause_demo
-    policy revoke deny '    system.defcon <= 2;' tails-demo-fd
+    policy revoke deny '    system.defcon <= 2;'
     start_probe
     chapter_start '8a. Nur das Systemattribut ändern'
     chapter_section 'Ausgangslage' \

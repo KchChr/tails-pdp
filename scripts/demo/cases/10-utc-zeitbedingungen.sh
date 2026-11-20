@@ -15,9 +15,9 @@
     printf '\n'
     pause_demo
     policy stream-permit permit '    environment.utc.minute >= 0;'
-    access_is allow
+    command_access_is allow cat -
     step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht. Sie hat Vorrang vor der passenden Permit-Policy.'
     policy utc deny '    environment.utc.hour >= 0;'
     explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang vor der passenden Permit-Policy.'
-    access_is deny
+    command_access_is deny cat -
     admin

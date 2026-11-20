@@ -84,13 +84,54 @@ p['hold'](str(root / 'target'), str(root / 'safe'), str(root))
             subprocess.run([shutil.which("python3"), "-c", program, str(PROJECT / "scripts/demo/probe.py"), directory], check=True, capture_output=True, timeout=5)
 
 
+class BashObserverTests(unittest.TestCase):
+    @unittest.skipUnless(Path('/proc/self/fd').is_dir(), 'Der Bash-FD-Beobachter benötigt Linux /proc')
+    def test_bash_holds_real_descriptors_and_reports_proc_listing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target, control = root / 'protected.txt', root / 'control.txt'
+            target.write_text('protected')
+            control.write_text('control')
+            with (root / 'output.log').open('w') as output:
+                process = subprocess.Popen(
+                    [shutil.which('bash'), str(PROJECT / 'scripts/demo/fd-observer.sh'),
+                     str(target), str(control), directory],
+                    stdout=output, stderr=subprocess.STDOUT,
+                )
+                try:
+                    deadline = time.monotonic() + 5
+                    while not (root / 'state.json').exists() and time.monotonic() < deadline:
+                        self.assertIsNone(process.poll(), (root / 'output.log').read_text())
+                        time.sleep(0.05)
+                    state = json.loads((root / 'state.json').read_text())
+                    ready = json.loads((root / 'ready.json').read_text())
+                    self.assertEqual(ready['pid'], process.pid)
+                    self.assertEqual(state['protected'], [True] * 3)
+                    self.assertEqual(state['controls'], [True] * 2)
+                    for key, path in [('protected', target), ('controls', control)]:
+                        for fd in ready[key]:
+                            self.assertTrue(os.path.samefile(f'/proc/{process.pid}/fd/{fd}', path))
+                    transcript = (root / 'output.log').read_text()
+                    self.assertIn('$ exec 10<', transcript)
+                    self.assertIn(f'$ ls -l /proc/{process.pid}/fd', transcript)
+                    self.assertIn('10: offen', transcript)
+                    self.assertEqual(Path(f'/proc/{process.pid}/comm').read_text().strip(), 'bash')
+                finally:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+
+
 class LauncherTests(unittest.TestCase):
     def run_launcher(self, with_tmux, build=False):
         with tempfile.TemporaryDirectory(prefix="demo test ") as directory:
             root = Path(directory)
             binaries = root / "bin"
             binaries.mkdir()
-            commands = "bash cat chmod chown date dirname env flock grep head id ln mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir setpriv sleep stat sudo tail tee uname unshare wc".split()
+            commands = "bash cat chmod chown date dirname env flock grep head id ln ls mkdir mkfifo mktemp mount mv pgrep ps python3 readlink rm rmdir sleep stat sudo tail tee uname unshare wc".split()
             for command in commands:
                 executable = shutil.which(command)
                 if executable:
@@ -344,7 +385,7 @@ show_policy_context
 
 
 class CommandAccessTests(unittest.TestCase):
-    def check_access(self, expected, mode, command='cat'):
+    def check_access(self, expected, mode, command='cat', uid='60001'):
         with tempfile.TemporaryDirectory(prefix='real command ') as directory:
             root = Path(directory)
             binaries = root / 'bin'
@@ -354,12 +395,19 @@ class CommandAccessTests(unittest.TestCase):
             stub = '''#!/usr/bin/env python3
 import json, os, sys
 from pathlib import Path
-if Path(sys.argv[0]).name == 'setpriv':
-    assert sys.argv[1:4] == ['--ruid', '60001', '--'], sys.argv
+if Path(sys.argv[0]).name == 'id':
+    assert sys.argv[1:] == ['-un', '60001'], sys.argv
+    print('demo-test')
+    raise SystemExit(0)
+if Path(sys.argv[0]).name == 'sudo':
+    assert sys.argv[1:4] == ['-u', 'demo-test', '--'], sys.argv
     Path(os.environ['INVOCATION']).write_text(json.dumps(sys.argv[1:]))
-    if os.environ['ACCESS_MODE'] == 'setpriv-error':
-        print('setpriv: Operation not permitted', file=sys.stderr)
+    if os.environ['ACCESS_MODE'] == 'sudo-error':
+        print('sudo: permission denied', file=sys.stderr)
         raise SystemExit(1)
+    if sys.argv[4:] == ['id', '-u']:
+        print('60001')
+        raise SystemExit(0)
     os.execvp(sys.argv[4], sys.argv[4:])
 if sys.argv[-1] == os.environ['TEST_TARGET'] and os.environ['ACCESS_MODE'] != 'allow':
     error = {'deny': 'Operation not permitted', 'dac': 'Permission denied', 'missing': 'No such file or directory'}[os.environ['ACCESS_MODE']]
@@ -367,7 +415,7 @@ if sys.argv[-1] == os.environ['TEST_TARGET'] and os.environ['ACCESS_MODE'] != 'a
     raise SystemExit(1)
 os.execv(os.environ['REAL_CAT'], [os.environ['REAL_CAT'], *sys.argv[1:]])
 '''
-            for name in ('setpriv', 'cat'):
+            for name in ('sudo', 'id', 'cat'):
                 path = binaries / name
                 path.write_text(stub)
                 path.chmod(0o755)
@@ -376,22 +424,35 @@ os.execv(os.environ['REAL_CAT'], [os.environ['REAL_CAT'], *sys.argv[1:]])
                            'TEST_TARGET': str(target), 'TEST_ROOT': directory,
                            'PROJECT_ROOT': str(PROJECT),
                            'RUNNER': str(PROJECT / 'scripts/demo/runner.sh'),
-                           'TEST_EXPECTED': expected, 'TEST_COMMAND': command,
-                           'INVOCATION': str(root / 'invocation')}
+                           'TEST_EXPECTED': expected, 'TEST_COMMAND': command, 'TEST_UID': uid,
+                           'INVOCATION': str(root / 'invocation'), 'DEMO_SUDO_BIN': str(binaries / 'sudo')}
             script = '''set -Eeuo pipefail
 source "$RUNNER"
 alive() { return 0; }
 admin() { printf 'generation policy=1 attribute=1\nATTRIBUTES:\nsystem.defcon = 5\n'; }
 demo_root="$TEST_ROOT"
 target="$TEST_TARGET"
-command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
+command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" "$TEST_UID"
 '''
             result = subprocess.run([shutil.which('bash'), '-c', script], env=environment,
                                     capture_output=True, text=True)
-            self.assertTrue((root / 'invocation').exists(), result.stdout + result.stderr)
-            self.assertEqual(json.loads((root / 'invocation').read_text()),
-                             ['--ruid', '60001', '--', command, '--', str(target)])
+            if uid == '-':
+                self.assertFalse((root / 'invocation').exists(), result.stdout + result.stderr)
+                self.assertIn('$ echo $UID\n', result.stdout)
+                self.assertIn(f'subject.uid == {os.getuid()};', result.stdout)
+                self.assertNotIn('sudo -u', result.stdout)
+                self.assertIn('$ cat ', result.stdout)
+            else:
+                self.assertTrue((root / 'invocation').exists(), result.stdout + result.stderr)
+                expected_command = ['id', '-u'] if mode == 'sudo-error' else [command, str(target)]
+                self.assertEqual(json.loads((root / 'invocation').read_text()),
+                                 ['-u', 'demo-test', '--', *expected_command])
             return result
+
+    def test_current_uid_uses_plain_cat_without_sudo(self):
+        result = self.check_access('allow', 'allow', uid='-')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('sichtbarer Dateiinhalt', result.stdout)
 
     def test_real_cat_and_head_show_file_contents(self):
         for command in ('cat', 'head'):
@@ -410,7 +471,7 @@ command_access_is "$TEST_EXPECTED" "$TEST_COMMAND" 60001
         self.assertIn('Operation not permitted', result.stdout)
 
     def test_other_errors_and_unexpected_success_are_not_denials(self):
-        for mode in ('dac', 'missing', 'setpriv-error', 'allow'):
+        for mode in ('dac', 'missing', 'sudo-error', 'allow'):
             with self.subTest(mode=mode):
                 result = self.check_access('deny', mode)
                 self.assertNotEqual(result.returncode, 0)

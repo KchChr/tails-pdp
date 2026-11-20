@@ -15,13 +15,13 @@
     printf '\n'
     pause_demo
     policy context deny '    system.defcon <= 2;'
-    access_is allow
+    command_access_is allow cat -
     step 'Im Authorization Context gilt anschließend `system.defcon == 2;`: Die bereits geladene Deny-Policy trifft jetzt zu.'
     attribute system.attributes 'defcon = 2'
-    access_is deny
+    command_access_is deny cat -
     admin show-active
     step 'Im Authorization Context gilt anschließend wieder `system.defcon == 5;`: Dieselbe Policy trifft nicht mehr zu.'
     attribute system.attributes 'defcon = 5'
-    access_is allow
+    command_access_is allow cat -
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy context

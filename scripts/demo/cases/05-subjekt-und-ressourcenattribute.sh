@@ -19,28 +19,28 @@
     attribute subjects/0.attributes 'position = "engineer"'
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
-    access_is deny
+    command_access_is deny cat -
     step 'Nur subject.position ändert sich von `subject.position == "engineer";` zu `subject.position == "intern";`. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
-    access_is allow
+    command_access_is allow cat -
     step 'Im Authorization Context gilt wieder `subject.position == "engineer";`. Damit sind wieder alle drei Bedingungen erfüllt.'
     attribute subjects/0.attributes 'position = "engineer"'
-    access_is deny
+    command_access_is deny cat -
     step 'Nur resource.classification ändert sich von `resource.classification == "internal";` zu `resource.classification == "public";`. Damit passt die Deny-Policy nicht mehr.'
     attribute "resources${target}.attributes" 'classification = "public"'
-    access_is allow
+    command_access_is allow cat -
     step 'Mit `resource.classification == "internal";` sind wieder alle drei Bedingungen erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
-    access_is deny
+    command_access_is deny cat -
     step 'Jetzt fehlt subject.position vollständig. Die Veröffentlichung ist gültig; die Bedingung `subject.position == "engineer";` passt jedoch nicht.'
     attribute subjects/0.attributes '# position fehlt'
-    access_is allow
+    command_access_is allow cat -
     step 'Im Authorization Context gilt `subject.position == 1;` statt `subject.position == "engineer";`. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
     attribute subjects/0.attributes 'position = 1'
-    access_is allow
+    command_access_is allow cat -
     step 'Im Authorization Context gilt wieder `subject.position == "engineer";`: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
-    access_is deny
+    command_access_is deny cat -
     admin
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy combined

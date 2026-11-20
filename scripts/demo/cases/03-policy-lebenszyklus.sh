@@ -19,13 +19,13 @@
     pause_demo
     explain 'Zuerst wird eine Permit-Policy geladen. Der Zugriff ist damit erlaubt.'
     policy permit permit
-    access_is allow
+    command_access_is allow cat -
     step 'Eine passende Deny-Policy wird ergänzt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang.'
     policy deny deny
-    access_is deny
+    command_access_is deny cat -
     admin
     step 'Nur die Deny-Policy wird entfernt; die Permit-Policy bleibt geladen. Der Zugriff ist danach wieder erlaubt.'
     remove_policy deny
-    access_is allow
+    command_access_is allow cat -
     step 'Die Permit-Policy wird zum Abschluss dieses Kapitels entfernt.'
     remove_policy permit

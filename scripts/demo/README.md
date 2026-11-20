@@ -111,7 +111,7 @@ Die Ausgabe verwendet ein einheitliches Farbschema:
 
 - **Türkis, fett:** Kapitelüberschriften; Abschnittsüberschriften sind fett.
 - **Gelb:** ausgeführte Befehle mit `$` sowie die Enter-Aufforderungen.
-- **Hellblau:** Admin-Ausgaben, Rückgaben der Zugriffshilfe und FD-Beobachtungen.
+- **Hellblau:** Admin-Ausgaben, Ausgaben der Linux-Kommandos und FD-Beobachtungen.
 - **Magenta:** veröffentlichte Policy- und Attributtexte.
 - **Grün:** bestätigte Demo-Prüfungen, auch bei einem erwarteten `deny`.
 - **Rot:** Fehler der Demo oder eine Abweichung vom erwarteten Ergebnis.
@@ -130,7 +130,7 @@ Jedes Kapitel erläutert vor der Ausführung **Ausgangslage**, **Aktion**,
 **erwartetes Verhalten** und **Beobachtung**. Während
 der Ausführung erklären zusätzliche Hinweise die einzelnen Policy- und
 Attributwechsel sowie ihre Bedeutung für die anschließenden Prüfungen.
-Begriffe wie FD und Generation sowie die Zugriffshilfe werden zu Beginn erklärt.
+Begriffe wie FD und Generation werden im jeweiligen Kapitel erklärt.
 Bei Veröffentlichungen erscheinen nur „Folgende Policy veröffentlicht“ bzw.
 „Folgende Attribute veröffentlicht“ und der jeweilige Dateiinhalt.
 Policy-Dateien werden immer vollständig angezeigt, einschließlich Wirkung,
@@ -150,20 +150,28 @@ aktuellen Attribute angezeigt, keine deaktivierten Policy-Plätze.
 Die Befehle laufen im privilegierten Demo-Worker; Eingaben sind nicht nötig.
 Interne Generationsabfragen bleiben ohne Befehlsausgabe. Kapitel 2 nennt die
 Pfade `demo/files/protected.txt`, `demo/files/control.txt` und `demo/files/alias.txt`.
-In Kapitel 1 und 2 wird echtes `cat` gestartet, in Kapitel 2 zusätzlich echtes
-`head`. `setpriv --ruid` setzt dabei nur die Real-UID; die effektive UID bleibt
-0, damit gewöhnliche Dateirechte den Filtervergleich nicht beeinflussen.
-Die Demo zeigt den vollständigen Aufruf, den Dateiinhalt bei Erfolg und die
-Originalfehlermeldung bei einer Verweigerung. Der Exitstatus allein genügt nicht:
-Nur eine Fehlermeldung des aufgerufenen Programms zur erwarteten Datei mit
-`Operation not permitted` wird als Deny gewertet. Die Prozesse laufen dafür
-mit `LC_ALL=C`; fehlende Dateien, gewöhnliches `Permission denied` oder Fehler
-von `setpriv` lassen die Demo fehlschlagen.
-In den übrigen Zugriffsszenarien führt `probe.py access` eine echte Dateiöffnung
-aus und gibt intern `allow` oder `deny` zurück. Die Hilfe wird einmal zu Beginn
-erklärt; anschließend erscheinen nur die kompakten Ergebnisse mit Datei,
-Kommando und Real-UID. Die `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das Bashskript nach dem Vergleich mit dem
-erwarteten Ergebnis; sie stammen nicht aus dem Admin-Tool oder dem Runtime-Log.
+Alle Dateiöffnungen werden mit echtem `cat` geprüft; Kapitel 2 verwendet
+zusätzlich `head` als Kommando-Gegenprobe. `echo $UID` zeigt vor den Aufrufen die
+tatsächliche UID des Demo-Workers. Die vollständigen Befehle und ihre
+Originalausgaben bleiben sichtbar.
+
+Für den UID-Vergleich in Kapitel 2 wird der vorhandene angemeldete Benutzer
+verwendet. Bei einem reinen root-Aufruf dient der vorhandene Benutzer `nobody`
+als Gegenprobe. `sudo -u <Benutzer> -- id -u` zeigt dessen UID,
+`sudo -u <Benutzer> -- cat <absoluter Pfad>` führt den tatsächlichen Zugriff aus.
+Dabei wechseln Real-UID und effektive UID. Vor der Deny-Policy müssen beide
+Benutzer die Datei lesen können; ansonsten bricht die Demo ab. In diesem Fall
+sollte die Demo aus einem normalen Benutzerkonto in einem dafür zugänglichen
+Checkout gestartet werden. Es werden keine Benutzerkonten angelegt und keine
+bestehenden Dateirechte geändert.
+
+Der Exitstatus allein genügt nicht: Nur eine Fehlermeldung des gestarteten
+Programms zur erwarteten Datei mit `Operation not permitted` wird als Deny
+gewertet. Die Prozesse laufen dafür mit `LC_ALL=C`; fehlende Dateien,
+gewöhnliches `Permission denied` oder ein fehlgeschlagener Benutzerwechsel
+lassen die Demo fehlschlagen. Die `[Demo-Prüfung] OK: ...`-Zeilen erzeugt das
+Bashskript nach dem Vergleich mit dem erwarteten Ergebnis.
+
 Die Demo verwendet die Begriffe **Authorization Context** für die Eingaben der
 Auswertung, **Authorization Decision** für Permit/Deny, **Enforcement** für die
 Umsetzung und **Re-evaluation** für die erneute Auswertung bestehender FDs.
@@ -179,7 +187,7 @@ Metadaten. Die Kontextwerte stehen in der Schreibweise der Policy-Bedingungen:
 ```text
 action == "file_open";
 command == "cat";
-subject.uid == 60001;
+subject.uid == 0;
 resource.device == 2049;
 resource.inode == 12345;
 resource.path == "/home/demo/tails-pdp/demo/files/protected.txt";
@@ -220,7 +228,7 @@ der Authorization Context nach einer Re-evaluation ist als solcher gekennzeichne
 und bedeutet keine neue Dateiöffnung.
 Nach der Zugriffsprüfung folgt ein kompakter Block **Authorization Decision**
 mit `resource.path` und `Decision` (`Permit` oder `Deny`). Die zusätzliche Anzeige
-von Observed Enforcement und Expected Decision entfällt. Kapitel 1 und 2 zeigen
+von Observed Enforcement und Expected Decision entfällt. Alle Kapitel zeigen
 stattdessen die tatsächliche Ausgabe von `cat` beziehungsweise `head`.
 Der erwartete Ausgang wird weiterhin intern geprüft. Die Prüfmeldung bestätigt
 die Übereinstimmung; Abweichungen werden
@@ -232,7 +240,7 @@ Beim FD-Entzug erscheinen getrennte Ergebnisse für die drei geschützten FDs
 und die beiden weiterhin offenen Kontroll-FDs.
 Der FD-Beobachter zeigt die Descriptor-Nummern jeweils mit **offen** oder
 **geschlossen**. Seine JSON-Zustandsdateien verwenden weiterhin boolesche Werte.
-Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: probe.py hold]`, und
+Die Ausgaben des FD-Beobachters tragen `[FD-Beobachter: Bash /proc]`, und
 Admin-Ausgaben werden mit `[Admin-Tool des Prototyps]` eingeleitet.
 Kernel-Debugmeldungen tragen `[Kernelspace-PEP]`. Die Runtime kennzeichnet den
 Userspace-PEP mit der Logkennung `USERSPACE_PEP`, etwa beim erfolgreichen oder
@@ -331,14 +339,19 @@ eindeutige Zuordnung bleiben erhalten. Ungültige oder fehlende Sicherungspfade
 führen weiterhin zu einem Abbruch mit Diagnose. Konfiguration wird während der
 Demo mit `scripts/publish-config.sh` atomar veröffentlicht.
 
-Kapitel 1 und 2 benötigen keine Zugriffshilfe; `cat`, `head` und `setpriv` gehören zu
-den geprüften Laufzeitwerkzeugen. In den übrigen Kapiteln dient `probe.py`
-als Syscall-Helfer: `access` setzt kontrolliert
-den unter Linux geführten Kommandonamen `comm` für den Kommando-Filter und optional die Real-UID (effektive UID bleibt root) und
-unterscheidet LSM-`EPERM` von sonstigen Fehlern. Es werden keine Benutzerkonten
-angelegt. `hold` hält drei geschützte und zwei Kontroll-FDs offen und bleibt auch
-nach deren Entzug aktiv. Seine Beobachtungen werden zusätzlich zur Runtime-Ausgabe
-geprüft. Das Admin-Tool liest Maps; seine Ausgabe allein gilt nicht als
+Die Demo verwendet für Dateiöffnungen keine Python-Zugriffshilfe und setzt
+keine künstlichen Kommandonamen. `scripts/demo/fd-observer.sh` hält stattdessen
+in einem echten Bash-Prozess drei geschützte und zwei Kontroll-FDs offen:
+`exec 10<... 11<... 12<... 13<... 14<...`. Der Beobachter zeigt seine UID und PID
+sowie bei Zustandswechseln `ls -l /proc/<PID>/fd`. Seine Linux-Hilfsprogramme
+erben diese fünf FDs nicht. JSON-Dateien dienen nur der internen automatischen
+Prüfung. Auch nach dem Entzug bleibt die Bash aktiv.
+Die FD-Policies in Kapitel 7–9 verwenden keinen zusätzlichen Kommando-Filter,
+damit sich dieselbe Ressourcen-Policy mit echtem `cat` und den offenen Bash-FDs
+prüfen lässt. Der Kommando-Filter wird separat in Kapitel 2 mit `cat` und
+`head` demonstriert. `probe.py` bleibt als separat testbares Diagnosewerkzeug
+vorhanden, wird vom geführten Ablauf aber nicht aufgerufen.
+Das Admin-Tool liest Maps; seine Ausgabe allein gilt nicht als
 Enforcement-Nachweis.
 
 Die Demo prüft die gezeigten Funktionsabläufe. Sie ersetzt keine Kapazitäts-,

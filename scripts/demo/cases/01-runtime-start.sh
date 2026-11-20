@@ -12,7 +12,7 @@
 
   Es läuft noch keine Runtime und es sind keine Policies geladen."
     chapter_section 'Aktion' \
-        "Der Prototyp wird gestartet. Danach wird die Ressource ${target} mit cat geöffnet und ihr Inhalt angezeigt."
+        "Der Prototyp wird gestartet. echo \$UID zeigt die UID des Demo-Workers. Danach wird die Ressource ${target} mit cat geöffnet und ihr Inhalt angezeigt."
     chapter_section 'Erwartetes Verhalten' \
         'Die Datei kann ohne Einschränkungen geöffnet werden, das Enforcement lässt die Dateiöffnung zu'
     chapter_section 'Beobachtung' \
@@ -34,5 +34,5 @@
     done
     wait_log 'scan completed'
     admin
-    command_access_is allow cat 0
+    command_access_is allow cat -
     explain 'Ergebnis: Die Runtime ist bereit und der Ausgangszugriff ist erlaubt. Ab jetzt bleibt derselbe Runtime-Prozess aktiv.'

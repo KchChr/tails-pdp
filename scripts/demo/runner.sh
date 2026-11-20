@@ -232,27 +232,26 @@ show_decision() {
         return 1
     fi
 }
-# Prüft die Dateiöffnung mit probe.py und vergleicht das tatsächliche Ergebnis mit allow oder deny.
-access_is() {
-    local expected="$1" command="${2:-tails-demo}" uid="${3:--}" file="${4:-$target}" actual
-    alive || { fail 'Runtime beendet.'; return 1; }
-    show_request "$command" "$uid" "$file"
-    local invocation=(python3 "$PROJECT_ROOT/scripts/demo/probe.py" access "$file" "$command" "$uid")
-    actual="$("${invocation[@]}")"
-    show_decision "$expected" "$actual" "$file" || {
-        fail "Zugriff: erwartet $expected, beobachtet $actual ($command, UID $uid)."
-        return 1
-    }
-}
-# Startet cat oder head mit gesetzter Real-UID und prüft Erfolg beziehungsweise eine echte EPERM-Verweigerung.
+# Startet echte Programme; UID "-" verwendet den Worker, eine andere UID einen echten Benutzer über sudo.
 command_access_is() {
     local expected="$1" command="$2" uid="$3" file="${4:-$target}" status=0 actual
     local output="$demo_root/command.stdout" error="$demo_root/command.stderr"
     alive || { fail 'Runtime beendet.'; return 1; }
+    if [[ "$uid" == - ]]; then uid="$UID"; fi
     show_request "$command" "$uid" "$file"
-    # Only the real UID changes. Effective UID 0 keeps ordinary DAC permissions
-    # constant while the UID, command and resource policy filters are varied.
-    local invocation=(setpriv --ruid "$uid" -- "$command" -- "$file")
+    local invocation=("$command" "$file")
+    if [[ "$uid" == "$UID" ]]; then
+        printf '\n%s$ echo $UID%s\n' "$color_command" "$color_reset"
+        show_output echo "$UID"
+    else
+        local user sudo_bin
+        user="$(id -un "$uid")" || { fail "Kein Benutzer für UID $uid vorhanden."; return 1; }
+        source "$PROJECT_ROOT/scripts/demo/dependencies.sh"
+        sudo_bin="$(resolve_demo_sudo)" || return 1
+        show_command sudo -u "$user" -- id -u
+        show_output "$sudo_bin" -u "$user" -- id -u
+        invocation=("$sudo_bin" -u "$user" -- "$command" "$file")
+    fi
     printf '\n[Dateizugriff durch das Programm %s]\n' "$command"
     show_command "${invocation[@]}"
     LC_ALL=C "${invocation[@]}" > "$output" 2> "$error" || status=$?
@@ -296,12 +295,12 @@ PY
 start_probe() {
     probe_dir="$(mktemp -d "$demo_root/fd.XXXXXX")"
     explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Authorization Contexts lauten:'
-    show_request tails-demo-fd 0 "$target"
-    show_request tails-demo-fd 0 "$safe"
-    printf '\n[FD-Beobachter: probe.py hold – Ausgabe im rechten unteren Bereich]\n'
-    show_command python3 "$PROJECT_ROOT/scripts/demo/probe.py" hold "$target" "$safe" "$probe_dir"
+    show_request bash "$UID" "$target"
+    show_request bash "$UID" "$safe"
+    printf '\n[FD-Beobachter: Bash /proc – Ausgabe im rechten unteren Bereich]\n'
+    show_command bash "$PROJECT_ROOT/scripts/demo/fd-observer.sh" "$target" "$safe" "$probe_dir"
     DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
-        python3 "$PROJECT_ROOT/scripts/demo/probe.py" hold "$target" "$safe" "$probe_dir" >> "$demo_root/observer.log" 2>&1 &
+        bash "$PROJECT_ROOT/scripts/demo/fd-observer.sh" "$target" "$safe" "$probe_dir" >> "$demo_root/observer.log" 2>&1 &
     probe_pid=$!
     local deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
     while ! probe_state_is open; do
@@ -327,9 +326,9 @@ expect_revoked() {
         (( SECONDS < deadline )) || { fail 'FD-Entzug ausgeblieben oder Kontroll-FD geschlossen.'; return 1; }
         sleep 0.1
     done
-    show_request tails-demo-fd 0 "$target" 'Authorization Context nach Re-evaluation der geschützten FDs (keine neue Dateiöffnung)'
+    show_request bash "$UID" "$target" 'Authorization Context nach Re-evaluation der geschützten FDs (keine neue Dateiöffnung)'
     show_decision deny deny "$target" 'Authorization Decision für die bestehenden geschützten FDs'
-    show_request tails-demo-fd 0 "$safe" 'Authorization Context nach Re-evaluation der Kontroll-FDs (keine neue Dateiöffnung)'
+    show_request bash "$UID" "$safe" 'Authorization Context nach Re-evaluation der Kontroll-FDs (keine neue Dateiöffnung)'
     show_decision allow allow "$safe" 'Authorization Decision für die bestehenden Kontroll-FDs'
     observe 'OK: Drei geschützte FDs entzogen, beide Kontroll-FDs offen, Hilfsprozess läuft weiter.'
 }
@@ -573,6 +572,10 @@ worker_cleanup() {
 demo_worker() {
     demo_root="$1"
     policy_dir="$PROJECT_ROOT/policies"
+    # The caller is normally the unprivileged demo user; root-only launches use
+    # the existing nobody account as the UID counterexample, never invented UIDs.
+    comparison_uid="${DEMO_CALLER_UID:-0}"
+    if [[ "$comparison_uid" == "$UID" ]]; then comparison_uid="$(id -u nobody)"; fi
     attribute_dir="$PROJECT_ROOT/attributes"
     target="$PROJECT_ROOT/demo/files/protected.txt"
     safe="$PROJECT_ROOT/demo/files/control.txt"

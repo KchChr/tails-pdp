@@ -17,11 +17,11 @@
     local boundary
     boundary=$(( $(date +%s) + 12 ))
     (( boundary < 4294967296 )) || { fail 'Zeitgrenze außerhalb des Demo-Modulus.'; return 1; }
-    policy timed deny "    environment.time % 4294967296 >= $boundary;" tails-demo-fd
+    policy timed deny "    environment.time % 4294967296 >= $boundary;"
     start_probe
     assert_probe_identity
     (( $(date +%s) < boundary - 2 )) || { fail 'Einrichtung zu langsam: Zeitgrenze schon zu nah.'; return 1; }
-    access_is allow tails-demo-fd
+    command_access_is allow cat -
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
     observe "Es wird auf den Unix-Zeitpunkt $boundary gewartet. Es erfolgen weder eine Veröffentlichung noch ein Neustart."
@@ -35,8 +35,8 @@ state = json.load(open(sys.argv[1]))
 if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
     raise SystemExit('FDs vor der Zeitgrenze geschlossen')
 PY
-    access_is deny tails-demo-fd
+    command_access_is deny cat -
     step 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug sind bestätigt. Der Beobachter wird beendet und die Policy entfernt; danach muss eine neue Dateiöffnung wieder erlaubt sein.'
     stop_probe
     remove_policy timed
-    access_is allow tails-demo-fd
+    command_access_is allow cat -
