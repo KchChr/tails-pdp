@@ -12,6 +12,7 @@ use tails_pdp_common::{
     POLICY_BANK_SIZE, StreamAttribute,
 };
 
+use crate::format::{entitlement_keyword, operator_symbol, time_condition};
 use crate::maps::{AttributeMap, FileOpenStaticPolicyMap, FileOpenStreamPolicyMap};
 
 pub type HashDictionary = HashMap<(u64, u64), String>;
@@ -57,10 +58,10 @@ fn describe_condition(condition: &AttributeCondition, dictionary: &HashDictionar
     };
 
     format!(
-        "{}.{} {:?} {}",
+        "{}.{} {} {};",
         namespace_prefix(condition.namespace),
         name,
-        condition.operator,
+        operator_symbol(condition.operator),
         value
     )
 }
@@ -99,15 +100,16 @@ pub fn show_file_open_static(
             continue;
         }
         println!(
-            "[{index}] enabled={} entitlement={:?} subject={} command={:?} resource={:?} device={} inode={}",
+            "[{index}] enabled={} entitlement={} subject.uid={} command={:?} resource.path={:?} resource.device={} resource.inode={}",
             policy.enabled,
-            policy.entitlement,
+            entitlement_keyword(policy.entitlement),
             subject_label(policy.subject),
             fixed_string(&policy.command),
             fixed_string(&policy.resource),
             policy.resource_device,
             policy.resource_inode,
         );
+        println!("    action == \"file_open\";");
     }
     println!();
     Ok(())
@@ -133,20 +135,25 @@ pub fn show_file_open_stream(
             String::from("none")
         } else if policy.attribute == StreamAttribute::Time {
             format!(
-                "{:?} % {} {:?} {}",
-                policy.attribute, policy.modulo, policy.operator, policy.value
+                "{:?} % {} {} {}",
+                policy.attribute,
+                policy.modulo,
+                operator_symbol(policy.operator),
+                policy.value
             )
         } else {
             format!(
-                "{:?} {:?} {}",
-                policy.attribute, policy.operator, policy.value
+                "{:?} {} {}",
+                policy.attribute,
+                operator_symbol(policy.operator),
+                policy.value
             )
         };
 
         println!(
-            "[{index}] enabled={} entitlement={:?} subject={} command={:?} resource={:?} device={} inode={} legacy_condition={}",
+            "[{index}] enabled={} entitlement={} subject.uid={} command={:?} resource.path={:?} resource.device={} resource.inode={} legacy_condition={}",
             policy.enabled,
-            policy.entitlement,
+            entitlement_keyword(policy.entitlement),
             subject_label(policy.subject),
             fixed_string(&policy.command),
             fixed_string(&policy.resource),
@@ -154,6 +161,18 @@ pub fn show_file_open_stream(
             policy.resource_inode,
             legacy_condition,
         );
+        println!("    action == \"file_open\";");
+        if policy.stream_condition_enabled != 0 {
+            println!(
+                "    {}",
+                time_condition(
+                    policy.attribute,
+                    policy.modulo,
+                    policy.operator,
+                    policy.value
+                )
+            );
+        }
 
         let condition_count =
             (policy.attribute_condition_count as usize).min(MAX_ATTRIBUTE_CONDITIONS);

@@ -152,26 +152,37 @@ Alle vier Befehle lesen nur die so ausgewählte Bank. `show` zeigt also nicht
 zusätzlich die inaktive Bank. Ein ausgegebener Policy-Index `[0]` ist relativ zur
 ausgewählten Bank: Bei Offset 16 wurde dafür Map-Eintrag 16 gelesen.
 
+Die Kopfzeilen mit `enabled=…`, `entitlement=…` und Ressourcenidentität sind
+Map-Metadaten, keine Policy-Anweisungen. Dort bleibt `=` der Trenner zwischen
+Feld und Wert. Bedingungen verwenden dagegen die Policy-Operatoren, etwa
+`attribute_condition=subject.position == "engineer";`.
+Attributwerte verwenden weiterhin Zuweisungen wie `system.defcon = 2`.
+Die Kennzeichen `generation`, `legacy_condition`, `attribute_condition` und die
+Attribut-Zuordnungspräfixe bleiben für bestehende Auswerteskripte erhalten.
+Die Ausgabe rekonstruiert kein vollständiges Originaldokument: Insbesondere
+sind ursprüngliche Policynamen nicht in den Maps gespeichert.
+
 ### Statische Policies
 
 Illustrative Ausgabe einer aktivierten Policy, keine Messung eines Testlaufs:
 
 ```text
 FILE_OPEN_STATIC_POLICIES:
-[0] enabled=1 entitlement=Deny subject=1000 command="cat" resource="/srv/demo.txt" device=2049 inode=12345
+[0] enabled=1 entitlement=deny subject.uid=1000 command="cat" resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345
+    action == "file_open";
 ```
 
 | Feld | Bedeutung |
 | --- | --- |
 | `[0]` | Platz innerhalb der ausgewählten Policy-Bank; kein ursprünglicher Policyname. |
 | `enabled` | Null: deaktiviert; ungleich null: aktiviert. |
-| `entitlement` | `Permit` oder `Deny`, also das Ergebnis dieser Regel bei erfüllten Bedingungen. |
-| `subject` | Benutzerkennung für den Subjektfilter (Real UID); `any` steht für einen uneingeschränkten Subjektfilter. |
+| `entitlement` | `permit` oder `deny`, also das Ergebnis dieser Regel bei erfüllten Bedingungen. |
+| `subject.uid` | Benutzerkennung für den Subjektfilter (Real UID); `any` steht für einen uneingeschränkten Subjektfilter. |
 | `command` | Kommando-Filter anhand des Linux-Tasknamens `comm`; eine leere Zeichenkette bedeutet keinen Kommando-Filter. |
-| `resource` | Gespeicherter Ressourcenpfad zur Darstellung. |
-| `device`, `inode` | Aufgelöste Dateiidentität, anhand derer der Prototyp die Ressource abgleicht. Beide Werte null kennzeichnen eine uneingeschränkte Ressource. |
+| `resource.path` | Gespeicherter Ressourcenpfad zur Darstellung. |
+| `resource.device`, `resource.inode` | Aufgelöste Dateiidentität, anhand derer der Prototyp die Ressource abgleicht. Beide Werte null kennzeichnen eine uneingeschränkte Ressource. |
 
-Die Felder beschreiben eine Regel. `entitlement=Permit` ist keine Aussage darüber,
+Die Felder beschreiben eine Regel. `entitlement=permit` ist keine Aussage darüber,
 ob eine konkrete Dateiöffnung insgesamt erlaubt wird: Eine ebenfalls passende
 Deny-Policy hat bei der Zusammenführung Vorrang.
 
@@ -181,8 +192,9 @@ Illustrative Ausgabe:
 
 ```text
 FILE_OPEN_STREAM_POLICIES:
-[0] enabled=1 entitlement=Deny subject=any command="" resource="/srv/demo.txt" device=2049 inode=12345 legacy_condition=none
-    attribute_condition=system.defcon LessThanOrEqual 2
+[0] enabled=1 entitlement=deny subject.uid=any command="" resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345 legacy_condition=none
+    action == "file_open";
+    attribute_condition=system.defcon <= 2;
 ```
 
 Stream-Policies enthalten zusätzlich dynamische Bedingungen:
@@ -190,15 +202,19 @@ Stream-Policies enthalten zusätzlich dynamische Bedingungen:
 - `legacy_condition=none` bedeutet, dass keine gesonderte Stream-Zeitbedingung
   aktiviert ist. Attributbedingungen können trotzdem vorhanden sein.
 - Eine Zeitbedingung kann beispielsweise als
-  `legacy_condition=Time % 86400 GreaterThanOrEqual 64800` erscheinen. Die Ausgabe
+  `legacy_condition=Time % 86400 >= 64800` erscheinen. Die Ausgabe
   enthält den gespeicherten Modulo-Wert, Vergleichsoperator und Vergleichswert.
-- Andere Stream-Zeitattribute werden als `Hour`, `Minute` oder `Second` dargestellt.
+- Zusätzlich erscheint die Zeitbedingung in Policy-Schreibweise, beispielsweise
+  `environment.time % 86400 >= 64800;`.
+- UTC-Komponenten erscheinen als `environment.utc.hour`,
+  `environment.utc.minute` oder `environment.utc.second`; die technische
+  `legacy_condition`-Angabe behält die Typkennungen `Hour`, `Minute` und `Second`.
 - Jede Zeile `attribute_condition=...` beschreibt eine strukturierte Bedingung an
   ein System-, Subjekt- oder Ressourcenattribut. Pro Policy werden höchstens vier
   solche Bedingungen ausgegeben.
 
-Die Operatoren heißen in der Ausgabe `LessThan` (`<`), `LessThanOrEqual` (`<=`),
-`Equal` (`==`), `GreaterThanOrEqual` (`>=`) und `GreaterThan` (`>`).
+Die Vergleichsoperatoren entsprechen der Policy-Sprache: `<`, `<=`, `==`,
+`>=` und `>`. Die Bedingungen enden mit einem Semikolon.
 Zahlen erscheinen dezimal, boolesche Werte als `true` oder `false`, Zeichenketten
 in Anführungszeichen. Die Ausgabe ist ein Diagnoseformat und keine direkt
 einlesbare Policy-Datei.

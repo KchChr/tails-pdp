@@ -4,6 +4,7 @@
 # Der Hardlink belegt zusätzlich den Abgleich über Gerät und Inode.
 
     chapter_start '2. Statische Policies: Kommando, Benutzer und Ressource'
+    #Seite 1
     chapter_section 'Ausgangslage' \
         "relevante Dateien:
   $target
@@ -21,11 +22,15 @@
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
 
-    step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können. Eine Verweigerung hier zeigt ein Problem mit den normalen Dateirechten.'
+    #Seite 2
+    step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können.'
     comparison_user="$(id -un "$comparison_uid")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
+
+
+    #Seite 3
     step "Die Deny-Policy für subject.uid == ${UID};, command == \"cat\"; und die geschützte Ressource wird veröffentlicht."
     policy scoped deny "    subject.uid == $UID;" cat
     admin show-active

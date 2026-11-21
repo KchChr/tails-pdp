@@ -6,6 +6,7 @@
 //! Passende Linux-Map-Leserechte sind erforderlich. Pins allein beweisen keine aktive Runtime.
 
 mod cli;
+mod format;
 mod maps;
 mod output;
 
