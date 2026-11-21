@@ -16,7 +16,7 @@
         'Deny bei Übereinstimmung aller Attribute, ansonsten Permit'
     printf '\n'
     pause_demo
-    explain 'Vor der Policy liest der Demo-Worker die geschützte Datei mit cat.'
+    explain "Die Datei $target wird mit $UID und cat geöffnet:"
     command_access_is allow cat -
     step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können. Eine Verweigerung hier zeigt ein Problem mit den normalen Dateirechten.'
     command_access_is allow cat "$comparison_uid"

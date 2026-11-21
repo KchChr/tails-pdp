@@ -230,7 +230,7 @@ show_decision() {
     python3 -c 'import json,sys; print("resource.path == " + json.dumps(sys.argv[1], ensure_ascii=False) + ";")' "$file"
     printf 'Decision: %s%s\n' "$actual_label" "$color_reset"
     if [[ "$actual" == "$expected" ]]; then
-        observe 'OK: Das beobachtete Enforcement entspricht der erwarteten Authorization Decision.'
+        observe 'OK: Das beobachtete Verhalten entspricht der Erwartung.'
     else
         printf '%sPrüfung: Erwartet %s, beobachtet %s.%s\n' "$color_error" "$expected_label" "$actual_label" "$color_reset"
         return 1
