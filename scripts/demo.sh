@@ -2,6 +2,8 @@
 # Guided live demo. Runtime and configuration changes run only in the worker.
 set -Eeuo pipefail
 
+git pull
+
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export PROJECT_ROOT
 
