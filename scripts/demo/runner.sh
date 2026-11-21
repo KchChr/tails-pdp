@@ -84,6 +84,20 @@ show_command() {
     done
     printf '%s\n' "$color_reset"
 }
+# Zeigt genau einen Bash-Befehlsstring an, führt ihn aus und gibt seinen Exitstatus zurück.
+run_cmd() {
+    [[ $# -eq 1 ]] || {
+        fail 'run_cmd erwartet genau einen Befehlsstring.'
+        return 1
+    }
+    local status=0
+    printf '\n%s$ %s%s\n' "$color_command" "$1" "$color_reset"
+    printf '%s' "$color_output"
+    # A subshell inherits demo variables but keeps command-local changes local.
+    (eval -- "$1") || status=$?
+    printf '%s' "$color_reset"
+    return "$status"
+}
 # Führt einen Befehl aus, färbt seine Standardausgabe ein und erhält dessen Exitstatus.
 show_output() {
     local status=0

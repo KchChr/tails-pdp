@@ -318,6 +318,34 @@ class RequestViewTests(unittest.TestCase):
 
 
 class PresentationTests(unittest.TestCase):
+    def test_run_cmd_prints_exact_command_and_preserves_failure_status(self):
+        commands = [('echo $UID', 0, str(os.getuid())), ('exit 7', 7, None)]
+        for command, expected_status, output in commands:
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [shutil.which('bash'), '-c', 'source "$1"; run_cmd "$2"', 'test',
+                     str(PROJECT / 'scripts/demo/runner.sh'), command],
+                    capture_output=True, text=True,
+                )
+                self.assertEqual(result.returncode, expected_status, result.stderr)
+                self.assertIn('$ ' + command + '\n', result.stdout)
+                if output is not None:
+                    self.assertTrue(result.stdout.endswith(output + '\n'))
+
+    def test_run_cmd_handles_quoted_paths_as_literal_filenames(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'file with $dollar and spaces.txt'
+            target.write_text('actual file contents\n')
+            command = 'cat ' + shlex.quote(str(target))
+            result = subprocess.run(
+                [shutil.which('bash'), '-c', 'source "$1"; run_cmd "$2"', 'test',
+                 str(PROJECT / 'scripts/demo/runner.sh'), command],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('$ ' + command + '\n', result.stdout)
+            self.assertTrue(result.stdout.endswith('actual file contents\n'))
+
     def test_decision_block_shows_actual_result_and_detects_mismatch(self):
         script = '''set -Eeuo pipefail
 source "$RUNNER"
@@ -371,12 +399,18 @@ target=/example/protected.txt
 safe=/example/control.txt
 PROJECT_ROOT=/example
 comparison_uid=1000
+color_command='' color_reset=''
 active=0 shown=0
 chapter_start() { :; }
 chapter_section() { :; }
 pause_demo() { :; }
 explain() { :; }
 step() { [[ $# -eq 1 ]]; }
+run_cmd() { eval -- "$1"; }
+id() { if [[ "$1" == -un ]]; then printf 'demo-test\n'; else printf '1000\n'; fi; }
+stat() { printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
+cat() { [[ "$active" == 0 ]]; printf 'BASELINE_CAT\n'; }
+sudo() { [[ "$1" == -u && "$2" == demo-test && "$3" == -- ]]; shift 3; "$@"; }
 policy() { [[ "$1" == scoped && "$2" == deny ]]; active=1; printf 'POLICY_ACTIVATED\n'; }
 admin() { if [[ "$active" == 1 ]]; then shown=1; printf 'ACTIVE_POLICY_SHOWN\n'; fi; }
 command_access_is() {
@@ -394,6 +428,8 @@ source "$1"
             capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count('BASELINE_CAT'), 2)
+        self.assertLess(result.stdout.rindex('BASELINE_CAT'), result.stdout.index('POLICY_ACTIVATED'))
         self.assertLess(result.stdout.index('POLICY_ACTIVATED'), result.stdout.index('ACTIVE_POLICY_SHOWN'))
         self.assertLess(result.stdout.index('ACTIVE_POLICY_SHOWN'), result.stdout.index('DENY_CHECKED'))
 

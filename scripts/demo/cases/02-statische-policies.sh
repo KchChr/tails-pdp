@@ -16,10 +16,16 @@
         'Deny bei Übereinstimmung aller Attribute, ansonsten Permit'
     printf '\n'
     pause_demo
-    explain "Die Datei $target wird mit $UID und cat geöffnet:"
-    command_access_is allow cat -
+    explain "Die Datei $target wird mit UID == $UID und cat geöffnet:"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+
     step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können. Eine Verweigerung hier zeigt ein Problem mit den normalen Dateirechten.'
-    command_access_is allow cat "$comparison_uid"
+    comparison_user="$(id -un "$comparison_uid")"
+    run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
+    run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
     step "Die Deny-Policy für subject.uid == ${UID};, command == \"cat\"; und die geschützte Ressource wird veröffentlicht."
     policy scoped deny "    subject.uid == $UID;" cat
     admin show-active
