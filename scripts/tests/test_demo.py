@@ -404,45 +404,60 @@ printf 'AKTION_AUSGEFUEHRT\\n'
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('nachfolgende Befehle in eine eigene Zeile', result.stderr)
 
-    def test_static_policy_chapter_activates_and_shows_policy_before_deny_check(self):
+    def test_static_policy_chapter_runs_visible_commands_and_checks_denials(self):
         script = '''set -Eeuo pipefail
+source "$1/scripts/demo/runner.sh"
 target=/example/protected.txt
 safe=/example/control.txt
 PROJECT_ROOT=/example
+demo_root="$2"
 comparison_uid=1000
-color_command='' color_reset=''
+deny_error="$3"
 active=0 shown=0
 chapter_start() { :; }
 chapter_section() { :; }
 pause_demo() { :; }
 explain() { :; }
 step() { [[ $# -eq 1 ]]; }
-run_cmd() { eval -- "$1"; }
 id() { if [[ "$1" == -un ]]; then printf 'demo-test\n'; else printf '1000\n'; fi; }
 stat() { printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
-cat() { [[ "$active" == 0 ]]; printf 'BASELINE_CAT\n'; }
-sudo() { [[ "$1" == -u && "$2" == demo-test && "$3" == -- ]]; shift 3; "$@"; }
+cat() {
+    if [[ "$active" == 1 && "${comparison:-0}" == 0 && "$1" != "$safe" ]]; then
+        [[ "$shown" == 1 ]]
+        printf 'cat: %s: %s\n' "$1" "$deny_error" >&2
+        return 1
+    fi
+    printf 'CAT_READ %s\n' "$1"
+}
+head() { printf 'HEAD_READ %s\n' "$1"; }
+sudo() { [[ "$1" == -u && "$2" == demo-test && "$3" == -- ]]; shift 3; comparison=1 "$@"; }
 policy() { [[ "$1" == scoped && "$2" == deny ]]; active=1; printf 'POLICY_ACTIVATED\n'; }
 admin() { if [[ "$active" == 1 ]]; then shown=1; printf 'ACTIVE_POLICY_SHOWN\n'; fi; }
-command_access_is() {
-    if [[ "$1" == deny ]]; then
-        [[ "$active" == 1 && "$shown" == 1 ]]
-        printf 'DENY_CHECKED\n'
-    fi
-}
-remove_policy() { active=0; }
-source "$1"
+show_request() { :; }
+show_decision() { printf 'DECISION %s %s\n' "$1" "$3"; }
+remove_policy() { active=0; printf 'POLICY_REMOVED\n'; }
+source "$1/scripts/demo/cases/02-statische-policies.sh"
 '''
-        result = subprocess.run(
-            [shutil.which('bash'), '-c', script, 'test',
-             str(PROJECT / 'scripts/demo/cases/02-statische-policies.sh')],
-            capture_output=True, text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.count('BASELINE_CAT'), 2)
-        self.assertLess(result.stdout.rindex('BASELINE_CAT'), result.stdout.index('POLICY_ACTIVATED'))
-        self.assertLess(result.stdout.index('POLICY_ACTIVATED'), result.stdout.index('ACTIVE_POLICY_SHOWN'))
-        self.assertLess(result.stdout.index('ACTIVE_POLICY_SHOWN'), result.stdout.index('DENY_CHECKED'))
+        for error in ['Operation not permitted', 'Permission denied', 'No such file or directory']:
+            with self.subTest(error=error), tempfile.TemporaryDirectory() as directory:
+                result = subprocess.run(
+                    [shutil.which('bash'), '-c', script, 'test', str(PROJECT), directory, error],
+                    capture_output=True, text=True,
+                )
+                if error != 'Operation not permitted':
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertNotIn('DECISION deny', result.stdout)
+                    continue
+                self.assertEqual(result.returncode, 0, result.stderr)
+                baseline, rest = result.stdout.split('POLICY_ACTIVATED', 1)
+                self.assertEqual(baseline.count('CAT_READ'), 2)
+                self.assertLess(rest.index('ACTIVE_POLICY_SHOWN'), rest.index('DECISION deny'))
+                self.assertEqual(rest.count('DECISION deny'), 2)
+                self.assertIn('$ head /example/protected.txt', rest)
+                self.assertIn('$ sudo -u demo-test -- cat /example/protected.txt', rest)
+                self.assertIn('$ cat /example/control.txt', rest)
+                self.assertIn('$ cat /example/demo/files/alias.txt', rest)
+                self.assertIn('CAT_READ /example/protected.txt', rest.split('POLICY_REMOVED', 1)[1])
 
     def test_publication_shows_content_but_keeps_internal_command_in_log(self):
         with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:
