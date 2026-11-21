@@ -39,7 +39,11 @@ def describe(snapshot, command, uid, path, now=None):
 
     # Include missing attributes referenced by active policies: absence is
     # significant, e.g. subject.position in chapter 5. Never read source files.
-    required = set(re.findall(r'attribute_condition=((?:system|subject|resource)\.[A-Za-z_][A-Za-z0-9_-]*)', snapshot))
+    required = set(re.findall(
+        r'^\s*(?:attribute_condition=)?((?:system|subject|resource)\.[A-Za-z_][A-Za-z0-9_-]*)'
+        r'\s+(?:[<>]=?|==|LessThan(?:OrEqual)?|GreaterThan(?:OrEqual)?|Equal)\s',
+        snapshot, re.MULTILINE,
+    ))
     for name in required:
         attributes.setdefault(name, None)
 

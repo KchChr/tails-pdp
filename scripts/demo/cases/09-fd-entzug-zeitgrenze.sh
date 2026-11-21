@@ -7,9 +7,9 @@
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.'
+        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass eine Policy oder ein Attribut veröffentlicht wird.'
     chapter_section 'Aktion' \
-        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne weitere Konfigurationsänderung gewartet.'
+        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne eine weitere Konfigurationsänderung gewartet.'
     chapter_section 'Erwartetes Verhalten' \
         'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.'
     chapter_section 'Hinweis' \

@@ -12,7 +12,7 @@ use tails_pdp_common::{
     POLICY_BANK_SIZE, StreamAttribute,
 };
 
-use crate::format::{entitlement_keyword, operator_symbol, time_condition};
+use crate::format::{entitlement_keyword, operator_symbol, policy_filters, time_condition};
 use crate::maps::{AttributeMap, FileOpenStaticPolicyMap, FileOpenStreamPolicyMap};
 
 pub type HashDictionary = HashMap<(u64, u64), String>;
@@ -77,14 +77,6 @@ fn describe_value(value: AttributeValue, dictionary: &HashDictionary) -> String 
     }
 }
 
-fn subject_label(subject: u32) -> String {
-    if subject == tails_pdp_common::ANY_SUBJECT {
-        String::from("any")
-    } else {
-        subject.to_string()
-    }
-}
-
 pub fn show_file_open_static(
     map: &FileOpenStaticPolicyMap,
     bank_offset: u32,
@@ -100,11 +92,10 @@ pub fn show_file_open_static(
             continue;
         }
         println!(
-            "[{index}] enabled={} entitlement={} subject.uid={} command={:?} resource.path={:?} resource.device={} resource.inode={}",
+            "[{index}] enabled={} entitlement={}{} resource.path={:?} resource.device={} resource.inode={}",
             policy.enabled,
             entitlement_keyword(policy.entitlement),
-            subject_label(policy.subject),
-            fixed_string(&policy.command),
+            policy_filters(policy.subject, &fixed_string(&policy.command)),
             fixed_string(&policy.resource),
             policy.resource_device,
             policy.resource_inode,
@@ -151,11 +142,10 @@ pub fn show_file_open_stream(
         };
 
         println!(
-            "[{index}] enabled={} entitlement={} subject.uid={} command={:?} resource.path={:?} resource.device={} resource.inode={} legacy_condition={}",
+            "[{index}] enabled={} entitlement={}{} resource.path={:?} resource.device={} resource.inode={} legacy_condition={}",
             policy.enabled,
             entitlement_keyword(policy.entitlement),
-            subject_label(policy.subject),
-            fixed_string(&policy.command),
+            policy_filters(policy.subject, &fixed_string(&policy.command)),
             fixed_string(&policy.resource),
             policy.resource_device,
             policy.resource_inode,
@@ -177,10 +167,7 @@ pub fn show_file_open_stream(
         let condition_count =
             (policy.attribute_condition_count as usize).min(MAX_ATTRIBUTE_CONDITIONS);
         for condition in policy.attribute_conditions.iter().take(condition_count) {
-            println!(
-                "    attribute_condition={}",
-                describe_condition(condition, dictionary)
-            );
+            println!("    {}", describe_condition(condition, dictionary));
         }
     }
     println!();

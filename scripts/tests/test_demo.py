@@ -239,7 +239,8 @@ if 'respawn-pane' in args:
 
 
 class RequestViewTests(unittest.TestCase):
-    def request(self, position='"engineer"', time_condition='none', alias=False):
+    def request(self, position='"engineer"', time_condition='none', alias=False,
+                condition='subject.position == "engineer";'):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / 'protected.txt'
@@ -253,7 +254,7 @@ class RequestViewTests(unittest.TestCase):
                 'generation policy=11 policy_bank_offset=256 attribute=8 attribute_bank=0\n'
                 'FILE_OPEN_STREAM_POLICIES:\n'
                 f'[0] enabled=1 legacy_condition={time_condition}\n'
-                '    attribute_condition=subject.position Equal "engineer"\n'
+                f'    {condition}\n'
                 'ATTRIBUTES:\n'
                 'system.defcon = 2\n'
                 'subject:60001 subject.position = "unrelated"\n'
@@ -278,6 +279,7 @@ class RequestViewTests(unittest.TestCase):
         text, _ = self.request()
         self.assertIn('subject.uid == 0;', text)
         self.assertIn('action == "file_open";', text)
+
         self.assertIn('command == "cat";', text)
         self.assertIn('system.defcon == 2;', text)
         self.assertIn('subject.position == "engineer";', text)
@@ -288,6 +290,14 @@ class RequestViewTests(unittest.TestCase):
         self.assertIn('\n\nAttribute:\n', text)
         self.assertIn('\n\nMetadaten:\n', text)
         self.assertTrue(all(not line or line == line.lstrip() for line in text.splitlines()))
+
+    def test_missing_attributes_are_detected_in_current_and_legacy_policy_output(self):
+        for condition in ['subject.position == "engineer";',
+                          'attribute_condition=subject.position == "engineer";',
+                          'attribute_condition=subject.position Equal "engineer"']:
+            with self.subTest(condition=condition):
+                text, _ = self.request(position=None, condition=condition)
+                self.assertIn('# subject.position: nicht vorhanden', text)
 
     def test_missing_and_numeric_attributes_keep_their_meaning(self):
         text, _ = self.request(position=None)
@@ -491,7 +501,10 @@ explain() { :; }
 observe() { :; }
 step() { [[ $# -eq 1 ]]; }
 policy() { :; }
-attribute() { :; }
+attribute() {
+    mkdir -p "$(dirname "$attribute_dir/$1")"
+    printf '%s\\n' "$2" > "$attribute_dir/$1"
+}
 remove_policy() { :; }
 admin() { :; }
 generations() { printf '1 1\n'; }
@@ -508,6 +521,10 @@ show_request() {
 }
 stat() { [[ "$3" == "$target" ]]; printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
 cat() {
+    if [[ "$1" == "$attribute_dir/"* ]]; then
+        printf '%s\\n' "$(< "$1")"
+        return
+    fi
     [[ "$1" == "$target" ]]
     if [[ "$current" == deny ]]; then
         printf 'cat: %s: %s\n' "$1" "$deny_error" >&2
@@ -535,8 +552,18 @@ run_chapter
                         self.assertNotIn('CHECKED deny', result.stdout)
                         continue
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    if chapter.startswith('05-'):
+                        for relative, content in [
+                            ('system.attributes', 'defcon = 2'),
+                            ('subjects/0.attributes', 'position = "engineer"'),
+                            ('resources' + '/example/protected file.txt.attributes', 'classification = "internal"'),
+                        ]:
+                            path = str(Path(directory) / 'attributes' / relative)
+                            lines = result.stdout.splitlines()
+                            index = next(i for i, line in enumerate(lines)
+                                         if line.startswith('$ cat ') and shlex.split(line[2:]) == ['cat', path])
+                            self.assertEqual(lines[index + 1], content)
                     self.assertEqual(result.stdout.count('$ echo $UID'), len(expected))
-                    self.assertEqual(result.stdout.count('$ stat -Lc'), len(expected))
                     self.assertEqual(result.stdout.count('$ cat /example/protected\\ file.txt'), len(expected))
                     self.assertEqual([line for line in result.stdout.splitlines() if line.startswith('CHECKED ')],
                                      ['CHECKED ' + value for value in expected])

@@ -18,7 +18,7 @@
     admin
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
 
@@ -28,7 +28,7 @@
     attribute system.attributes 'defcon = 2'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     status=0
     LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
     printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
@@ -45,7 +45,7 @@
     attribute system.attributes 'defcon = 5'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
 

@@ -1,6 +1,18 @@
 //! Schreibweisen der Policy-Sprache für die lesende Map-Darstellung.
 
-use tails_pdp_common::{Entitlement, StreamAttribute, StreamOperator};
+use tails_pdp_common::{ANY_SUBJECT, Entitlement, StreamAttribute, StreamOperator};
+
+/// Zeigt nur tatsächlich gesetzte UID- und Kommando-Filter an.
+pub(crate) fn policy_filters(subject: u32, command: &str) -> String {
+    let mut fields = String::new();
+    if subject != ANY_SUBJECT {
+        fields.push_str(&format!(" subject.uid={subject}"));
+    }
+    if !command.is_empty() {
+        fields.push_str(&format!(" command={command:?}"));
+    }
+    fields
+}
 
 pub(crate) fn operator_symbol(operator: StreamOperator) -> &'static str {
     match operator {
@@ -37,6 +49,17 @@ pub(crate) fn time_condition(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unset_filters_are_omitted_independently() {
+        assert_eq!(policy_filters(ANY_SUBJECT, ""), "");
+        assert_eq!(policy_filters(ANY_SUBJECT, "cat"), " command=\"cat\"");
+        assert_eq!(policy_filters(0, ""), " subject.uid=0");
+        assert_eq!(
+            policy_filters(1000, "cat"),
+            " subject.uid=1000 command=\"cat\""
+        );
+    }
 
     #[test]
     fn comparison_operators_use_policy_symbols() {

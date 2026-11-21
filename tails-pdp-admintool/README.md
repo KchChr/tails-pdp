@@ -155,9 +155,9 @@ ausgewählten Bank: Bei Offset 16 wurde dafür Map-Eintrag 16 gelesen.
 Die Kopfzeilen mit `enabled=…`, `entitlement=…` und Ressourcenidentität sind
 Map-Metadaten, keine Policy-Anweisungen. Dort bleibt `=` der Trenner zwischen
 Feld und Wert. Bedingungen verwenden dagegen die Policy-Operatoren, etwa
-`attribute_condition=subject.position == "engineer";`.
+`subject.position == "engineer";`.
 Attributwerte verwenden weiterhin Zuweisungen wie `system.defcon = 2`.
-Die Kennzeichen `generation`, `legacy_condition`, `attribute_condition` und die
+Die Kennzeichen `generation`, `legacy_condition` und die
 Attribut-Zuordnungspräfixe bleiben für bestehende Auswerteskripte erhalten.
 Die Ausgabe rekonstruiert kein vollständiges Originaldokument: Insbesondere
 sind ursprüngliche Policynamen nicht in den Maps gespeichert.
@@ -177,8 +177,8 @@ FILE_OPEN_STATIC_POLICIES:
 | `[0]` | Platz innerhalb der ausgewählten Policy-Bank; kein ursprünglicher Policyname. |
 | `enabled` | Null: deaktiviert; ungleich null: aktiviert. |
 | `entitlement` | `permit` oder `deny`, also das Ergebnis dieser Regel bei erfüllten Bedingungen. |
-| `subject.uid` | Benutzerkennung für den Subjektfilter (Real UID); `any` steht für einen uneingeschränkten Subjektfilter. |
-| `command` | Kommando-Filter anhand des Linux-Tasknamens `comm`; eine leere Zeichenkette bedeutet keinen Kommando-Filter. |
+| `subject.uid` | Benutzerkennung für den Subjektfilter (Real UID); wird ohne UID-Filter nicht angezeigt. |
+| `command` | Kommando-Filter anhand des Linux-Tasknamens `comm`; wird ohne Kommando-Filter nicht angezeigt. |
 | `resource.path` | Gespeicherter Ressourcenpfad zur Darstellung. |
 | `resource.device`, `resource.inode` | Aufgelöste Dateiidentität, anhand derer der Prototyp die Ressource abgleicht. Beide Werte null kennzeichnen eine uneingeschränkte Ressource. |
 
@@ -192,9 +192,9 @@ Illustrative Ausgabe:
 
 ```text
 FILE_OPEN_STREAM_POLICIES:
-[0] enabled=1 entitlement=deny subject.uid=any command="" resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345 legacy_condition=none
+[0] enabled=1 entitlement=deny resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345 legacy_condition=none
     action == "file_open";
-    attribute_condition=system.defcon <= 2;
+    system.defcon <= 2;
 ```
 
 Stream-Policies enthalten zusätzlich dynamische Bedingungen:
@@ -209,7 +209,7 @@ Stream-Policies enthalten zusätzlich dynamische Bedingungen:
 - UTC-Komponenten erscheinen als `environment.utc.hour`,
   `environment.utc.minute` oder `environment.utc.second`; die technische
   `legacy_condition`-Angabe behält die Typkennungen `Hour`, `Minute` und `Second`.
-- Jede Zeile `attribute_condition=...` beschreibt eine strukturierte Bedingung an
+- Zeilen wie `system.defcon <= 2;` beschreiben eine strukturierte Bedingung an
   ein System-, Subjekt- oder Ressourcenattribut. Pro Policy werden höchstens vier
   solche Bedingungen ausgegeben.
 

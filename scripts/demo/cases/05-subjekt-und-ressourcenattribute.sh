@@ -16,8 +16,12 @@
     printf '\n'
     pause_demo
     attribute system.attributes 'defcon = 2'
+    run_cmd "cat $(printf '%q' "$attribute_dir/system.attributes")"
     attribute subjects/0.attributes 'position = "engineer"'
+    run_cmd "cat $(printf '%q' "$attribute_dir/subjects/0.attributes")"
     attribute "resources${target}.attributes" 'classification = "internal"'
+    run_cmd "cat $(printf '%q' "$attribute_dir/resources${target}.attributes")"
+
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -33,7 +37,7 @@
 
 
     #Seite 2
-    step 'Nur subject.position ändert sich von `subject.position == "engineer";` zu `subject.position == "intern";`. Damit ist eine der drei UND-Bedingungen falsch.'
+    step 'subject.position wird geändert `subject.position == "engineer";` --> `subject.position == "intern";`.'
     attribute subjects/0.attributes 'position = "intern"'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -43,7 +47,7 @@
 
 
     #Seite 3
-    step 'Im Authorization Context gilt wieder `subject.position == "engineer";`. Damit sind wieder alle drei Bedingungen erfüllt.'
+    step 'Es gilt wieder `subject.position == "engineer";`. Alle drei BEdingungen sind erfüllt.'
     attribute subjects/0.attributes 'position = "engineer"'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -59,7 +63,7 @@
 
 
     #Seite 4
-    step 'Nur resource.classification ändert sich von `resource.classification == "internal";` zu `resource.classification == "public";`. Damit passt die Deny-Policy nicht mehr.'
+    step ' `resource.classification == "internal";` --> `resource.classification == "public";`. Die Policy ist somit nicht mehr erfüllt.'
     attribute "resources${target}.attributes" 'classification = "public"'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -69,7 +73,7 @@
 
 
     #Seite 5
-    step 'Mit `resource.classification == "internal";` sind wieder alle drei Bedingungen erfüllt.'
+    step '`resource.classification == "internal";` alle drei Bedingungen sind erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -85,31 +89,31 @@
 
 
     #Seite 6
-    step 'Jetzt fehlt subject.position vollständig. Die Veröffentlichung ist gültig; die Bedingung `subject.position == "engineer";` passt jedoch nicht.'
+    step 'subject.position fehlt vollständig. Die Veröffentlichung ist gültig; die Bedingung `subject.position == "engineer";` ist nicht erfüllt.'
     attribute subjects/0.attributes '# position fehlt'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
 
 
     #Seite 7
-    step 'Im Authorization Context gilt `subject.position == 1;` statt `subject.position == "engineer";`. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
+    step 'Es gilt `subject.position == 1;` statt `subject.position == "engineer";`. Der Integer 1 stimmt nicht mit dem Stromg "engineer" überein.'
     attribute subjects/0.attributes 'position = 1'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
 
 
     #Seite 8
-    step 'Im Authorization Context gilt wieder `subject.position == "engineer";`: Alle Bedingungen passen und der Zugriff wird verweigert.'
+    step 'Es gilt wieder `subject.position == "engineer";`: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     status=0
     LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
     printf '%s\n' "$(< "$demo_root/command.stderr")" >&2

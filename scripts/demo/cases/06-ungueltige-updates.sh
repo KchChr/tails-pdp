@@ -7,7 +7,7 @@
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        'Im Authorization Context gilt noch `system.defcon == 2;`. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.'
+        'Es gilt `system.defcon == 2;`. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.'
     chapter_section 'Aktion' \
         'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird in der Systemattributdatei defcon = 9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.'
     chapter_section 'Erwartetes Verhalten' \
@@ -23,7 +23,7 @@
 
 
     #Seite 2
-    step 'Die nächste Policy ist absichtlich syntaktisch fehlerhaft. Sie darf nicht aktiviert werden.'
+    step 'Laden einer syntaktisch fehlerhaften Policy.'
     printf 'policy "broken"\ndeny\n action == "file_open"\n' | publish "$policy_dir/broken.policy"
     wait_log 'POLICY sync failed' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültige Policy änderte die Generation.'; return 1; }
@@ -44,9 +44,10 @@
 
 
     #Seite 3
-    step 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
-    policy broken permit
-    explain 'Nach der gültigen Policy-Korrektur ist broken zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
+    step 'Die fehlerhafte Datei wird entfernt und eine gültige Permit-Policy namens corrected veröffentlicht. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
+    remove_policy broken
+    policy corrected permit
+    explain 'Nach der gültigen Policy-Korrektur ist corrected zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
     admin show-active
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
@@ -62,16 +63,16 @@
 
 
     #Seite 4
-    step 'Die korrigierte Policy broken wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
-    remove_policy broken
-    explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: broken wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert `system.defcon == 2;` bleiben aktiv.'
+    step 'Die korrigierte Policy corrected wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
+    remove_policy corrected
+    explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: corrected wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert `system.defcon == 2;` bleiben aktiv.'
     admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
 
 
     #Seite 5
-    step 'Die Zuweisung defcon = 9 in der Systemattributdatei ist unzulässig. Im Authorization Context muss trotz geänderter Quelldatei `system.defcon == 2;` gelten.'
+    step 'Die Zuweisung defcon = 9 in system.attributes ist nicht erlaubt. Im Authorization Context muss trotz geänderter Quelldatei `system.defcon == 2;` gelten.'
     printf 'defcon = 9\n' | publish "$attribute_dir/system.attributes"
     wait_log 'Ignoring invalid stream attributes' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültiges Attribut änderte die Generation.'; return 1; }
@@ -104,5 +105,5 @@
 
 
     #Seite 7
-    step 'Die Demo-Policy dieses Kapitels wird entfernt.'
+    step 'Die Demo-Policy wird entfernt.'
     remove_policy robust

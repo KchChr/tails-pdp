@@ -7,9 +7,9 @@
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        'Bisher wurden neue Dateiöffnungen geprüft. Ein Prozess kann eine Datei aber schon geöffnet haben, bevor eine neue Policy veröffentlicht wird.'
+        'Bisher wurden neue Dateiöffnungen geprüft. Ein Prozess kann eine Datei bereits geöffnet haben, bevor eine neue Policy veröffentlicht wird.'
     chapter_section 'Aktion' \
-        'Ein Beobachter mit drei offenen FDs zur geschützten Datei und zwei offenen FDs zur Kontrolldatei wird gestartet. Erst im nächsten Schritt wird eine passende Deny-Policy veröffentlicht.'
+        'Ein Beobachter mit drei offenen Filedescriptors (FD) zur geschützten Datei und zwei offenen FDs zur Kontrolldatei wird gestartet. Erst im nächsten Schritt wird eine passende Deny-Policy veröffentlicht.'
     chapter_section 'Erwartetes Verhalten' \
         'Zunächst müssen alle fünf FDs offen sein. Nach der Policyaktivierung führt der Userspace-PEP eine Re-evaluation für die bestehenden FDs aus. Das Enforcement entzieht ausschließlich die drei geschützten FDs.'
     printf '\n'
