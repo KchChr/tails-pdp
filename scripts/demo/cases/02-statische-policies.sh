@@ -36,7 +36,7 @@
     admin show-active
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     status=0
     LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
     printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
@@ -52,7 +52,7 @@
     admin
     show_request cat "$comparison_uid" "$target"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
-    run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
 
@@ -62,7 +62,7 @@
     step 'command == "head";. Die UID bleibt gleich.'
     show_request head "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "head $(printf '%q' "$target")"
     show_decision allow allow "$target"
 
@@ -74,17 +74,17 @@
     step 'cat auf die Kontrolldatei, der Zugriff muss erlaubt bleiben.'
     show_request cat "$UID" "$safe"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$safe")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$safe")"
     run_cmd "cat $(printf '%q' "$safe")"
     show_decision allow allow "$safe"
 
 
     #Seite 7
-    step 'Der alternative Hardlink-Pfad bezeichnet dieselbe geschützte Datei. cat muss auch über diesen Pfad abgewiesen werden.'
+    step "Der alternative Hardlink-Pfad bezeichnet dieselbe geschützte Datei. cat muss auch über diesen Pfad abgewiesen werden."
     alias_path="$PROJECT_ROOT/demo/files/alias.txt"
     show_request cat "$UID" "$alias_path"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$alias_path")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$alias_path")"
     status=0
     LC_ALL=C run_cmd "cat $(printf '%q' "$alias_path")" 2> "$demo_root/command.stderr" || status=$?
     printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
@@ -101,6 +101,6 @@
     admin
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"

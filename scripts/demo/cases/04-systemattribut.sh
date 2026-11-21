@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '4. Dynamisches Systemattribut'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Im Authorization Context gilt `system.defcon == 5;`. Diese Zahl dient als dynamischer Bestandteil des Authorization Context.'
     chapter_section 'Aktion' \
@@ -18,6 +20,9 @@
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
+
+
+    #Seite 2
     step 'Im Authorization Context gilt anschließend `system.defcon == 2;`: Die bereits geladene Deny-Policy trifft jetzt zu.'
     attribute system.attributes 'defcon = 2'
     show_request cat "$UID" "$target"
@@ -32,6 +37,9 @@
     fi
     show_decision deny deny "$target"
     admin show-active
+
+
+    #Seite 3
     step 'Im Authorization Context gilt anschließend wieder `system.defcon == 5;`: Dieselbe Policy trifft nicht mehr zu.'
     attribute system.attributes 'defcon = 5'
     show_request cat "$UID" "$target"
@@ -39,5 +47,8 @@
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
+
+
+    #Seite 4
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy context
