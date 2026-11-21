@@ -13,9 +13,23 @@
     printf '\n'
     pause_demo
     policy stream-permit permit '    environment.utc.minute >= 0;'
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht. Sie hat Vorrang vor der passenden Permit-Policy.'
     policy utc deny '    environment.utc.hour >= 0;'
     explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang vor der passenden Permit-Policy.'
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     admin

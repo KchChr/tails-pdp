@@ -25,12 +25,32 @@
     explain 'Aktiver Zustand nach der Ablehnung: broken wurde nicht aktiviert. Policies, Attribute und beide Generationen bleiben unverändert.'
     admin show-active
     observe "Ungültige Policy verworfen: Policygeneration ${before%% *} und Attributgeneration ${before##* } unverändert."
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
     policy broken permit
     explain 'Nach der gültigen Policy-Korrektur ist broken zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
     admin show-active
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Die korrigierte Policy broken wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
     remove_policy broken
     explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: broken wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert `system.defcon == 2;` bleiben aktiv.'
@@ -44,11 +64,25 @@
     explain 'Aktiver Zustand nach der Ablehnung von defcon = 9: show-active zeigt weiterhin den Wert 2 für system.defcon sowie dieselben Policies und Generationen.'
     admin show-active
     observe "Ungültiges Attribut verworfen: Policygeneration ${before%% *} und Attributgeneration ${before##* } unverändert."
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
     attribute system.attributes 'defcon = 5'
     explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: Der Kontextwert `system.defcon == 5;` und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'
     admin show-active
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy robust

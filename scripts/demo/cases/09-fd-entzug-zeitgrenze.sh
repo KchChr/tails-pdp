@@ -21,7 +21,11 @@
     start_probe
     assert_probe_identity
     (( $(date +%s) < boundary - 2 )) || { fail 'Einrichtung zu langsam: Zeitgrenze schon zu nah.'; return 1; }
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
     observe "Es wird auf den Unix-Zeitpunkt $boundary gewartet. Es erfolgen weder eine Veröffentlichung noch ein Neustart."
@@ -35,8 +39,22 @@ state = json.load(open(sys.argv[1]))
 if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
     raise SystemExit('FDs vor der Zeitgrenze geschlossen')
 PY
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug sind bestätigt. Der Beobachter wird beendet und die Policy entfernt; danach muss eine neue Dateiöffnung wieder erlaubt sein.'
     stop_probe
     remove_policy timed
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"

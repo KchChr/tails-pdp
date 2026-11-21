@@ -17,7 +17,7 @@
         'Deny bei Übereinstimmung aller Attribute, ansonsten Permit'
     printf '\n'
     pause_demo
-    explain "Die Datei $target wird mit UID == $UID und cat geöffnet:"
+    explain "Die Datei $target wird mit UID = $UID und cat geöffnet:"
     run_cmd 'echo $UID'
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
@@ -47,25 +47,39 @@
     show_decision deny deny "$target"
 
 
-
-    step 'Nur der Benutzer wird geändert: sudo -u startet cat mit der anderen Benutzeridentität.'
+    #Seite 4
+    step "Nur der Benutzer wird geändert: sudo -u startet cat mit UID = $comparison_uid."
+    admin
     show_request cat "$comparison_uid" "$target"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
-    step 'Nur command ändert sich zu command == "head";. Die UID des Demo-Workers bleibt gleich.'
+
+
+
+    #Seite 5
+    step 'command == "head";. Die UID bleibt gleich.'
     show_request head "$UID" "$target"
     run_cmd 'echo $UID'
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "head $(printf '%q' "$target")"
     show_decision allow allow "$target"
-    step 'cat liest als Demo-Worker die separate Kontrolldatei. Dieser Zugriff muss erlaubt bleiben.'
+
+
+
+
+
+    #Seite 6
+    step 'cat auf die Kontrolldatei, der Zugriff muss erlaubt bleiben.'
     show_request cat "$UID" "$safe"
     run_cmd 'echo $UID'
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$safe")"
     run_cmd "cat $(printf '%q' "$safe")"
     show_decision allow allow "$safe"
+
+
+    #Seite 7
     step 'Der alternative Hardlink-Pfad bezeichnet dieselbe geschützte Datei. cat muss auch über diesen Pfad abgewiesen werden.'
     alias_path="$PROJECT_ROOT/demo/files/alias.txt"
     show_request cat "$UID" "$alias_path"
@@ -80,8 +94,11 @@
     fi
     show_decision deny deny "$alias_path"
     admin show-active
+
+    #Seite 8
     step 'Die Policy wird entfernt. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
     remove_policy scoped
+    admin
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"

@@ -281,6 +281,14 @@ Abschnitte können in der Kapiteldatei umbenannt, entfernt oder ergänzt werden.
 `chapter_section` formatiert die übergebene Überschrift und den Text.
 Die Enter-Pause vor den Aktionen steht ebenfalls ausdrücklich in der Datei.
 
+Die Dateiöffnungen in Kapitel 2 bis 10 stehen als `run_cmd`-Aufrufe direkt in
+der jeweiligen Kapiteldatei: zuerst die UID, dann `stat` und anschließend
+`cat` beziehungsweise `head`. `run_cmd` zeigt den übergebenen Befehlsstring
+an und führt ihn aus. Erwartete Verweigerungen werden in der Kapiteldatei
+gesondert geprüft; andere Fehler brechen die Demo ab. Veröffentlichung,
+Aktivierungsprüfung und FD-Beobachter verwenden weiterhin die technischen
+Hilfsfunktionen des Runners.
+
 `scripts/demo/chapters.sh` legt die Reihenfolge ausdrücklich fest. Hier kann
 ein Kapitel in den Ablauf aufgenommen werden. Die Kapitel bauen aufeinander
 auf; bloßes Umordnen oder Weglassen kann ihre Voraussetzungen verletzen.

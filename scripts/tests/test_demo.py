@@ -459,6 +459,88 @@ source "$1/scripts/demo/cases/02-statische-policies.sh"
                 self.assertIn('$ cat /example/demo/files/alias.txt', rest)
                 self.assertIn('CAT_READ /example/protected.txt', rest.split('POLICY_REMOVED', 1)[1])
 
+    def test_following_chapters_run_commands_and_preserve_denial_checks(self):
+        scenarios = {
+            '03-policy-lebenszyklus.sh': ['allow', 'deny', 'allow'],
+            '04-systemattribut.sh': ['allow', 'deny', 'allow'],
+            '05-subjekt-und-ressourcenattribute.sh': ['deny', 'allow', 'deny', 'allow', 'deny', 'allow', 'allow', 'deny'],
+            '06-ungueltige-updates.sh': ['deny', 'deny', 'deny', 'allow'],
+            '09-fd-entzug-zeitgrenze.sh': ['allow', 'deny', 'allow'],
+            '10-utc-zeitbedingungen.sh': ['allow', 'deny'],
+        }
+        script = '''set -Eeuo pipefail
+source "$1/scripts/demo/runner.sh"
+PROJECT_ROOT="$1"
+demo_root="$2"
+chapter="$3"
+deny_error="$4"
+shift 4
+expectations=("$@")
+request_index=0
+current=''
+target='/example/protected file.txt'
+policy_dir="$demo_root/policies"
+attribute_dir="$demo_root/attributes"
+probe_dir="$demo_root"
+: > "$demo_root/runtime.log"
+printf '{"unix_ns":9999999999999999999}' > "$probe_dir/state.json"
+chapter_start() { :; }
+chapter_section() { :; }
+pause_demo() { :; }
+explain() { :; }
+observe() { :; }
+step() { [[ $# -eq 1 ]]; }
+policy() { :; }
+attribute() { :; }
+remove_policy() { :; }
+admin() { :; }
+generations() { printf '1 1\n'; }
+wait_log() { :; }
+publish() { while IFS= read -r line; do :; done; }
+start_probe() { :; }
+assert_probe_identity() { :; }
+expect_revoked() { :; }
+stop_probe() { :; }
+show_request() {
+    [[ "$1" == cat && "$2" == "$UID" && "$3" == "$target" ]]
+    current="${expectations[$request_index]}"
+    request_index=$((request_index + 1))
+}
+stat() { [[ "$3" == "$target" ]]; printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
+cat() {
+    [[ "$1" == "$target" ]]
+    if [[ "$current" == deny ]]; then
+        printf 'cat: %s: %s\n' "$1" "$deny_error" >&2
+        return 1
+    fi
+    printf 'PROTECTED_CONTENT\n'
+}
+show_decision() {
+    [[ "$1" == "$current" && "$2" == "$current" && "$3" == "$target" ]]
+    printf 'CHECKED %s\n' "$current"
+}
+run_chapter() { source "$PROJECT_ROOT/scripts/demo/cases/$chapter"; }
+run_chapter
+[[ "$request_index" == "${#expectations[@]}" ]]
+'''
+        for chapter, expected in scenarios.items():
+            for error in ['Operation not permitted', 'Permission denied', 'No such file or directory']:
+                with self.subTest(chapter=chapter, error=error), tempfile.TemporaryDirectory() as directory:
+                    result = subprocess.run(
+                        [shutil.which('bash'), '-c', script, 'test', str(PROJECT), directory, chapter, error, *expected],
+                        capture_output=True, text=True,
+                    )
+                    if error != 'Operation not permitted':
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertNotIn('CHECKED deny', result.stdout)
+                        continue
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout.count('$ echo $UID'), len(expected))
+                    self.assertEqual(result.stdout.count('$ stat -Lc'), len(expected))
+                    self.assertEqual(result.stdout.count('$ cat /example/protected\\ file.txt'), len(expected))
+                    self.assertEqual([line for line in result.stdout.splitlines() if line.startswith('CHECKED ')],
+                                     ['CHECKED ' + value for value in expected])
+
     def test_publication_shows_content_but_keeps_internal_command_in_log(self):
         with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:
             root = Path(directory)

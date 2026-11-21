@@ -17,28 +17,84 @@
     attribute subjects/0.attributes 'position = "engineer"'
     attribute "resources${target}.attributes" 'classification = "internal"'
     policy combined deny $'    system.defcon <= 2;\n    subject.position == "engineer";\n    resource.classification == "internal";'
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Nur subject.position ändert sich von `subject.position == "engineer";` zu `subject.position == "intern";`. Damit ist eine der drei UND-Bedingungen falsch.'
     attribute subjects/0.attributes 'position = "intern"'
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Im Authorization Context gilt wieder `subject.position == "engineer";`. Damit sind wieder alle drei Bedingungen erfüllt.'
     attribute subjects/0.attributes 'position = "engineer"'
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Nur resource.classification ändert sich von `resource.classification == "internal";` zu `resource.classification == "public";`. Damit passt die Deny-Policy nicht mehr.'
     attribute "resources${target}.attributes" 'classification = "public"'
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Mit `resource.classification == "internal";` sind wieder alle drei Bedingungen erfüllt.'
     attribute "resources${target}.attributes" 'classification = "internal"'
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     step 'Jetzt fehlt subject.position vollständig. Die Veröffentlichung ist gültig; die Bedingung `subject.position == "engineer";` passt jedoch nicht.'
     attribute subjects/0.attributes '# position fehlt'
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Im Authorization Context gilt `subject.position == 1;` statt `subject.position == "engineer";`. Die Zahl 1 stimmt nicht mit der Zeichenkette "engineer" überein.'
     attribute subjects/0.attributes 'position = 1'
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
+    show_decision allow allow "$target"
     step 'Im Authorization Context gilt wieder `subject.position == "engineer";`: Alle Bedingungen passen und der Zugriff wird verweigert.'
     attribute subjects/0.attributes 'position = "engineer"'
-    command_access_is deny cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    status=0
+    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
+    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
+    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
+        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
+        return 1
+    fi
+    show_decision deny deny "$target"
     admin
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy combined
