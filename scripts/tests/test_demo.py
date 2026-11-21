@@ -126,7 +126,7 @@ class BashObserverTests(unittest.TestCase):
 
 
 class LauncherTests(unittest.TestCase):
-    def run_launcher(self, with_tmux, build=False):
+    def run_launcher(self, with_tmux, build=False, git_status=0):
         with tempfile.TemporaryDirectory(prefix="demo test ") as directory:
             root = Path(directory)
             binaries = root / "bin"
@@ -143,6 +143,7 @@ class LauncherTests(unittest.TestCase):
             for name, content in {
                 "uname": '#!/bin/sh\necho Linux\n',
                 "sudo": '#!/bin/sh\nexit 0\n',
+                "git": '#!/bin/sh\nprintf "%s\\n" "$@" > "$GIT_CALL"\nexit "$GIT_STATUS"\n',
                 "nix-shell": '''#!/usr/bin/env python3
 import json, os, sys
 from pathlib import Path
@@ -185,6 +186,8 @@ if 'respawn-pane' in args:
                            "TAILS_PDP_BIN": str(demo_binary), "ADM_TOOL_BIN": str(demo_binary), "DEMO_SUDO_BIN": str(system_sudo),
                            "DEMO_ARTIFACT_PATH_FILE": str(root / "artifact-path")}
             environment.pop("TAILS_DEMO_NIX", None)
+            environment.pop("TAILS_DEMO_UPDATE_ATTEMPTED", None)
+            environment.update(GIT_CALL=str(root / 'git-call'), GIT_STATUS=str(git_status))
             try:
                 terminal_log = root / 'terminal.log'
                 arguments = [str(PROJECT / 'scripts/demo.sh'), '--auto']
@@ -195,6 +198,10 @@ if 'respawn-pane' in args:
                 diagnostic = terminal_log.read_text(errors='replace')
                 self.assertFalse(timed_out, f'Launcher-Test überschritt das Zeitlimit:\n{diagnostic}')
                 self.assertEqual(status, 0, f'Launcher-Ausgabe:\n{diagnostic}')
+                self.assertEqual((root / 'git-call').read_text().splitlines(),
+                                 ['-C', str(PROJECT), 'pull', '--ff-only'])
+                if git_status:
+                    self.assertIn('Die Demo startet mit dem vorhandenen Stand.', diagnostic)
                 if with_tmux:
                     self.assertEqual((root / 'artifact-path').read_text().strip(), (root / 'demo-root').read_text())
             finally:
@@ -208,6 +215,10 @@ if 'respawn-pane' in args:
         self.assertEqual(arguments[8], str(PROJECT / "scripts/demo/shell.nix"))
         self.assertEqual(arguments[9], "--run")
         self.assertEqual(shlex.split(arguments[10]), ["bash", str(PROJECT / "scripts/demo.sh"), "--auto"])
+
+    def test_failed_git_update_still_starts_demo(self):
+        calls = [json.loads(line) for line in self.run_launcher(True, git_status=128).splitlines()]
+        self.assertTrue(any('attach-session' in call for call in calls))
 
     def test_tmux_layout_and_worker_are_configured_before_attach(self):
         calls = [json.loads(line) for line in self.run_launcher(True).splitlines()]

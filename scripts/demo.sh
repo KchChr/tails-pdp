@@ -2,8 +2,6 @@
 # Guided live demo. Runtime and configuration changes run only in the worker.
 set -Eeuo pipefail
 
-git pull
-
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export PROJECT_ROOT
 
@@ -68,6 +66,15 @@ for argument in "$@"; do
 done
 [[ "$(uname -s)" == Linux ]] || { echo 'Die Live-Demo benötigt Linux.' >&2; exit 1; }
 [[ -t 0 && -t 1 ]] || { echo 'Bitte die Demo in einem interaktiven Terminal starten.' >&2; exit 1; }
+
+# Aktualisiert nur im ursprünglichen Aufruf, vor sudo und dem Nix-Neustart.
+# Ein fehlendes Netzwerk, Git oder SSH-Zugang verhindert die lokale Demo nicht.
+if [[ "${TAILS_DEMO_UPDATE_ATTEMPTED:-0}" != 1 ]]; then
+    export TAILS_DEMO_UPDATE_ATTEMPTED=1
+    if ! git -C "$PROJECT_ROOT" pull --ff-only; then
+        printf '\nHinweis: Repository konnte nicht aktualisiert werden. Die Demo startet mit dem vorhandenen Stand.\n' >&2
+    fi
+fi
 
 # Resolve the host's privilege wrapper before Nix changes PATH, and preserve the
 # absolute path for the Nix re-exec, authentication and the tmux worker alike.

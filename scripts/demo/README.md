@@ -6,6 +6,12 @@ Vom Repository aus auf dem dedizierten **x86_64-Linux-Zielsystem** starten:
 ./scripts/demo.sh
 ```
 
+Beim Start versucht das Skript einmalig `git pull --ff-only` im Repository,
+bevor es Nix oder den privilegierten Worker startet. Schlägt das Update etwa
+wegen fehlender Internetverbindung oder SSH-Anmeldung fehl, erscheint ein
+Hinweis; die Demo läuft mit den vorhandenen Dateien weiter. Die Worker führen
+kein Git-Update aus.
+
 Mit der Systemkonfiguration aus `nix-config/configuration.nix` sind die
 Laufzeitwerkzeuge einschließlich `tmux` bereits systemweit verfügbar. Eine
 Nix-Shell muss vor dem Start nicht manuell geöffnet werden. Fehlen die
