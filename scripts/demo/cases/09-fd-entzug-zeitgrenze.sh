@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '9. FD-Entzug ausschließlich durch eine Zeitgrenze'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass jemand eine Policy oder ein Attribut veröffentlicht.'
     chapter_section 'Aktion' \
@@ -50,6 +52,9 @@ PY
         return 1
     fi
     show_decision deny deny "$target"
+
+
+    #Seite 2
     step 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug sind bestätigt. Der Beobachter wird beendet und die Policy entfernt; danach muss eine neue Dateiöffnung wieder erlaubt sein.'
     stop_probe
     remove_policy timed

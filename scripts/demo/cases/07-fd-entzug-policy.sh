@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '7. Bereits geöffnete FDs durch eine neue Policy entziehen'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Bisher wurden neue Dateiöffnungen geprüft. Ein Prozess kann eine Datei aber schon geöffnet haben, bevor eine neue Policy veröffentlicht wird.'
     chapter_section 'Aktion' \
@@ -13,6 +15,9 @@
     printf '\n'
     pause_demo
     start_probe
+
+
+    #Seite 2
     chapter_start '7a. FDs sind offen – jetzt Deny veröffentlichen'
     chapter_section 'Ausgangslage' \
         'Der Beobachter hält alle fünf FDs offen. Vor der Änderung wird zusätzlich geprüft, dass diese FDs noch auf die erwarteten Dateien verweisen.'
@@ -25,6 +30,9 @@
     assert_probe_identity
     policy revoke deny ''
     expect_revoked
+
+
+    #Seite 3
     step 'Der selektive Entzug ist bestätigt. Der Beobachter wird jetzt gezielt beendet und die Demo-Policy für das nächste Kapitel entfernt.'
     stop_probe
     remove_policy revoke

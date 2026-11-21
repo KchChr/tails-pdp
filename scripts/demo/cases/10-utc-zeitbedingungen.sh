@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '10. UTC-Zeitbedingung und abschließende Inspektion'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder.'
     chapter_section 'Aktion' \
@@ -18,6 +20,9 @@
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
+
+
+    #Seite 2
     step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht. Sie hat Vorrang vor der passenden Permit-Policy.'
     policy utc deny '    environment.utc.hour >= 0;'
     explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang vor der passenden Permit-Policy.'

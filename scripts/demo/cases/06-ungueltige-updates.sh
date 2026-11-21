@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '6. Ungültige Updates und anschließende Korrektur'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Im Authorization Context gilt noch `system.defcon == 2;`. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.'
     chapter_section 'Aktion' \
@@ -18,6 +20,9 @@
     admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
+
+
+    #Seite 2
     step 'Die nächste Policy ist absichtlich syntaktisch fehlerhaft. Sie darf nicht aktiviert werden.'
     printf 'policy "broken"\ndeny\n action == "file_open"\n' | publish "$policy_dir/broken.policy"
     wait_log 'POLICY sync failed' "$offset"
@@ -36,6 +41,9 @@
         return 1
     fi
     show_decision deny deny "$target"
+
+
+    #Seite 3
     step 'Die fehlerhafte Datei wird durch eine gültige Permit-Policy ersetzt. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
     policy broken permit
     explain 'Nach der gültigen Policy-Korrektur ist broken zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
@@ -51,12 +59,18 @@
         return 1
     fi
     show_decision deny deny "$target"
+
+
+    #Seite 4
     step 'Die korrigierte Policy broken wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
     remove_policy broken
     explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: broken wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert `system.defcon == 2;` bleiben aktiv.'
     admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
+
+
+    #Seite 5
     step 'Die Zuweisung defcon = 9 in der Systemattributdatei ist unzulässig. Im Authorization Context muss trotz geänderter Quelldatei `system.defcon == 2;` gelten.'
     printf 'defcon = 9\n' | publish "$attribute_dir/system.attributes"
     wait_log 'Ignoring invalid stream attributes' "$offset"
@@ -75,6 +89,9 @@
         return 1
     fi
     show_decision deny deny "$target"
+
+
+    #Seite 6
     step 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
     attribute system.attributes 'defcon = 5'
     explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: Der Kontextwert `system.defcon == 5;` und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'
@@ -84,5 +101,8 @@
     run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
     show_decision allow allow "$target"
+
+
+    #Seite 7
     step 'Die Demo-Policy dieses Kapitels wird entfernt.'
     remove_policy robust

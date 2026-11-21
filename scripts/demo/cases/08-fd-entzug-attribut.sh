@@ -4,6 +4,8 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '8. FD-Entzug ausschließlich durch Attributänderung'
+
+    #Seite 1
     chapter_section 'Ausgangslage' \
         'Im Authorization Context gilt `system.defcon == 5;`. Vor dem Öffnen wird eine Deny-Policy mit `system.defcon <= 2;` installiert. Die Policy ist aktiviert, ihre Bedingung ist jedoch noch nicht erfüllt.'
     chapter_section 'Aktion' \
@@ -14,6 +16,9 @@
     pause_demo
     policy revoke deny '    system.defcon <= 2;'
     start_probe
+
+
+    #Seite 2
     chapter_start '8a. Nur das Systemattribut ändern'
     chapter_section 'Ausgangslage' \
         'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.'
@@ -32,6 +37,9 @@
     [[ "${before%% *}" == "${current%% *}" ]] || { fail 'Policygeneration unerwartet geändert.'; return 1; }
     wait_log "scan started cause=[attributes:${current##* }]" "$offset"
     expect_revoked
+
+
+    #Seite 3
     step 'Der FD-Entzug durch die Attributänderung ist bestätigt. Beobachter und Demo-Policy werden für das nächste Kapitel zurückgesetzt.'
     stop_probe
     remove_policy revoke
