@@ -46,9 +46,60 @@ pub(crate) fn time_condition(
     format!("{field} {} {value};", operator_symbol(operator))
 }
 
+/// Ergänzt die technische Zeitbedingung nur, wenn sie tatsächlich aktiviert ist.
+pub(crate) fn legacy_condition(
+    enabled: bool,
+    attribute: StreamAttribute,
+    modulo: u64,
+    operator: StreamOperator,
+    value: u64,
+) -> String {
+    if !enabled {
+        String::new()
+    } else if attribute == StreamAttribute::Time {
+        format!(
+            " legacy_condition={attribute:?} % {modulo} {} {value}",
+            operator_symbol(operator)
+        )
+    } else {
+        format!(
+            " legacy_condition={attribute:?} {} {value}",
+            operator_symbol(operator)
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn absent_time_conditions_are_omitted_but_enabled_conditions_remain_visible() {
+        assert_eq!(
+            legacy_condition(
+                false,
+                StreamAttribute::Time,
+                20,
+                StreamOperator::GreaterThanOrEqual,
+                10
+            ),
+            ""
+        );
+        assert_eq!(
+            legacy_condition(
+                true,
+                StreamAttribute::Time,
+                20,
+                StreamOperator::GreaterThanOrEqual,
+                10
+            ),
+            " legacy_condition=Time % 20 >= 10"
+        );
+        assert_eq!(
+            legacy_condition(true, StreamAttribute::Hour, 0, StreamOperator::Equal, 0),
+            " legacy_condition=Hour == 0"
+        );
+    }
 
     #[test]
     fn unset_filters_are_omitted_independently() {

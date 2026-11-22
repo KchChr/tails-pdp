@@ -31,7 +31,7 @@
 
 
     #Seite 3
-    step "Die Deny-Policy für subject.uid == ${UID};, command == \"cat\"; und die geschützte Ressource wird veröffentlicht."
+    step "Die Deny-Policy für subject.uid == ${UID}, command == \"cat\" und die geschützte Ressource wird veröffentlicht."
     policy scoped deny "    subject.uid == $UID;" cat
     admin show-active
     show_request cat "$UID" "$target"
@@ -57,7 +57,7 @@
 
 
     #Seite 5
-    step 'command == "head";. Die UID bleibt gleich.'
+    step 'command == "head". Die UID bleibt gleich.'
     show_request head "$UID" "$target"
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"

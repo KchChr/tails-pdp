@@ -632,6 +632,7 @@ target='/example/protected file.txt'
 policy_dir="$demo_root/policies"
 attribute_dir="$demo_root/attributes"
 probe_dir="$demo_root"
+mkdir -p "$attribute_dir"
 : > "$demo_root/runtime.log"
 printf '{"unix_ns":9999999999999999999}' > "$probe_dir/state.json"
 chapter_start() { :; }
@@ -649,6 +650,8 @@ remove_policy() { :; }
 admin() { :; }
 generations() { printf '1 1\n'; }
 wait_log() { :; }
+wait_generation() { [[ "$1" == attribute ]]; [[ "$(< "$attribute_dir/system.attributes")" == 'defcon = 2' || "$(< "$attribute_dir/system.attributes")" == 'defcon = 5' ]]; }
+show_policy_context() { :; }
 publish() { while IFS= read -r line; do :; done; }
 start_probe() { :; }
 assert_probe_identity() { :; }

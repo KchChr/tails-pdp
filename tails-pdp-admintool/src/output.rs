@@ -9,10 +9,12 @@ use anyhow::Context;
 use tails_pdp_common::{
     AttributeCondition, AttributeHash, AttributeKey, AttributeNamespace, AttributeValue,
     AttributeValueKind, FileOpenStaticPolicy, FileOpenStreamPolicy, MAX_ATTRIBUTE_CONDITIONS,
-    POLICY_BANK_SIZE, StreamAttribute,
+    POLICY_BANK_SIZE,
 };
 
-use crate::format::{entitlement_keyword, operator_symbol, policy_filters, time_condition};
+use crate::format::{
+    entitlement_keyword, legacy_condition, operator_symbol, policy_filters, time_condition,
+};
 use crate::maps::{AttributeMap, FileOpenStaticPolicyMap, FileOpenStreamPolicyMap};
 
 pub type HashDictionary = HashMap<(u64, u64), String>;
@@ -122,27 +124,16 @@ pub fn show_file_open_stream(
             continue;
         }
 
-        let legacy_condition = if policy.stream_condition_enabled == 0 {
-            String::from("none")
-        } else if policy.attribute == StreamAttribute::Time {
-            format!(
-                "{:?} % {} {} {}",
-                policy.attribute,
-                policy.modulo,
-                operator_symbol(policy.operator),
-                policy.value
-            )
-        } else {
-            format!(
-                "{:?} {} {}",
-                policy.attribute,
-                operator_symbol(policy.operator),
-                policy.value
-            )
-        };
+        let legacy_condition = legacy_condition(
+            policy.stream_condition_enabled != 0,
+            policy.attribute,
+            policy.modulo,
+            policy.operator,
+            policy.value,
+        );
 
         println!(
-            "[{index}] enabled={} entitlement={}{} resource.path={:?} resource.device={} resource.inode={} legacy_condition={}",
+            "[{index}] enabled={} entitlement={}{} resource.path={:?} resource.device={} resource.inode={}{}",
             policy.enabled,
             entitlement_keyword(policy.entitlement),
             policy_filters(policy.subject, &fixed_string(&policy.command)),

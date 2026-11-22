@@ -7,11 +7,11 @@
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        '`system.defcon == 5;`. .'
+        'system.defcon == 5'
     chapter_section 'Aktion' \
-        'Eine Deny-Policy mit `system.defcon <= 2;` wird geladen. Anschließend wird system.defcon von 5 auf 2 und zurück auf 5 geändert.'
+        'Eine Deny-Policy mit system.defcon <= 2 wird geladen. Anschließend wird system.defcon von 5 auf 2 und zurück auf 5 geändert.'
     chapter_section 'Erwartetes Verhalten' \
-        'Bei `system.defcon == 5;` ist die Deny-Bedingung nicht erfüllt und der Zugriff erlaubt. Bei `system.defcon == 2;` ist sie erfüllt und der wird Zugriff verweigert. Nach der Rückkehr zu `system.defcon == 5;` ist er wieder erlaubt.'
+        'Bei system.defcon == 5 ist die Deny-Bedingung nicht erfüllt und der Zugriff erlaubt. Bei system.defcon == 2 ist sie erfüllt und der wird Zugriff verweigert. Nach der Rückkehr zu system.defcon == 5 ist er wieder erlaubt.'
     printf '\n'
     pause_demo
     policy context deny '    system.defcon <= 2;'
@@ -23,8 +23,12 @@
 
 
     #Seite 2
-    step ' Es gilt `system.defcon == 2`.  Die bereits geladene Deny-Policy trifft jetzt zu.'
-    attribute system.attributes 'defcon = 2'
+    step ' Es gilt system.defcon == 2.  Die bereits geladene Deny-Policy trifft jetzt zu.'
+    attribute_before="$(generations)"
+    attribute_offset="$(wc -l < "$demo_root/runtime.log")"
+    run_cmd "echo \"defcon = 2\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    wait_generation attribute "${attribute_before##* }" "$attribute_offset"
+    show_policy_context
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
@@ -39,8 +43,12 @@
 
 
     #Seite 3
-    step 'Es gilt wieder `system.defcon == 5;`. Dieselbe Policy trifft nicht mehr zu.'
-    attribute system.attributes 'defcon = 5'
+    step 'Es gilt wieder system.defcon == 5. Dieselbe Policy trifft nicht mehr zu.'
+    attribute_before="$(generations)"
+    attribute_offset="$(wc -l < "$demo_root/runtime.log")"
+    run_cmd "echo \"defcon = 5\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    wait_generation attribute "${attribute_before##* }" "$attribute_offset"
+    show_policy_context
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"

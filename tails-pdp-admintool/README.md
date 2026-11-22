@@ -192,15 +192,15 @@ Illustrative Ausgabe:
 
 ```text
 FILE_OPEN_STREAM_POLICIES:
-[0] enabled=1 entitlement=deny resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345 legacy_condition=none
+[0] enabled=1 entitlement=deny resource.path="/srv/demo.txt" resource.device=8388610 resource.inode=12345
     action == "file_open";
     system.defcon <= 2;
 ```
 
 Stream-Policies enthalten zusätzlich dynamische Bedingungen:
 
-- `legacy_condition=none` bedeutet, dass keine gesonderte Stream-Zeitbedingung
-  aktiviert ist. Attributbedingungen können trotzdem vorhanden sein.
+- Ohne gesonderte Stream-Zeitbedingung wird `legacy_condition` weggelassen.
+  Attributbedingungen können trotzdem vorhanden sein.
 - Eine Zeitbedingung kann beispielsweise als
   `legacy_condition=Time % 86400 >= 64800` erscheinen. Die Ausgabe
   enthält den gespeicherten Modulo-Wert, Vergleichsoperator und Vergleichswert.

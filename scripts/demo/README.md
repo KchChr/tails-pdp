@@ -295,6 +295,15 @@ Abschnitte können in der Kapiteldatei umbenannt, entfernt oder ergänzt werden.
 `chapter_section` formatiert die übergebene Überschrift und den Text.
 Die Enter-Pause vor den Aktionen steht ebenfalls ausdrücklich in der Datei.
 
+Änderungen von `system.attributes` werden in den Kapiteln unmittelbar über
+`run_cmd` und `echo "defcon = …" > /absoluter/pfad/system.attributes` ausgeführt.
+Die Attributdatei enthält Zuweisungen ohne Namespace-Präfix und mit einem `=`;
+die Policy-Bedingung dazu lautet beispielsweise `system.defcon == 2;`.
+Die Datei wird ersetzt, da ein Anhängen mit `>>` doppelte Definitionen erzeugen
+würde. Nach gültigen Änderungen wird weiterhin auf die neue Attributgeneration
+und die abgeschlossene Re-evaluation gewartet. Der ungültige Wert 9 in Kapitel 6
+wird ebenso geschrieben, muss aber vom Loader abgelehnt werden.
+
 Die Dateiöffnungen in Kapitel 2 bis 10 stehen als `run_cmd`-Aufrufe direkt in
 der jeweiligen Kapiteldatei: zuerst die UID, dann `stat` und anschließend
 `cat` beziehungsweise `head`. `run_cmd` zeigt den übergebenen Befehlsstring

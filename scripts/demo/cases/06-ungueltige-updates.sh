@@ -7,7 +7,7 @@
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        'Es gilt `system.defcon == 2;`. Eine passende Deny-Policy wird geladen. Vor jedem fehlerhaften Update werden beide Generationsnummern gespeichert.'
+        'Es gilt system.defcon == 2. Eine passende Deny-Policy wird geladen. '
     chapter_section 'Aktion' \
         'Zuerst wird eine Policy mit fehlendem Semikolon veröffentlicht. Nach ihrer Korrektur wird in der Systemattributdatei defcon = 9 veröffentlicht, obwohl für dieses Attribut nur 1 bis 5 zulässig sind.'
     chapter_section 'Erwartetes Verhalten' \
@@ -16,7 +16,7 @@
     pause_demo
     policy robust deny '    system.defcon <= 2;'
     local before offset
-    explain 'Aktiver Ausgangszustand vor der ungültigen Policy: Die Deny-Policy robust ist aktiviert und im Authorization Context gilt `system.defcon == 2;`.'
+    explain 'Aktiver Ausgangszustand vor der ungültigen Policy: Die Deny-Policy robust ist aktiviert und im Authorization Context gilt system.defcon == 2.'
     admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
@@ -65,15 +65,15 @@
     #Seite 4
     step 'Die korrigierte Policy corrected wird entfernt. Danach wird der aktive Ausgangszustand für die Attributprüfung angezeigt.'
     remove_policy corrected
-    explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: corrected wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert `system.defcon == 2;` bleiben aktiv.'
+    explain 'Aktiver Ausgangszustand vor dem ungültigen Attribut: corrected wurde wieder entfernt. Die Deny-Policy robust und der Kontextwert system.defcon == 2 bleiben aktiv.'
     admin show-active
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
 
 
     #Seite 5
-    step 'Die Zuweisung defcon = 9 in system.attributes ist nicht erlaubt. Im Authorization Context muss trotz geänderter Quelldatei `system.defcon == 2;` gelten.'
-    printf 'defcon = 9\n' | publish "$attribute_dir/system.attributes"
+    step 'Die Zuweisung defcon = 9 in system.attributes ist nicht erlaubt. Im Authorization Context muss trotz geänderter Quelldatei system.defcon == 2 gelten.'
+    run_cmd "echo \"defcon = 9\" > $(printf '%q' "$attribute_dir/system.attributes")"
     wait_log 'Ignoring invalid stream attributes' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültiges Attribut änderte die Generation.'; return 1; }
     explain 'Aktiver Zustand nach der Ablehnung von defcon = 9: show-active zeigt weiterhin den Wert 2 für system.defcon sowie dieselben Policies und Generationen.'
@@ -94,8 +94,12 @@
 
     #Seite 6
     step 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
-    attribute system.attributes 'defcon = 5'
-    explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: Der Kontextwert `system.defcon == 5;` und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'
+    attribute_before="$(generations)"
+    attribute_offset="$(wc -l < "$demo_root/runtime.log")"
+    run_cmd "echo \"defcon = 5\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    wait_generation attribute "${attribute_before##* }" "$attribute_offset"
+    show_policy_context
+    explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: Der Kontextwert system.defcon == 5 und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'
     admin show-active
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
