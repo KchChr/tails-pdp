@@ -1,61 +1,65 @@
 #!/usr/bin/env bash
-# Kapitel 9: Erst nach der Enter-Pause die Grenze berechnen. Ab dem Öffnen
-# nichts mehr veröffentlichen; Zeit-Trigger und konstante Generationen prüfen.
-# Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
+# Kapitel 9: Zehn Sekunden Permit und zehn Sekunden Deny wechseln sich ab.
+# Derselbe Bash-Prozess hält FD 10 bis zum zeitgetriggerten Enforcement.
+# Danach versucht er jede Sekunde erneut zu öffnen, ohne selbst den FD zu schließen.
 
-    chapter_start '9. FD-Entzug ausschließlich durch eine Zeitgrenze'
+    chapter_start '9. Wiederkehrende Zeitfenster: Datei öffnen, offen halten und FD entziehen'
 
     #Seite 1
     chapter_section 'Ausgangslage' \
-        'Eine Zeitbedingung kann ihren Wahrheitswert ändern, ohne dass eine Policy oder ein Attribut veröffentlicht wird.'
+        'Die Zeitbedingung environment.time % 20 >= 10 teilt jeden Zyklus in zehn Sekunden Permit und zehn Sekunden Deny.'
     chapter_section 'Aktion' \
-        'Nach dem Drücken der Enter-Taste wird eine Grenze zwölf Sekunden in der Zukunft berechnet. Die zeitabhängige Policy wird geladen und die Dateien werden vor dieser Grenze geöffnet. Anschließend wird ohne eine weitere Konfigurationsänderung gewartet.'
+        'Ein Bash-Prozess versucht jede Sekunde, die Datei zu öffnen. Sobald dies erlaubt ist, hält er FD 10 offen. Nach dessen Entzug versucht derselbe Prozess erneut jede Sekunde, die Datei zu öffnen.'
     chapter_section 'Erwartetes Verhalten' \
-        'Vor der Grenze sind die FDs offen. Nach Erreichen der Grenze wird die Deny-Bedingung wahr und ein zeitgetriggerter Scan entzieht die drei geschützten FDs. Beide Konfigurationsgenerationen bleiben gleich.'
+        'An der Deny-Grenze entzieht der Userspace-PEP den offenen FD. In den folgenden zehn Sekunden verweigert der Kernel die Öffnungsversuche. Im nächsten Permit-Fenster bleibt die Datei wieder ungefähr zehn Sekunden offen, bis der nächste FD-Entzug erfolgt.'
     chapter_section 'Hinweis' \
-        'Während des Zeitübergangs läuft die Demo ohne Enter-Pause weiter; die FDs werden vor und nach der Zeitgrenze geprüft.'
+        'Rechts oben: Öffnungsversuche, Kernel-Denys und FD-Entzüge des Userspace-PEP. Rechts unten: laufender Prozess und offener FD. Der erste Zeitabschnitt kann bereits angebrochen sein. Die Vorführung läuft bis zum zweiten FD-Entzug ohne Enter-Pause weiter.'
     printf '\n'
     pause_demo
-    local boundary
-    boundary=$(( $(date +%s) + 12 ))
-    (( boundary < 4294967296 )) || { fail 'Zeitgrenze außerhalb des Demo-Modulus.'; return 1; }
-    policy timed deny "    environment.time % 4294967296 >= $boundary;"
-    start_probe
-    assert_probe_identity
-    (( $(date +%s) < boundary - 2 )) || { fail 'Einrichtung zu langsam: Zeitgrenze schon zu nah.'; return 1; }
-    show_request cat "$UID" "$target"
-    run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
-    run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
+    policy timed deny '    environment.time % 20 >= 10;'
+    admin show-active
+    show_request bash "$UID" "$target"
+
+    probe_dir="$(mktemp -d "$demo_root/time-fd.XXXXXX")"
+    local before offset deadline
     before="$(generations)"
     offset="$(wc -l < "$demo_root/runtime.log")"
-    observe "Es wird auf den Unix-Zeitpunkt $boundary gewartet. Es erfolgen weder eine Veröffentlichung noch ein Neustart."
-    wait_log "scan started cause=[time:$boundary]" "$offset"
-    wait_log "scan completed policy_generation=${before%% *} attribute_generation=${before##* }" "$offset"
-    expect_revoked
-    [[ "$(generations)" == "$before" ]] || { fail 'Konfigurationsgeneration an Zeitgrenze verändert.'; return 1; }
-    python3 - "$probe_dir/state.json" "$boundary" <<'PY'
+    show_command bash "$PROJECT_ROOT/scripts/demo/time-observer.sh" "$target" "$probe_dir" "$demo_root/runtime.log"
+    DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
+        bash "$PROJECT_ROOT/scripts/demo/time-observer.sh" "$target" "$probe_dir" "$demo_root/runtime.log" >> "$demo_root/observer.log" 2>&1 &
+    probe_pid=$!
+
+    # Je nach Startzeit dauert die Folge bis zu 40 Sekunden; zusätzliche Zeit
+    # bleibt für Einrichtung und Scans auf dem Zielsystem.
+    deadline=$((SECONDS + 40 + DEMO_TIMEOUT_SECONDS))
+    while :; do
+        alive || { fail 'Runtime während des Zeitfenster-Falls beendet.'; return 1; }
+        kill -0 "$probe_pid" 2>/dev/null || { fail 'Zeitbeobachter unerwartet beendet; siehe FD-Beobachter.'; return 1; }
+        if [[ -f "$probe_dir/state.json" ]] && python3 - "$probe_dir/state.json" <<'PY_CHECK'
 import json, sys
 state = json.load(open(sys.argv[1]))
-if state['unix_ns'] < int(sys.argv[2]) * 1_000_000_000:
-    raise SystemExit('FDs vor der Zeitgrenze geschlossen')
-PY
-    show_request cat "$UID" "$target"
-    run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
-    status=0
-    LC_ALL=C run_cmd "cat $(printf '%q' "$target")" 2> "$demo_root/command.stderr" || status=$?
-    printf '%s\n' "$(< "$demo_root/command.stderr")" >&2
-    if [[ "$status" != 1 ]] || ! grep -Fq 'Operation not permitted' "$demo_root/command.stderr"; then
-        fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
-        return 1
-    fi
-    show_decision deny deny "$target"
+raise SystemExit(0 if state['opens'] >= 2 and state['revocations'] >= 2 else 1)
+PY_CHECK
+        then
+            break
+        fi
+        (( SECONDS < deadline )) || { fail 'Zwei zeitgetriggerte FD-Entzüge sind ausgeblieben.'; return 1; }
+        sleep 0.1
+    done
+    # Die FD-Beobachtung kann der Logausgabe des PEP knapp zuvorkommen.
+    deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
+    while [[ "$(grep -Fc "USERSPACE_PEP closed pid=$probe_pid fd=10 " "$demo_root/runtime.log")" -lt 2 ]]; do
+        alive || { fail 'Runtime vor dem Logging der FD-Entzüge beendet.'; return 1; }
+        (( SECONDS < deadline )) || { fail 'Zwei FD-Entzüge fehlen im Userspace-PEP-Log.'; return 1; }
+        sleep 0.1
+    done
+    [[ "$(generations)" == "$before" ]] || { fail 'Konfigurationsgeneration während der Zeitfenster verändert.'; return 1; }
+    python3 "$PROJECT_ROOT/scripts/demo/time-observer-check.py" \
+        "$probe_dir" "$demo_root/runtime.log" "$offset" "$probe_pid"
 
 
     #Seite 2
-    step 'Der Zeitauslöser, die unveränderten Generationen und der FD-Entzug sind bestätigt. Der Beobachter wird beendet und die Policy entfernt; danach muss eine neue Dateiöffnung wieder erlaubt sein.'
+    step 'Zwei zeitgetriggerte FD-Entzüge wurden im selben Prozess nachgewiesen. Der Beobachter wird beendet und die Zeit-Policy entfernt.'
     stop_probe
     remove_policy timed
     show_request cat "$UID" "$target"

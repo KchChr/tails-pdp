@@ -23,6 +23,7 @@ exec(compile((PROJECT / "scripts/demo/probe.py").read_text(), "probe.py", "exec"
 live = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/tests/test_demo_live.py')))
 kernel_trace = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/kernel_trace.py')))
 vendor_check = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/check-vendor.py')))
+time_observer_check = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/time-observer-check.py')))
 request_view = types.SimpleNamespace(**runpy.run_path(str(PROJECT / 'scripts/demo/request.py')))
 
 
@@ -116,6 +117,145 @@ class BashObserverTests(unittest.TestCase):
                     self.assertIn(f'$ ls -l /proc/{process.pid}/fd', transcript)
                     self.assertIn('10: offen', transcript)
                     self.assertEqual(Path(f'/proc/{process.pid}/comm').read_text().strip(), 'bash')
+                finally:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+
+
+class TimeObserverTests(unittest.TestCase):
+    def fixture(self):
+        events = []
+        for kind, second in [('opened', 100), ('revoked', 110),
+                             *[('denied', second) for second in range(110, 120)],
+                             ('opened', 120), ('revoked', 130)]:
+            events.append(dict(event=kind, unix_ns=second * 1_000_000_000, pid=4242, fd=10))
+        runtime = ''.join(
+            f'USERSPACE_PEP scan started cause=[time:{second}] policy_generation=1 attribute_generation=1\n'
+            'USERSPACE_PEP closed pid=4242 fd=10 for File policy Stream[0]\n'
+            'USERSPACE_PEP scan completed policy_generation=1 attribute_generation=1\n'
+            for second in [110, 130]
+        )
+        return events, runtime
+
+    def test_two_cycles_include_ten_denials_and_real_time_triggered_pep_closings(self):
+        events, runtime = self.fixture()
+        self.assertEqual(time_observer_check.validate(events, runtime, 4242), 10)
+
+    def test_process_changes_early_closures_and_missing_pep_evidence_are_rejected(self):
+        for corruption in ['pid', 'fd', 'short_permit', 'short_deny', 'no_denials', 'no_pep', 'attribute_trigger']:
+            with self.subTest(corruption=corruption):
+                events, runtime = self.fixture()
+                if corruption in ['pid', 'fd']:
+                    events[-1][corruption] += 1
+                elif corruption == 'short_permit':
+                    events[-1]['unix_ns'] = 121_000_000_000
+                elif corruption == 'short_deny':
+                    events = [event for event in events if event['event'] != 'denied' or event['unix_ns'] < 112_000_000_000]
+                    events[-2]['unix_ns'] = 112_000_000_000
+                elif corruption == 'no_denials':
+                    events = [event for event in events if event['event'] != 'denied']
+                elif corruption == 'no_pep':
+                    runtime = ''
+                else:
+                    runtime = runtime.replace('time:', 'attributes:')
+                with self.assertRaises(ValueError):
+                    time_observer_check.validate(events, runtime, 4242)
+
+    def test_chapter_runs_two_cycles_and_cleans_up_observer(self):
+        events, runtime = self.fixture()
+        with tempfile.TemporaryDirectory(prefix='time chapter ') as directory:
+            root = Path(directory)
+            demo_scripts = root / 'scripts/demo'
+            demo_scripts.mkdir(parents=True)
+            (demo_scripts / 'time-observer-check.py').symlink_to(PROJECT / 'scripts/demo/time-observer-check.py')
+            # The chapter integration uses prepared evidence; actual open FDs
+            # are checked separately on Linux and in the privileged live test.
+            (demo_scripts / 'time-observer.sh').write_text('''#!/usr/bin/env bash
+set -eu
+python3 - "$2" "$3" "$$" <<'PY_EVIDENCE'
+import json, os, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+pid = int(sys.argv[3])
+events = json.loads(os.environ['TEST_TIME_EVENTS'])
+for event in events:
+    event['pid'] = pid
+(root / 'events.jsonl').write_text(''.join(json.dumps(event) + '\\n' for event in events))
+with Path(sys.argv[2]).open('a') as log:
+    log.write(os.environ['TEST_TIME_RUNTIME'].replace('pid=4242', f'pid={pid}'))
+(root / 'state.json').write_text(json.dumps(dict(opens=2, revocations=2, denied=10)))
+PY_EVIDENCE
+exec sleep 20
+''')
+            target = root / 'protected file.txt'
+            target.write_text('protected')
+            (root / 'runtime.log').touch()
+            script = '''set -Eeuo pipefail
+original_project="$1"
+source "$original_project/scripts/demo/runner.sh"
+PROJECT_ROOT="$2"
+demo_root="$2"
+target="$demo_root/protected file.txt"
+probe_pid=''
+DEMO_TIMEOUT_SECONDS=1
+trap stop_probe EXIT
+chapter_start() { :; }
+chapter_section() { :; }
+pause_demo() { :; }
+step() { [[ $# -eq 1 ]]; }
+policy() { [[ "$1" == timed && "$2" == deny && "$3" == '    environment.time % 20 >= 10;' ]]; }
+admin() { :; }
+show_request() { :; }
+show_decision() { :; }
+alive() { :; }
+generations() { printf '1 1\n'; }
+wait_log() { grep -Fq "$1" "$demo_root/runtime.log"; }
+remove_policy() { [[ "$1" == timed ]]; printf 'TIME_POLICY_REMOVED\n'; }
+stat() { printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
+run_chapter() { source "$original_project/scripts/demo/cases/09-fd-entzug-zeitgrenze.sh"; }
+run_chapter
+[[ -z "$probe_pid" ]]
+'''
+            result = subprocess.run(
+                [shutil.which('bash'), '-c', script, 'test', str(PROJECT), directory],
+                env={**os.environ, 'TEST_TIME_EVENTS': json.dumps(events), 'TEST_TIME_RUNTIME': runtime},
+                capture_output=True, text=True, timeout=8,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('zwei FD-Entzüge; 10 verweigerte Öffnungsversuche', result.stdout)
+            self.assertIn('TIME_POLICY_REMOVED', result.stdout)
+            self.assertIn('protected', result.stdout)
+
+    @unittest.skipUnless(Path('/proc/self/fd').is_dir(), 'Der Zeitbeobachter benötigt Linux /proc')
+    def test_observer_opens_one_real_fd_and_keeps_it_in_its_own_process(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / 'protected file.txt'
+            target.write_text('protected')
+            with (root / 'observer.log').open('w') as output:
+                process = subprocess.Popen(
+                    [shutil.which('bash'), str(PROJECT / 'scripts/demo/time-observer.sh'),
+                     str(target), directory, str(root / 'runtime.log')],
+                    stdout=output, stderr=subprocess.STDOUT,
+                )
+                try:
+                    deadline = time.monotonic() + 4
+                    while not (root / 'state.json').exists() and time.monotonic() < deadline:
+                        self.assertIsNone(process.poll(), (root / 'observer.log').read_text())
+                        time.sleep(0.05)
+                    state = json.loads((root / 'state.json').read_text())
+                    self.assertEqual(state['opens'], 1)
+                    self.assertEqual(state['revocations'], 0)
+                    self.assertTrue(os.path.samefile(f'/proc/{process.pid}/fd/10', target))
+                    time.sleep(1.1)
+                    self.assertTrue(os.path.samefile(f'/proc/{process.pid}/fd/10', target))
+                    events = [json.loads(line) for line in (root / 'events.jsonl').read_text().splitlines()]
+                    self.assertEqual([event['event'] for event in events], ['opened'])
+                    self.assertIn('FD 10 offen', (root / 'observer.log').read_text())
                 finally:
                     process.terminate()
                     try:
@@ -475,7 +615,6 @@ source "$1/scripts/demo/cases/02-statische-policies.sh"
             '04-systemattribut.sh': ['allow', 'deny', 'allow'],
             '05-subjekt-und-ressourcenattribute.sh': ['deny', 'allow', 'deny', 'allow', 'deny', 'allow', 'allow', 'deny'],
             '06-ungueltige-updates.sh': ['deny', 'deny', 'deny', 'allow'],
-            '09-fd-entzug-zeitgrenze.sh': ['allow', 'deny', 'allow'],
             '10-utc-zeitbedingungen.sh': ['allow', 'deny'],
         }
         script = '''set -Eeuo pipefail

@@ -298,8 +298,17 @@ Er bindet den Redaktionsplan ein, sodass die Kapitel Runtime und Arbeitsbereich
 teilen. Die Dateien sind
 für diesen gemeinsamen Ablauf vorgesehen. Die Zwischenschritte 7a und 8a
 stehen beim jeweiligen FD-Fall.
-Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Berechnen
-der Zeitgrenze, damit die Vorführungsdauer den Übergang nicht vorwegnimmt.
+Im Zeitkapitel erfolgt die gesamte Erklärung vor dem Start des Beobachters.
+Die Policy `environment.time % 20 >= 10;` lässt Dateiöffnungen jeweils zehn
+Sekunden zu und verweigert sie in den folgenden zehn Sekunden. Ein Bash-Prozess
+öffnet FD 10 und hält ihn, bis der Userspace-PEP ihn entzieht. Danach versucht
+derselbe Prozess jede Sekunde erneut, die Datei zu öffnen. Öffnungsversuche und
+Ergebnisse erscheinen rechts oben neben den Kernel-Denys und PEP-Meldungen;
+rechts unten werden zusätzlich der offene FD und der weiterlaufende Prozess
+sichtbar. Die Vorführung endet nach zwei nachgewiesenen FD-Entzügen. Der erste
+Zeitabschnitt kann bereits angebrochen sein; im nächsten Permit-Fenster bleibt
+die Datei ungefähr zehn Sekunden offen. Üblicherweise ergeben sich zehn
+verweigerte Versuche pro Deny-Fenster; die genaue Anzahl hängt vom Scheduling ab.
 In Kapitel 3 wird die Ausgangslage zusätzlich vor dem Ausführen der Aktionen
 mit einem sichtbaren `show-active`-Aufruf belegt. Dabei sind keine aktivierten
 Policy-Einträge vorhanden; die unabhängig verwalteten Attribute bleiben sichtbar.
@@ -313,8 +322,8 @@ geladenen Zugriffsrichtlinien.
 `--auto` führt dieselben Kapitel ohne Enter-Pausen aus und schließt das Layout
 nach Abschluss. Auch dieser Modus benötigt ein interaktives Terminal. Technische
 Wartephasen prüfen den tatsächlichen Zustand und haben standardmäßig 30 Sekunden
-Timeout (`DEMO_TIMEOUT_SECONDS`). Für das Zeitkapitel muss der Timeout über der
-zwölfsekündigen Zeitgrenze liegen. Aktivierungszeiten sind keine zugesicherten
+Timeout (`DEMO_TIMEOUT_SECONDS`). Kapitel 9 erhält zusätzlich 40 Sekunden für
+die zwei vollständigen Zeitübergänge. Aktivierungszeiten sind keine zugesicherten
 Produkteigenschaften: Ein Timeout ist ein Fehler der Vorführung, kein Beleg für
 eine garantierte Frist.
 
@@ -328,7 +337,7 @@ eine garantierte Frist.
 6. Ungültige Policy und ungültiges Attribut: Generation bleibt erhalten; gültige Korrektur folgt.
 7. Selektiver Entzug bereits offener FDs durch Policyaktivierung.
 8. Selektiver FD-Entzug allein durch Attributaktivierung, bei unveränderter Policygeneration.
-9. Selektiver FD-Entzug allein an einer Zeitgrenze, bei unveränderten Konfigurationsgenerationen.
+9. Wiederkehrende zehnsekündige Permit-/Deny-Fenster: Öffnungsversuche jede Sekunde, FD offen halten und zweimal zeitgetriggert entziehen, bei unveränderten Konfigurationsgenerationen.
 10. UTC-Zeitbedingungen, Stream-Permit und Deny-Vorrang, abschließende Admin-Inspektion.
 
 Die Demo startet mit dem Repository als Arbeitsverzeichnis. Die Runtime liest

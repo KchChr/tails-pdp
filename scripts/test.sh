@@ -131,7 +131,8 @@ run_step "Demo-Skripte syntaktisch prüfen" \
     "$PROJECT_ROOT/scripts/demo.sh" "$PROJECT_ROOT/scripts/demo/runner.sh" \
     "$PROJECT_ROOT/scripts/demo/chapters.sh" \
     "$PROJECT_ROOT/scripts/demo/dependencies.sh" "$PROJECT_ROOT/scripts/demo/build.sh" \
-    "$PROJECT_ROOT/scripts/demo/pane.sh" "$PROJECT_ROOT/scripts/demo/fd-observer.sh" "$PROJECT_ROOT"/scripts/demo/cases/*.sh
+    "$PROJECT_ROOT/scripts/demo/pane.sh" "$PROJECT_ROOT/scripts/demo/fd-observer.sh" \
+    "$PROJECT_ROOT/scripts/demo/time-observer.sh" "$PROJECT_ROOT"/scripts/demo/cases/*.sh
 
 run_step "Demo-Start, Isolation und Syscall-Helfer prüfen" \
     env PYTHONDONTWRITEBYTECODE=1 python3 "$PROJECT_ROOT/scripts/tests/test_demo.py"
