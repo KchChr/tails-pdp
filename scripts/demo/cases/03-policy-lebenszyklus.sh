@@ -21,7 +21,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
 
 
 
@@ -39,7 +38,6 @@
         fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
         return 1
     fi
-    show_decision deny deny "$target"
     admin
 
 
@@ -51,7 +49,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
     admin
     step 'Die Permit-Policy wird entfernt.'
 

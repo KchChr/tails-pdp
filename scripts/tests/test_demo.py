@@ -584,7 +584,7 @@ sudo() { [[ "$1" == -u && "$2" == demo-test && "$3" == -- ]]; shift 3; compariso
 policy() { [[ "$1" == scoped && "$2" == deny ]]; active=1; printf 'POLICY_ACTIVATED\n'; }
 admin() { if [[ "$active" == 1 ]]; then shown=1; printf 'ACTIVE_POLICY_SHOWN\n'; fi; }
 show_request() { :; }
-show_decision() { printf 'DECISION %s %s\n' "$1" "$3"; }
+show_decision() { printf 'Unerwarteter show_decision-Aufruf\n' >&2; return 99; }
 remove_policy() { active=0; printf 'POLICY_REMOVED\n'; }
 source "$1/scripts/demo/cases/02-statische-policies.sh"
 '''
@@ -596,13 +596,14 @@ source "$1/scripts/demo/cases/02-statische-policies.sh"
                 )
                 if error != 'Operation not permitted':
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertNotIn('DECISION deny', result.stdout)
+                    self.assertNotIn('POLICY_REMOVED', result.stdout)
                     continue
                 self.assertEqual(result.returncode, 0, result.stderr)
                 baseline, rest = result.stdout.split('POLICY_ACTIVATED', 1)
                 self.assertEqual(baseline.count('CAT_READ'), 2)
-                self.assertLess(rest.index('ACTIVE_POLICY_SHOWN'), rest.index('DECISION deny'))
-                self.assertEqual(rest.count('DECISION deny'), 2)
+                self.assertLess(rest.index('ACTIVE_POLICY_SHOWN'), rest.index('$ cat /example/protected.txt'))
+                self.assertEqual(result.stderr.count('Operation not permitted'), 2)
+                self.assertNotIn('Authorization Decision', result.stdout)
                 self.assertIn('$ head /example/protected.txt', rest)
                 self.assertIn('$ sudo -u demo-test -- cat /example/protected.txt', rest)
                 self.assertIn('$ cat /example/control.txt', rest)
@@ -704,8 +705,14 @@ run_chapter
                             self.assertEqual(lines[index + 1], content)
                     self.assertEqual(result.stdout.count('$ echo $UID'), len(expected))
                     self.assertEqual(result.stdout.count('$ cat /example/protected\\ file.txt'), len(expected))
-                    self.assertEqual([line for line in result.stdout.splitlines() if line.startswith('CHECKED ')],
-                                     ['CHECKED ' + value for value in expected])
+                    if chapter[:2] in ('03', '04'):
+                        self.assertNotIn('CHECKED ', result.stdout)
+                        self.assertNotIn('Authorization Decision', result.stdout)
+                        self.assertEqual(result.stdout.count('PROTECTED_CONTENT'), expected.count('allow'))
+                        self.assertEqual(result.stderr.count('Operation not permitted'), expected.count('deny'))
+                    else:
+                        self.assertEqual([line for line in result.stdout.splitlines() if line.startswith('CHECKED ')],
+                                         ['CHECKED ' + value for value in expected])
 
     def test_publication_shows_content_but_keeps_internal_command_in_log(self):
         with tempfile.TemporaryDirectory(prefix='demo-publication-', dir=PROJECT) as directory:

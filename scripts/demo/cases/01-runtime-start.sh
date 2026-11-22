@@ -32,5 +32,8 @@
     done
     wait_log 'scan completed'
     admin
-    command_access_is allow cat -
+    show_request cat "$UID" "$target"
+    run_cmd 'echo $UID'
+    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    run_cmd "cat $(printf '%q' "$target")"
     explain 'Ergebnis: Die Runtime ist bereit.'

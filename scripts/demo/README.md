@@ -240,11 +240,15 @@ Zugriff und keine atomare Aufzeichnung des tatsächlichen Kernel-Requests.
 Bei FD-Szenarien werden geschützte Datei und Kontrolldatei getrennt dargestellt;
 der Authorization Context nach einer Re-evaluation ist als solcher gekennzeichnet
 und bedeutet keine neue Dateiöffnung.
-Nach der Zugriffsprüfung folgt ein kompakter Block **Authorization Decision**
+Kapitel 1–4 zeigen das Ergebnis direkt durch die Ausgabe von `cat` beziehungsweise
+`head`: gelesener Dateiinhalt oder die tatsächliche Fehlermeldung. Ein zusätzlicher
+Block **Authorization Decision** wird dort nicht angezeigt. Erwartete Verweigerungen
+werden weiterhin intern geprüft; andere Fehler brechen die Demo ab.
+In den folgenden Kapiteln ergänzt ein kompakter Block **Authorization Decision**
 mit `resource.path` und `Decision` (`Permit` oder `Deny`). Die zusätzliche Anzeige
 von Observed Enforcement und Expected Decision entfällt. Alle Kapitel zeigen
 stattdessen die tatsächliche Ausgabe von `cat` beziehungsweise `head`.
-Der erwartete Ausgang wird weiterhin intern geprüft. Die Prüfmeldung bestätigt
+Der erwartete Ausgang wird weiterhin intern geprüft. Eine zusätzliche Prüfmeldung bestätigt
 die Übereinstimmung; Abweichungen werden
 sichtbar als Fehler ausgegeben und brechen die Demo ab. Die Anzeige fasst
 das beobachtete Enforcement zusammen und behauptet keinen ausgelesenen

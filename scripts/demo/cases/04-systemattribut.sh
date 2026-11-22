@@ -20,7 +20,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
 
 
     #Seite 2
@@ -36,7 +35,6 @@
         fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
         return 1
     fi
-    show_decision deny deny "$target"
     admin show-active
 
 
@@ -47,7 +45,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
 
 
     #Seite 4

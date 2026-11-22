@@ -44,7 +44,6 @@
         fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
         return 1
     fi
-    show_decision deny deny "$target"
 
 
     #Seite 4
@@ -54,7 +53,6 @@
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
     #run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
 
 
 
@@ -64,7 +62,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "head $(printf '%q' "$target")"
-    show_decision allow allow "$target"
 
 
 
@@ -76,7 +73,6 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$safe")"
     run_cmd "cat $(printf '%q' "$safe")"
-    show_decision allow allow "$safe"
 
 
     #Seite 7
@@ -92,7 +88,6 @@
         fail 'cat über den Hardlink wurde nicht wie erwartet durch die Policy verweigert.'
         return 1
     fi
-    show_decision deny deny "$alias_path"
     admin show-active
 
     #Seite 8
@@ -103,4 +98,3 @@
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
-    show_decision allow allow "$target"
