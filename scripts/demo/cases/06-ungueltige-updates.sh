@@ -45,7 +45,8 @@
 
     #Seite 3
     step 'Die fehlerhafte Datei wird entfernt und eine gültige Permit-Policy namens corrected veröffentlicht. Die bereits aktivierte Deny-Policy hat weiterhin Vorrang.'
-    remove_policy broken
+    # Die abgelehnte Datei war nie aktiv; ihr Entfernen erzeugt keine Generation.
+    run_cmd "rm -- $(printf '%q' "$policy_dir/broken.policy")"
     policy corrected permit
     explain 'Nach der gültigen Policy-Korrektur ist corrected zusätzlich aktiviert. Die Deny-Policy robust gilt weiterhin.'
     admin show-active
@@ -73,7 +74,8 @@
 
     #Seite 5
     step 'Die Zuweisung defcon = 9 in system.attributes ist nicht erlaubt. Im Authorization Context muss trotz geänderter Quelldatei system.defcon == 2 gelten.'
-    run_cmd "echo \"defcon = 9\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    run_cmd "echo \"defcon = 9\" > $(printf '%q' "$attribute_dir/system.attributes.tmp")"
+    run_cmd "mv -f -- $(printf '%q' "$attribute_dir/system.attributes.tmp") $(printf '%q' "$attribute_dir/system.attributes")"
     wait_log 'Ignoring invalid stream attributes' "$offset"
     [[ "$(generations)" == "$before" ]] || { fail 'Ungültiges Attribut änderte die Generation.'; return 1; }
     explain 'Aktiver Zustand nach der Ablehnung von defcon = 9: show-active zeigt weiterhin den Wert 2 für system.defcon sowie dieselben Policies und Generationen.'
@@ -96,7 +98,8 @@
     step 'Mit dem gültigen Wert 5 wird ein neuer Attributstand aktiviert. Die Deny-Bedingung ist danach falsch und der Zugriff wieder erlaubt.'
     attribute_before="$(generations)"
     attribute_offset="$(wc -l < "$demo_root/runtime.log")"
-    run_cmd "echo \"defcon = 5\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    run_cmd "echo \"defcon = 5\" > $(printf '%q' "$attribute_dir/system.attributes.tmp")"
+    run_cmd "mv -f -- $(printf '%q' "$attribute_dir/system.attributes.tmp") $(printf '%q' "$attribute_dir/system.attributes")"
     wait_generation attribute "${attribute_before##* }" "$attribute_offset"
     show_policy_context
     explain 'Aktiver Zustand nach der gültigen Attribut-Korrektur: Der Kontextwert system.defcon == 5 und die neue Attributgeneration sind sichtbar. Die Deny-Policy robust ist weiterhin aktiviert, ihre Bedingung ist jetzt jedoch falsch.'

@@ -17,7 +17,8 @@
     pause_demo
     attribute_before="$(generations)"
     attribute_offset="$(wc -l < "$demo_root/runtime.log")"
-    run_cmd "echo \"defcon = 2\" > $(printf '%q' "$attribute_dir/system.attributes")"
+    run_cmd "echo \"defcon = 2\" > $(printf '%q' "$attribute_dir/system.attributes.tmp")"
+    run_cmd "mv -f -- $(printf '%q' "$attribute_dir/system.attributes.tmp") $(printf '%q' "$attribute_dir/system.attributes")"
     wait_generation attribute "${attribute_before##* }" "$attribute_offset"
     show_policy_context
     run_cmd "cat $(printf '%q' "$attribute_dir/system.attributes")"

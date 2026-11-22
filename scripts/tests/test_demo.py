@@ -616,6 +616,8 @@ source "$1/scripts/demo/cases/02-statische-policies.sh"
             '04-systemattribut.sh': ['allow', 'deny', 'allow'],
             '05-subjekt-und-ressourcenattribute.sh': ['deny', 'allow', 'deny', 'allow', 'deny', 'allow', 'allow', 'deny'],
             '06-ungueltige-updates.sh': ['deny', 'deny', 'deny', 'allow'],
+            '07-fd-entzug-policy.sh': [],
+            '08-fd-entzug-attribut.sh': [],
             '10-utc-zeitbedingungen.sh': ['allow', 'deny'],
         }
         script = '''set -Eeuo pipefail
@@ -632,7 +634,7 @@ target='/example/protected file.txt'
 policy_dir="$demo_root/policies"
 attribute_dir="$demo_root/attributes"
 probe_dir="$demo_root"
-mkdir -p "$attribute_dir"
+mkdir -p "$attribute_dir" "$policy_dir"
 : > "$demo_root/runtime.log"
 printf '{"unix_ns":9999999999999999999}' > "$probe_dir/state.json"
 chapter_start() { :; }
@@ -646,13 +648,22 @@ attribute() {
     mkdir -p "$(dirname "$attribute_dir/$1")"
     printf '%s\\n' "$2" > "$attribute_dir/$1"
 }
-remove_policy() { :; }
+remove_policy() { [[ "$1" != broken ]]; }
 admin() { :; }
 generations() { printf '1 1\n'; }
 wait_log() { :; }
-wait_generation() { [[ "$1" == attribute ]]; [[ "$(< "$attribute_dir/system.attributes")" == 'defcon = 2' || "$(< "$attribute_dir/system.attributes")" == 'defcon = 5' ]]; }
+mv() {
+    [[ "$1" == -f && "$2" == -- && "$3" == "$attribute_dir/system.attributes.tmp" && "$4" == "$attribute_dir/system.attributes" ]]
+    command mv "$@"
+    printf '%s\\n' "$(< "$attribute_dir/system.attributes")" >> "$demo_root/attribute-renames"
+}
+wait_generation() {
+    [[ "$1" == attribute && -f "$demo_root/attribute-renames" ]]
+    [[ "$(< "$attribute_dir/system.attributes")" == 'defcon = 2' || "$(< "$attribute_dir/system.attributes")" == 'defcon = 5' ]]
+    [[ ! -e "$attribute_dir/system.attributes.tmp" ]]
+}
 show_policy_context() { :; }
-publish() { while IFS= read -r line; do :; done; }
+publish() { : > "$1"; while IFS= read -r line; do printf '%s\\n' "$line" >> "$1"; done; }
 start_probe() { :; }
 assert_probe_identity() { :; }
 expect_revoked() { :; }
@@ -695,6 +706,18 @@ run_chapter
                         self.assertNotIn('CHECKED deny', result.stdout)
                         continue
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    system_updates = {
+                        '04': ['defcon = 2', 'defcon = 5'],
+                        '05': ['defcon = 2'],
+                        '06': ['defcon = 9', 'defcon = 5'],
+                        '08': ['defcon = 2'],
+                    }.get(chapter[:2])
+                    if system_updates is not None:
+                        self.assertEqual((Path(directory) / 'attribute-renames').read_text().splitlines(), system_updates)
+                        self.assertEqual(result.stdout.count('$ mv -f -- '), len(system_updates))
+                    if chapter.startswith('06-'):
+                        self.assertIn('$ rm -- ', result.stdout)
+                        self.assertFalse((Path(directory) / 'policies/broken.policy').exists())
                     if chapter.startswith('05-'):
                         for relative, content in [
                             ('system.attributes', 'defcon = 2'),

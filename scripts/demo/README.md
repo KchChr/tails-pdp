@@ -296,7 +296,11 @@ Abschnitte können in der Kapiteldatei umbenannt, entfernt oder ergänzt werden.
 Die Enter-Pause vor den Aktionen steht ebenfalls ausdrücklich in der Datei.
 
 Änderungen von `system.attributes` werden in den Kapiteln unmittelbar über
-`run_cmd` und `echo "defcon = …" > /absoluter/pfad/system.attributes` ausgeführt.
+`run_cmd` ausgeführt: zuerst
+`echo "defcon = …" > /absoluter/pfad/system.attributes.tmp`, anschließend
+`mv -f -- /absoluter/pfad/system.attributes.tmp /absoluter/pfad/system.attributes`.
+Der Watcher aktiviert Konfigurationsdateien nach einem Rename; direkte
+Schreibzugriffe auf `system.attributes` lösen keine Veröffentlichung aus.
 Die Attributdatei enthält Zuweisungen ohne Namespace-Präfix und mit einem `=`;
 die Policy-Bedingung dazu lautet beispielsweise `system.defcon == 2;`.
 Die Datei wird ersetzt, da ein Anhängen mit `>>` doppelte Definitionen erzeugen
