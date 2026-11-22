@@ -30,11 +30,20 @@ eBPF-Build von `core` zusätzlich zu den Projektabhängigkeiten benötigt.
 Die Prüfroutine gleicht außerdem das Lockfile der installierten
 `rust-src`-Komponente mit dieser mitgelieferten Liste ab.
 
-**Stand der Offline-Abgabe:** Die Cargo-Abhängigkeiten sind lokal vorhanden.
-Ein vollständiges Offline-Paket der Buildwerkzeuge ist noch nicht mitgeliefert.
-Die in `nix-config/rust-toolchain` und `nix-config/ebpf-toolchain` festgelegten
-Compiler, `rust-src`, BPF-Linker 0.9.15 und die LLVM-21-Bibliotheken müssen lokal
-vorhanden sein. Der aktuelle Aya-eBPF-Build benötigt weiterhin Nightly;
+Die Build-Shell und die ISO verwenden dieselbe Definition aus
+`demo/demo-toolchain.nix`: die festgelegten Compiler, `rust-src`, BPF-Linker 0.9.15
+und LLVM 21. `RUSTUP_HOME` zeigt auf ein vorbereitetes Verzeichnis im Nix-Store;
+manuelle Toolchain-Installationen unter `~/.rustup` sind nicht erforderlich.
+Auf einer vorhandenen VM müssen die Nix-Abhängigkeiten einmalig bereitgestellt
+werden. Dabei darf Nix Pakete herunterladen oder bauen:
+
+```bash
+nix-shell nix-config/shell.nix --run 'bash scripts/demo/build.sh'
+```
+
+Anschließend kann `./scripts/demo.sh --build` diese Abhängigkeiten offline
+verwenden. Auf der ISO sind sie bereits enthalten. Cargo verwendet in beiden
+Fällen ausschließlich die lokalen Quellen. Der aktuelle Aya-eBPF-Build benötigt weiterhin Nightly;
 die Anforderung, auch den eBPF-Teil ausschließlich mit Stable Rust zu bauen,
 ist damit noch nicht erfüllt. Es wird weder eine Nightly-Installation noch
 ein `RUSTC_BOOTSTRAP`-Workaround während der Demo ausgeführt.
@@ -45,8 +54,9 @@ die Programme für diesen Aufruf bereit, ohne sie global zu installieren.
 `nix-shell`, die lokale Nixpkgs-Quelle und alle benötigten Nix-Store-Pfade müssen
 bereits verfügbar sein. Substitutionen sowie lokale und entfernte Nix-Builds
 sind für diese Aufrufe deaktiviert; fehlende Pakete führen zum Abbruch.
-Die lokale Nixpkgs-Quelle ist bisher noch nicht im Repository gepinnt oder
-mitgeliefert. Ein bereits eingerichtetes `sudo`
+Die Build-Shell verwendet die in `demo/sources.nix` gepinnten Quellen; die
+Werkzeug-Shell `scripts/demo/shell.nix` verwendet weiterhin `<nixpkgs>`.
+Ein bereits eingerichtetes `sudo`
 oder ein Start als root ist für die privilegierte Runtime erforderlich; das
 Bereitstellen eines sudo-Pakets richtet keine Systemberechtigungen ein. Deshalb
 enthält die Demo-Shell kein sudo-Paket. Die Demo verwendet auf NixOS bevorzugt

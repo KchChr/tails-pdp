@@ -4,19 +4,21 @@
 # Wird in demo_worker eingebunden und nutzt dessen Runtime und Arbeitsbereich.
 
     chapter_start '3. Permit, Deny-Vorrang und Policy-Lebenszyklus'
+    printf ''
     chapter_section 'Ausgangslage' \
         'Es sind keine Policies aktiv.'
     admin --no-label show-active
 
     #Seite 1
     chapter_section 'Aktion' \
-        'Zuerst wird eine Permit-Policy geladen, dann eine passende Deny-Policy ergänzt und anschließend nur die Deny-Policy entfernt. Zum Schluss wird auch die Permit-Policy entfernt.'
+        'Zuerst wird eine Permit-Policy geladen, dann eine passende Deny-Policy ergänzt und anschließend nur die Deny-Policy entfernt.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Zugriffe folgen der Reihenfolge erlaubt → verweigert → erlaubt. Bei gleichzeitig passenden Policies hat Deny Vorrang vor Permit.'
     printf '\n'
     pause_demo
     explain 'Zuerst wird eine Permit-Policy geladen. Der Zugriff ist damit erlaubt.'
     policy permit permit
+    admin
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
@@ -28,7 +30,9 @@
     #Seite 2
     step 'Eine passende Deny-Policy wird ergänzt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang.'
     policy deny deny
+    admin
     show_request cat "$UID" "$target"
+
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     status=0
@@ -38,7 +42,7 @@
         fail 'cat wurde nicht wie erwartet durch die Policy verweigert.'
         return 1
     fi
-    admin
+
 
 
     #Seite 3

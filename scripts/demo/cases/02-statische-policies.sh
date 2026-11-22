@@ -19,14 +19,14 @@
     pause_demo
     explain "Die Datei $target wird mit UID = $UID und cat geöffnet:"
     run_cmd 'echo $UID'
-    run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"
 
     #Seite 2
     step 'Auch der Vergleichsbenutzer muss die Datei ohne Policy lesen können.'
     comparison_user="$(id -un "$comparison_uid")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- id -u"
-    run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
+    #run_cmd "sudo -u $(printf '%q' "$comparison_user") -- stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "sudo -u $(printf '%q' "$comparison_user") -- cat $(printf '%q' "$target")"
 
 
@@ -94,7 +94,7 @@
     step 'Die Policy wird entfernt. Derselbe zuvor verweigerte Zugriff muss wieder möglich sein.'
     remove_policy scoped
     admin
-    show_request cat "$UID" "$target"
-    run_cmd 'echo $UID'
+    #show_request cat "$UID" "$target"
+    #run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
     run_cmd "cat $(printf '%q' "$target")"

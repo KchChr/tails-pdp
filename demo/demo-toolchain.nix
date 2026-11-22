@@ -6,6 +6,15 @@ let
   ebpf = pkgs.rust-bin.nightly.${pkgs.lib.removePrefix "nightly-" ebpfName}.minimal.override {
     extensions = [ "rust-src" ];
   };
+  host = pkgs.stdenv.hostPlatform.rust.rustcTarget;
+  # Rustup proxies and nested aya-build invocations resolve the same compilers.
+  # This directory belongs to the Nix closure, not to a user's mutable profile.
+  rustupHome = pkgs.runCommand "tails-pdp-rustup-home" { } ''
+    mkdir -p "$out/toolchains"
+    ln -s ${stable} "$out/toolchains/${stableName}-${host}"
+    ln -s ${ebpf} "$out/toolchains/${ebpfName}-${host}"
+    printf 'version = "12"\ndefault_toolchain = "${stableName}-${host}"\nprofile = "minimal"\n' > "$out/settings.toml"
+  '';
   llvm = pkgs.llvmPackages_21;
   # Do not inherit the default compiler's potentially different LLVM version.
   linker = pkgs.bpf-linker.overrideAttrs (old: {
@@ -21,13 +30,14 @@ let
 in
 assert pkgs.lib.assertMsg (linker.version == "0.9.15") "Demo requires bpf-linker 0.9.15";
 {
-  inherit stableName ebpfName stable ebpf llvm linker;
+  inherit stableName ebpfName stable ebpf llvm linker rustupHome;
   packages = with pkgs; [
     rustup linker llvm.llvm llvm.libllvm gcc gnumake pkg-config zlib libxml2
     bashInteractive coreutils findutils gnugrep gnused diffutils procps
     python3 tmux util-linux git iproute2 nano
   ];
   variables = {
+    RUSTUP_HOME = "${rustupHome}";
     RUSTUP_TOOLCHAIN = stableName;
     RUSTUP_AUTO_INSTALL = "0";
     CARGO_NET_OFFLINE = "true";

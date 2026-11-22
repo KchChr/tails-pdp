@@ -34,6 +34,8 @@ Ein Flake-Lockfile ist bei diesem klassischen Nix-Einstieg nicht erforderlich.
 Die Rust-Versionen werden aus den vorhandenen Dateien unter `nix-config/`
 gelesen: Stable für Userspace und die festgelegte Nightly-Version für eBPF.
 LLVM 21 und bpf-linker 0.9.15 sind ebenfalls festgelegt.
+`nix-config/shell.nix` verwendet dieselbe Definition. Beide Compiler werden
+Rustup über ein vorbereitetes `RUSTUP_HOME` im Nix-Store bereitgestellt.
 
 ## ISO verwenden
 
@@ -53,8 +55,9 @@ LLVM 21 und bpf-linker 0.9.15 sind ebenfalls festgelegt.
 Das ISO enthält die ausgewählten Repository-Quellen einschließlich `vendor/`
 und die vollständigen Nix-Paketabhängigkeiten der eingebundenen Werkzeuge.
 Beim Booten werden die Quellen in `/home/demo/tails-pdp` kopiert. Die gepinnten
-Compiler und rust-src werden lokal für rustup registriert, ohne Installation
-aus dem Netz. Ein erneuter Login führt einen inkrementellen Build aus.
+Compiler und rust-src stehen im gemeinsamen Rustup-Verzeichnis im Nix-Store
+bereit, ohne Installation aus dem Netz. Auch die gepinnten Nix-Quellen sind
+für die Build-Shell über `NIX_PATH` erreichbar. Ein erneuter Login führt einen inkrementellen Build aus.
 Manuelle Tests können in der SSH-Shell mit `./scripts/test.sh` gestartet werden.
 
 Änderungen, Build-Ergebnisse und Logs gehen beim Ausschalten verloren. Zum

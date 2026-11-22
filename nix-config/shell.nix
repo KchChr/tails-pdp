@@ -1,41 +1,25 @@
-{ pkgs ? import <nixpkgs> {} }:
+{
+  # The ISO supplies store paths via NIX_PATH; a normal VM uses pinned sources.
+  sources ? let local = builtins.tryEval <tails-pdp-sources>;
+    in if local.success then import local.value else import ../demo/sources.nix,
+  pkgs ? import sources.nixpkgs { overlays = [ (import sources.rustOverlay) ]; }
+}:
 let
-  llvm = pkgs.llvmPackages_21;
+  toolPkgs = if pkgs ? rust-bin then pkgs else pkgs.extend (import sources.rustOverlay);
+  tools = import ../demo/demo-toolchain.nix { pkgs = toolPkgs; };
   projectRoot = builtins.toString ../.;
 in
-pkgs.mkShell {
-  buildInputs = [
-    pkgs.bashInteractive
-    pkgs.git
-    pkgs.coreutils
-    pkgs.gnugrep
-    pkgs.procps
-    pkgs.python3
-    pkgs.tmux
-    llvm.llvm
-    llvm.libllvm
-    pkgs.zlib
-    # LLVM benötigt libxml2 auch beim Linken von bpf-linker.
-    pkgs.libxml2
-    pkgs.rustup
-  ];
+toolPkgs.mkShell (tools.variables // {
+  buildInputs = tools.packages;
 
   shellHook = ''
     # kein -u/-e, damit der Hook nicht still abbricht
     set -o pipefail
 
     export CARGO_HOME="$HOME/.cargo"
-    export RUSTUP_HOME="$HOME/.rustup"
-    export RUSTUP_AUTO_INSTALL=0
-    export PATH="$CARGO_HOME/bin:$PATH"
     export NIX_ENFORCE_PURITY=0
-
-    # LLVM für aya-rustc-llvm-proxy / bpf-linker
-    export AYA_RUSTC_LLVM_PATH="${llvm.libllvm}/lib/libLLVM-21.so"
-    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [ pkgs.zlib pkgs.libxml2 ]}:''${LD_LIBRARY_PATH:-}"
-
-    # Nur lokal vorhandene Toolchains verwenden; der Shell-Start lädt nichts nach.
-    export RUSTUP_TOOLCHAIN="${pkgs.lib.strings.trim (builtins.readFile ./rust-toolchain)}"
+    # Compilers, rust-src and bpf-linker come from the shared Nix definition.
+    # Keep Nix's binaries ahead of any old tools in ~/.cargo/bin.
 
     # Vorab bereitgestellten Linker prüfen, niemals während der Demo installieren.
     setup-bpf-tools() {
@@ -60,8 +44,10 @@ pkgs.mkShell {
     echo "=== Nix dev shell ready ==="
     echo "IN_NIX_SHELL=''${IN_NIX_SHELL:-}  (leer? -> evtl. schon in nix-shell)"
     echo "AYA_RUSTC_LLVM_PATH=$AYA_RUSTC_LLVM_PATH"
-    echo "Offline-Build: Compiler, rust-src und bpf-linker müssen lokal bereitstehen."
+    echo "Userspace: ${tools.stableName} | eBPF: ${tools.ebpfName} mit rust-src"
+    echo "RUSTUP_HOME=$RUSTUP_HOME"
+    echo "Compiler und bpf-linker werden durch Nix bereitgestellt."
     echo "========================================"
     echo
   '';
-}
+})

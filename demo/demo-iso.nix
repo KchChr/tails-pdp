@@ -14,7 +14,8 @@ let
         "tails-pdp-common" "tails-pdp-ebpf"
         "tails-pdp-userspace-common" "tails-pdp-policy-loader"
         "tails-pdp-userspace-pep" "policies" "attributes"
-      ] && !(builtins.elem (baseNameOf path) [ "__pycache__" ".DS_Store" ]);
+      ] && !(builtins.elem (baseNameOf path) [ "__pycache__" ".DS_Store" ])
+      || builtins.elem relative [ "demo" "demo/sources.nix" "demo/demo-toolchain.nix" ];
   };
 in
 {
@@ -68,7 +69,15 @@ in
   system.build.demoLinker = tools.linker;
   environment.variables = tools.variables;
   # Keep the exact Nixpkgs source available for manual offline test shells too.
-  nix.nixPath = [ "nixpkgs=${sources.nixpkgs}" ];
+  nix.nixPath = [
+    "nixpkgs=${sources.nixpkgs}"
+    "tails-pdp-sources=${pkgs.writeText "tails-pdp-sources.nix" ''
+      {
+        nixpkgs = ${sources.nixpkgs};
+        rustOverlay = ${sources.rustOverlay};
+      }
+    ''}"
+  ];
   programs.bash.loginShellInit = builtins.readFile ./demo-login.sh;
 
   systemd.services.demo-workspace = {
@@ -85,10 +94,8 @@ in
         cp -r ${repository} /home/demo/tails-pdp
         chmod -R u+w /home/demo/tails-pdp
       fi
-      install -d /home/demo/.rustup/toolchains /home/demo/.cargo
-      # rustup discovers these preinstalled toolchains without a download.
-      ln -sfn ${tools.stable} /home/demo/.rustup/toolchains/${tools.stableName}-x86_64-unknown-linux-gnu
-      ln -sfn ${tools.ebpf} /home/demo/.rustup/toolchains/${tools.ebpfName}-x86_64-unknown-linux-gnu
+      install -d /home/demo/.cargo
+      # RUSTUP_HOME points to the shared, preinstalled Nix-store toolchain home.
       chown -R demo:users /home/demo
     '';
   };
