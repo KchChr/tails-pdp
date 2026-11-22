@@ -14,27 +14,26 @@
   FD 10, 11, 12: $target
   FD 13, 14:     $safe
 
-Ein Dateideskriptor (FD) ist eine Nummer für eine geöffnete Datei innerhalb eines Prozesses.
-exec 10<\"$target\" öffnet die Datei zum Lesen und hält sie als FD 10 in dieser Bash offen.
-Der Prozess schließt diese fünf FDs während der Vorführung nicht selbst und öffnet sie nach einem Entzug nicht erneut."
+
+exec 10<\"$target\" öffnet die Datei zum Lesen und hält sie als FD 10 in dieser Bash offen."
     chapter_section 'Erwartetes Verhalten' \
-        'Zunächst sind alle fünf FDs offen. Rechts unten zeigt ls -l /proc/<PID>/fd, auf welche Dateien die Nummern verweisen. Die PID bezeichnet den Bash-Prozess. Vor der Policy-Veröffentlichung bleibt Zeit, diese Ausgangslage anzusehen.'
+        'Zunächst sind alle fünf FDs offen. Rechts unten zeigt ls -l /proc/<PID>/fd, auf welche Dateien die Nummern verweisen. '
     printf '\n'
     pause_demo
     start_probe --native
-    explain "Der Bash-Prozess läuft mit PID $probe_pid. Seine offenen Dateien:"
+    explain "Der Bash-Prozess läuft mit PID $probe_pid.  offenen Dateien:"
     run_cmd "ls -l /proc/$probe_pid/fd"
-    explain 'Die Einträge 10, 11 und 12 zeigen auf die geschützte Datei; 13 und 14 auf die Kontrolldatei. Mit Enter folgt die Policy-Veröffentlichung.'
+    explain 'Die Einträge 10, 11 und 12 zeigen auf $target, 13 und 14 auf $safe. '
 
 
     #Seite 2
     chapter_start '7a. Derselbe Prozess – jetzt Deny veröffentlichen'
     chapter_section 'Ausgangslage' \
-        "Der Bash-Prozess mit PID $probe_pid hält die Dateien weiterhin offen. Er wird weder beendet noch neu gestartet."
+        "Der Prozess $probe_pid hält die Dateien weiterhin offen."
     chapter_section 'Aktion' \
-        'Mit Enter veröffentlichen wir eine Deny-Policy für die geschützte Datei. Der Userspace-PEP prüft daraufhin die bereits offenen FDs erneut.'
+        'Mit Enter wird eine Deny-Policy veröffentlicht. Der Userspace-PEP prüft daraufhin die bereits offenen FDs erneut.'
     chapter_section 'Erwartetes Verhalten' \
-        'Rechts oben protokolliert der Userspace-PEP das Schließen von FD 10, 11 und 12. Rechts unten verschwinden diese Einträge aus /proc. FD 13 und 14 bleiben offen. Die PID bleibt gleich: Das Enforcement betrifft die geschützte Datei, während derselbe Prozess weiterläuft.'
+        'Der Userspace-PEP schließt FD 10, 11 und 12, die Einträge verschwinden aus /proc. FD 13 und 14 bleiben offen. Die PID bleibt gleich: Das Enforcement betrifft die geschützte Datei, während derselbe Prozess weiterläuft.'
     printf '\n'
     pause_demo
     assert_probe_identity
