@@ -310,12 +310,14 @@ expected = sys.argv[2] == 'open'
 raise SystemExit(0 if state['protected'] == [expected] * 3 and state['controls'] == [True] * 2 else 1)
 PY
 }
-# Startet den Beobachter mit drei geschützten und zwei Kontroll-FDs und wartet auf deren Öffnung.
+# Startet den Bash-Prozess mit fünf FDs; --native lässt zusätzliche Authorization-Anzeigen weg.
 start_probe() {
     probe_dir="$(mktemp -d "$demo_root/fd.XXXXXX")"
-    explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Authorization Contexts lauten:'
-    show_request bash "$UID" "$target"
-    show_request bash "$UID" "$safe"
+    if [[ "${1:-}" != --native ]]; then
+        explain 'Der FD-Beobachter öffnet die geschützte Datei dreimal und die Kontrolldatei zweimal. Die beiden Authorization Contexts lauten:'
+        show_request bash "$UID" "$target"
+        show_request bash "$UID" "$safe"
+    fi
     printf '\n[FD-Beobachter: Bash /proc – Ausgabe im rechten unteren Bereich]\n'
     show_command bash "$PROJECT_ROOT/scripts/demo/fd-observer.sh" "$target" "$safe" "$probe_dir"
     DEMO_OUTPUT_COLOR="$color_output" DEMO_COLOR_RESET="$color_reset" \
@@ -336,7 +338,7 @@ stop_probe() {
         probe_pid=''
     fi
 }
-# Wartet auf den selektiven Entzug der geschützten FDs und zeigt die geprüften Ergebnisse an.
+# Prüft den selektiven Entzug; --native überlässt die sichtbaren Nachweise dem Kapitel.
 expect_revoked() {
     local deadline=$((SECONDS + DEMO_TIMEOUT_SECONDS))
     while ! probe_state_is closed; do
@@ -345,6 +347,7 @@ expect_revoked() {
         (( SECONDS < deadline )) || { fail 'FD-Entzug ausgeblieben oder Kontroll-FD geschlossen.'; return 1; }
         sleep 0.1
     done
+    [[ "${1:-}" != --native ]] || return 0
     show_request bash "$UID" "$target" 'Authorization Context nach Re-evaluation der geschützten FDs (keine neue Dateiöffnung)'
     show_decision deny deny "$target" 'Authorization Decision für die bestehenden geschützten FDs'
     show_request bash "$UID" "$safe" 'Authorization Context nach Re-evaluation der Kontroll-FDs (keine neue Dateiöffnung)'

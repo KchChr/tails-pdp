@@ -361,8 +361,8 @@ eine garantierte Frist.
 3. Permit, Deny-Vorrang, Veröffentlichung und Entfernung ohne Neustart.
 4. Dynamisches Systemattribut `system.defcon`.
 5. Subject-/Resource-Attribute, UND-Verknüpfung, fehlende und anders typisierte Werte.
-6. Ungültige Policy und ungültiges Attribut: Generation bleibt erhalten; gültige Korrektur folgt.
-7. Selektiver Entzug bereits offener FDs durch Policyaktivierung.
+6. Ungültige Policy und ungültiges Attribut: Aktivierte Policies, Werte und Generationen werden mit dem Admin-Tool verglichen; gültige Korrekturen folgen. Zusätzliche Dateiöffnungen und Authorization-Decision-Blöcke entfallen.
+7. Ein Bash-Prozess hält die geschützte Datei dreimal und die Kontrolldatei zweimal offen. Vorher/nachher-Vergleich derselben PID mit ls in /proc; drei PEP-Schließmeldungen belegen den selektiven Entzug durch die neue Policy. Zusätzliche Authorization-Context- und Decision-Blöcke entfallen.
 8. Selektiver FD-Entzug allein durch Attributaktivierung, bei unveränderter Policygeneration.
 9. Wiederkehrende zehnsekündige Permit-/Deny-Fenster: Öffnungsversuche jede Sekunde, FD offen halten und zweimal zeitgetriggert entziehen, bei unveränderten Konfigurationsgenerationen.
 10. UTC-Zeitbedingungen, Stream-Permit und Deny-Vorrang, abschließende Admin-Inspektion.

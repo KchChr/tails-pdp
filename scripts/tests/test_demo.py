@@ -554,6 +554,86 @@ printf 'AKTION_AUSGEFUEHRT\\n'
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('nachfolgende Befehle in eine eigene Zeile', result.stderr)
 
+    def test_native_fd_check_keeps_state_validation_and_omits_extra_authorization_output(self):
+        script = '''set -Eeuo pipefail
+source "$1"
+probe_pid=$$
+DEMO_TIMEOUT_SECONDS=0
+probe_state_is() { [[ "$TEST_PROBE_STATE" == closed ]]; }
+alive() { :; }
+show_request() { printf 'CONTEXT\n'; }
+show_decision() { printf 'DECISION\n'; }
+observe() { printf 'OBSERVED\n'; }
+target=/protected.txt
+safe=/control.txt
+expect_revoked "$2"
+'''
+        for mode, state in [('--native', 'closed'), ('--native', 'open'), ('', 'closed')]:
+            with self.subTest(mode=mode, state=state):
+                result = subprocess.run(
+                    [shutil.which('bash'), '-c', script, 'test', str(PROJECT / 'scripts/demo/runner.sh'), mode],
+                    env={**os.environ, 'TEST_PROBE_STATE': state}, capture_output=True, text=True,
+                )
+                if state == 'open':
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('FD-Entzug ausgeblieben', result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    if mode == '--native':
+                        self.assertEqual(result.stdout, '')
+                    else:
+                        self.assertEqual(result.stdout.count('CONTEXT'), 2)
+                        self.assertEqual(result.stdout.count('DECISION'), 2)
+
+    def test_first_chapter_checks_runtime_and_maps_before_reading_file(self):
+        for missing_map in [False, True]:
+            with self.subTest(missing_map=missing_map), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                pins = root / 'pins'
+                pins.mkdir()
+                for name in ['POLICY_GENERATION', 'ATTRIBUTE_GENERATION', 'FILE_OPEN_STATIC_POLICIES',
+                             'FILE_OPEN_STREAM_POLICIES', 'CURRENT_TIME', 'ATTRIBUTES']:
+                    if not (missing_map and name == 'CURRENT_TIME'):
+                        (pins / name).touch()
+                (root / 'protected file.txt').write_text('CHAPTER_ONE_CONTENT\n')
+                runtime = root / 'runtime.sh'
+                runtime.write_text('#!/usr/bin/env bash\nprintf "Kernel debug logging mode=Deny\\nWaiting for Ctrl-C\\nscan completed\\n"\nexec sleep 20\n')
+                runtime.chmod(0o755)
+                script = '''set -Eeuo pipefail
+source "$1/scripts/demo/runner.sh"
+PROJECT_ROOT="$1"
+demo_root="$2"
+pin_dir="$demo_root/pins"
+target="$demo_root/protected file.txt"
+safe="$demo_root/control.txt"
+TAILS_PDP_BIN="$demo_root/runtime.sh"
+DEMO_TIMEOUT_SECONDS=3
+runtime_pid=''
+trap 'if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; wait "$runtime_pid" 2>/dev/null || true; fi' EXIT
+chapter_start() { :; }
+chapter_section() { :; }
+pause_demo() { :; }
+start_kernel_trace() { :; }
+alive() { kill -0 "$runtime_pid" 2>/dev/null; }
+admin() { :; }
+show_request() { :; }
+show_decision() { return 99; }
+command_access_is() { return 99; }
+explain() { :; }
+stat() { printf 'Device (Major:Minor): 8:2 | Inode: 12345\n'; }
+run_chapter() { source "$PROJECT_ROOT/scripts/demo/cases/01-runtime-start.sh"; }
+run_chapter
+'''
+                result = subprocess.run([shutil.which('bash'), '-c', script, 'test', str(PROJECT), directory],
+                                        capture_output=True, text=True, timeout=6)
+                if missing_map:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('Map fehlt: CURRENT_TIME', result.stderr)
+                    self.assertNotIn('CHAPTER_ONE_CONTENT', result.stdout)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('CHAPTER_ONE_CONTENT', result.stdout)
+
     def test_static_policy_chapter_runs_visible_commands_and_checks_denials(self):
         script = '''set -Eeuo pipefail
 source "$1/scripts/demo/runner.sh"
@@ -615,7 +695,7 @@ source "$1/scripts/demo/cases/02-statische-policies.sh"
             '03-policy-lebenszyklus.sh': ['allow', 'deny', 'allow'],
             '04-systemattribut.sh': ['allow', 'deny', 'allow'],
             '05-subjekt-und-ressourcenattribute.sh': ['deny', 'allow', 'deny', 'allow', 'deny', 'allow', 'allow', 'deny'],
-            '06-ungueltige-updates.sh': ['deny', 'deny', 'deny', 'allow'],
+            '06-ungueltige-updates.sh': [],
             '07-fd-entzug-policy.sh': [],
             '08-fd-entzug-attribut.sh': [],
             '10-utc-zeitbedingungen.sh': ['allow', 'deny'],
@@ -631,6 +711,7 @@ expectations=("$@")
 request_index=0
 current=''
 target='/example/protected file.txt'
+safe='/example/control.txt'
 policy_dir="$demo_root/policies"
 attribute_dir="$demo_root/attributes"
 probe_dir="$demo_root"
@@ -643,15 +724,22 @@ pause_demo() { :; }
 explain() { :; }
 observe() { :; }
 step() { [[ $# -eq 1 ]]; }
-policy() { :; }
+policy() {
+    if [[ "$chapter" == 07-* ]]; then printf 'NATIVE_POLICY_PUBLISHED\n'; fi
+}
 attribute() {
     mkdir -p "$(dirname "$attribute_dir/$1")"
     printf '%s\\n' "$2" > "$attribute_dir/$1"
 }
 remove_policy() { [[ "$1" != broken ]]; }
-admin() { :; }
+admin() { printf 'ADMIN_ACTIVE\n'; }
 generations() { printf '1 1\n'; }
-wait_log() { :; }
+wait_log() {
+    if [[ "$chapter" == 07-* ]]; then
+        [[ "$1" == 'USERSPACE_PEP closed pid=4242 fd='* ]]
+        printf 'PEP_CLOSE_CONFIRMED\n'
+    fi
+}
 mv() {
     [[ "$1" == -f && "$2" == -- && "$3" == "$attribute_dir/system.attributes.tmp" && "$4" == "$attribute_dir/system.attributes" ]]
     command mv "$@"
@@ -664,9 +752,17 @@ wait_generation() {
 }
 show_policy_context() { :; }
 publish() { : > "$1"; while IFS= read -r line; do printf '%s\\n' "$line" >> "$1"; done; }
-start_probe() { :; }
+start_probe() {
+    if [[ "$chapter" == 07-* ]]; then [[ "$1" == --native ]]; fi
+    probe_pid=4242
+    printf 'PROBE_STARTED\n'
+}
+ls() { [[ "$1" == -l && "$2" == /proc/4242/fd ]]; printf 'PROC_FD_LIST\n'; }
 assert_probe_identity() { :; }
-expect_revoked() { :; }
+expect_revoked() {
+    if [[ "$chapter" == 07-* ]]; then [[ "$1" == --native ]]; fi
+    printf 'PROBE_REVOKED\n'
+}
 stop_probe() { :; }
 show_request() {
     [[ "$1" == cat && "$2" == "$UID" && "$3" == "$target" ]]
@@ -696,6 +792,8 @@ run_chapter
 '''
         for chapter, expected in scenarios.items():
             for error in ['Operation not permitted', 'Permission denied', 'No such file or directory']:
+                if error != 'Operation not permitted' and 'deny' not in expected:
+                    continue
                 with self.subTest(chapter=chapter, error=error), tempfile.TemporaryDirectory() as directory:
                     result = subprocess.run(
                         [shutil.which('bash'), '-c', script, 'test', str(PROJECT), directory, chapter, error, *expected],
@@ -715,9 +813,19 @@ run_chapter
                     if system_updates is not None:
                         self.assertEqual((Path(directory) / 'attribute-renames').read_text().splitlines(), system_updates)
                         self.assertEqual(result.stdout.count('$ mv -f -- '), len(system_updates))
+                    if chapter.startswith('07-'):
+                        self.assertEqual(result.stdout.count('PROC_FD_LIST'), 2)
+                        self.assertEqual(result.stdout.count('PEP_CLOSE_CONFIRMED'), 3)
+                        self.assertLess(result.stdout.index('PROC_FD_LIST'), result.stdout.index('NATIVE_POLICY_PUBLISHED'))
+                        self.assertLess(result.stdout.index('NATIVE_POLICY_PUBLISHED'), result.stdout.index('PROBE_REVOKED'))
+                        self.assertGreater(result.stdout.rindex('PROC_FD_LIST'), result.stdout.rindex('PEP_CLOSE_CONFIRMED'))
+                        self.assertNotIn('CHECKED ', result.stdout)
                     if chapter.startswith('06-'):
                         self.assertIn('$ rm -- ', result.stdout)
                         self.assertFalse((Path(directory) / 'policies/broken.policy').exists())
+                        self.assertEqual(result.stdout.count('ADMIN_ACTIVE'), 7)
+                        self.assertNotIn('PROTECTED_CONTENT', result.stdout)
+                        self.assertNotIn('CHECKED ', result.stdout)
                     if chapter.startswith('05-'):
                         for relative, content in [
                             ('system.attributes', 'defcon = 2'),
