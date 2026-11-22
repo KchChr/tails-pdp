@@ -59,7 +59,7 @@ PY_CHECK
 
 
     #Seite 2
-    step 'Zwei zeitgetriggerte FD-Entzüge wurden im selben Prozess nachgewiesen. Der Beobachter wird beendet und die Zeit-Policy entfernt.'
+    step 'Policy entfernen:.'
     stop_probe
     remove_policy timed
     show_request cat "$UID" "$target"

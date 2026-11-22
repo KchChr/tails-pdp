@@ -21,12 +21,13 @@
     #Seite 2
     chapter_start '8a. Nur das Systemattribut ändern'
     chapter_section 'Ausgangslage' \
-        'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen. Die aktuelle Policygeneration wird gespeichert.'
+        'Die Policy ist bereits geladen und der Beobachter hält seine FDs offen.'
     chapter_section 'Aktion' \
         'Mit Enter wird ausschließlich defcon = 2 in der Systemattributdatei veröffentlicht. Anschließend gilt im Authorization Context system.defcon == 2. Der Attributloader aktiviert den neuen Wert und löst damit eine Re-evaluation der bestehenden FDs aus.'
     chapter_section 'Erwartetes Verhalten' \
         'Die Attributgeneration steigt, die Policygeneration bleibt gleich. Nur die drei geschützten FDs werden geschlossen; beide Kontroll-FDs bleiben offen.'
     printf '\n'
+    admin
     pause_demo
     assert_probe_identity
     before="$(generations)"
@@ -45,6 +46,6 @@
 
 
     #Seite 3
-    step 'Der FD-Entzug durch die Attributänderung ist bestätigt. Beobachter und Demo-Policy werden für das nächste Kapitel zurückgesetzt.'
+    step 'Löschen der Policy.'
     stop_probe
     remove_policy revoke

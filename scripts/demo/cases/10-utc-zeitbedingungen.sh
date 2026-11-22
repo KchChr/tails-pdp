@@ -9,9 +9,9 @@
     chapter_section 'Ausgangslage' \
         'Neben Unix-Zeit mit Modulus unterstützt der Prototyp UTC-Zeitfelder.'
     chapter_section 'Aktion' \
-        'Zuerst wird eine Permit-Policy mit environment.utc.minute >= 0 geladen und der Zugriff geprüft. Danach kommt eine Deny-Policy mit environment.utc.hour >= 0 hinzu. Abschließend werden die aktivierten Policies und Attribute angezeigt.'
+        'Zuerst wird eine Permit-Policy mit environment.utc.minute >= 0 geladen und der Zugriff geprüft. Danach kommt eine Deny-Policy mit environment.utc.hour >= 0 hinzu.'
     chapter_section 'Erwartetes Verhalten' \
-        'Beide Bedingungen sind zu jeder gültigen Tageszeit wahr. Mit der Permit-Policy ist der Zugriff erlaubt. Bei gleichzeitig passenden Permit- und Deny-Policies hat Deny Vorrang und der Zugriff wird verweigert.'
+        'Beide Bedingungen sind jederzeit wahr. Da Deny Vorrang hat, wird der Zugriff verweigert.'
     printf '\n'
     pause_demo
     policy stream-permit permit '    environment.utc.minute >= 0;'
@@ -23,9 +23,9 @@
 
 
     #Seite 2
-    step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht. Sie hat Vorrang vor der passenden Permit-Policy.'
+    step 'Die zusätzliche UTC-Deny-Policy wird veröffentlicht.'
     policy utc deny '    environment.utc.hour >= 0;'
-    explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang vor der passenden Permit-Policy.'
+    explain 'Die zusätzliche UTC-Deny-Policy hat Vorrang.'
     show_request cat "$UID" "$target"
     run_cmd 'echo $UID'
     #run_cmd "stat -Lc 'Device (Major:Minor): %Hd:%Ld | Inode: %i' $(printf '%q' "$target")"
